@@ -4,7 +4,7 @@
       <h1>Панель управления гидравлическими системами</h1>
       <button @click="handleLogout" class="logout-btn">Выйти</button>
     </header>
-
+    
     <div class="dashboard-content">
       <!-- Раздел списка систем -->
       <section class="systems-section">
@@ -17,6 +17,7 @@
         <SystemsList 
           @edit="handleEdit" 
           @delete="handleDelete"
+          @select="handleSystemSelect"
         />
       </section>
 
@@ -32,6 +33,11 @@
       <!-- Раздел загрузки файлов -->
       <section class="upload-section">
         <FileUpload />
+      </section>
+
+      <!-- Раздел отчетов -->
+      <section v-if="selectedSystemForReports" class="reports-section">
+        <ReportsList :system-id="selectedSystemForReports" />
       </section>
     </div>
   </div>
@@ -49,6 +55,7 @@ const { fetchSystems, deleteSystem } = useSystems()
 
 const showForm = ref(false)
 const selectedSystem = ref(null)
+const selectedSystemForReports = ref(null)
 
 // Показать форму создания
 const showCreateForm = () => {
@@ -67,11 +74,20 @@ const handleDelete = async (systemId) => {
   if (confirm('Вы уверены, что хотите удалить эту систему?')) {
     try {
       await deleteSystem(systemId)
+      // Если удаляем выбранную систему, очищаем выбор
+      if (selectedSystemForReports.value === systemId) {
+        selectedSystemForReports.value = null
+      }
       await fetchSystems()
     } catch (error) {
       console.error('Ошибка при удалении системы:', error)
     }
   }
+}
+
+// Обработчик выбора системы для просмотра отчетов
+const handleSystemSelect = (systemId) => {
+  selectedSystemForReports.value = systemId
 }
 
 // Обработчик отправки формы
@@ -181,11 +197,16 @@ onMounted(async () => {
 }
 
 .form-section,
-.upload-section {
+.upload-section,
+.reports-section {
   background: white;
   padding: 0;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.reports-section {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 1024px) {
@@ -194,7 +215,8 @@ onMounted(async () => {
   }
   
   .form-section,
-  .upload-section {
+  .upload-section,
+  .reports-section {
     grid-column: 1;
   }
 }
