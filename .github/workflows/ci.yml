@@ -1,11 +1,9 @@
 name: CI/CD Pipeline
-
 on:
   push:
     branches: [ master, develop ]
   pull_request:
     branches: [ master, develop ]
-
 jobs:
   test-backend:
     name: Backend Tests
@@ -86,6 +84,36 @@ jobs:
         with:
           directory: ./frontend/coverage
           flags: frontend
+          fail_ci_if_error: false
+
+  test-nuxt-frontend:
+    name: Nuxt Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ./nuxt_frontend/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./nuxt_frontend
+        run: npm ci
+      
+      - name: Run tests
+        working-directory: ./nuxt_frontend
+        run: npm test -- --run --coverage
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./nuxt_frontend/coverage
+          flags: nuxt-frontend
           fail_ci_if_error: false
 
   lint-backend:
