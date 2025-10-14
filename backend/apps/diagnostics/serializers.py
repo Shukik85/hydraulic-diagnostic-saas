@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import HydraulicSystem, SensorData, DiagnosticReport, Equipment, Diagnosis
+from .models import HydraulicSystem, SensorData, Equipment, Diagnosis
 from apps.users.models import User
 
 
@@ -21,21 +21,7 @@ class SensorDataSerializer(serializers.ModelSerializer):
         model = SensorData
         fields = [
             'id', 'sensor_type', 'sensor_type_display', 'value', 'unit',
-            'timestamp', 'is_critical', 'warning_message'
-        ]
-
-
-class DiagnosticReportSerializer(serializers.ModelSerializer):
-    """Сериализатор для отчетов диагностики"""
-    severity_display = serializers.CharField(
-        source='get_severity_display', read_only=True
-    )
-    
-    class Meta:
-        model = DiagnosticReport
-        fields = [
-            'id', 'title', 'description', 'severity', 'severity_display',
-            'ai_analysis', 'recommendations', 'created_at', 'resolved_at'
+            'timestamp', 'is_critical', 'threshold_exceeded'
         ]
 
 
@@ -63,8 +49,8 @@ class DiagnosisSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(
         source='get_status_display', read_only=True
     )
-    priority_display = serializers.CharField(
-        source='get_priority_display', read_only=True
+    severity_display = serializers.CharField(
+        source='get_severity_display', read_only=True
     )
     assigned_to = UserBasicSerializer(read_only=True)
     created_by = UserBasicSerializer(read_only=True)
@@ -73,9 +59,9 @@ class DiagnosisSerializer(serializers.ModelSerializer):
     class Meta:
         model = Diagnosis
         fields = [
-            'id', 'title', 'description', 'severity', 'status', 'status_display',
-            'priority', 'priority_display', 'equipment', 'assigned_to', 'created_by',
-            'created_at', 'resolved_at', 'findings', 'recommendations'
+            'id', 'title', 'description', 'severity', 'severity_display',
+            'status', 'status_display', 'equipment', 'assigned_to', 'created_by',
+            'findings', 'recommendations', 'diagnosed_at', 'resolved_at'
         ]
 
 
