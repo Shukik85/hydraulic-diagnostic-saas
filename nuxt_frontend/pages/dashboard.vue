@@ -20,7 +20,6 @@
           @select="handleSystemSelect"
         />
       </section>
-
       <!-- Форма создания/редактирования системы -->
       <section v-if="showForm" class="form-section">
         <SystemForm 
@@ -29,15 +28,17 @@
           @cancel="handleFormCancel"
         />
       </section>
-
       <!-- Раздел загрузки файлов -->
       <section class="upload-section">
         <FileUpload />
       </section>
-
       <!-- Раздел отчетов -->
       <section v-if="selectedSystemForReports" class="reports-section">
         <ReportsList :system-id="selectedSystemForReports" />
+      </section>
+      <!-- RAG Assistant -->
+      <section class="rag-assistant-section">
+        <RagAssistant />
       </section>
     </div>
   </div>
@@ -198,14 +199,16 @@ onMounted(async () => {
 
 .form-section,
 .upload-section,
-.reports-section {
+.reports-section,
+.rag-assistant-section {
   background: white;
   padding: 0;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.reports-section {
+.reports-section,
+.rag-assistant-section {
   grid-column: 1 / -1;
 }
 
@@ -216,7 +219,8 @@ onMounted(async () => {
   
   .form-section,
   .upload-section,
-  .reports-section {
+  .reports-section,
+  .rag-assistant-section {
     grid-column: 1;
   }
 }
