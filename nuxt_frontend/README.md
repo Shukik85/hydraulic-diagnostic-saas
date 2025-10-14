@@ -1,52 +1,78 @@
 # Nuxt Frontend для гидравлической диагностической системы
-
 Фронтенд приложение на Nuxt 3 для системы диагностики гидравлических систем.
 
 ## Структура проекта
-
 ```
 nuxt_frontend/
 ├── components/          # Vue компоненты
-│   └── SystemsList.vue # Компонент списка систем
-├── pages/              # Страницы приложения (авто-роутинг)
-│   └── index.vue       # Главная страница
-├── app.vue             # Корневой компонент
-├── package.json        # Зависимости проекта
-└── README.md          # Этот файл
+│   └── ReportsList.vue  # Список отчетов с экспортом CSV/JSON
+├── pages/               # Страницы приложения (авто-роутинг)
+│   └── index.vue        # Главная страница
+├── app.vue              # Корневой компонент
+├── package.json         # Зависимости проекта
+└── README.md            # Этот файл
 ```
 
 ## Установка
-
-```bash
+```
+bash
 # Установка зависимостей
 npm install
 ```
 
 ## Разработка
-
-```bash
+```
+bash
 # Запуск dev-сервера на http://localhost:3000
 npm run dev
 ```
 
 ## Сборка для продакшена
-
-```bash
+```
+bash
 # Сборка приложения
 npm run build
-
 # Предпросмотр продакшен-сборки
 npm run preview
 ```
 
-## Технологии
+## MVP: Экспорт отчетов (CSV/JSON)
+Готовая реализация экспорта отчетов доступна в компоненте `components/ReportsList.vue`.
 
-- **Nuxt 3** - Vue.js фреймворк для SSR и SSG
-- **Vue 3** - Progressive JavaScript Framework
-- **TypeScript** (опционально) - Типизированный JavaScript
+Возможности:
+- Кнопка «Экспорт» рядом с каждым отчетом
+- Выпадающее меню форматов: CSV, JSON
+- Метод `downloadReport(reportId, format)` отправляет запрос `GET /systems/:systemId/reports/:reportId/export/?format=csv|json`
+- Блокировка повторных кликов во время экспорта (per-report)
+- Индикаторы состояния («Экспорт…») и toast-уведомления (успех/ошибка)
+- Таймаут 60 сек, обработка ошибок с выводом деталей
+- Инициирование скачивания через `Blob` + `URL.createObjectURL` + `a[download]`
+
+Требования окружения:
+- В `nuxt.config` должна быть настроена переменная `runtimeConfig.public.apiUrl`, например:
+```ts
+export default defineNuxtConfig({
+  runtimeConfig: {
+    public: {
+      apiUrl: process.env.API_URL || 'http://localhost:8000/api'
+    }
+  }
+})
+```
+
+Пример UX-потока:
+1) Пользователь нажимает «Экспорт» у нужного отчета
+2) Открывается меню форматов → выбирает CSV или JSON
+3) Показывается уведомление «Подготовка файла к экспорту…», кнопки блокируются от дублей
+4) По завершении — «Экспорт завершен» и начинается скачивание файла `report_<id>.<format>`
+5) В случае ошибок показывается уведомление с деталями; меню закрывается, блокировки снимаются
+
+## Технологии
+- Nuxt 3 — Vue.js фреймворк для SSR и SSG
+- Vue 3 — Progressive JavaScript Framework
+- TypeScript (опционально)
 
 ## TODO
-
 - [ ] Подключение к Django backend API
 - [ ] Настройка аутентификации
 - [ ] Добавление компонентов для диагностики
@@ -54,6 +80,5 @@ npm run preview
 - [ ] Настройка state management (Pinia)
 
 ## Ссылки
-
 - [Документация Nuxt 3](https://nuxt.com/docs)
 - [Документация Vue 3](https://vuejs.org/)
