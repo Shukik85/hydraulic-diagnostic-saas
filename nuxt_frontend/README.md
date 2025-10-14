@@ -17,9 +17,14 @@ nuxt_frontend/
 ├── pages/               # Страницы приложения (авто-роутинг)
 │   ├── Login.vue        # Страница авторизации
 │   └── index.vue        # Главная страница
+├── tests/               # Тесты
+│   └── composables/     # Unit тесты для composables
+│       └── useSystems.test.js
 ├── app.vue              # Корневой компонент
 ├── package.json         # Зависимости проекта
-└── README.md            # Этот файл
+├── vitest.config.js     # Конфигурация тестов
+├── README.md            # Этот файл
+└── TESTING.md           # Документация по тестированию
 ```
 
 ## Установка
@@ -46,6 +51,87 @@ npm run build
 npm run preview
 ```
 
+## Тестирование
+
+Проект использует **Vitest** и **Vue Test Utils** для unit-тестирования.
+
+### Запуск тестов
+
+```bash
+# Запуск всех тестов
+npm test
+
+# Запуск тестов в watch режиме
+npm test -- --watch
+
+# Запуск тестов с UI интерфейсом
+npm run test:ui
+
+# Запуск тестов с coverage отчетом
+npm run test:coverage
+```
+
+### Структура тестов
+
+Тесты располагаются в папке `tests/` и повторяют структуру основного кода:
+
+```
+tests/
+└── composables/
+    └── useSystems.test.js  # Тесты для useSystems.js
+```
+
+### Пример теста
+
+```javascript
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useSystems } from '../../composables/useSystems'
+
+// Mock fetch globally
+global.fetch = vi.fn()
+
+describe('useSystems', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    fetch.mockClear()
+  })
+
+  it('should fetch systems successfully', async () => {
+    const mockSystems = [
+      { id: 1, name: 'System 1', status: 'active' },
+      { id: 2, name: 'System 2', status: 'inactive' }
+    ]
+    
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockSystems
+    })
+
+    const { systems, loading, error, fetchSystems } = useSystems()
+    await fetchSystems()
+
+    expect(systems.value).toEqual(mockSystems)
+    expect(loading.value).toBe(false)
+    expect(error.value).toBeNull()
+  })
+})
+```
+
+### Coverage отчет
+
+Для генерации coverage отчета используйте:
+
+```bash
+npm run test:coverage
+```
+
+Отчет будет сгенерирован в папке `coverage/` в форматах:
+- HTML отчет: `coverage/index.html`
+- JSON отчет: `coverage/coverage-final.json`
+- Текстовый отчет в консоли
+
+Подробнее о тестировании см. [TESTING.md](./TESTING.md)
+
 ## MVP: Экспорт отчетов (CSV/JSON)
 
 Готовая реализация экспорта отчетов доступна в компоненте `components/ReportsList.vue`.
@@ -64,69 +150,73 @@ npm run preview
 
 - В `nuxt.config` должна быть настроена переменная `runtimeConfig.public.apiUrl`, например:
 
-```ts
+```js
 export default defineNuxtConfig({
   runtimeConfig: {
     public: {
-      apiUrl: process.env.API_URL || 'http://localhost:8000/api'
+      apiUrl: process.env.API_URL || 'http://localhost:8000/api/v1'
     }
   }
 })
 ```
 
-### Пример UX-потока:
-
-1) Пользователь нажимает «Экспорт» у нужного отчета
-2) Открывается меню форматов → выбирает CSV или JSON
-3) Показывается уведомление «Подготовка файла к экспорту…», кнопки блокируются от дублей
-4) По завершении — «Экспорт завершен» и начинается скачивание файла `report_<id>.<format>`
-5) В случае ошибок показывается уведомление с деталями; меню закрывается, блокировки снимаются
-
-## Работа с уведомлениями в UI
-
-### Composable: useNotifications
-
-В проекте реализован простой и удобный механизм уведомлений через composable `useNotifications.js`.
-
-#### Основные возможности:
-
-- **Автоматическая очистка**: уведомления исчезают через 5 секунд
-- **Типизированные сообщения**: поддержка типов `success`, `error`, `warning`, `info`
-- **Ручное закрытие**: возможность закрыть уведомление вручную
-- **Реактивность**: полная интеграция с Vue 3 Composition API
-
-#### Использование в компонентах:
+### Пример использования:
 
 ```vue
+<template>
+  <div>
+    <h2>Отчеты</h2>
+    <ReportsList :system-id="systemId" />
+  </div>
+</template>
+
+<script setup>
+import ReportsList from '~/components/ReportsList.vue'
+
+const systemId = ref(1)
+</script>
+```
+
+## Управление уведомлениями (useNotifications)
+
+Приложение включает composable `useNotifications` для централизованного управления toast-уведомлениями.
+
+### Возможности:
+
+- Автоматическое удаление уведомлений через 5 секунд
+- Типизированные уведомления: success, error, warning, info
+- Поддержка ручного закрытия
+- Реактивный список уведомлений
+- Автоматическая очистка при unmount компонента
+
+### Пример использования:
+
+```vue
+<template>
+  <div>
+    <!-- Container для уведомлений -->
+    <div class="notifications-container">
+      <div
+        v-for="notification in notifications"
+        :key="notification.id"
+        :class="['notification', `notification-${notification.type}`]"
+      >
+        {{ notification.message }}
+        <button @click="removeNotification(notification.id)">✕</button>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup>
 import { useNotifications } from '~/composables/useNotifications'
 
 const { notifications, pushNotification, removeNotification } = useNotifications()
 
-// Пример использования при успешной операции
-const handleSuccess = () => {
-  pushNotification('success', 'Операция выполнена успешно!')
-}
-
-// Пример использования при ошибке
-const handleError = (error) => {
-  pushNotification('error', `Ошибка: ${error.message}`)
-}
+// Примеры использования
+pushNotification('success', 'Данные успешно сохранены')
+pushNotification('error', 'Ошибка при загрузке данных')
 </script>
-
-<template>
-  <!-- Отображение уведомлений -->
-  <div class="notifications-container">
-    <div 
-      v-for="notification in notifications" 
-      :key="notification.id"
-      :class="['notification', `notification-${notification.type}`]"
-    >
-      {{ notification.message }}
-      <button @click="removeNotification(notification.id)">✕</button>
-    </div>
-  </div>
-</template>
 ```
 
 #### Интеграция в основные компоненты:
@@ -159,7 +249,7 @@ const handleError = (error) => {
 
 ```js
 const { 
-  notifications,      // Ref<Array> - реактивный массив активных уведомлений
+  notifications,      // Ref<array> - реактивный массив активных уведомлений
   pushNotification,   // (type: string, message: string) => void
   removeNotification  // (id: number) => void
 } = useNotifications()
@@ -176,6 +266,8 @@ const {
 
 - Nuxt 3 — Vue.js фреймворк для SSR и SSG
 - Vue 3 — Progressive JavaScript Framework
+- Vitest — Unit Testing Framework
+- Vue Test Utils — Утилиты для тестирования Vue компонентов
 - TypeScript (опционально)
 
 ## TODO
@@ -185,8 +277,12 @@ const {
 - [ ] Добавление компонентов для диагностики
 - [ ] Настройка Tailwind CSS / другого UI фреймворка
 - [ ] Настройка state management (Pinia)
+- [x] Настройка unit-тестов с Vitest
+- [x] Добавление coverage отчетов
 
 ## Ссылки
 
 - [Документация Nuxt 3](https://nuxt.com/docs)
 - [Документация Vue 3](https://vuejs.org/)
+- [Документация Vitest](https://vitest.dev/)
+- [Документация Vue Test Utils](https://test-utils.vuejs.org/)
