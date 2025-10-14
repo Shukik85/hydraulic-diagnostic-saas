@@ -1,25 +1,21 @@
 <template>
-  <div class="container">
-    <h1>Гидравлическая диагностическая система</h1>
-    <p>Добро пожаловать в Nuxt 3 Frontend</p>
-    
-    <SystemsList />
+  <div>
+    <Login v-if="!isAuthenticated" />
+    <Dashboard v-else />
   </div>
 </template>
 
 <script setup>
-// Главная страница приложения
+import { ref, onMounted } from 'vue'
+import Login from './Login.vue'
+import Dashboard from './dashboard.vue'
+import { useAuth } from '~/composables/useAuth'
+
+const { getToken } = useAuth()
+const isAuthenticated = ref(false)
+
+onMounted(() => {
+  const token = getToken()
+  isAuthenticated.value = !!token
+})
 </script>
-
-<style scoped>
-.container {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-h1 {
-  color: #333;
-  margin-bottom: 1rem;
-}
-</style>
