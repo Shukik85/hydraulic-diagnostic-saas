@@ -1,15 +1,9 @@
 from rest_framework import serializers
-<<<<<<< HEAD
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate
 from .models import User, UserProfile, UserActivity
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
-    """Сериализатор регистрации пользователя"""
-    password = serializers.CharField(write_only=True, validators=[validate_password])
-=======
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -22,21 +16,18 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         }
         return data
 
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6)
->>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
+    """Сериализатор регистрации пользователя"""
+    password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
     
     class Meta:
         model = User
-<<<<<<< HEAD
         fields = [
             'username', 'email', 'password', 'password_confirm',
             'first_name', 'last_name', 'company', 'position', 'phone'
         ]
-=======
-        fields = ['email', 'username', 'password', 'password_confirm']
->>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -45,7 +36,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         validated_data.pop('password_confirm')
-<<<<<<< HEAD
         password = validated_data.pop('password')
         
         user = User(**validated_data)
@@ -56,6 +46,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         UserProfile.objects.create(user=user)
         
         return user
+
 
 class UserSerializer(serializers.ModelSerializer):
     """Основной сериализатор пользователя"""
@@ -78,6 +69,7 @@ class UserSerializer(serializers.ModelSerializer):
     def get_systems_count(self, obj):
         return obj.get_systems_count()
 
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """Сериализатор профиля пользователя"""
     user = UserSerializer(read_only=True)
@@ -88,6 +80,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'user', 'avatar', 'bio', 'location', 'website',
             'theme', 'language', 'timezone', 'created_at', 'updated_at'
         ]
+
 
 class UserActivitySerializer(serializers.ModelSerializer):
     """Сериализатор активности пользователя"""
@@ -101,6 +94,7 @@ class UserActivitySerializer(serializers.ModelSerializer):
             'ip_address', 'metadata', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+
 
 class ChangePasswordSerializer(serializers.Serializer):
     """Сериализатор смены пароля"""
@@ -118,6 +112,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not user.check_password(value):
             raise serializers.ValidationError("Неверный текущий пароль")
         return value
+
 
 class LoginSerializer(serializers.Serializer):
     """Сериализатор входа в систему"""
@@ -146,6 +141,7 @@ class LoginSerializer(serializers.Serializer):
         else:
             raise serializers.ValidationError('Необходимо указать email и пароль')
 
+
 class UserStatsSerializer(serializers.Serializer):
     """Сериализатор статистики пользователя"""
     total_systems = serializers.IntegerField()
@@ -154,7 +150,3 @@ class UserStatsSerializer(serializers.Serializer):
     critical_alerts_today = serializers.IntegerField()
     ai_queries_this_month = serializers.IntegerField()
     last_diagnostic_run = serializers.DateTimeField()
-=======
-        user = User.objects.create_user(**validated_data)
-        return user
->>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
