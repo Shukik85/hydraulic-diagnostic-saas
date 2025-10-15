@@ -1,6 +1,15 @@
 import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
+import { vi } from 'vitest'
+
+vi.mock('#app', () => ({
+  useRuntimeConfig: () => ({
+    public: {
+      apiBaseUrl: 'http://localhost:8000/api'
+    }
+  })
+}))
 
 export default defineConfig({
   plugins: [vue()],
