@@ -63,10 +63,6 @@ class SensorData(models.Model):
     unit = models.CharField(max_length=20, verbose_name='Единица измерения')
     timestamp = models.DateTimeField(auto_now_add=True, verbose_name='Время измерения')
     
-    # Критические значения
-    is_critical = models.BooleanField(default=False, verbose_name='Критическое значение')
-    threshold_exceeded = models.BooleanField(default=False, verbose_name='Превышен порог')
-    
     class Meta:
         db_table = 'sensor_data'
         verbose_name = 'Данные датчика'
@@ -74,25 +70,25 @@ class SensorData(models.Model):
         ordering = ['-timestamp']
     
     def __str__(self):
-        return f"{self.get_sensor_type_display()} - {self.value}{self.unit} ({self.timestamp})"
+        return f"{self.get_sensor_type_display()}: {self.value} {self.unit}"
 
 
 class Equipment(models.Model):
-    """Оборудование гидросистемы"""
+    """Оборудование гидравлической системы"""
     
     EQUIPMENT_TYPES = [
         ('pump', 'Насос'),
         ('valve', 'Клапан'),
         ('cylinder', 'Цилиндр'),
-        ('motor', 'Гидромотор'),
+        ('motor', 'Мотор'),
         ('filter', 'Фильтр'),
         ('accumulator', 'Аккумулятор'),
     ]
     
     STATUS_CHOICES = [
-        ('operational', 'Рабочее'),
+        ('operational', 'В работе'),
         ('maintenance', 'На обслуживании'),
-        ('faulty', 'Неисправное'),
+        ('faulty', 'Неисправно'),
         ('retired', 'Списано'),
     ]
     
@@ -100,11 +96,11 @@ class Equipment(models.Model):
     name = models.CharField(max_length=200, verbose_name='Название')
     equipment_type = models.CharField(max_length=50, choices=EQUIPMENT_TYPES, verbose_name='Тип оборудования')
     manufacturer = models.CharField(max_length=200, verbose_name='Производитель')
-    model = models.CharField(max_length=100, verbose_name='Модель')
+    model = models.CharField(max_length=200, verbose_name='Модель')
     serial_number = models.CharField(max_length=100, unique=True, verbose_name='Серийный номер')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='operational', verbose_name='Статус')
     
-    # Даты
+    # Даты обслуживания
     installation_date = models.DateField(verbose_name='Дата установки')
     last_maintenance = models.DateField(null=True, blank=True, verbose_name='Последнее обслуживание')
     next_maintenance = models.DateField(null=True, blank=True, verbose_name='Следующее обслуживание')
@@ -121,6 +117,32 @@ class Equipment(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.get_equipment_type_display()})"
+
+
+class DiagnosticReport(models.Model):
+    """Отчет о диагностике"""
+    
+    REPORT_TYPES = [
+        ('routine', 'Плановая проверка'),
+        ('emergency', 'Экстренная диагностика'),
+        ('post_repair', 'После ремонта'),
+        ('commissioning', 'Ввод в эксплуатацию'),
+    ]
+    
+    system = models.ForeignKey(HydraulicSystem, on_delete=models.CASCADE, related_name='reports', verbose_name='Система')
+    report_type = models.CharField(max_length=50, choices=REPORT_TYPES, verbose_name='Тип отчета')
+    summary = models.TextField(verbose_name='Сводка')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='reports_created', verbose_name='Создан')
+    
+    class Meta:
+        db_table = 'diagnostic_reports'
+        verbose_name = 'Отчет о диагностике'
+        verbose_name_plural = 'Отчеты о диагностике'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Отчет {self.id} - {self.get_report_type_display()} ({self.created_at.date()})"
 
 
 class Diagnosis(models.Model):
@@ -142,6 +164,7 @@ class Diagnosis(models.Model):
     
     system = models.ForeignKey(HydraulicSystem, on_delete=models.CASCADE, related_name='diagnoses', verbose_name='Система')
     equipment = models.ForeignKey(Equipment, on_delete=models.SET_NULL, null=True, blank=True, related_name='diagnoses', verbose_name='Оборудование')
+    report = models.ForeignKey(DiagnosticReport, on_delete=models.CASCADE, related_name='diagnoses', verbose_name='Отчет')
     
     # Основная информация
     title = models.CharField(max_length=200, verbose_name='Заголовок')
