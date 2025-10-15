@@ -26,8 +26,9 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'rest_framework',
-    'rest_framework_simplejwt',
-    'corsheaders',
+    'rest_framework_simplejwt',  # JWT authentication
+    'corsheaders',  # CORS headers
+    'django_filters',  # Django filters для фильтрации API
 ]
 
 LOCAL_APPS = [
@@ -36,11 +37,10 @@ LOCAL_APPS = [
     'apps.rag_assistant.apps.RagAssistantConfig',
 ]
 
-
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # CORS должен быть первым
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -79,35 +79,72 @@ DATABASES = {
     )
 }
 
-# REST Framework
+# REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # JWT authentication
     ),
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.IsAuthenticated',  # По умолчанию требуется аутентификация
     ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',  # Django filters
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',  # Базовая пагинация
+    'PAGE_SIZE': 20,  # Размер страницы по умолчанию
 }
 
-# CORS Settings
+# JWT Configuration
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Access token живет 1 час
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),  # Refresh token живет 7 дней
+    'ROTATE_REFRESH_TOKENS': True,  # Обновлять refresh token при использовании
+    'BLACKLIST_AFTER_ROTATION': True,  # Добавлять старые токены в blacklist
+    'UPDATE_LAST_LOGIN': True,  # Обновлять last_login при аутентификации
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+# CORS Settings - настройки для кросс-доменных запросов
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
 
-# Также убедитесь, что CORS настроен правильно
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000", 
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
 
-CORS_ALLOW_CREDENTIALS = True
-# или, если вы используете Django 5+, можно использовать:
-# CORS_ALLOWED_ORIGIN_REGEXES = [
-#     r"^https?://localhost:3000$",
-# ]
+CORS_ALLOW_CREDENTIALS = True  # Разрешить отправку cookies
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
 
 # Internationalization
 LANGUAGE_CODE = 'ru-ru'
@@ -124,20 +161,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
-
-<<<<<<< HEAD
-=======
-from datetime import timedelta
->>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
-
-# JWT Configuration (добавь в конец файла)
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-}
-<<<<<<< HEAD
-# Добавить в конец файла core/settings.py
 
 # AI и Machine Learning настройки
 AI_SETTINGS = {
@@ -164,14 +187,6 @@ MONITORING_SETTINGS = {
     'HEALTH_CHECK_INTERVAL': 300,  # 5 минут
 }
 
-# Middleware (добавить к существующему MIDDLEWARE)
-MIDDLEWARE += [
-    'apps.diagnostics.middleware.APILoggingMiddleware',
-    'apps.diagnostics.middleware.DiagnosticSystemMonitoringMiddleware',
-    'apps.diagnostics.middleware.RateLimitingMiddleware',
-    'apps.diagnostics.middleware.SystemHealthMiddleware',
-]
-
 # Создание папки для логов
 LOGS_DIR = BASE_DIR / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
@@ -190,11 +205,6 @@ LOGGING = {
             'format': '[{levelname}] {asctime} | {message}',
             'style': '{',
             'datefmt': '%H:%M:%S',
-        },
-        'django_server': {
-            'format': '[{asctime}] {message}',
-            'style': '{',
-            'datefmt': '%d/%b/%Y %H:%M:%S',
         },
     },
     'handlers': {
@@ -264,16 +274,6 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
-        'ai_engine': {
-            'handlers': ['console', 'ai_file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'diagnostic': {
-            'handlers': ['console', 'diagnostic_file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
     },
     'root': {
         'handlers': ['console', 'error_file'],
@@ -293,14 +293,6 @@ CACHES = {
     }
 }
 
-# Настройки для фоновых задач (если используется Celery)
-# CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-# CELERY_ACCEPT_CONTENT = ['json']
-# CELERY_TASK_SERIALIZER = 'json'
-# CELERY_RESULT_SERIALIZER = 'json'
-# CELERY_TIMEZONE = TIME_ZONE
-
 # Настройки безопасности для production
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
@@ -313,8 +305,3 @@ if not DEBUG:
 # Максимальный размер загружаемых файлов (100MB)
 FILE_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
-
-# Опционально для OpenAI
-OPENAI_API_KEY = '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'
-=======
->>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
