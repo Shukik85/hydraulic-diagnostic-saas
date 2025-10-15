@@ -1,4 +1,5 @@
 <template>
+<<<<<<< HEAD
   <div class="dashboard-container">
     <!-- Заголовок дашборда -->
     <div class="dashboard-header">
@@ -9,6 +10,16 @@
         <p class="dashboard-subtitle">
           Мониторинг гидравлических систем в реальном времени
         </p>
+=======
+  <div class="dashboard">
+    <header class="header">
+      <div class="container">
+        <h1>🔧 Диагностика гидравлических систем</h1>
+        <div class="user-info">
+          Привет, {{ user?.username }}!
+          <button @click="handleLogout" class="btn">Выход</button>
+        </div>
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
       </div>
       
       <div class="header-actions">
@@ -27,6 +38,7 @@
       </div>
     </div>
 
+<<<<<<< HEAD
     <!-- Метрики верхнего уровня -->
     <div class="metrics-grid">
       <div class="metric-card total-systems">
@@ -38,6 +50,11 @@
             +{{ dashboardStats.user_systems?.active || 0 }} активных
           </div>
         </div>
+=======
+    <main class="main">
+      <div class="container">
+        <SystemsList />
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
       </div>
 
       <div class="metric-card active-monitoring">
@@ -312,16 +329,24 @@
 </template>
 
 <script>
+<<<<<<< HEAD
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { hydraulicSystemService } from '@/services/hydraulicSystemService'
 import { ragService } from '@/services/ragService'
 import AIChat from '@/components/AIChat.vue'
 import DiagnosisModal from '@/components/DiagnosisModal.vue'
+=======
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'  // Добавь этот импорт
+import { authService } from '@/services/authService'
+import SystemsList from '@/components/SystemsList.vue'
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
 
 export default {
   name: 'Dashboard',
   components: {
+<<<<<<< HEAD
     AIChat,
     DiagnosisModal
   },
@@ -419,8 +444,22 @@ export default {
         console.error('Ошибка загрузки данных дашборда:', error)
       } finally {
         isRefreshing.value = false
+=======
+    SystemsList
+  },
+  setup() {
+    const router = useRouter()  // Добавь эту строку
+    const user = ref(null)
+
+    const checkAuth = () => {
+      if (!authService.isAuthenticated()) {
+        router.push('/login')  // Замени window.location.href на это
+        return
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
       }
+      user.value = authService.getCurrentUser()
     }
+<<<<<<< HEAD
     
     const generateRecommendations = async () => {
       try {
@@ -669,6 +708,21 @@ export default {
       formatTimeAgo,
       formatDate,
       truncateText
+=======
+
+    const handleLogout = () => {
+      authService.logout()
+      router.push('/login')  // Замени window.location.href на это
+    }
+
+    onMounted(() => {
+      checkAuth()
+    })
+
+    return {
+      user,
+      handleLogout
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
     }
   }
 }
@@ -679,7 +733,12 @@ export default {
 .dashboard-container {
   padding: 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+<<<<<<< HEAD
   min-height: 100vh;
+=======
+  color: white;
+  padding: 1rem 0;
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
 }
 
 /* Заголовок дашборда */
@@ -912,6 +971,7 @@ input:checked + .slider:before {
   align-items: center;
 }
 
+<<<<<<< HEAD
 .section-title {
   font-size: 1.25rem;
   font-weight: 600;
@@ -926,6 +986,12 @@ input:checked + .slider:before {
   border-radius: 12px;
   font-size: 0.875rem;
   font-weight: 600;
+=======
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
 }
 
 .section-link {
@@ -934,6 +1000,7 @@ input:checked + .slider:before {
   font-weight: 500;
   transition: color 0.2s;
 }
+<<<<<<< HEAD
 
 .section-link:hover {
   color: #553c9a;
@@ -1438,4 +1505,6 @@ input:checked + .slider:before {
     flex-direction: column;
   }
 }
+=======
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
 </style>

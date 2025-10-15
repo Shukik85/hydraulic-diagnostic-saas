@@ -1,4 +1,5 @@
 from rest_framework import serializers
+<<<<<<< HEAD
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate
 from .models import User, UserProfile, UserActivity
@@ -6,14 +7,36 @@ from .models import User, UserProfile, UserActivity
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """Сериализатор регистрации пользователя"""
     password = serializers.CharField(write_only=True, validators=[validate_password])
+=======
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from .models import User
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'role': self.user.role
+        }
+        return data
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=6)
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
     password_confirm = serializers.CharField(write_only=True)
     
     class Meta:
         model = User
+<<<<<<< HEAD
         fields = [
             'username', 'email', 'password', 'password_confirm',
             'first_name', 'last_name', 'company', 'position', 'phone'
         ]
+=======
+        fields = ['email', 'username', 'password', 'password_confirm']
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
     
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -22,6 +45,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         validated_data.pop('password_confirm')
+<<<<<<< HEAD
         password = validated_data.pop('password')
         
         user = User(**validated_data)
@@ -130,3 +154,7 @@ class UserStatsSerializer(serializers.Serializer):
     critical_alerts_today = serializers.IntegerField()
     ai_queries_this_month = serializers.IntegerField()
     last_diagnostic_run = serializers.DateTimeField()
+=======
+        user = User.objects.create_user(**validated_data)
+        return user
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f

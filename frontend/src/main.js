@@ -1,12 +1,18 @@
 import { createApp } from 'vue'
 import App from './App.vue'
+<<<<<<< HEAD
 import router from './router'
 import { createPinia } from 'pinia'
 import MainLayout from './layouts/MainLayout.vue'
 import websocketService, { useWebSocket } from './services/websocketService'
+=======
+import router from './router'  // Добавь эту строку
+import './style.css'
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
 
 // Создание приложения
 const app = createApp(App)
+<<<<<<< HEAD
 
 // Подключение Pinia для state management
 const pinia = createPinia()
@@ -46,6 +52,9 @@ router.beforeEach((to, from, next) => {
 })
 
 // Монтирование приложения
+=======
+app.use(router)  // Добавь эту строку
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
 app.mount('#app')
 
 // Обработка ошибок Vue

@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+<<<<<<< HEAD
 from django.utils import timezone
 from django.core.validators import MinValueValidator, MaxValueValidator
 import json
@@ -17,12 +18,27 @@ class HydraulicSystem(models.Model):
         ('construction', 'Строительная'),
         ('mining', 'Горнодобывающая'),
         ('agricultural', 'Сельскохозяйственная'),
+=======
+
+User = get_user_model()
+
+
+class HydraulicSystem(models.Model):
+    """Гидравлическая система"""
+    
+    SYSTEM_TYPES = [
+        ('industrial', 'Промышленная'),
+        ('mobile', 'Мобильная'),  
+        ('marine', 'Морская'),
+        ('aviation', 'Авиационная'),
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
     ]
     
     STATUS_CHOICES = [
         ('active', 'Активна'),
         ('maintenance', 'На обслуживании'),
         ('inactive', 'Неактивна'),
+<<<<<<< HEAD
         ('emergency', 'Аварийная'),
         ('decommissioned', 'Списана'),
     ]
@@ -514,6 +530,138 @@ class Alert(models.Model):
         ('performance_degradation', 'Снижение производительности'),
     ]
     
+=======
+        ('faulty', 'Неисправна'),
+    ]
+    
+    name = models.CharField(max_length=200, verbose_name='Название системы')
+    system_type = models.CharField(max_length=50, choices=SYSTEM_TYPES, verbose_name='Тип системы')
+    location = models.CharField(max_length=200, verbose_name='Местоположение')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='active', verbose_name='Статус')
+    
+    # Технические характеристики
+    max_pressure = models.FloatField(verbose_name='Максимальное давление (бар)')
+    flow_rate = models.FloatField(verbose_name='Расход (л/мин)')
+    temperature_range = models.CharField(max_length=50, verbose_name='Диапазон температур')
+    
+    # Метаданные
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Владелец')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+    
+    class Meta:
+        db_table = 'hydraulic_systems'
+        verbose_name = 'Гидравлическая система'
+        verbose_name_plural = 'Гидравлические системы'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_system_type_display()})"
+
+
+class SensorData(models.Model):
+    """Данные с датчиков"""
+    
+    SENSOR_TYPES = [
+        ('pressure', 'Датчик давления'),
+        ('temperature', 'Датчик температуры'),
+        ('flow', 'Датчик расхода'),
+        ('vibration', 'Датчик вибрации'),
+        ('level', 'Датчик уровня'),
+    ]
+    
+    system = models.ForeignKey(HydraulicSystem, on_delete=models.CASCADE, related_name='sensor_data', verbose_name='Система')
+    sensor_type = models.CharField(max_length=50, choices=SENSOR_TYPES, verbose_name='Тип датчика')
+    value = models.FloatField(verbose_name='Значение')
+    unit = models.CharField(max_length=20, verbose_name='Единица измерения')
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name='Время измерения')
+    
+    class Meta:
+        db_table = 'sensor_data'
+        verbose_name = 'Данные датчика'
+        verbose_name_plural = 'Данные датчиков'
+        ordering = ['-timestamp']
+    
+    def __str__(self):
+        return f"{self.get_sensor_type_display()}: {self.value} {self.unit}"
+
+
+class Equipment(models.Model):
+    """Оборудование гидравлической системы"""
+    
+    EQUIPMENT_TYPES = [
+        ('pump', 'Насос'),
+        ('valve', 'Клапан'),
+        ('cylinder', 'Цилиндр'),
+        ('motor', 'Мотор'),
+        ('filter', 'Фильтр'),
+        ('accumulator', 'Аккумулятор'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('operational', 'В работе'),
+        ('maintenance', 'На обслуживании'),
+        ('faulty', 'Неисправно'),
+        ('retired', 'Списано'),
+    ]
+    
+    system = models.ForeignKey(HydraulicSystem, on_delete=models.CASCADE, related_name='equipment', verbose_name='Система')
+    name = models.CharField(max_length=200, verbose_name='Название')
+    equipment_type = models.CharField(max_length=50, choices=EQUIPMENT_TYPES, verbose_name='Тип оборудования')
+    manufacturer = models.CharField(max_length=200, verbose_name='Производитель')
+    model = models.CharField(max_length=200, verbose_name='Модель')
+    serial_number = models.CharField(max_length=100, unique=True, verbose_name='Серийный номер')
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='operational', verbose_name='Статус')
+    
+    # Даты обслуживания
+    installation_date = models.DateField(verbose_name='Дата установки')
+    last_maintenance = models.DateField(null=True, blank=True, verbose_name='Последнее обслуживание')
+    next_maintenance = models.DateField(null=True, blank=True, verbose_name='Следующее обслуживание')
+    
+    # Метаданные
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
+    
+    class Meta:
+        db_table = 'equipment'
+        verbose_name = 'Оборудование'
+        verbose_name_plural = 'Оборудование'
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_equipment_type_display()})"
+
+
+class DiagnosticReport(models.Model):
+    """Отчет о диагностике"""
+    
+    REPORT_TYPES = [
+        ('routine', 'Плановая проверка'),
+        ('emergency', 'Экстренная диагностика'),
+        ('post_repair', 'После ремонта'),
+        ('commissioning', 'Ввод в эксплуатацию'),
+    ]
+    
+    system = models.ForeignKey(HydraulicSystem, on_delete=models.CASCADE, related_name='reports', verbose_name='Система')
+    report_type = models.CharField(max_length=50, choices=REPORT_TYPES, verbose_name='Тип отчета')
+    summary = models.TextField(verbose_name='Сводка')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='reports_created', verbose_name='Создан')
+    
+    class Meta:
+        db_table = 'diagnostic_reports'
+        verbose_name = 'Отчет о диагностике'
+        verbose_name_plural = 'Отчеты о диагностике'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Отчет {self.id} - {self.get_report_type_display()} ({self.created_at.date()})"
+
+
+class Diagnosis(models.Model):
+    """Результаты диагностики"""
+    
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
     SEVERITY_LEVELS = [
         ('low', 'Низкая'),
         ('medium', 'Средняя'),
@@ -522,6 +670,7 @@ class Alert(models.Model):
     ]
     
     STATUS_CHOICES = [
+<<<<<<< HEAD
         ('active', 'Активно'),
         ('acknowledged', 'Принято'),
         ('resolved', 'Решено'),
@@ -592,3 +741,41 @@ class Alert(models.Model):
         self.resolved_at = timezone.now()
         self.resolution_notes = notes
         self.save()
+=======
+        ('pending', 'В ожидании'),
+        ('in_progress', 'В процессе'),
+        ('completed', 'Завершена'),
+        ('failed', 'Неудачная'),
+    ]
+    
+    system = models.ForeignKey(HydraulicSystem, on_delete=models.CASCADE, related_name='diagnoses', verbose_name='Система')
+    equipment = models.ForeignKey(Equipment, on_delete=models.SET_NULL, null=True, blank=True, related_name='diagnoses', verbose_name='Оборудование')
+    report = models.ForeignKey(DiagnosticReport, on_delete=models.CASCADE, related_name='diagnoses', verbose_name='Отчет')
+    
+    # Основная информация
+    title = models.CharField(max_length=200, verbose_name='Заголовок')
+    description = models.TextField(verbose_name='Описание')
+    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS, verbose_name='Серьезность')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Статус')
+    
+    # Результаты
+    findings = models.TextField(blank=True, verbose_name='Результаты')
+    recommendations = models.TextField(blank=True, verbose_name='Рекомендации')
+    
+    # Даты
+    diagnosed_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата диагностики')
+    resolved_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата решения')
+    
+    # Ответственные
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='diagnoses_created', verbose_name='Создано')
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='diagnoses_assigned', verbose_name='Назначено')
+    
+    class Meta:
+        db_table = 'diagnoses'
+        verbose_name = 'Диагностика'
+        verbose_name_plural = 'Диагностики'
+        ordering = ['-diagnosed_at']
+    
+    def __str__(self):
+        return f"{self.title} - {self.get_severity_display()} ({self.diagnosed_at.date()})"
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f

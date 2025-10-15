@@ -125,6 +125,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
 
+<<<<<<< HEAD
+=======
+from datetime import timedelta
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
 
 # JWT Configuration (добавь в конец файла)
 SIMPLE_JWT = {
@@ -132,6 +136,7 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
 }
+<<<<<<< HEAD
 # Добавить в конец файла core/settings.py
 
 # AI и Machine Learning настройки
@@ -311,3 +316,5 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
 
 # Опционально для OpenAI
 OPENAI_API_KEY = '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'
+=======
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f

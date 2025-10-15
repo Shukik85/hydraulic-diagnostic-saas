@@ -1,4 +1,5 @@
 from rest_framework import serializers
+<<<<<<< HEAD
 from django.utils import timezone
 from datetime import timedelta
 from .models import (
@@ -96,10 +97,28 @@ class SensorDataSerializer(serializers.ModelSerializer):
     sensor_type_display = serializers.CharField(source='get_sensor_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     system_name = serializers.CharField(source='system.name', read_only=True)
+=======
+from .models import HydraulicSystem, SensorData, Equipment, Diagnosis, DiagnosticReport
+from apps.users.models import User
+
+class UserBasicSerializer(serializers.ModelSerializer):
+    """Базовая информация о пользователе"""
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email']
+
+class SensorDataSerializer(serializers.ModelSerializer):
+    """Сериализатор для данных датчиков"""
+    sensor_type_display = serializers.CharField(
+        source='get_sensor_type_display', read_only=True
+    )
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
     
     class Meta:
         model = SensorData
         fields = [
+<<<<<<< HEAD
             'id', 'system', 'system_name', 'sensor_type', 'sensor_type_display',
             'sensor_id', 'value', 'unit', 'timestamp', 'status', 'status_display',
             'is_critical', 'warning_message', 'raw_data', 'quality_score',
@@ -127,10 +146,41 @@ class DiagnosticReportListSerializer(serializers.ModelSerializer):
     report_type_display = serializers.CharField(source='get_report_type_display', read_only=True)
     severity_display = serializers.CharField(source='get_severity_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+=======
+            'id', 'sensor_type', 'sensor_type_display', 'value', 'unit',
+            'timestamp', 'is_critical', 'threshold_exceeded'
+        ]
+
+class EquipmentSerializer(serializers.ModelSerializer):
+    """Сериализатор для оборудования"""
+    equipment_type_display = serializers.CharField(
+        source='get_equipment_type_display', read_only=True
+    )
+    status_display = serializers.CharField(
+        source='get_status_display', read_only=True
+    )
+    
+    class Meta:
+        model = Equipment
+        fields = [
+            'id', 'name', 'equipment_type', 'equipment_type_display',
+            'manufacturer', 'model', 'serial_number', 'status', 'status_display',
+            'installation_date', 'last_maintenance', 'next_maintenance',
+            'created_at', 'updated_at'
+        ]
+
+class DiagnosticReportSerializer(serializers.ModelSerializer):
+    """Сериализатор для диагностических отчетов"""
+    report_type_display = serializers.CharField(
+        source='get_report_type_display', read_only=True
+    )
+    generated_by = UserBasicSerializer(read_only=True)
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
     
     class Meta:
         model = DiagnosticReport
         fields = [
+<<<<<<< HEAD
             'id', 'system', 'system_name', 'title', 'report_type', 'report_type_display',
             'severity', 'severity_display', 'status', 'status_display',
             'ai_confidence', 'created_at', 'completed_at'
@@ -317,3 +367,56 @@ class DiagnosticRequestSerializer(serializers.Serializer):
             raise serializers.ValidationError("Некоторые системы не найдены или недоступны")
         
         return value
+=======
+            'id', 'title', 'report_type', 'report_type_display',
+            'generated_by', 'generated_at', 'data', 'file_path',
+            'created_at', 'updated_at'
+        ]
+
+class DiagnosisSerializer(serializers.ModelSerializer):
+    """Сериализатор для диагностики"""
+    status_display = serializers.CharField(
+        source='get_status_display', read_only=True
+    )
+    severity_display = serializers.CharField(
+        source='get_severity_display', read_only=True
+    )
+    assigned_to = UserBasicSerializer(read_only=True)
+    created_by = UserBasicSerializer(read_only=True)
+    equipment = EquipmentSerializer(read_only=True)
+    report = DiagnosticReportSerializer(read_only=True)
+    
+    class Meta:
+        model = Diagnosis
+        fields = [
+            'id', 'title', 'description', 'severity', 'severity_display',
+            'status', 'status_display', 'equipment', 'assigned_to', 'created_by',
+            'report', 'findings', 'recommendations', 'diagnosed_at', 'resolved_at'
+        ]
+
+class HydraulicSystemSerializer(serializers.ModelSerializer):
+    """Сериализатор для гидравлической системы"""
+    system_type_display = serializers.CharField(
+        source='get_system_type_display', read_only=True
+    )
+    status_display = serializers.CharField(
+        source='get_status_display', read_only=True
+    )
+    owner = UserBasicSerializer(read_only=True)
+    equipment = EquipmentSerializer(many=True, read_only=True)
+    sensor_data = SensorDataSerializer(many=True, read_only=True)
+    recent_diagnoses = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = HydraulicSystem
+        fields = [
+            'id', 'name', 'system_type', 'system_type_display', 'location',
+            'status', 'status_display', 'max_pressure', 'flow_rate',
+            'temperature_range', 'owner', 'equipment', 'sensor_data',
+            'recent_diagnoses', 'created_at', 'updated_at'
+        ]
+    
+    def get_recent_diagnoses(self, obj):
+        recent = obj.diagnoses.all()[:5]
+        return DiagnosisSerializer(recent, many=True).data
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f

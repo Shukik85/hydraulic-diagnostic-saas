@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+<<<<<<< HEAD
 from django.conf import settings
 from django.conf.urls.static import static
 from apps.users.views import UserRegistrationView, UserLoginView
@@ -18,6 +19,13 @@ urlpatterns = [
     path('api/users/', include('apps.users.urls')),
     path('api/diagnostics/', include('apps.diagnostics.urls')),
     path('api/rag/', include('apps.rag_assistant.urls')),
+=======
+
+urlpatterns = [
+    path('admin/', admin.site.urls), # Админка Django
+    path('api/', include('apps.diagnostics.urls')), # Добавляем маршруты приложения diagnostics
+    path('api/', include('apps.users.urls')), # Добавляем маршруты приложения users
+>>>>>>> cae71f2baa2fcddf341336d7eaa5721b089eeb9f
 ]
 
 if settings.DEBUG:
