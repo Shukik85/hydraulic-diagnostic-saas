@@ -57,37 +57,6 @@ jobs:
           file: ./backend/coverage.xml
           flags: backend
           fail_ci_if_error: false
-
-  test-frontend:
-    name: Frontend Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: ./frontend/package-lock.json
-      
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: npm ci
-      
-      - name: Run tests
-        working-directory: ./frontend
-        run: npm test -- --run --coverage
-      
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          directory: ./frontend/coverage
-          flags: frontend
-          fail_ci_if_error: false
-
   test-nuxt-frontend:
     name: Nuxt Frontend Tests
     runs-on: ubuntu-latest
@@ -117,7 +86,6 @@ jobs:
           directory: ./nuxt_frontend/coverage
           flags: nuxt-frontend
           fail_ci_if_error: false
-
   lint-backend:
     name: Backend Linting
     runs-on: ubuntu-latest
@@ -138,28 +106,4 @@ jobs:
       - name: Run flake8
         working-directory: ./backend
         run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        continue-on-error: true
-
-  lint-frontend:
-    name: Frontend Linting
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: ./frontend/package-lock.json
-      
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: npm ci
-      
-      - name: Run ESLint
-        working-directory: ./frontend
-        run: npm run lint
         continue-on-error: true
