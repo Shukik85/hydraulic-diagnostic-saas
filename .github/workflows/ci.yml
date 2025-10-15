@@ -1,9 +1,11 @@
 name: CI/CD Pipeline
+
 on:
   push:
     branches: [ master, develop ]
   pull_request:
     branches: [ master, develop ]
+
 jobs:
   test-backend:
     name: Backend Tests
@@ -57,6 +59,7 @@ jobs:
           file: ./backend/coverage.xml
           flags: backend
           fail_ci_if_error: false
+
   test-nuxt-frontend:
     name: Nuxt Frontend Tests
     runs-on: ubuntu-latest
@@ -72,9 +75,15 @@ jobs:
           cache: 'npm'
           cache-dependency-path: ./nuxt_frontend/package-lock.json
       
+      - name: Clear npm cache
+        working-directory: ./nuxt_frontend
+        run: |
+          npm cache clean --force
+      
       - name: Install dependencies
         working-directory: ./nuxt_frontend
-        run: npm ci
+        run: |
+          npm ci --legacy-peer-deps || npm ci --force
       
       - name: Run tests
         working-directory: ./nuxt_frontend
@@ -86,6 +95,7 @@ jobs:
           directory: ./nuxt_frontend/coverage
           flags: nuxt-frontend
           fail_ci_if_error: false
+
   lint-backend:
     name: Backend Linting
     runs-on: ubuntu-latest
