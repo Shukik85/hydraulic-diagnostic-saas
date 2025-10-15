@@ -1,7 +1,6 @@
 from rest_framework import serializers
-from .models import HydraulicSystem, SensorData, Equipment, Diagnosis
+from .models import HydraulicSystem, SensorData, Equipment, Diagnosis, DiagnosticReport
 from apps.users.models import User
-
 
 class UserBasicSerializer(serializers.ModelSerializer):
     """Базовая информация о пользователе"""
@@ -9,7 +8,6 @@ class UserBasicSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email']
-
 
 class SensorDataSerializer(serializers.ModelSerializer):
     """Сериализатор для данных датчиков"""
@@ -23,7 +21,6 @@ class SensorDataSerializer(serializers.ModelSerializer):
             'id', 'sensor_type', 'sensor_type_display', 'value', 'unit',
             'timestamp', 'is_critical', 'threshold_exceeded'
         ]
-
 
 class EquipmentSerializer(serializers.ModelSerializer):
     """Сериализатор для оборудования"""
@@ -43,6 +40,20 @@ class EquipmentSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
 
+class DiagnosticReportSerializer(serializers.ModelSerializer):
+    """Сериализатор для диагностических отчетов"""
+    report_type_display = serializers.CharField(
+        source='get_report_type_display', read_only=True
+    )
+    generated_by = UserBasicSerializer(read_only=True)
+    
+    class Meta:
+        model = DiagnosticReport
+        fields = [
+            'id', 'title', 'report_type', 'report_type_display',
+            'generated_by', 'generated_at', 'data', 'file_path',
+            'created_at', 'updated_at'
+        ]
 
 class DiagnosisSerializer(serializers.ModelSerializer):
     """Сериализатор для диагностики"""
@@ -55,15 +66,15 @@ class DiagnosisSerializer(serializers.ModelSerializer):
     assigned_to = UserBasicSerializer(read_only=True)
     created_by = UserBasicSerializer(read_only=True)
     equipment = EquipmentSerializer(read_only=True)
+    report = DiagnosticReportSerializer(read_only=True)
     
     class Meta:
         model = Diagnosis
         fields = [
             'id', 'title', 'description', 'severity', 'severity_display',
             'status', 'status_display', 'equipment', 'assigned_to', 'created_by',
-            'findings', 'recommendations', 'diagnosed_at', 'resolved_at'
+            'report', 'findings', 'recommendations', 'diagnosed_at', 'resolved_at'
         ]
-
 
 class HydraulicSystemSerializer(serializers.ModelSerializer):
     """Сериализатор для гидравлической системы"""
