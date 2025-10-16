@@ -14,13 +14,16 @@ jobs:
       matrix:
         python: [3.10, 3.11]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
       - name: Install dev dependencies
-        run: pip install -r requirements-dev.txt
+        run: 
+          cd backend
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
       - name: Format and lint
         run: |
           black --check .
@@ -37,13 +40,14 @@ jobs:
       matrix:
         python: [3.10, 3.11]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
       - name: Install dependencies
         run: |
+          cd backend
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
       - name: Run tests with coverage
