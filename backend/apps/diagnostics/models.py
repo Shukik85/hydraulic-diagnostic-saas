@@ -6,32 +6,31 @@ import uuid
 
 User = get_user_model()
 
+SYSTEM_TYPES = [
+    ('industrial', 'Промышленная'),
+    ('mobile', 'Мобильная'),
+    ('marine', 'Морская'),
+    ('aviation', 'Авиационная'),
+    ('construction', 'Строительная'),
+    ('mining', 'Горнодобывающая'),
+    ('agricultural', 'Сельскохозяйственная'),
+]
+STATUS_CHOICES = [
+    ('active', 'Активна'),
+    ('maintenance', 'На обслуживании'),
+    ('inactive', 'Неактивна'),
+    ('emergency', 'Аварийная'),
+    ('decommissioned', 'Списана'),
+]
+CRITICALITY_LEVELS = [
+    ('low', 'Низкая'),
+    ('medium', 'Средняя'),
+    ('high', 'Высокая'),
+    ('critical', 'Критическая'),
+]
 
 class HydraulicSystem(models.Model):
     """Гидравлическая система"""
-
-    SYSTEM_TYPES = [
-        ('industrial', 'Промышленная'),
-        ('mobile', 'Мобильная'),
-        ('marine', 'Морская'),
-        ('aviation', 'Авиационная'),
-        ('construction', 'Строительная'),
-        ('mining', 'Горнодобывающая'),
-        ('agricultural', 'Сельскохозяйственная'),
-    ]
-    STATUS_CHOICES = [
-        ('active', 'Активна'),
-        ('maintenance', 'На обслуживании'),
-        ('inactive', 'Неактивна'),
-        ('emergency', 'Аварийная'),
-        ('decommissioned', 'Списана'),
-    ]
-    CRITICALITY_LEVELS = [
-        ('low', 'Низкая'),
-        ('medium', 'Средняя'),
-        ('high', 'Высокая'),
-        ('critical', 'Критическая'),
-    ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200, verbose_name='Название системы')
@@ -191,31 +190,7 @@ class DiagnosticReport(models.Model):
 
 
 class MaintenanceSchedule(models.Model):
-    """График планового обслуживания"""   
-    
-
-    SYSTEM_TYPES = [
-        ('industrial', 'Промышленная'),
-        ('mobile', 'Мобильная'),
-        ('marine', 'Морская'),
-        ('aviation', 'Авиационная'),
-        ('construction', 'Строительная'),
-        ('mining', 'Горнодобывающая'),
-        ('agricultural', 'Сельскохозяйственная'),
-    ]
-    STATUS_CHOICES = [
-        ('active', 'Активна'),
-        ('maintenance', 'На обслуживании'),
-        ('inactive', 'Неактивна'),
-        ('emergency', 'Аварийная'),
-        ('decommissioned', 'Списана'),
-    ]
-    CRITICALITY_LEVELS = [
-        ('low', 'Низкая'),
-        ('medium', 'Средняя'),
-        ('high', 'Высокая'),
-        ('critical', 'Критическая'),
-    ]
+    """График планового обслуживания"""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     system = models.ForeignKey(
