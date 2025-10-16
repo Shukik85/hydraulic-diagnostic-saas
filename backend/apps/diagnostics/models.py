@@ -29,6 +29,7 @@ CRITICALITY_LEVELS = [
     ('critical', 'Критическая'),
 ]
 
+
 class HydraulicSystem(models.Model):
     """Гидравлическая система"""
 
@@ -82,7 +83,11 @@ class SystemComponent(models.Model):
         related_name='components', verbose_name='Система', db_index=True
     )
     name = models.CharField(max_length=200, verbose_name='Название компонента')
-    specification = models.JSONField(blank=True, null=True, verbose_name='Характеристики')
+    specification = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name='Характеристики'
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -112,7 +117,10 @@ class SensorData(models.Model):
     )
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
     value = models.FloatField(verbose_name='Значение')
-    unit = models.CharField(max_length=50, blank=True, verbose_name='Единица измерения')
+    unit = models.CharField(max_length=50,
+                            blank=True,
+                            verbose_name='Единица измерения'
+                            )
 
     class Meta:
         verbose_name = 'Данные датчика'
@@ -197,7 +205,8 @@ class MaintenanceSchedule(models.Model):
         HydraulicSystem, on_delete=models.CASCADE,
         related_name='maintenance_schedules', verbose_name='Система', db_index=True
     )
-    schedule_date = models.DateField(verbose_name='Дата обслуживания', db_index=True)
+    schedule_date = models.DateField(
+        verbose_name='Дата обслуживания', db_index=True)
     description = models.TextField(blank=True, verbose_name='Описание')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -214,10 +223,13 @@ class MaintenanceSchedule(models.Model):
     description = models.TextField(blank=True, verbose_name='Описание')
 
     # Основные характеристики
-    system_type = models.CharField(max_length=50, choices=SYSTEM_TYPES, verbose_name='Тип системы')
-    manufacturer = models.CharField(max_length=100, blank=True, verbose_name='Производитель')
+    system_type = models.CharField(
+        max_length=50, choices=SYSTEM_TYPES, verbose_name='Тип системы')
+    manufacturer = models.CharField(
+        max_length=100, blank=True, verbose_name='Производитель')
     model = models.CharField(max_length=100, blank=True, verbose_name='Модель')
-    serial_number = models.CharField(max_length=100, blank=True, verbose_name='Серийный номер')
+    serial_number = models.CharField(
+        max_length=100, blank=True, verbose_name='Серийный номер')
 
     # Технические параметры
     max_pressure = models.FloatField(
@@ -240,18 +252,24 @@ class MaintenanceSchedule(models.Model):
     )
 
     # Статус и критичность
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active', verbose_name='Статус')
-    criticality = models.CharField(max_length=20, choices=CRITICALITY_LEVELS, default='medium', verbose_name='Критичность')
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='active', verbose_name='Статус')
+    criticality = models.CharField(
+        max_length=20, choices=CRITICALITY_LEVELS, default='medium', verbose_name='Критичность')
 
     # Местоположение
-    location = models.CharField(max_length=200, blank=True, verbose_name='Местоположение')
-    installation_date = models.DateField(null=True, blank=True, verbose_name='Дата установки')
+    location = models.CharField(
+        max_length=200, blank=True, verbose_name='Местоположение')
+    installation_date = models.DateField(
+        null=True, blank=True, verbose_name='Дата установки')
 
     # Временные метки
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлен')
-    last_maintenance = models.DateTimeField(null=True, blank=True, verbose_name='Последнее ТО')
-    next_maintenance = models.DateTimeField(null=True, blank=True, verbose_name='Следующее ТО')
+    last_maintenance = models.DateTimeField(
+        null=True, blank=True, verbose_name='Последнее ТО')
+    next_maintenance = models.DateTimeField(
+        null=True, blank=True, verbose_name='Следующее ТО')
 
     class Meta:
         verbose_name = 'Гидравлическая система'
@@ -303,19 +321,27 @@ class DiagnosticReport(models.Model):
     # Основная информация
     title = models.CharField(max_length=200, verbose_name='Заголовок')
     description = models.TextField(verbose_name='Описание')
-    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, verbose_name='Важность')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Статус')
+    severity = models.CharField(
+        max_length=20, choices=SEVERITY_CHOICES, verbose_name='Важность')
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Статус')
 
     # Технические данные
-    measured_pressure = models.FloatField(null=True, blank=True, verbose_name='Измеренное давление')
-    measured_flow = models.FloatField(null=True, blank=True, verbose_name='Измеренный расход')
-    measured_temperature = models.FloatField(null=True, blank=True, verbose_name='Измеренная температура')
-    vibration_level = models.FloatField(null=True, blank=True, verbose_name='Уровень вибрации')
-    noise_level = models.FloatField(null=True, blank=True, verbose_name='Уровень шума')
+    measured_pressure = models.FloatField(
+        null=True, blank=True, verbose_name='Измеренное давление')
+    measured_flow = models.FloatField(
+        null=True, blank=True, verbose_name='Измеренный расход')
+    measured_temperature = models.FloatField(
+        null=True, blank=True, verbose_name='Измеренная температура')
+    vibration_level = models.FloatField(
+        null=True, blank=True, verbose_name='Уровень вибрации')
+    noise_level = models.FloatField(
+        null=True, blank=True, verbose_name='Уровень шума')
 
     # Рекомендации
     recommendations = models.TextField(blank=True, verbose_name='Рекомендации')
-    actions_taken = models.TextField(blank=True, verbose_name='Выполненные действия')
+    actions_taken = models.TextField(
+        blank=True, verbose_name='Выполненные действия')
 
     # AI анализ
     ai_confidence = models.FloatField(
@@ -330,7 +356,8 @@ class DiagnosticReport(models.Model):
 
     # Временные метки
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
-    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='Завершен')
+    completed_at = models.DateTimeField(
+        null=True, blank=True, verbose_name='Завершен')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     # Автор (если ручной отчет)
@@ -390,15 +417,21 @@ class SystemComponent(models.Model):
         verbose_name='Система'
     )
 
-    component_type = models.CharField(max_length=50, choices=COMPONENT_TYPES, verbose_name='Тип компонента')
+    component_type = models.CharField(
+        max_length=50, choices=COMPONENT_TYPES, verbose_name='Тип компонента')
     name = models.CharField(max_length=200, verbose_name='Название')
-    manufacturer = models.CharField(max_length=100, blank=True, verbose_name='Производитель')
+    manufacturer = models.CharField(
+        max_length=100, blank=True, verbose_name='Производитель')
     model = models.CharField(max_length=100, blank=True, verbose_name='Модель')
-    serial_number = models.CharField(max_length=100, blank=True, verbose_name='Серийный номер')
+    serial_number = models.CharField(
+        max_length=100, blank=True, verbose_name='Серийный номер')
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='operational', verbose_name='Статус')
-    installation_date = models.DateField(null=True, blank=True, verbose_name='Дата установки')
-    last_service_date = models.DateField(null=True, blank=True, verbose_name='Дата последнего обслуживания')
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='operational', verbose_name='Статус')
+    installation_date = models.DateField(
+        null=True, blank=True, verbose_name='Дата установки')
+    last_service_date = models.DateField(
+        null=True, blank=True, verbose_name='Дата последнего обслуживания')
 
     notes = models.TextField(blank=True, verbose_name='Примечания')
 
@@ -451,28 +484,38 @@ class SensorData(models.Model):
         verbose_name='Компонент'
     )
 
-    sensor_type = models.CharField(max_length=50, choices=SENSOR_TYPES, verbose_name='Тип сенсора')
-    sensor_code = models.CharField(max_length=100, blank=True, verbose_name='Код/именование сенсора')
+    sensor_type = models.CharField(
+        max_length=50, choices=SENSOR_TYPES, verbose_name='Тип сенсора')
+    sensor_code = models.CharField(
+        max_length=100, blank=True, verbose_name='Код/именование сенсора')
 
     value = models.FloatField(verbose_name='Значение')
     unit = models.CharField(max_length=50, verbose_name='Ед. измерения')
 
-    timestamp = models.DateTimeField(default=timezone.now, db_index=True, verbose_name='Момент измерения')
+    timestamp = models.DateTimeField(
+        default=timezone.now, db_index=True, verbose_name='Момент измерения')
 
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ok', verbose_name='Статус')
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='ok', verbose_name='Статус')
     is_critical = models.BooleanField(default=False, verbose_name='Критично')
 
     # Пределы и качество данных
-    lower_bound = models.FloatField(null=True, blank=True, verbose_name='Нижний предел')
-    upper_bound = models.FloatField(null=True, blank=True, verbose_name='Верхний предел')
-    quality = models.CharField(max_length=50, blank=True, verbose_name='Качество/источник')
-    is_out_of_range = models.BooleanField(default=False, verbose_name='Выход за предел')
+    lower_bound = models.FloatField(
+        null=True, blank=True, verbose_name='Нижний предел')
+    upper_bound = models.FloatField(
+        null=True, blank=True, verbose_name='Верхний предел')
+    quality = models.CharField(
+        max_length=50, blank=True, verbose_name='Качество/источник')
+    is_out_of_range = models.BooleanField(
+        default=False, verbose_name='Выход за предел')
 
     # Доп. сведения
-    metadata = models.JSONField(default=dict, blank=True, verbose_name='Метаданные')
+    metadata = models.JSONField(
+        default=dict, blank=True, verbose_name='Метаданные')
     note = models.TextField(blank=True, verbose_name='Примечание')
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создано')
+    created_at = models.DateTimeField(
+        auto_now_add=True, verbose_name='Создано')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлено')
 
     class Meta:
