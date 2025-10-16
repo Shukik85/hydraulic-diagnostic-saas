@@ -31,7 +31,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
           cache: 'pip'
       
       - name: Install dependencies
@@ -73,7 +73,7 @@ jobs:
           cache-dependency-path: ./nuxt_frontend/package-lock.json
       
       - name: Downgrade npm to version 9
-        run: npm install -g npm@9
+        run: npm install -g npm
       
       - name: Clear npm cache
         working-directory: ./nuxt_frontend
@@ -106,7 +106,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
       
       - name: Install linting tools
         run: |
