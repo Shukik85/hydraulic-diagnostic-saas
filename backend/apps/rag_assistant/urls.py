@@ -1,14 +1,12 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views
+from .views import DocumentViewSet, RagSystemViewSet, RagQueryLogViewSet
 
 router = DefaultRouter()
-router.register(r'knowledge-base', views.KnowledgeBaseViewSet, basename='knowledgebase')
-router.register(r'queries', views.RAGQueryViewSet, basename='ragquery')
-router.register(r'conversations', views.RAGConversationViewSet, basename='ragconversation')
-router.register(r'settings', views.RAGSystemSettingsViewSet, basename='ragsettings')
+router.register(r'documents', DocumentViewSet, basename='documents')
+router.register(r'systems', RagSystemViewSet, basename='systems')
+router.register(r'logs', RagQueryLogViewSet, basename='logs')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('stats/', views.rag_system_stats, name='rag-stats'),
 ]

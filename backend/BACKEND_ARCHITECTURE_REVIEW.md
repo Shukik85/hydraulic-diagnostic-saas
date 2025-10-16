@@ -1,6 +1,34 @@
 # Backend Architecture Review: Hydraulic Diagnostic SaaS
 
-## Overview
+# Обзор архитектуры бэкенда
+
+## 1. Структура приложения
+- `core/` — корневые настройки и маршрутизация.
+- `apps/users/` — управление пользователями, аутентификация.
+- `apps/diagnostics/` — диагностика гидросистем.
+- `apps/rag_assistant/` — Retrieval-Augmented Generation.
+
+## 2. CI/CD
+Документация и тесты запускаются через GitHub Actions (`ci.yml`), покрытие собирается в `coverage.xml`.
+
+## 3. Функциональные зоны
+- **Auth**: JWT через SimpleJWT, пользовательские пермишены.
+- **Diagnostic**: CRUD для систем, компонентов, отчётов и планов обслуживания.
+- **RAG**: индексация многоформатных документов, мультиязычный поиск, логирование запросов.
+
+## 4. Расширяемость
+- **Индексаторы**: FAISS, ElasticSearch, Pinecone.
+- **Форматы**: txt, pdf, docx, md.  
+- **Языки**: en, ru, de и др.
+
+## 5. Точки улучшения
+1. Асинхронная очередь Celery для тяжёлых задач индексирования.  
+2. Каналы WebSocket для real-time оповещений.  
+3. Мониторинг метрик через Prometheus + Grafana.  
+4. Развертывание в Kubernetes с Helm-чартом.
+
+*(Полное описание и диаграммы см. разделы ниже.)*
+
 
 This document provides a comprehensive review of the Django backend architecture for the Hydraulic Diagnostic SaaS system. It analyzes the current structure, identifies scalability bottlenecks, and provides recommendations for improvement.
 

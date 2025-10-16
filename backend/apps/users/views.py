@@ -1,140 +1,101 @@
-from rest_framework import status, generics, permissions
-from rest_framework.decorators import api_view, permission_classes
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+from rest_framework import viewsets, status, generics, permissions, filters
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django.contrib.auth import login, logout
-from django.utils import timezone
-from django.db.models import Count, Q
-from datetime import datetime, timedelta
-from .models import User, UserProfile, UserActivity
+
+from .models import UserProfile, UserActivity
 from .serializers import (
-    UserRegistrationSerializer, UserSerializer, UserProfileSerializer,
-    ChangePasswordSerializer, LoginSerializer, UserActivitySerializer,
-    UserStatsSerializer, CustomTokenObtainPairSerializer
+    CustomTokenObtainPairSerializer,
+    UserBasicSerializer,
+    UserCreateSerializer,
+    UserDetailSerializer,
+    UserProfileSerializer,
+    ChangePasswordSerializer,
+    UserActivitySerializer,
+    UserStatsSerializer,
 )
+
+User = get_user_model()
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    """Кастомный view для получения токенов"""
+    """Выдача JWT токенов."""
     serializer_class = CustomTokenObtainPairSerializer
-    permission_classes = [AllowAny]
-
-    def post(self, request, *args, **kwargs):
-        print(f"Login attempt: {request.data}")  # Для отладки
-        try:
-            response = super().post(request, *args, **kwargs)
-            print(f"Login successful")
-            return response
-        except Exception as e:
-            print(f"Login error: {str(e)}")
-            return Response({
-                'error': 'Неверные учетные данные'
-            }, status=status.HTTP_400_BAD_REQUEST)
+    permission_classes = [permissions.AllowAny]
 
 
 class UserRegistrationView(generics.CreateAPIView):
-    """Регистрация нового пользователя"""
+    """Регистрация нового пользователя."""
     queryset = User.objects.all()
-    serializer_class = UserRegistrationSerializer
+    serializer_class = UserCreateSerializer
     permission_classes = [permissions.AllowAny]
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    def perform_create(self, serializer):
         user = serializer.save()
-        
-        # Создание токенов
-        refresh = RefreshToken.for_user(user)
-        
-        # Логирование активности
+        # Логирование
+        RefreshToken.for_user(user)
         UserActivity.objects.create(
             user=user,
             action='login',
-            description='Первый вход после регистрации',
-            ip_address=self.get_client_ip(request),
-            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            description='Регистрация',
+            ip_address=self.get_client_ip(),
+            user_agent=self.request.META.get('HTTP_USER_AGENT', '')
         )
-        
-        return Response({
-            'user': UserSerializer(user).data,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'message': 'Пользователь успешно зарегистрирован'
-        }, status=status.HTTP_201_CREATED)
 
-    def get_client_ip(self, request):
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
+    def get_client_ip(self):
+        xff = self.request.META.get('HTTP_X_FORWARDED_FOR')
+        return xff.split(',')[0] if xff else self.request.META.get('REMOTE_ADDR')
 
 
-class UserLoginView(APIView):
-    """Вход пользователя в систему"""
-    permission_classes = [permissions.AllowAny]
+class UserViewSet(viewsets.GenericViewSet,
+                  mixins.RetrieveModelMixin,
+                  mixins.UpdateModelMixin):
+    """Просмотр и обновление данных пользователя."""
+    queryset = User.objects.all()
+    serializer_class = UserDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = 'pk'
 
-    def post(self, request):
-        serializer = LoginSerializer(data=request.data)
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def change_password(self, request, pk=None):
+        """Сменить пароль."""
+        user = self.get_object()
+        serializer = ChangePasswordSerializer(data=request.data, context={'user': user})
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        
-        # Создание токенов
-        refresh = RefreshToken.for_user(user)
-        
-        # Логирование входа
-        UserActivity.objects.create(
-            user=user,
-            action='login',
-            description='Вход в систему',
-            ip_address=get_client_ip(request),
-            user_agent=request.META.get('HTTP_USER_AGENT', ''),
-        )
-        
-        return Response({
-            'user': UserSerializer(user).data,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'message': 'Успешный вход'
-        })
+        serializer.save()
+        return Response({'detail': 'Пароль изменён'}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def stats(self, request, pk=None):
+        """Статистика пользователя."""
+        user = self.get_object()
+        data = UserStatsSerializer(user).data
+        return Response(data)
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def user_logout(request):
-    """Выход пользователя из системы"""
-    # Логирование выхода
-    UserActivity.objects.create(
-        user=request.user,
-        action='logout',
-        description='Выход из системы',
-        ip_address=get_client_ip(request),
-    )
-    logout(request)
-    return Response({'message': 'Успешный выход'})
+class UserProfileViewSet(viewsets.ModelViewSet):
+    """CRUD для профиля пользователя."""
+    queryset = UserProfile.objects.select_related('user').all()
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['user__username', 'location']
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_profile(request):
-    """Получение профиля пользователя"""
-    return Response({
-        'id': request.user.id,
-        'username': request.user.username,
-        'email': request.user.email,
-        'role': request.user.role
-    })
+class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
+    """Логи активности пользователей."""
+    queryset = UserActivity.objects.select_related('user').all().order_by('-created_at')
+    serializer_class = UserActivitySerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
 
-
-def get_client_ip(request):
-    """Получение IP адреса клиента"""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
+    def list(self, request, *args, **kwargs):
+        # По умолчанию возвращаем активность текущего пользователя
+        self.queryset = self.queryset.filter(user=request.user)
+        return super().list(request, *args, **kwargs)

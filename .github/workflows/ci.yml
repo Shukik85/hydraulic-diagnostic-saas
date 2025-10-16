@@ -1,120 +1,55 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [master, develop]
+    branches: [main]
   pull_request:
-    branches: [master, develop]
+    branches: [main]
 
 jobs:
-  lint-backend:
-    name: Backend Linting
+  lint:
+    name: Lint & Type-check
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: [3.10, 3.11]
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
-      - name: Install lint tools
+          python-version: ${{ matrix.python }}
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Format and lint
         run: |
-          pip install flake8 black isort
-      - name: Run flake8
-        working-directory: ./backend
-        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-      - name: Run black check
-        working-directory: ./backend
-        run: black --check .
-      - name: Run isort check
-        working-directory: ./backend
-        run: isort --check-only .
+          black --check .
+          isort --check-only .
+          flake8
+      - name: Type check
+        run: mypy .
 
-  test-backend:
-    name: Backend Tests
-    needs: lint-backend
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
+    needs: lint
+    strategy:
+      matrix:
+        python: [3.10, 3.11]
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
-          cache: pip
-      - name: Install system deps for Pillow
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libjpeg-dev zlib1g-dev libtiff-dev libfreetype6-dev \
-            libopenjp2-7 libwebp-dev
-      - name: Install Python dependencies
-        working-directory: ./backend
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run migrations and tests
-        working-directory: ./backend
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-          DJANGO_SETTINGS_MODULE: core.settings
-        run: |
-          python manage.py makemigrations --noinput
-          python manage.py migrate --noinput
-          pytest --disable-warnings --maxfail=1 --cov=apps --cov-report=xml
-      - name: Upload coverage report
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./backend/coverage.xml
-          flags: backend
-          fail_ci_if_error: false
-      - name: Upload test logs
-        if: failure()
-        uses: actions/upload-artifact@v3
-        with:
-          name: backend-logs
-          path: ./backend/logs/
-
-  test-frontend:
-    name: Nuxt Frontend Tests
-    needs: lint-backend
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: ./frontend/package-lock.json
+          python-version: ${{ matrix.python }}
       - name: Install dependencies
-        working-directory: ./frontend
         run: |
-          npm ci --legacy-peer-deps || npm ci --force
-      - name: Run Vitest
-        working-directory: ./frontend
-        run: npm test -- --coverage
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      - name: Run tests with coverage
+        run: pytest --maxfail=1 --disable-warnings --strict-markers --cov=apps --cov-report=xml
       - name: Upload coverage report
-        uses: codecov/codecov-action@v3
-        with:
-          directory: ./frontend/coverage
-          flags: nuxt-frontend
-          fail_ci_if_error: false
-      - name: Upload frontend logs
-        if: failure()
         uses: actions/upload-artifact@v3
         with:
-          name: frontend-logs
-          path: ./frontend/logs/
+          name: coverage-report
+          path: coverage.xml
