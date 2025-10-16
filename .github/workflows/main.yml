@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: Install dev dependencies
-        run: 
+        run: |
           cd backend
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
