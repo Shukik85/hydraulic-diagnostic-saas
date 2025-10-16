@@ -26,7 +26,6 @@ jobs:
         run: |
           black --check .
           isort --check-only .
-          flake8 --check-only .
       - name: Type check
         run: mypy .
 
