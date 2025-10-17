@@ -1,47 +1,192 @@
+# apps/rag_assistant/views.py
 from rest_framework import viewsets, status, permissions, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from celery.result import AsyncResult
+from django.db import models
+from django.db.models import Count, Avg, Sum, Prefetch
+from django.db.models.functions import Length
+import logging
+import time
 
 from .models import Document, RagSystem, RagQueryLog
 from .serializers import DocumentSerializer, RagSystemSerializer, RagQueryLogSerializer
 from .rag_service import RagAssistant
+from .tasks import process_document_async, reindex_documents_async
+
+# Настройка логирования медленных запросов
+logger = logging.getLogger(__name__)
+
+class TimingMiddleware:
+    """Middleware для логирования медленных запросов"""
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        start_time = time.time()
+        response = self.get_response(request)
+        duration = (time.time() - start_time) * 1000  # в миллисекундах
+        
+        if duration > 100:  # если запрос дольше 100ms
+            logger.warning(f"Slow query: {request.path} took {duration:.2f}ms")
+        
+        return response
 
 class DocumentViewSet(viewsets.ModelViewSet):
-    queryset = Document.objects.all()
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'content']
     ordering_fields = ['created_at', 'language']
     ordering = ['-created_at']
+    
+    def get_queryset(self):
+        """Оптимизированный queryset с eager loading"""
+        queryset = Document.objects.select_related(
+            'user'  # если есть ForeignKey на пользователя
+        ).prefetch_related(
+            # prefetch для ManyToMany отношений, если есть
+        ).annotate(
+            content_length=Length('content')
+        )
+        
+        # Фильтрация по системе, если указано
+        system_id = self.request.query_params.get('system_id')
+        if system_id:
+            queryset = queryset.filter(metadata__rag_system=system_id)
+            
+        return queryset
 
 class RagSystemViewSet(viewsets.ModelViewSet):
-    queryset = RagSystem.objects.all()
     serializer_class = RagSystemSerializer
     permission_classes = [permissions.IsAuthenticated]
-
+    
+    def get_queryset(self):
+        """Оптимизированный queryset с агрегациями"""
+        return RagSystem.objects.annotate(
+            document_count=Count('documents', distinct=True),
+            query_count=Count('query_logs', distinct=True)
+        ).prefetch_related(
+            Prefetch(
+                'documents',
+                queryset=Document.objects.select_related().only(
+                    'id', 'title', 'format', 'language', 'created_at'
+                )
+            ),
+            Prefetch(
+                'query_logs',
+                queryset=RagQueryLog.objects.select_related('document').only(
+                    'id', 'query_text', 'timestamp'
+                )[:10]  # Ограничиваем количество для оптимизации
+            )
+        )
+    
     @action(detail=True, methods=['post'])
     def index(self, request, pk=None):
+        """Асинхронная индексация документов"""
         system = self.get_object()
-        assistant = RagAssistant(system)
-        docs = Document.objects.filter(metadata__rag_system=system.id)
-        for doc in docs:
-            assistant.index_document(doc)
-        return Response({'status': 'indexed'}, status=status.HTTP_200_OK)
+        
+        # Получение списка документов для индексации
+        document_ids = request.data.get('document_ids', None)
+        
+        # Запуск асинхронной задачи
+        task = reindex_documents_async.delay(system.id, document_ids)
+        
+        return Response({
+            'task_id': task.id,
+            'status': 'started',
+            'message': 'Documents indexing started'
+        }, status=status.HTTP_202_ACCEPTED)
 
     @action(detail=True, methods=['post'])
     def query(self, request, pk=None):
+        """Синхронный запрос к RAG системе"""
         system = self.get_object()
         text = request.data.get('query')
-        assistant = RagAssistant(system)
-        answer = assistant.answer(text)
-        log = RagQueryLog.objects.create(system=system, query_text=text, response_text=answer)
-        return Response({'answer': answer}, status=status.HTTP_200_OK)
+        
+        if not text:
+            return Response({
+                'error': 'Query text is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Измеряем время выполнения запроса
+            start_time = time.time()
+            assistant = RagAssistant(system)
+            answer = assistant.answer(text)
+            duration = (time.time() - start_time) * 1000
+            
+            # Логируем медленные запросы
+            if duration > 100:
+                logger.warning(f"Slow RAG query processing: {duration:.2f}ms for query: {text[:50]}...")
+            
+            log = RagQueryLog.objects.create(system=system, query_text=text, response_text=answer)
+            return Response({'answer': answer}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error in RAG query: {str(e)}")
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['get'])
+    def stats(self, request, pk=None):
+        """Получение статистики по системе"""
+        system = self.get_object()
+        
+        # Batch loading для агрегаций
+        stats = RagQueryLog.objects.filter(system=system).aggregate(
+            total_queries=Count('id'),
+            avg_response_time=Avg('response_time'),  # если есть такое поле
+            total_documents=Count('document', distinct=True)
+        )
+        
+        # Дополнительные статистики
+        recent_queries = RagQueryLog.objects.filter(system=system).select_related(
+            'document'
+        ).order_by('-timestamp')[:10]
+        
+        return Response({
+            'system_stats': stats,
+            'recent_queries': RagQueryLogSerializer(recent_queries, many=True).data
+        })
 
 class RagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = RagQueryLog.objects.select_related('system', 'document').all()
     serializer_class = RagQueryLogSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['timestamp']
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ['timestamp', 'system__name']
     ordering = ['-timestamp']
+    search_fields = ['query_text', 'response_text']
+    
+    def get_queryset(self):
+        """Оптимизированный queryset с eager loading"""
+        return RagQueryLog.objects.select_related(
+            'system',
+            'document'
+        ).annotate(
+            query_length=Length('query_text'),
+            response_length=Length('response_text')
+        ).prefetch_related(
+            # Дополнительные prefetch, если есть ManyToMany отношения
+        )
+
+# Добавление нового view для проверки статуса задач
+from rest_framework.views import APIView
+
+class TaskStatusView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, task_id):
+        """Получение статуса задачи по ID"""
+        task_result = AsyncResult(str(task_id))
+        
+        response_data = {
+            'task_id': str(task_id),
+            'status': task_result.status,
+            'result': task_result.result if task_result.ready() else None
+        }
+        
+        if task_result.failed():
+            response_data['error'] = str(task_result.info)
+        
+        return Response(response_data)

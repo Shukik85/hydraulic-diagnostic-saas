@@ -4,21 +4,31 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-.env
-.env.local
+pip-log.txt
+pip-delete-this-directory.txt
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
 # Django
+logs/
 *.log
 local_settings.py
-db.sqlite3
-db.sqlite3-journal
-media/
-staticfiles/
-backend/apps/*/migrations/
 # Node.js
 node_modules/
 npm-debug.log*
@@ -35,6 +45,13 @@ dist/
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite3-journal
+# Static files (in production)
+staticfiles/
+# Environment variables
+.env
+.env.local
+.env.*.local
 # Docker
 .dockerignore
 # OS

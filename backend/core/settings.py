@@ -2,17 +2,15 @@ from datetime import timedelta
 import os
 import sys
 from pathlib import Path
-from decouple import config
+from decouple import config, Csv
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
-SECRET_KEY = config(
-    'SECRET_KEY', default='django-insecure-change-in-production-key-12345')
-DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1',
-                       cast=lambda v: [s.strip() for s in v.split(',')])
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-in-production-key-12345')
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
 # Application definition
 DJANGO_APPS = [
@@ -49,7 +47,14 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.rag_assistant.views.TimingMiddleware',
 ]
+
+# Для django-debug-toolbar (в development):
+if DEBUG:
+    INSTALLED_APPS += ['debug_toolbar']
+    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
+    INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
 ROOT_URLCONF = 'core.urls'
 
@@ -74,10 +79,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Database
 DATABASES = {
     'default': dj_database_url.parse(
-        config('DATABASE_URL',
-               default='postgresql://postgres:password123@localhost:5432/hydraulic_diagnostic')
+        config('DATABASE_URL', default='postgresql://postgres:password123@localhost:5432/hydraulic_diagnostic')
     )
 }
+
+# Redis Configuration
+REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
@@ -113,15 +120,13 @@ SIMPLE_JWT = {
 }
 
 # CORS Settings - настройки для кросс-доменных запросов
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', 
+                              default='http://localhost:3000,http://127.0.0.1:3000', 
+                              cast=Csv())
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', 
+                             default='http://localhost:3000,http://127.0.0.1:3000', 
+                             cast=Csv())
 
 CORS_ALLOW_CREDENTIALS = True  # Разрешить отправку cookies
 
@@ -169,6 +174,7 @@ AI_SETTINGS = {
     'RAG_DATABASE_PATH': os.path.join(BASE_DIR, 'knowledge_base.db'),
     'MAX_SENSOR_DATA_BATCH_SIZE': 1000,
     'AI_ANALYSIS_CACHE_TIMEOUT': 3600,  # 1 час
+    'OPENAI_API_KEY': config('OPENAI_API_KEY', default=''),
 }
 
 # Настройки RAG системы
@@ -191,7 +197,7 @@ MONITORING_SETTINGS = {
 LOGS_DIR = BASE_DIR / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
 
-# Logging configuration
+# Обновление LOGGING в settings.py:
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -247,6 +253,14 @@ LOGGING = {
             'formatter': 'verbose',
             'level': 'ERROR',
         },
+        'slow_query_file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'slow_queries.log'),
+            'maxBytes': 1024*1024*5,  # 5MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'level': 'WARNING',
+        },
     },
     'loggers': {
         'django': {
@@ -270,7 +284,7 @@ LOGGING = {
             'propagate': False,
         },
         'apps.rag_assistant': {
-            'handlers': ['console', 'ai_file'],
+            'handlers': ['console', 'ai_file', 'slow_query_file'],
             'level': 'DEBUG',
             'propagate': False,
         },
@@ -281,17 +295,27 @@ LOGGING = {
     },
 }
 
+
 # Кеширование для AI операций
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'diagnostic-cache',
-        'TIMEOUT': 3600,
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
         'OPTIONS': {
-            'MAX_ENTRIES': 1000,
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }
 }
+# Celery Configuration
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 минут
+
 
 # Настройки безопасности для production
 if not DEBUG:
