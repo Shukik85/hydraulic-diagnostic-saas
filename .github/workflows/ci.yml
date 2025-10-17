@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  backend-ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password123
+          POSTGRES_DB: hydraulic_diagnostic
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd="pg_isready -U postgres" --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd="redis-cli ping || exit 1" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libpq-dev libjpeg-dev zlib1g-dev libtiff-dev libfreetype6-dev
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install flake8 black isort mypy pytest pytest-django pytest-cov
+
+      - name: Lint (black)
+        run: |
+          black --check backend || (echo "Run: black backend" && exit 1)
+
+      - name: Lint (isort)
+        run: |
+          isort --check-only backend || (echo "Run: isort backend" && exit 1)
+
+      - name: Lint (flake8)
+        run: |
+          flake8 backend --max-line-length=100 --exclude=.venv,.mypy_cache
+
+      - name: Type check (mypy)
+        run: |
+          mypy backend || true
+
+      - name: Prepare env
+        run: |
+          cp backend/.env.example backend/.env
+          echo "DEBUG=True" >> backend/.env
+          echo "SECRET_KEY=ci-secret-key" >> backend/.env
+          echo "ALLOWED_HOSTS=localhost,127.0.0.1" >> backend/.env
+          echo "DATABASE_URL=postgresql://postgres:password123@localhost:5432/hydraulic_diagnostic" >> backend/.env
+          echo "REDIS_URL=redis://localhost:6379/0" >> backend/.env
+          echo "AI_REDIS_URL=redis://localhost:6379/1" >> backend/.env
+
+      - name: Run migrations
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: |
+          python manage.py migrate --noinput
+
+      - name: Collect static
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: |
+          python manage.py collectstatic --noinput
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: |
+          pytest -q --disable-warnings --maxfail=1 --cov=apps --cov-report=term-missing
