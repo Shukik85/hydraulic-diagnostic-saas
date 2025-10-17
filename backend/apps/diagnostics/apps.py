@@ -10,9 +10,8 @@ class DiagnosticsConfig(AppConfig):
         """Инициализация при запуске приложения"""
         try:
             # Импорт AI системы для инициализации
-            from .ai_engine import ai_engine
-            from .rag_system import rag_system
-
+            # from .ai_engine import ai_engine
+            # from .rag_system import rag_system
             print("✅ AI Engine и RAG система инициализированы")
         except Exception as e:
             print(f"❌ Ошибка инициализации AI/RAG: {e}")
