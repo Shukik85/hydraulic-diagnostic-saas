@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password123}
+      POSTGRES_DB: hydraulic_diagnostic
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DJANGO_SETTINGS_MODULE: core.secure_settings
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password123}@db:5432/hydraulic_diagnostic
+      REDIS_URL: redis://redis:6379/0
+      AI_REDIS_URL: redis://redis:6379/1
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: "False"
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["bash", "-lc", ". /opt/venv/bin/activate && celery -A core worker -l info"]
+    working_dir: /app/backend
+    environment:
+      DJANGO_SETTINGS_MODULE: core.secure_settings
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password123}@db:5432/hydraulic_diagnostic
+      REDIS_URL: redis://redis:6379/0
+      AI_REDIS_URL: redis://redis:6379/1
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: "False"
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["bash", "-lc", ". /opt/venv/bin/activate && celery -A core beat -l info"]
+    working_dir: /app/backend
+    environment:
+      DJANGO_SETTINGS_MODULE: core.secure_settings
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-password123}@db:5432/hydraulic_diagnostic
+      REDIS_URL: redis://redis:6379/0
+      AI_REDIS_URL: redis://redis:6379/1
+      SECRET_KEY: ${SECRET_KEY}
+      DEBUG: "False"
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-production}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
