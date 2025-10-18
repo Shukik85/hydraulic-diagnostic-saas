@@ -3,7 +3,7 @@ import logging
 import os
 import sqlite3
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from django.conf import settings
@@ -19,8 +19,8 @@ class HydraulicKnowledgeBase:
     def __init__(self):
         self.vectorizer = TfidfVectorizer(max_features=1000, stop_words=None, ngram_range=(1, 2))
         self.knowledge_vectors = None
-        self.knowledge_texts = []
-        self.knowledge_metadata = []
+        self.knowledge_texts: List[str] = []
+        self.knowledge_metadata: List[Dict[str, Any]] = []
         self.db_path = os.path.join(settings.BASE_DIR, "knowledge_base.db")
         self._initialize_knowledge_base()
 
@@ -83,72 +83,86 @@ class HydraulicKnowledgeBase:
         base_knowledge = [
             {
                 "title": "ГОСТ 17752-81 Гидропривод объемный. Термины и определения",
-                "content": """Гидропривод объемный - совокупность устройств, предназначенных для приведения в движение 
-                машин и механизмов посредством рабочей жидкости под давлением. Основные параметры: рабочее давление 
-                от 6,3 до 32 МПа, температура рабочей жидкости от -30 до +80°C. Критические показатели: 
-                падение давления более 10%, повышение температуры выше 80°C,
-                появление металлической стружки в масле.""",
+                "content": (
+                    "Гидропривод объемный - совокупность устройств, предназначенных для приведения в движение "
+                    "машин и механизмов посредством рабочей жидкости под давлением. Основные параметры: рабочее давление "
+                    "от 6,3 до 32 МПа, температура рабочей жидкости от -30 до +80°C. Критические показатели: "
+                    "падение давления более 10%, повышение температуры выше 80°C, "
+                    "появление металлической стружки в масле."
+                ),
                 "category": "standards",
                 "tags": "ГОСТ, гидропривод, давление, температура",
                 "source": "ГОСТ 17752-81",
             },
             {
                 "title": "Диагностика по давлению в гидросистеме",
-                "content": """Нормальное рабочее давление составляет 150-250 бар для промышленных систем. 
-                Давление ниже 100 бар может указывать на износ насоса или утечки. Давление выше 300 бар - 
-                на засорение фильтров или неисправность предохранительного клапана. Колебания давления более ±5% 
-                от номинального указывают на нестабильность системы.""",
+                "content": (
+                    "Нормальное рабочее давление составляет 150-250 бар для промышленных систем. "
+                    "Давление ниже 100 бар может указывать на износ насоса или утечки. Давление выше 300 бар - "
+                    "на засорение фильтров или неисправность предохранительного клапана. Колебания давления более ±5% "
+                    "от номинального указывают на нестабильность системы."
+                ),
                 "category": "diagnostics",
                 "tags": "давление, насос, утечки, клапан, диагностика",
                 "source": "technical_manual",
             },
             {
                 "title": "Температурная диагностика гидросистем",
-                "content": """Нормальная рабочая температура гидравлического масла: 40-60°C. 
-                Температура выше 70°C указывает на перегрузку системы, засорение радиатора или износ уплотнений. 
-                Температура ниже 20°C может вызвать загустение масла и кавитацию насоса. Резкие перепады температуры 
-                свидетельствуют о проблемах терморегуляции.""",
+                "content": (
+                    "Нормальная рабочая температура гидравлического масла: 40-60°C. "
+                    "Температура выше 70°C указывает на перегрузку системы, засорение радиатора или износ уплотнений. "
+                    "Температура ниже 20°C может вызвать загустение масла и кавитацию насоса. Резкие перепады температуры "
+                    "свидетельствуют о проблемах терморегуляции."
+                ),
                 "category": "diagnostics",
                 "tags": "температура, масло, перегрузка, радиатор, уплотнения",
                 "source": "technical_manual",
             },
             {
                 "title": "Анализ расхода жидкости",
-                "content": """Номинальный расход для промышленных систем: 50-100 л/мин. 
-                Снижение расхода более чем на 15% указывает на износ насоса, засорение фильтров или утечки. 
-                Увеличение расхода может быть связано с неплотностями в системе. Пульсации расхода указывают на 
-                воздух в системе или неисправность насоса.""",
+                "content": (
+                    "Номинальный расход для промышленных систем: 50-100 л/мин. "
+                    "Снижение расхода более чем на 15% указывает на износ насоса, засорение фильтров или утечки. "
+                    "Увеличение расхода может быть связано с неплотностями в системе. Пульсации расхода указывают на "
+                    "воздух в системе или неисправность насоса."
+                ),
                 "category": "diagnostics",
                 "tags": "расход, насос, фильтр, утечки, пульсации",
                 "source": "technical_manual",
             },
             {
                 "title": "Вибродиагностика гидроагрегатов",
-                "content": """Нормальный уровень вибрации для гидронасосов: до 7,1 мм/с (СКЗ). 
-                Вибрация 7,1-18 мм/с - удовлетворительное состояние. Свыше 18 мм/с - недопустимо. 
-                Частоты вибрации: 1х оборотная - дисбаланс, 2х оборотная - несоосность, 
-                высокочастотная - износ подшипников, кавитация.""",
+                "content": (
+                    "Нормальный уровень вибрации для гидронасосов: до 7,1 мм/с (СКЗ). "
+                    "Вибрация 7,1-18 мм/с - удовлетворительное состояние. Свыше 18 мм/с - недопустимо. "
+                    "Частоты вибрации: 1х оборотная - дисбаланс, 2х оборотная - несоосность, "
+                    "высокочастотная - износ подшипников, кавитация."
+                ),
                 "category": "diagnostics",
                 "tags": "вибрация, насос, подшипники, дисбаланс, кавитация",
                 "source": "vibration_manual",
             },
             {
                 "title": "Типовые неисправности промышленных гидросистем",
-                "content": """1. Износ плунжеров насоса - снижение давления и расхода, металлическая стружка в масле.
-                2. Засорение фильтров - рост давления, падение расхода, перегрев.
-                3. Износ уплотнений - внешние утечки, падение давления, загрязнение масла.
-                4. Кавитация насоса - характерный шум, вибрация, эрозия металла.
-                5. Загрязнение масла - ускоренный износ, перегрев, снижение эффективности.""",
+                "content": (
+                    "1. Износ плунжеров насоса - снижение давления и расхода, металлическая стружка в масле. "
+                    "2. Засорение фильтров - рост давления, падение расхода, перегрев. "
+                    "3. Износ уплотнений - внешние утечки, падение давления, загрязнение масла. "
+                    "4. Кавитация насоса - характерный шум, вибрация, эрозия металла. "
+                    "5. Загрязнение масла - ускоренный износ, перегрев, снижение эффективности."
+                ),
                 "category": "failures",
                 "tags": "неисправности, насос, фильтры, уплотнения, кавитация, масло",
                 "source": "failure_analysis",
             },
             {
                 "title": "Рекомендации по техническому обслуживанию",
-                "content": """Регламентные работы каждые 500 часов: замена масла, проверка фильтров, 
-                контроль давления. Каждые 1000 часов: замена фильтров, проверка уплотнений, 
-                вибродиагностика. Каждые 2000 часов: ревизия насоса, проверка аккумуляторов, 
-                промывка системы. Аварийное обслуживание при превышении пороговых значений.""",
+                "content": (
+                    "Регламентные работы каждые 500 часов: замена масла, проверка фильтров, "
+                    "контроль давления. Каждые 1000 часов: замена фильтров, проверка уплотнений, "
+                    "вибродиагностика. Каждые 2000 часов: ревизия насоса, проверка аккумуляторов, "
+                    "промывка системы. Аварийное обслуживание при превышении пороговых значений."
+                ),
                 "category": "maintenance",
                 "tags": "обслуживание, масло, фильтры, насос, регламент",
                 "source": "maintenance_manual",
@@ -205,7 +219,7 @@ class HydraulicKnowledgeBase:
             # Получение топ-K наиболее релевантных документов
             top_indices = np.argsort(similarities)[-top_k:][::-1]
 
-            results = []
+            results: List[Dict[str, Any]] = []
             for idx in top_indices:
                 if similarities[idx] > 0.1:  # Порог релевантности
                     results.append(
@@ -225,8 +239,8 @@ class HydraulicKnowledgeBase:
             return []
 
     def get_diagnostic_recommendations(
-        self, symptoms: List[str], system_type: str = None
-    ) -> List[Dict]:
+        self, symptoms: List[str], system_type: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Получение рекомендаций по диагностике на основе симптомов"""
         try:
             # Формирование поискового запроса
@@ -237,7 +251,7 @@ class HydraulicKnowledgeBase:
             # Поиск релевантных документов
             relevant_docs = self.search_knowledge(query, top_k=3)
 
-            recommendations = []
+            recommendations: List[Dict[str, Any]] = []
             for doc in relevant_docs:
                 # Извлечение рекомендаций из содержимого
                 content = doc["content"]
@@ -264,9 +278,9 @@ class HydraulicKnowledgeBase:
         problem: str,
         symptoms: List[str],
         solution: str,
-        system_type: str = None,
+        system_type: Optional[str] = None,
         success_rate: float = 1.0,
-    ):
+    ) -> None:
         """Добавление нового диагностического случая в базу знаний"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -304,7 +318,7 @@ class HydraulicKnowledgeBase:
         except Exception as e:
             logger.error(f"Ошибка добавления случая: {e}")
 
-    def get_similar_cases(self, current_symptoms: List[str], top_k: int = 3) -> List[Dict]:
+    def get_similar_cases(self, current_symptoms: List[str], top_k: int = 3) -> List[Dict[str, Any]]:
         """Поиск похожих диагностических случаев"""
         try:
             conn = sqlite3.connect(self.db_path)
@@ -314,7 +328,7 @@ class HydraulicKnowledgeBase:
             cases = cursor.fetchall()
             conn.close()
 
-            similar_cases = []
+            similar_cases: List[Dict[str, Any]] = []
             current_symptoms_set = set(current_symptoms)
 
             for case in cases:
@@ -348,7 +362,7 @@ class HydraulicKnowledgeBase:
             return []
 
     def generate_contextual_answer(
-        self, question: str, context_data: Dict = None
+        self, question: str, context_data: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Генерация контекстного ответа на основе базы знаний"""
         try:
@@ -363,9 +377,9 @@ class HydraulicKnowledgeBase:
                 }
 
             # Формирование ответа на основе найденной информации
-            answer_parts = []
-            sources = []
-            total_relevance = 0
+            answer_parts: List[str] = []
+            sources: List[Dict[str, Any]] = []
+            total_relevance = 0.0
 
             for doc in relevant_docs:
                 # Извлечение наиболее релевантной части документа
@@ -379,7 +393,7 @@ class HydraulicKnowledgeBase:
                             "relevance": doc["relevance_score"],
                         }
                     )
-                    total_relevance += doc["relevance_score"]
+                    total_relevance += float(doc["relevance_score"])  # типобезопасно
 
             # Объединение частей ответа
             if answer_parts:
@@ -389,12 +403,16 @@ class HydraulicKnowledgeBase:
                 answer = "Информация найдена, но требует дополнительного анализа."
                 confidence = 0.3
 
+            # Нормализация контекста
+            context = context_data or {}
+
             return {
                 "answer": answer,
                 "confidence": confidence,
                 "sources": sources,
                 "question": question,
                 "timestamp": datetime.now().isoformat(),
+                "context": context,
             }
 
         except Exception as e:
@@ -410,7 +428,7 @@ class HydraulicKnowledgeBase:
         """Извлечение рекомендаций из содержимого документа"""
         # Простое извлечение предложений с ключевыми словами
         sentences = content.split(". ")
-        recommendations = []
+        recommendations: List[str] = []
 
         keywords = [
             "рекомендуется",
@@ -445,7 +463,7 @@ class HydraulicKnowledgeBase:
 
         return best_sentence.strip() if best_sentence else content[:150] + "..."
 
-    def update_knowledge_base(self, new_documents: List[Dict]):
+    def update_knowledge_base(self, new_documents: List[Dict[str, Any]]) -> None:
         """Обновление базы знаний новыми документами"""
         try:
             conn = sqlite3.connect(self.db_path)
