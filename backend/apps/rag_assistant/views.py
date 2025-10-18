@@ -8,11 +8,12 @@ from django.db.models.functions import Length
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Document, RagQueryLog, RagSystem
 from .rag_service import RagAssistant
 from .serializers import DocumentSerializer, RagQueryLogSerializer, RagSystemSerializer
-from .tasks import reindex_documents_async
+from .tasks import index_documents_batch_async
 
 # Настройка логирования медленных запросов
 logger = logging.getLogger(__name__)
@@ -81,9 +82,7 @@ class RagSystemViewSet(viewsets.ModelViewSet):
                 "query_logs",
                 queryset=RagQueryLog.objects.select_related("document").only(
                     "id", "query_text", "timestamp"
-                )[
-                    :10
-                ],  # Ограничиваем количество для оптимизации
+                )[:10],  # Ограничиваем количество для оптимизации
             ),
         )
 
@@ -93,10 +92,16 @@ class RagSystemViewSet(viewsets.ModelViewSet):
         system = self.get_object()
 
         # Получение списка документов для индексации
-        document_ids = request.data.get("document_ids", None)
+        document_ids = request.data.get("document_ids")
 
-        # Запуск асинхронной задачи
-        task = reindex_documents_async.delay(system.id, document_ids)
+        # Если список не передан — индексируем все документы системы
+        if not document_ids:
+            document_ids = list(
+                Document.objects.filter(rag_system=system).values_list("id", flat=True)
+            )
+
+        # Запуск асинхронной пакетной задачи
+        task = index_documents_batch_async.delay(document_ids)
 
         return Response(
             {
@@ -129,7 +134,7 @@ class RagSystemViewSet(viewsets.ModelViewSet):
                     f"Slow RAG query processing: {duration:.2f}ms for query: {text[:50]}..."
                 )
 
-            log = RagQueryLog.objects.create(system=system, query_text=text, response_text=answer)
+            _ = RagQueryLog.objects.create(system=system, query_text=text, response_text=answer)
             return Response({"answer": answer}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error in RAG query: {str(e)}")
@@ -182,10 +187,6 @@ class RagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
                 # Дополнительные prefetch, если есть ManyToMany отношения
             )
         )
-
-
-# Добавление нового view для проверки статуса задач
-from rest_framework.views import APIView
 
 
 class TaskStatusView(APIView):
