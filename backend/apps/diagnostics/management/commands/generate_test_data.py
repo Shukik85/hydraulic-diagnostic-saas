@@ -92,7 +92,7 @@ class Command(BaseCommand):
             # Создание систем
             for i in range(systems_count):
                 template = random.choice(system_templates)
-                status = random.choices(statuses, weights=status_weights)
+                status = random.choices(statuses, weights=status_weights)[0]
 
                 # Генерация уникальных данных
                 location_num = random.randint(1, 50)
@@ -279,11 +279,14 @@ class Command(BaseCommand):
                                     f"{sensor_names.get(sensor_type, sensor_type)}: {count} событий"
                                 )
 
-                            report = DiagnosticReport.objects.create(
+                            _ = DiagnosticReport.objects.create(
                                 system=system,
                                 title=f"Критические события {day.strftime('%d.%m.%Y')}",
-                                description=f"Обнаружено {len(events)} критических событий: {', '.join(problems_desc)}. "
-                                f"Рекомендуется проверка системы и возможное техническое обслуживание.",
+                                description=(
+                                    "Обнаружено "
+                                    f"{len(events)} критических событий: {', '.join(problems_desc)}. "
+                                    "Рекомендуется проверка системы и возможное техническое обслуживание."
+                                ),
                                 severity=severity,
                                 ai_analysis=json.dumps(
                                     {
@@ -310,7 +313,7 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"\n✅ ГЕНЕРАЦИЯ ЗАВЕРШЕНА:\n"
+                    "\n✅ ГЕНЕРАЦИЯ ЗАВЕРШЕНА:\n"
                     f"👥 Пользователь: {user.username}\n"
                     f"🏭 Создано систем: {systems_count}\n"
                     f"📊 Создано записей датчиков: {total_sensors_created}\n"
