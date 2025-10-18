@@ -94,7 +94,7 @@ class Command(BaseCommand):
 
         # Summary
         self.stdout.write("\n" + "=" * 50)
-        self.stdout.write(self.style.SUCCESS(f"Analysis complete!"))
+        self.stdout.write(self.style.SUCCESS("Analysis complete!"))
         self.stdout.write(f"Total systems analyzed: {total_systems}")
         self.stdout.write(self.style.SUCCESS(f"Successful: {success_count}"))
         if error_count > 0:

@@ -1,4 +1,5 @@
 # Python
+.venv
 __pycache__/
 *.py[cod]
 *$py.class
@@ -52,6 +53,7 @@ staticfiles/
 .env
 .env.local
 .env.*.local
+.pre-commit-config.yaml
 # Docker
 .dockerignore
 # OS
