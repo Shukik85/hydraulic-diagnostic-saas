@@ -110,7 +110,7 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
         # Логирование производительности
         duration = time.time() - start_time
         performance_logger.info(
-            f"Document created and queued for processing",
+            "Document created and queued for processing",
             extra={
                 "document_id": document.id,
                 "task_id": task.id,
