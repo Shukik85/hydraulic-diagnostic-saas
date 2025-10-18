@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from rest_framework import filters, generics, permissions, status, viewsets
+from rest_framework import filters, generics, permissions, status, viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
