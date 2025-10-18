@@ -3,11 +3,23 @@ from django.db import migrations
 
 SQL_STATEMENTS = [
     # Documents
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_document_language_format ON rag_assistant_document(language, format)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_document_created_at ON rag_assistant_document(created_at)",
+    (
+        "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_document_language_format "
+        "ON rag_assistant_document(language, format)"
+    ),
+    (
+        "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_document_created_at "
+        "ON rag_assistant_document(created_at)"
+    ),
     # Query logs
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ragquerylog_timestamp ON rag_assistant_ragquerylog(timestamp)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ragquerylog_system_ts ON rag_assistant_ragquerylog(system_id, timestamp)",
+    (
+        "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ragquerylog_timestamp "
+        "ON rag_assistant_ragquerylog(timestamp)"
+    ),
+    (
+        "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ragquerylog_system_ts "
+        "ON rag_assistant_ragquerylog(system_id, timestamp)"
+    ),
 ]
 
 REVERSE_SQL = [
