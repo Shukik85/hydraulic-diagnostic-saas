@@ -39,7 +39,7 @@ def task_performance_monitor(task_name: str, **metadata):
     finally:
         duration = time.time() - start_time
         performance_logger.info(
-            f"Celery task completed: {task_name}",
+            "Celery task completed",
             extra={
                 "task_name": task_name,
                 "duration_ms": round(duration * 1000, 2),
@@ -58,7 +58,8 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
     - Error handling
     - Performance monitoring
     """
-    self.request.id
+    # task_id not used directly, but useful for logs
+    _ = self.request.id
 
     try:
         with task_performance_monitor("process_document", document_id=document_id, reindex=reindex):
@@ -191,7 +192,7 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
     task_id = self.request.id
     total_docs = len(document_ids)
     processed = 0
-    errors = []
+    errors: List[Dict[str, Any]] = []
 
     try:
         with task_performance_monitor("batch_index_documents", total_docs=total_docs):
@@ -200,7 +201,7 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
             documents = Document.objects.select_related("rag_system").filter(id__in=document_ids)
 
             # Группируем по RAG системам для эффективности
-            docs_by_system = {}
+            docs_by_system: Dict[int, Dict[str, Any]] = {}
             for doc in documents:
                 if doc.rag_system.id not in docs_by_system:
                     docs_by_system[doc.rag_system.id] = {
@@ -210,7 +211,10 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
                 docs_by_system[doc.rag_system.id]["docs"].append(doc)
 
             logger.info(
-                f"Starting batch processing of {total_docs} documents across {len(docs_by_system)} systems"
+                (
+                    f"Batch processing: {total_docs} documents across "
+                    f"{len(docs_by_system)} systems"
+                )
             )
 
             # Обрабатываем каждую RAG систему
@@ -238,7 +242,9 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
                                         "current": processed,
                                         "total": total_docs,
                                         "percent": progress_percent,
-                                        "status": f"Processed {processed}/{total_docs} documents",
+                                        "status": (
+                                            f"Processed {processed}/{total_docs} documents"
+                                        ),
                                     },
                                 )
 
@@ -282,12 +288,13 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
             }
 
             if success_count == total_docs:
-                logger.info(
-                    f"Batch processing completed successfully: {success_count}/{total_docs}"
-                )
+                logger.info(f"Batch processing completed successfully: {success_count}/{total_docs}")
             else:
                 logger.warning(
-                    f"Batch processing completed with errors: {success_count}/{total_docs} successful, {error_count} errors"
+                    (
+                        "Batch processing completed with errors: "
+                        f"{success_count}/{total_docs} successful, {error_count} errors"
+                    )
                 )
 
             return result
@@ -414,7 +421,7 @@ def generate_performance_report() -> Dict[str, Any]:
         with task_performance_monitor("performance_report"):
 
             current_time = time.strftime("%Y-%m-%d:%H")
-            time.strftime("%Y-%m-%d", time.localtime(time.time() - 86400))
+            _ = time.strftime("%Y-%m-%d", time.localtime(time.time() - 86400))
 
             # Метрики за 24 часа
             total_requests = 0
@@ -457,7 +464,10 @@ def generate_performance_report() -> Dict[str, Any]:
             cache.set("performance_report_24h", report, timeout=86400)  # 24 часа
 
             logger.info(
-                f"Performance report generated: {total_requests} requests, {total_ai_requests} AI operations"
+                (
+                    "Performance report generated: "
+                    f"{total_requests} requests, {total_ai_requests} AI operations"
+                )
             )
 
             return report
