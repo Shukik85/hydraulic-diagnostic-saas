@@ -4,56 +4,49 @@ from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from .models import DocumentChunk, KnowledgeBase, RAGSystemSettings
+from .models import Document, RagSystem, RagQueryLog
 
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=KnowledgeBase)
-def knowledge_base_updated(sender, instance, created, **kwargs):
-    """Обработка обновления документа в базе знаний"""
+@receiver(post_save, sender=Document)
+def document_updated(sender, instance, created, **kwargs):
+    """Обработка обновления/создания документа."""
     action = "создан" if created else "обновлен"
     logger.info(f"Документ {instance.title} {action}")
 
-    # Очистка кэша поиска
-    cache.delete_pattern("rag_search_*")
-
-    # Обновление статистики
-    if created:
-        cache.delete("knowledge_base_stats")
+    # Очистка кэша поиска конкретной системы
+    cache.delete_pattern(f"rag:{instance.rag_system_id}:search:*")
+    cache.delete_pattern(f"rag:{instance.rag_system_id}:faq:*")
 
 
-@receiver(post_delete, sender=KnowledgeBase)
-def knowledge_base_deleted(sender, instance, **kwargs):
-    """Обработка удаления документа"""
+@receiver(post_delete, sender=Document)
+def document_deleted(sender, instance, **kwargs):
+    """Обработка удаления документа."""
     logger.info(f"Документ {instance.title} удален")
 
     # Очистка кэша
-    cache.delete_pattern("rag_search_*")
-    cache.delete("knowledge_base_stats")
+    cache.delete_pattern(f"rag:{instance.rag_system_id}:search:*")
+    cache.delete_pattern(f"rag:{instance.rag_system_id}:faq:*")
 
 
-@receiver(post_save, sender=RAGSystemSettings)
-def rag_settings_updated(sender, instance, created, **kwargs):
-    """Обработка обновления настроек RAG системы"""
-    if instance.is_active:
-        # Деактивировать все остальные настройки
-        RAGSystemSettings.objects.exclude(id=instance.id).update(is_active=False)
-
-        # Очистка кэша моделей
-        cache.delete("rag_embedding_model")
-
-        logger.info(f"Настройки RAG системы {'созданы' if created else 'обновлены'}")
+@receiver(post_save, sender=RagSystem)
+def rag_system_updated(sender, instance, created, **kwargs):
+    """Обновление настроек/состояния RAG системы."""
+    logger.info(f"RAG система {'создана' if created else 'обновлена'}: {instance.name}")
+    cache.delete_pattern(f"rag:{instance.id}:*")
 
 
-@receiver(post_save, sender=DocumentChunk)
-def document_chunk_created(sender, instance, created, **kwargs):
-    """Обработка создания нового фрагмента документа"""
+@receiver(post_delete, sender=RagSystem)
+def rag_system_deleted(sender, instance, **kwargs):
+    """Удаление RAG системы."""
+    logger.info(f"RAG система удалена: {instance.name}")
+    cache.delete_pattern(f"rag:{instance.id}:*")
+
+
+@receiver(post_save, sender=RagQueryLog)
+def rag_query_logged(sender, instance, created, **kwargs):
+    """Создание логов запросов — можно обновлять метрики в кэше."""
     if created:
-        # Обновление счетчика фрагментов у документа
-        chunks_count = DocumentChunk.objects.filter(document=instance.document).count()
-
-        # Можно добавить логику обновления статистики
-        logger.debug(
-            f"Создан фрагмент {instance.chunk_index} для документа {instance.document.title}"
-        )
+        cache.incr(f"ai_metrics:{instance.timestamp.strftime('%Y-%m-%d:%H')}:ai_requests", ignore_key_check=True)
+        logger.debug("RAG запрос залогирован")
