@@ -1,15 +1,26 @@
-import tempfile, os, bleach, pydantic, hashlib, json
-from typing import Optional, List, Dict, Any
+import hashlib
+import os
+import tempfile
+from typing import Any, Dict, List, Optional
+
+import bleach
+import pydantic
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.core.cache import cache
 from django_ratelimit.decorators import ratelimit
-from langchain.document_loaders import TextLoader, PDFMinerLoader, UnstructuredWordDocumentLoader, MarkdownLoader
+from langchain.chains import RetrievalQA
+from langchain.document_loaders import (
+    MarkdownLoader,
+    PDFMinerLoader,
+    TextLoader,
+    UnstructuredWordDocumentLoader,
+)
+from langchain.embeddings import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chains import RetrievalQA
-from .models import Document, RagSystem, RagQueryLog
+
+from .models import Document, RagQueryLog, RagSystem
 
 # Константы для валидации
 MAX_QUERY_LENGTH = 500
@@ -19,64 +30,68 @@ MAX_CONTENT_SIZE = 50 * 1024 * 1024  # 50MB
 CACHE_VERSION = "v1"
 DOC_EMBEDDING_TTL = None  # Бессрочно
 SEARCH_RESULT_TTL = 3600  # 1 час
-FAQ_ANSWER_TTL = 86400    # 24 часа
+FAQ_ANSWER_TTL = 86400  # 24 часа
 CACHE_STATS_KEY = "cache_stats"
 
 LOADER_MAP = {
-    'txt': TextLoader,
-    'pdf': PDFMinerLoader,
-    'docx': UnstructuredWordDocumentLoader,
-    'md': MarkdownLoader,
+    "txt": TextLoader,
+    "pdf": PDFMinerLoader,
+    "docx": UnstructuredWordDocumentLoader,
+    "md": MarkdownLoader,
 }
+
 
 class QueryInput(pydantic.BaseModel):
     """Pydantic модель для валидации входного запроса"""
+
     query: str
     user_id: Optional[int] = None
-    
-    @pydantic.validator('query')
+
+    @pydantic.validator("query")
     def validate_query(cls, v):
         if not isinstance(v, str):
-            raise ValueError('Query must be a string')
+            raise ValueError("Query must be a string")
         if len(v) > MAX_QUERY_LENGTH:
-            raise ValueError(f'Query too long. Maximum length is {MAX_QUERY_LENGTH} characters')
+            raise ValueError(f"Query too long. Maximum length is {MAX_QUERY_LENGTH} characters")
         # Санитизация HTML-тегов
         sanitized = bleach.clean(v, tags=[], attributes={}, strip=True)
         return sanitized.strip()
-    
-    @pydantic.validator('user_id')
+
+    @pydantic.validator("user_id")
     def validate_user_id(cls, v):
         if v is not None and not isinstance(v, int):
-            raise ValueError('User ID must be an integer')
+            raise ValueError("User ID must be an integer")
         return v
+
 
 class DocumentInput(pydantic.BaseModel):
     """Pydantic модель для валидации входных данных документа"""
+
     content: str
     format: str
     metadata: dict
-    
-    @pydantic.validator('content')
+
+    @pydantic.validator("content")
     def validate_content(cls, v):
         if not isinstance(v, str):
-            raise ValueError('Content must be a string')
-        if len(v.encode('utf-8')) > MAX_CONTENT_SIZE:
-            raise ValueError(f'Content too large. Maximum size is {MAX_CONTENT_SIZE} bytes')
+            raise ValueError("Content must be a string")
+        if len(v.encode("utf-8")) > MAX_CONTENT_SIZE:
+            raise ValueError(f"Content too large. Maximum size is {MAX_CONTENT_SIZE} bytes")
         # Санитизация HTML-тегов
         return bleach.clean(v, tags=[], attributes={}, strip=True)
-    
-    @pydantic.validator('format')
+
+    @pydantic.validator("format")
     def validate_format(cls, v):
         if not isinstance(v, str):
-            raise ValueError('Format must be a string')
+            raise ValueError("Format must be a string")
         if v not in LOADER_MAP:
-            raise ValueError(f'Unsupported format. Supported formats: {list(LOADER_MAP.keys())}')
+            raise ValueError(f"Unsupported format. Supported formats: {list(LOADER_MAP.keys())}")
         return v.strip().lower()
-    
-    @pydantic.validator('metadata')
+
+    @pydantic.validator("metadata")
     def validate_metadata(cls, v):
         if not isinstance(v, dict):
-            raise ValueError('Metadata must be a dictionary')
+            raise ValueError("Metadata must be a dictionary")
         # Санитизация всех строковых значений в metadata
         sanitized_metadata = {}
         for key, value in v.items():
@@ -86,37 +101,39 @@ class DocumentInput(pydantic.BaseModel):
                 sanitized_metadata[key] = value
         return sanitized_metadata
 
+
 class CacheStats:
     """Класс для отслеживания статистики кеширования"""
-    
+
     @staticmethod
     def increment_hit():
-        stats = cache.get(CACHE_STATS_KEY, {'hits': 0, 'misses': 0})
-        stats['hits'] += 1
+        stats = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
+        stats["hits"] += 1
         cache.set(CACHE_STATS_KEY, stats)
-    
+
     @staticmethod
     def increment_miss():
-        stats = cache.get(CACHE_STATS_KEY, {'hits': 0, 'misses': 0})
-        stats['misses'] += 1
+        stats = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
+        stats["misses"] += 1
         cache.set(CACHE_STATS_KEY, stats)
-    
+
     @staticmethod
     def get_stats():
-        return cache.get(CACHE_STATS_KEY, {'hits': 0, 'misses': 0})
-    
+        return cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
+
     @staticmethod
     def get_hit_rate():
         stats = CacheStats.get_stats()
-        total = stats['hits'] + stats['misses']
-        return stats['hits'] / total if total > 0 else 0
+        total = stats["hits"] + stats["misses"]
+        return stats["hits"] / total if total > 0 else 0
+
 
 class RagAssistant:
     def __init__(self, system: RagSystem):
         # Валидация входной системы
         if not isinstance(system, RagSystem):
             raise TypeError("system must be an instance of RagSystem")
-        
+
         self.system = system
         self.embedding = OpenAIEmbeddings()
         self.index = self._load_index()
@@ -125,13 +142,13 @@ class RagAssistant:
         """Загрузка индекса с валидацией"""
         if self.system.index_config is not None and not isinstance(self.system.index_config, dict):
             raise TypeError("index_config must be a dictionary")
-            
+
         config = self.system.index_config or {}
-        if self.system.index_type == 'faiss':
-            path = config.get('index_path') or f'/tmp/{self.system.name}.faiss'
+        if self.system.index_type == "faiss":
+            path = config.get("index_path") or f"/tmp/{self.system.name}.faiss"
             if not isinstance(path, str):
                 raise TypeError("index_path must be a string")
-                
+
             if os.path.exists(path):
                 return FAISS.load_local(path, self.embedding)
             return FAISS(self.embedding.embed_query, [])
@@ -145,19 +162,19 @@ class RagAssistant:
     def _invalidate_document_cache(self, doc_id: int):
         """Инвалидация кеша для конкретного документа"""
         cache_keys_to_delete = [
-            self._get_cache_key('doc_embedding', str(doc_id)),
-            self._get_cache_key('doc_chunks', str(doc_id)),
+            self._get_cache_key("doc_embedding", str(doc_id)),
+            self._get_cache_key("doc_chunks", str(doc_id)),
         ]
         cache.delete_many(cache_keys_to_delete)
 
     def _cache_document_embedding(self, doc_id: int, embedding: List[float]):
         """Кеширование эмбеддинга документа"""
-        cache_key = self._get_cache_key('doc_embedding', str(doc_id))
+        cache_key = self._get_cache_key("doc_embedding", str(doc_id))
         cache.set(cache_key, embedding, timeout=DOC_EMBEDDING_TTL)
 
     def _get_cached_document_embedding(self, doc_id: int) -> Optional[List[float]]:
         """Получение закешированного эмбеддинга документа"""
-        cache_key = self._get_cache_key('doc_embedding', str(doc_id))
+        cache_key = self._get_cache_key("doc_embedding", str(doc_id))
         cached = cache.get(cache_key)
         if cached is not None:
             CacheStats.increment_hit()
@@ -167,12 +184,18 @@ class RagAssistant:
 
     def _cache_search_result(self, query: str, category: Optional[str], results: List[Dict]):
         """Кеширование результатов поиска"""
-        cache_key = self._get_cache_key('search', f"{hashlib.md5(query.encode()).hexdigest()}:{category}")
+        cache_key = self._get_cache_key(
+            "search", f"{hashlib.md5(query.encode()).hexdigest()}:{category}"
+        )
         cache.set(cache_key, results, timeout=SEARCH_RESULT_TTL)
 
-    def _get_cached_search_result(self, query: str, category: Optional[str]) -> Optional[List[Dict]]:
+    def _get_cached_search_result(
+        self, query: str, category: Optional[str]
+    ) -> Optional[List[Dict]]:
         """Получение закешированных результатов поиска"""
-        cache_key = self._get_cache_key('search', f"{hashlib.md5(query.encode()).hexdigest()}:{category}")
+        cache_key = self._get_cache_key(
+            "search", f"{hashlib.md5(query.encode()).hexdigest()}:{category}"
+        )
         cached = cache.get(cache_key)
         if cached is not None:
             CacheStats.increment_hit()
@@ -182,12 +205,12 @@ class RagAssistant:
 
     def _cache_faq_answer(self, question: str, answer: str):
         """Кеширование ответа на частый вопрос"""
-        cache_key = self._get_cache_key('faq', hashlib.md5(question.encode()).hexdigest())
+        cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
         cache.set(cache_key, answer, timeout=FAQ_ANSWER_TTL)
 
     def _get_cached_faq_answer(self, question: str) -> Optional[str]:
         """Получение закешированного ответа на частый вопрос"""
-        cache_key = self._get_cache_key('faq', hashlib.md5(question.encode()).hexdigest())
+        cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
         cached = cache.get(cache_key)
         if cached is not None:
             CacheStats.increment_hit()
@@ -201,64 +224,66 @@ class RagAssistant:
         # Валидация документа через Pydantic
         try:
             validated_doc = DocumentInput(
-                content=doc.content,
-                format=doc.format,
-                metadata=doc.metadata or {}
+                content=doc.content, format=doc.format, metadata=doc.metadata or {}
             )
         except pydantic.ValidationError as e:
             raise ValidationError(f"Document validation failed: {e}")
-        
+
         # Обновление документа валидированными данными
         doc.content = validated_doc.content
         doc.format = validated_doc.format
         doc.metadata = validated_doc.metadata
-        
+
         # Инвалидация кеша перед обновлением
         self._invalidate_document_cache(doc.id)
-        
+
         loader_cls = LOADER_MAP.get(doc.format)
         if loader_cls is None:
             raise ValueError(f"Unsupported document format: {doc.format}")
-            
-        loader = loader_cls(file_path=doc.metadata.get('file_path') or tmp_file_for(doc))
+
+        loader = loader_cls(file_path=doc.metadata.get("file_path") or tmp_file_for(doc))
         pages = loader.load()
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
         chunks = splitter.split_documents(pages)
         self.index.add_documents(chunks)
-        self.index.save_local(f'/tmp/{self.system.name}.faiss')
+        self.index.save_local(f"/tmp/{self.system.name}.faiss")
 
-    def search_documents(self, query: str, category: Optional[str] = None, ttl: int = 3600) -> List[Dict]:
+    def search_documents(
+        self, query: str, category: Optional[str] = None, ttl: int = 3600
+    ) -> List[Dict]:
         """Поиск документов с кешированием результатов"""
         # Проверка кеша
         cached_results = self._get_cached_search_result(query, category)
         if cached_results is not None:
             return cached_results
-        
+
         # Выполнение поиска
         results = self._perform_search(query, category)
-        
+
         # Кеширование результатов
         self._cache_search_result(query, category, results)
-        
+
         return results
 
     def _perform_search(self, query: str, category: Optional[str] = None) -> List[Dict]:
         """Выполнение фактического поиска документов"""
         # Генерация эмбеддинга для запроса с возможным кешированием
         query_embedding = self._get_or_generate_embedding(query)
-        
+
         # Поиск в индексе
         docs = self.index.similarity_search_by_vector(query_embedding, k=10)
-        
+
         # Форматирование результатов
         results = []
         for doc in docs:
-            results.append({
-                'content': doc.page_content,
-                'metadata': doc.metadata,
-                'score': getattr(doc, 'similarity', None)
-            })
-        
+            results.append(
+                {
+                    "content": doc.page_content,
+                    "metadata": doc.metadata,
+                    "score": getattr(doc, "similarity", None),
+                }
+            )
+
         return results
 
     def _get_or_generate_embedding(self, text: str) -> List[float]:
@@ -266,7 +291,7 @@ class RagAssistant:
         # Для запросов не кешируем эмбеддинги, только для документов
         return self.embedding.embed_query(text)
 
-    @ratelimit(key='user_or_ip', rate='10/m', block=True)
+    @ratelimit(key="user_or_ip", rate="10/m", block=True)
     def answer(self, query: str, user_id: Optional[int] = None):
         """Ответ на запрос с валидацией, rate limiting и кешированием"""
         # Проверка кеша для частых вопросов
@@ -274,34 +299,34 @@ class RagAssistant:
         if cached_answer is not None:
             self._log_query(query, cached_answer, user_id)
             return cached_answer
-        
+
         # Валидация входных данных через Pydantic
         try:
             validated_input = QueryInput(query=query, user_id=user_id)
         except pydantic.ValidationError as e:
             raise ValidationError(f"Query validation failed: {e}")
-        
+
         validated_query = validated_input.query
         validated_user_id = validated_input.user_id
-        
+
         # Создание QA цепочки
         qa = RetrievalQA.from_chain_type(
             llm=self.system.model_name,
-            chain_type='stuff',
-            retriever=self.index.as_retriever()
+            chain_type="stuff",
+            retriever=self.index.as_retriever(),
         )
-        
+
         # Получение ответа
         result = qa.run(validated_query)
-        
+
         # Кеширование ответа на частый вопрос
         self._cache_faq_answer(validated_query, result)
-        
+
         # Логирование запроса с параметризированным запросом
         self._log_query(validated_query, result, validated_user_id)
-        
+
         return result
-    
+
     @transaction.atomic
     def _log_query(self, query: str, response: str, user_id: Optional[int] = None):
         """Логирование запроса с использованием параметризированных запросов"""
@@ -310,7 +335,7 @@ class RagAssistant:
             system=self.system,
             query_text=query,
             response_text=response,
-            user_id=user_id
+            user_id=user_id,
         )
 
     def get_cache_stats(self) -> Dict[str, Any]:
@@ -318,40 +343,41 @@ class RagAssistant:
         stats = CacheStats.get_stats()
         hit_rate = CacheStats.get_hit_rate()
         return {
-            'hits': stats['hits'],
-            'misses': stats['misses'],
-            'hit_rate': hit_rate,
-            'hit_rate_percent': round(hit_rate * 100, 2)
+            "hits": stats["hits"],
+            "misses": stats["misses"],
+            "hit_rate": hit_rate,
+            "hit_rate_percent": round(hit_rate * 100, 2),
         }
 
     def clear_cache_stats(self):
         """Очистка статистики кеширования"""
         cache.delete(CACHE_STATS_KEY)
 
+
 def tmp_file_for(doc: Document):
     """Вспомогательная запись контента во временный файл с валидацией"""
     # Валидация документа
     if not isinstance(doc, Document):
         raise TypeError("doc must be an instance of Document")
-    
-    if not hasattr(doc, 'format') or not doc.format:
+
+    if not hasattr(doc, "format") or not doc.format:
         raise ValueError("Document format is required")
-    
-    if not hasattr(doc, 'content') or not doc.content:
+
+    if not hasattr(doc, "content") or not doc.content:
         raise ValueError("Document content is required")
-    
+
     suffix = f".{doc.format}"
     fd, path = tempfile.mkstemp(suffix=suffix)
-    
+
     # Проверка размера контента перед записью
-    content_bytes = doc.content.encode('utf-8')
+    content_bytes = doc.content.encode("utf-8")
     if len(content_bytes) > MAX_CONTENT_SIZE:
         os.close(fd)
         os.unlink(path)
-        raise ValueError(f'Content too large. Maximum size is {MAX_CONTENT_SIZE} bytes')
-    
+        raise ValueError(f"Content too large. Maximum size is {MAX_CONTENT_SIZE} bytes")
+
     try:
-        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             # Санитизация перед записью
             sanitized_content = bleach.clean(doc.content, tags=[], attributes={}, strip=True)
             f.write(sanitized_content)
@@ -360,5 +386,5 @@ def tmp_file_for(doc: Document):
         if os.path.exists(path):
             os.unlink(path)
         raise e
-        
+
     return path

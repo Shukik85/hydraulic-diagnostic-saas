@@ -1,6 +1,5 @@
 # Generated migration for adding concurrent indexes to optimize queries
 from django.db import migrations
-from django.conf import settings
 
 SQL_STATEMENTS = [
     # Documents
@@ -8,7 +7,7 @@ SQL_STATEMENTS = [
     "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_document_created_at ON rag_assistant_document(created_at)",
     # Query logs
     "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ragquerylog_timestamp ON rag_assistant_ragquerylog(timestamp)",
-    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ragquerylog_system_ts ON rag_assistant_ragquerylog(system_id, timestamp)"
+    "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_ragquerylog_system_ts ON rag_assistant_ragquerylog(system_id, timestamp)",
 ]
 
 REVERSE_SQL = [
@@ -21,7 +20,7 @@ REVERSE_SQL = [
 
 def create_indexes(apps, schema_editor):
     # Run only on PostgreSQL
-    if schema_editor.connection.vendor != 'postgresql':
+    if schema_editor.connection.vendor != "postgresql":
         return
     for stmt in SQL_STATEMENTS:
         schema_editor.execute(stmt)
@@ -29,7 +28,7 @@ def create_indexes(apps, schema_editor):
 
 def drop_indexes(apps, schema_editor):
     # Run only on PostgreSQL
-    if schema_editor.connection.vendor != 'postgresql':
+    if schema_editor.connection.vendor != "postgresql":
         return
     for stmt in REVERSE_SQL:
         schema_editor.execute(stmt)
@@ -37,7 +36,7 @@ def drop_indexes(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('rag_assistant', '0001_initial'),
+        ("rag_assistant", "0001_initial"),
     ]
 
     operations = [

@@ -1,88 +1,111 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from django.utils.html import format_html
-from .models import User, UserProfile, UserActivity
+
+from .models import User, UserActivity, UserProfile
+
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = [
-        'username', 'email', 'get_full_name', 'company', 'position', 
-        'systems_count', 'is_active', 'last_activity', 'created_at'
+        "username",
+        "email",
+        "get_full_name",
+        "company",
+        "position",
+        "systems_count",
+        "is_active",
+        "last_activity",
+        "created_at",
     ]
     list_filter = [
-        'is_active', 'is_staff', 'is_superuser', 'company',
-        'email_notifications', 'created_at'
+        "is_active",
+        "is_staff",
+        "is_superuser",
+        "company",
+        "email_notifications",
+        "created_at",
     ]
-    search_fields = ['username', 'email', 'first_name', 'last_name', 'company']
-    ordering = ['-created_at']
-    
+    search_fields = ["username", "email", "first_name", "last_name", "company"]
+    ordering = ["-created_at"]
+
     fieldsets = BaseUserAdmin.fieldsets + (
-        ('Дополнительная информация', {
-            'fields': (
-                'company', 'position', 'phone', 'experience_years', 'specialization'
-            )
-        }),
-        ('Настройки уведомлений', {
-            'fields': (
-                'email_notifications', 'push_notifications', 'critical_alerts_only'
-            )
-        }),
-        ('Статистика', {
-            'fields': ('systems_count', 'reports_generated', 'last_activity')
-        }),
+        (
+            "Дополнительная информация",
+            {
+                "fields": (
+                    "company",
+                    "position",
+                    "phone",
+                    "experience_years",
+                    "specialization",
+                )
+            },
+        ),
+        (
+            "Настройки уведомлений",
+            {
+                "fields": (
+                    "email_notifications",
+                    "push_notifications",
+                    "critical_alerts_only",
+                )
+            },
+        ),
+        (
+            "Статистика",
+            {"fields": ("systems_count", "reports_generated", "last_activity")},
+        ),
     )
-    
-    readonly_fields = ['last_activity', 'created_at', 'systems_count']
-    
+
+    readonly_fields = ["last_activity", "created_at", "systems_count"]
+
     def get_full_name(self, obj):
         return obj.get_full_name() or obj.username
-    get_full_name.short_description = 'Полное имя'
+
+    get_full_name.short_description = "Полное имя"
+
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ['user', 'location', 'theme', 'language', 'timezone', 'updated_at']
-    list_filter = ['theme', 'language', 'timezone', 'created_at']
-    search_fields = ['user__username', 'user__email', 'location', 'bio']
-    ordering = ['-updated_at']
-    
+    list_display = ["user", "location", "theme", "language", "timezone", "updated_at"]
+    list_filter = ["theme", "language", "timezone", "created_at"]
+    search_fields = ["user__username", "user__email", "location", "bio"]
+    ordering = ["-updated_at"]
+
     fieldsets = (
-        ('Основная информация', {
-            'fields': ('user', 'avatar', 'bio', 'location', 'website')
-        }),
-        ('Настройки интерфейса', {
-            'fields': ('theme', 'language', 'timezone')
-        }),
+        (
+            "Основная информация",
+            {"fields": ("user", "avatar", "bio", "location", "website")},
+        ),
+        ("Настройки интерфейса", {"fields": ("theme", "language", "timezone")}),
     )
+
 
 @admin.register(UserActivity)
 class UserActivityAdmin(admin.ModelAdmin):
-    list_display = [
-        'user', 'action', 'get_action_display', 'ip_address', 'created_at'
-    ]
-    list_filter = ['action', 'created_at']
-    search_fields = ['user__username', 'user__email', 'description', 'ip_address']
-    ordering = ['-created_at']
-    readonly_fields = ['created_at']
-    
+    list_display = ["user", "action", "get_action_display", "ip_address", "created_at"]
+    list_filter = ["action", "created_at"]
+    search_fields = ["user__username", "user__email", "description", "ip_address"]
+    ordering = ["-created_at"]
+    readonly_fields = ["created_at"]
+
     fieldsets = (
-        ('Основная информация', {
-            'fields': ('user', 'action', 'description')
-        }),
-        ('Техническая информация', {
-            'fields': ('ip_address', 'user_agent', 'metadata')
-        }),
-        ('Время', {
-            'fields': ('created_at',)
-        }),
+        ("Основная информация", {"fields": ("user", "action", "description")}),
+        (
+            "Техническая информация",
+            {"fields": ("ip_address", "user_agent", "metadata")},
+        ),
+        ("Время", {"fields": ("created_at",)}),
     )
-    
+
     def has_add_permission(self, request):
         return False
-    
+
     def has_change_permission(self, request, obj=None):
         return False
 
+
 # Настройка админ панели
-admin.site.site_header = 'Гидравлическая диагностика - Админ панель'
-admin.site.site_title = 'Админ панель'
-admin.site.index_title = 'Управление системой диагностики'
+admin.site.site_header = "Гидравлическая диагностика - Админ панель"
+admin.site.site_title = "Админ панель"
+admin.site.index_title = "Управление системой диагностики"

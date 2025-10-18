@@ -1,8 +1,10 @@
-from django.db.models.signals import post_save, pre_delete
-from django.dispatch import receiver
-from .models import SensorData, HydraulicSystem, DiagnosticReport
 import logging
 from datetime import datetime, timedelta
+
+from django.db.models.signals import post_save, pre_delete
+from django.dispatch import receiver
+
+from .models import DiagnosticReport, HydraulicSystem, SensorData
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +24,7 @@ def process_critical_sensor_data(sender, instance, created, **kwargs):
             recent_critical = SensorData.objects.filter(
                 system=instance.system,
                 is_critical=True,
-                timestamp__gte=datetime.now() - timedelta(hours=1)
+                timestamp__gte=datetime.now() - timedelta(hours=1),
             ).count()
 
             # Автоматическое создание отчета при множественных проблемах
@@ -31,30 +33,25 @@ def process_critical_sensor_data(sender, instance, created, **kwargs):
                 recent_reports = DiagnosticReport.objects.filter(
                     system=instance.system,
                     created_at__gte=datetime.now() - timedelta(hours=1),
-                    title__icontains='Автоматический отчет'
+                    title__icontains="Автоматический отчет",
                 ).count()
 
                 if recent_reports == 0:
                     DiagnosticReport.objects.create(
                         system=instance.system,
-                        title=(
-                            "Автоматический отчет - "
-                            "Множественные критические события"
-                        ),
+                        title=("Автоматический отчет - " "Множественные критические события"),
                         description=(
-                            f"Система {instance.system.name} зафиксировала "
-                            (
+                            f"Система {instance.system.name} зафиксировала "(
                                 f"{recent_critical} критических событий"
                                 " за последний час. "
                                 "Рекомендуется немедленная проверка."
                             )
                         ),
-                        severity='critical'
+                        severity="critical",
                     )
 
                     logger.error(
-                        f"🚨 Создан автоматический критический отчет для "
-                        f"{instance.system.name}"
+                        f"🚨 Создан автоматический критический отчет для " f"{instance.system.name}"
                     )
 
         except Exception as e:
@@ -98,22 +95,18 @@ def cleanup_system_data(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=DiagnosticReport)
-def process_diagnostic_report(
-    sender, instance, created, **kwargs
-):
+def process_diagnostic_report(sender, instance, created, **kwargs):
     """Обработка диагностических отчетов"""
     if created:
         try:
             logger.info(
-                f"📋 Создан отчет: {instance.title} "
-                (
-                    f"(система: {instance.system.name}, "
-                    f"серьезность: {instance.severity})"
+                f"📋 Создан отчет: {instance.title} "(
+                    f"(система: {instance.system.name}, " f"серьезность: {instance.severity})"
                 )
             )
 
             # Дополнительные действия для критических отчетов
-            if instance.severity == 'critical':
+            if instance.severity == "critical":
                 # Здесь можно добавить:
                 # - Отправку уведомлений
                 # - Создание заявок на обслуживание

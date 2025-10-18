@@ -1,9 +1,9 @@
 import pytest
-from django.urls import reverse
-from rest_framework.test import APIClient
-from rest_framework import status
+from apps.diagnostics.models import HydraulicSystem, SystemComponent
 from django.contrib.auth import get_user_model
-from apps.diagnostics.models import HydraulicSystem, SystemComponent, SensorData, DiagnosticReport, MaintenanceSchedule
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient
 
 User = get_user_model()
 
@@ -20,7 +20,9 @@ def user(db):
 
 @pytest.fixture
 def auth_client(api_client, user):
-    resp = api_client.post(reverse("token_obtain_pair"), {"email": user.email, "password": "Pwd12345"})
+    resp = api_client.post(
+        reverse("token_obtain_pair"), {"email": user.email, "password": "Pwd12345"}
+    )
     token = resp.data["access"]
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
     return api_client
@@ -29,7 +31,12 @@ def auth_client(api_client, user):
 @pytest.mark.django_db
 def test_hydraulic_system_crud(auth_client):
     # Create
-    data = {"name": "HS1", "system_type": "industrial", "status": "active", "criticality": "medium"}
+    data = {
+        "name": "HS1",
+        "system_type": "industrial",
+        "status": "active",
+        "criticality": "medium",
+    }
     resp = auth_client.post("/api/diagnostics/systems/", data)
     assert resp.status_code == status.HTTP_201_CREATED
     hs_id = resp.data["id"]
@@ -52,7 +59,9 @@ def test_hydraulic_system_crud(auth_client):
 
 @pytest.mark.django_db
 def test_system_component_flow(auth_client):
-    hs = HydraulicSystem.objects.create(name="HS2", system_type="mobile", status="active", criticality="low")
+    hs = HydraulicSystem.objects.create(
+        name="HS2", system_type="mobile", status="active", criticality="low"
+    )
     # Create component
     data = {"system": hs.id, "name": "Comp1", "specification": {"rpm": 1000}}
     r1 = auth_client.post("/api/diagnostics/components/", data, format="json")
@@ -67,7 +76,9 @@ def test_system_component_flow(auth_client):
 
 @pytest.mark.django_db
 def test_sensor_data_and_diagnostic(auth_client):
-    hs = HydraulicSystem.objects.create(name="HS3", system_type="marine", status="active", criticality="high")
+    hs = HydraulicSystem.objects.create(
+        name="HS3", system_type="marine", status="active", criticality="high"
+    )
     comp = SystemComponent.objects.create(system=hs, name="C1")
     # Post sensor data
     sdata = {"system": hs.id, "component": comp.id, "value": 12.5, "unit": "bar"}
@@ -84,7 +95,9 @@ def test_sensor_data_and_diagnostic(auth_client):
 
 @pytest.mark.django_db
 def test_reports_and_actions(auth_client):
-    hs = HydraulicSystem.objects.create(name="HS4", system_type="construction", status="active", criticality="medium")
+    hs = HydraulicSystem.objects.create(
+        name="HS4", system_type="construction", status="active", criticality="medium"
+    )
     # Create report
     r = auth_client.post(f"/api/diagnostics/systems/{hs.id}/diagnose/")
     rid = r.data["id"]
@@ -96,8 +109,14 @@ def test_reports_and_actions(auth_client):
 
 @pytest.mark.django_db
 def test_maintenance_schedule(auth_client):
-    hs = HydraulicSystem.objects.create(name="HS5", system_type="aviation", status="active", criticality="critical")
-    ms_data = {"system": hs.id, "schedule_date": "2025-12-01", "description": "Year-end"}
+    hs = HydraulicSystem.objects.create(
+        name="HS5", system_type="aviation", status="active", criticality="critical"
+    )
+    ms_data = {
+        "system": hs.id,
+        "schedule_date": "2025-12-01",
+        "description": "Year-end",
+    }
     r1 = auth_client.post("/api/diagnostics/maintenance/", ms_data)
     assert r1.status_code == status.HTTP_201_CREATED
     ms_id = r1.data["id"]

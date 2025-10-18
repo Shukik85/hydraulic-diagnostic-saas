@@ -1,13 +1,10 @@
-import os
-import tempfile
 import pytest
-from django.urls import reverse
-from rest_framework.test import APIClient
-from rest_framework import status
-from django.contrib.auth import get_user_model
-
-from apps.rag_assistant.models import Document, RagSystem, RagQueryLog
+from apps.rag_assistant.models import Document, RagQueryLog, RagSystem
 from apps.rag_assistant.rag_service import RagAssistant
+from django.contrib.auth import get_user_model
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient
 
 User = get_user_model()
 
@@ -25,7 +22,9 @@ def user(db):
 
 @pytest.fixture
 def auth_client(api_client, user):
-    resp = api_client.post(reverse("token_obtain_pair"), {"email": user.email, "password": "Pwd12345"})
+    resp = api_client.post(
+        reverse("token_obtain_pair"), {"email": user.email, "password": "Pwd12345"}
+    )
     token = resp.data["access"]
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
     return api_client
@@ -38,7 +37,7 @@ def rag_system(db):
         description="Test",
         model_name="openai/gpt-3.5-turbo",
         index_type="faiss",
-        index_config={}
+        index_config={},
     )
 
 
@@ -50,7 +49,7 @@ def test_document_crud(auth_client):
         "content": "# Заголовок\nТекст на русском",
         "format": "md",
         "language": "ru",
-        "metadata": {}
+        "metadata": {},
     }
     r1 = auth_client.post("/api/rag_assistant/documents/", data, format="json")
     assert r1.status_code == status.HTTP_201_CREATED
@@ -80,7 +79,7 @@ def test_index_and_query(auth_client, rag_system, tmp_path):
         content="Hello world",
         format="txt",
         language="en",
-        metadata={"rag_system": rag_system.id}
+        metadata={"rag_system": rag_system.id},
     )
 
     # Index via API
@@ -89,7 +88,9 @@ def test_index_and_query(auth_client, rag_system, tmp_path):
 
     # Query via API
     query_data = {"query": "world"}
-    r2 = auth_client.post(f"/api/rag_assistant/systems/{rag_system.id}/query/", query_data, format="json")
+    r2 = auth_client.post(
+        f"/api/rag_assistant/systems/{rag_system.id}/query/", query_data, format="json"
+    )
     assert r2.status_code == status.HTTP_200_OK
     assert "answer" in r2.data
 
@@ -105,11 +106,7 @@ def test_index_and_query(auth_client, rag_system, tmp_path):
 def test_rag_assistant_service(tmp_path, rag_system):
     # Write temp file for loader
     doc = Document.objects.create(
-        title="T",
-        content="Sample text",
-        format="txt",
-        language="en",
-        metadata={}
+        title="T", content="Sample text", format="txt", language="en", metadata={}
     )
     # Initialize assistant
     assistant = RagAssistant(rag_system)

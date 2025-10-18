@@ -1,8 +1,8 @@
 import pytest
-from django.urls import reverse
-from rest_framework.test import APIClient
-from rest_framework import status
 from django.contrib.auth import get_user_model
+from django.urls import reverse
+from rest_framework import status
+from rest_framework.test import APIClient
 
 User = get_user_model()
 
@@ -19,7 +19,7 @@ def user_data():
         "username": "testuser",
         "password": "StrongPass123",
         "first_name": "Test",
-        "last_name": "User"
+        "last_name": "User",
     }
 
 
@@ -37,7 +37,9 @@ def test_login_and_token_refresh(api_client, user_data):
     api_client.post(reverse("user-register"), data=user_data)
     # Login
     login_url = reverse("token_obtain_pair")
-    resp = api_client.post(login_url, {"email": user_data["email"], "password": user_data["password"]})
+    resp = api_client.post(
+        login_url, {"email": user_data["email"], "password": user_data["password"]}
+    )
     assert resp.status_code == status.HTTP_200_OK
     assert "access" in resp.data and "refresh" in resp.data
     refresh = resp.data["refresh"]
@@ -52,8 +54,10 @@ def test_login_and_token_refresh(api_client, user_data):
 def test_change_password(api_client, user_data):
     # Register and login
     api_client.post(reverse("user-register"), data=user_data)
-    login_resp = api_client.post(reverse("token_obtain_pair"),
-                                {"email": user_data["email"], "password": user_data["password"]})
+    login_resp = api_client.post(
+        reverse("token_obtain_pair"),
+        {"email": user_data["email"], "password": user_data["password"]},
+    )
     token = login_resp.data["access"]
     api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
     # Change password
@@ -63,8 +67,10 @@ def test_change_password(api_client, user_data):
     assert resp.status_code == status.HTTP_200_OK
     # Re-login with new password
     api_client.credentials()  # clear
-    resp2 = api_client.post(reverse("token_obtain_pair"),
-                            {"email": user_data["email"], "password": new_pass})
+    resp2 = api_client.post(
+        reverse("token_obtain_pair"),
+        {"email": user_data["email"], "password": new_pass},
+    )
     assert resp2.status_code == status.HTTP_200_OK
 
 
@@ -72,8 +78,10 @@ def test_change_password(api_client, user_data):
 def test_profile_crud(api_client, user_data):
     # Register & login
     api_client.post(reverse("user-register"), data=user_data)
-    login_resp = api_client.post(reverse("token_obtain_pair"),
-                                {"email": user_data["email"], "password": user_data["password"]})
+    login_resp = api_client.post(
+        reverse("token_obtain_pair"),
+        {"email": user_data["email"], "password": user_data["password"]},
+    )
     token = login_resp.data["access"]
     client = api_client
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
@@ -96,8 +104,10 @@ def test_profile_crud(api_client, user_data):
 def test_user_activity_logs(api_client, user_data):
     # Register & login
     api_client.post(reverse("user-register"), data=user_data)
-    login_resp = api_client.post(reverse("token_obtain_pair"),
-                                {"email": user_data["email"], "password": user_data["password"]})
+    login_resp = api_client.post(
+        reverse("token_obtain_pair"),
+        {"email": user_data["email"], "password": user_data["password"]},
+    )
     token = login_resp.data["access"]
     client = api_client
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")

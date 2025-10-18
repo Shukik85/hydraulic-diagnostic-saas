@@ -1,7 +1,8 @@
 """Unit tests for models."""
+
 import pytest
-from django.utils import timezone
 from apps.diagnostics.models import Diagnosis, Equipment
+from django.utils import timezone
 
 
 @pytest.mark.django_db
@@ -15,7 +16,7 @@ class TestEquipmentModel:
             equipment_type="pump",
             manufacturer="HydroTech",
             model="HT-3000",
-            serial_number="SN123456"
+            serial_number="SN123456",
         )
         assert equipment.name == "Hydraulic Pump A"
         assert equipment.equipment_type == "pump"
@@ -39,7 +40,7 @@ class TestDiagnosisModel:
             equipment=equipment,
             symptom="High temperature",
             status="pending",
-            priority="high"
+            priority="high",
         )
         assert diagnosis.symptom == "High temperature"
         assert diagnosis.status == "pending"

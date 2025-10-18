@@ -1,9 +1,10 @@
-from django.core.management.base import BaseCommand
-from apps.rag_assistant.models import RagSystem, Document
+from apps.rag_assistant.models import Document, RagSystem
 from apps.rag_assistant.rag_service import RagAssistant
+from django.core.management.base import BaseCommand
+
 
 class Command(BaseCommand):
-    help = 'Переиндексация документов для всех систем'
+    help = "Переиндексация документов для всех систем"
 
     def handle(self, *args, **options):
         for system in RagSystem.objects.all():

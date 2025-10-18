@@ -1,14 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
-from datetime import timedelta
 
 from .models import (
-    HydraulicSystem,
-    SystemComponent,
-    SensorData,
     DiagnosticReport,
+    HydraulicSystem,
     MaintenanceSchedule,
+    SensorData,
+    SystemComponent,
 )
 
 User = get_user_model()
@@ -18,7 +17,7 @@ class ChoiceDisplayMixin:
     """Миксин для получения человекочитаемых значений полей выбора."""
 
     def get_choice_display(self, obj, field_name):
-        method_name = f'get_{field_name}_display'
+        method_name = f"get_{field_name}_display"
         if hasattr(obj, method_name):
             method = getattr(obj, method_name)
             if callable(method):
@@ -31,7 +30,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+        fields = ["id", "username", "email", "first_name", "last_name"]
         read_only_fields = fields
 
 
@@ -40,6 +39,7 @@ class EquipmentSerializer(serializers.Serializer):
     Зависит от реальной модели Equipment.
     Здесь приведён шаблон, подставьте реальную модель и поля.
     """
+
     id = serializers.UUIDField(read_only=True)
     name = serializers.CharField(max_length=200)
     specification = serializers.JSONField(required=False)
@@ -50,10 +50,10 @@ class SensorDataSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SensorData
-        fields = ['id', 'system', 'component', 'timestamp', 'value', 'unit']
-        read_only_fields = ['id']
+        fields = ["id", "system", "component", "timestamp", "value", "unit"]
+        read_only_fields = ["id"]
         extra_kwargs = {
-            'timestamp': {'default': timezone.now},
+            "timestamp": {"default": timezone.now},
         }
 
 
@@ -62,8 +62,8 @@ class SystemComponentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SystemComponent
-        fields = ['id', 'system', 'name', 'specification', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ["id", "system", "name", "specification", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSerializer):
@@ -78,26 +78,39 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
     class Meta:
         model = HydraulicSystem
         fields = [
-            'id', 'name', 'description',
-            'system_type', 'system_type_display',
-            'status', 'status_display',
-            'criticality', 'criticality_display',
-            'created_at', 'updated_at',
-            'latest_activity', 'health_score',
+            "id",
+            "name",
+            "description",
+            "system_type",
+            "system_type_display",
+            "status",
+            "status_display",
+            "criticality",
+            "criticality_display",
+            "created_at",
+            "updated_at",
+            "latest_activity",
+            "health_score",
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'latest_activity', 'health_score']
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "latest_activity",
+            "health_score",
+        ]
 
     def get_system_type_display(self, obj):
-        return self.get_choice_display(obj, 'system_type')
+        return self.get_choice_display(obj, "system_type")
 
     def get_status_display(self, obj):
-        return self.get_choice_display(obj, 'status')
+        return self.get_choice_display(obj, "status")
 
     def get_criticality_display(self, obj):
-        return self.get_choice_display(obj, 'criticality')
+        return self.get_choice_display(obj, "criticality")
 
     def get_latest_activity(self, obj):
-        last = obj.sensor_data.order_by('-timestamp').first()
+        last = obj.sensor_data.order_by("-timestamp").first()
         return last.timestamp if last else None
 
 
@@ -112,22 +125,35 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
     class Meta:
         model = DiagnosticReport
         fields = [
-            'id', 'system', 'title',
-            'severity', 'severity_display',
-            'status', 'status_display',
-            'ai_confidence', 'created_by',
-            'created_at', 'completed_at', 'updated_at',
+            "id",
+            "system",
+            "title",
+            "severity",
+            "severity_display",
+            "status",
+            "status_display",
+            "ai_confidence",
+            "created_by",
+            "created_at",
+            "completed_at",
+            "updated_at",
         ]
         read_only_fields = [
-            'id', 'system', 'severity_display', 'status_display',
-            'created_by', 'created_at', 'completed_at', 'updated_at',
+            "id",
+            "system",
+            "severity_display",
+            "status_display",
+            "created_by",
+            "created_at",
+            "completed_at",
+            "updated_at",
         ]
 
     def get_severity_display(self, obj):
-        return self.get_choice_display(obj, 'severity')
+        return self.get_choice_display(obj, "severity")
 
     def get_status_display(self, obj):
-        return self.get_choice_display(obj, 'status')
+        return self.get_choice_display(obj, "status")
 
 
 class MaintenanceScheduleSerializer(serializers.ModelSerializer):
@@ -135,8 +161,15 @@ class MaintenanceScheduleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MaintenanceSchedule
-        fields = ['id', 'system', 'schedule_date', 'description', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = [
+            "id",
+            "system",
+            "schedule_date",
+            "description",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
 
 
 class DiagnosticEngineSettingsSerializer(serializers.Serializer):
@@ -144,7 +177,8 @@ class DiagnosticEngineSettingsSerializer(serializers.Serializer):
     Пример сериализатора настроек для DiagnosticEngine.
     Замените на реальные поля настроек при необходимости.
     """
-    model_type = serializers.ChoiceField(choices=['isolation_forest', 'random_forest'])
+
+    model_type = serializers.ChoiceField(choices=["isolation_forest", "random_forest"])
     threshold = serializers.FloatField(min_value=0, max_value=1)
 
 

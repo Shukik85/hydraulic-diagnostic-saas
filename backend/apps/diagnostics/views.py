@@ -1,31 +1,27 @@
 import logging
-from datetime import timedelta
 
-from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django.db.models import Prefetch
-
-from rest_framework import viewsets, status, permissions, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.parsers import MultiPartParser, FormParser
-
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.response import Response
 
 from .models import (
-    HydraulicSystem,
-    SystemComponent,
-    SensorData,
     DiagnosticReport,
+    HydraulicSystem,
     MaintenanceSchedule,
+    SensorData,
+    SystemComponent,
 )
 from .serializers import (
-    HydraulicSystemListSerializer,
-    SystemComponentSerializer,
-    SensorDataSerializer,
     DiagnosticReportSerializer,
+    HydraulicSystemListSerializer,
     MaintenanceScheduleSerializer,
+    SensorDataSerializer,
+    SystemComponentSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,51 +29,62 @@ logger = logging.getLogger(__name__)
 
 class StandardResultsSetPagination(PageNumberPagination):
     page_size = 20
-    page_size_query_param = 'page_size'
+    page_size_query_param = "page_size"
     max_page_size = 100
 
 
 class BaseModelViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardResultsSetPagination
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
 
 
 class HydraulicSystemViewSet(BaseModelViewSet):
     serializer_class = HydraulicSystemListSerializer
-    filterset_fields = ['system_type', 'status', 'criticality']
-    search_fields = ['name', 'description']
-    ordering_fields = ['name', 'created_at', 'updated_at']
-    ordering = ['-created_at']
+    filterset_fields = ["system_type", "status", "criticality"]
+    search_fields = ["name", "description"]
+    ordering_fields = ["name", "created_at", "updated_at"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
-        return HydraulicSystem.objects.select_related().prefetch_related(
-            Prefetch('sensor_data', queryset=SensorData.objects.order_by('-timestamp')[:50])
-        ).all()
+        return (
+            HydraulicSystem.objects.select_related()
+            .prefetch_related(
+                Prefetch(
+                    "sensor_data",
+                    queryset=SensorData.objects.order_by("-timestamp")[:50],
+                )
+            )
+            .all()
+        )
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def sensor_data(self, request, pk=None):
         system = self.get_object()
-        data = system.sensor_data.select_related('component').order_by('-timestamp')[:100]
+        data = system.sensor_data.select_related("component").order_by("-timestamp")[:100]
         serializer = SensorDataSerializer(data, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def reports(self, request, pk=None):
         system = self.get_object()
-        reports = system.diagnostic_reports.select_related('created_by').order_by('-created_at')
+        reports = system.diagnostic_reports.select_related("created_by").order_by("-created_at")
         serializer = DiagnosticReportSerializer(reports, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def diagnose(self, request, pk=None):
         system = self.get_object()
         try:
             report = DiagnosticReport.objects.create(
                 system=system,
                 title=f"Автоматическая диагностика - {timezone.now():%Y-%m-%d %H:%M}",
-                severity='info',
-                status='pending',
+                severity="info",
+                status="pending",
                 created_by=request.user,
             )
             # TODO: integrate DiagnosticEngine here
@@ -85,31 +92,34 @@ class HydraulicSystemViewSet(BaseModelViewSet):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
             logger.error(f"Ошибка диагностики системы {pk}: {e}")
-            return Response({'error': 'Ошибка при выполнении диагностики'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": "Ошибка при выполнении диагностики"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    @action(detail=True, methods=["post"], parser_classes=[MultiPartParser, FormParser])
     def upload_sensor_data(self, request, pk=None):
-        system = self.get_object()
-        uploaded = request.FILES.get('file')
+        self.get_object()
+        uploaded = request.FILES.get("file")
         if not uploaded:
-            return Response({'error': 'Файл не найден'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Файл не найден"}, status=status.HTTP_400_BAD_REQUEST)
         try:
             # TODO: parse and save SensorData via pandas or openpyxl
-            return Response({'message': 'Файл успешно обработан'}, status=status.HTTP_201_CREATED)
+            return Response({"message": "Файл успешно обработан"}, status=status.HTTP_201_CREATED)
         except Exception as e:
             logger.error(f"Ошибка загрузки файла для системы {pk}: {e}")
-            return Response({'error': 'Ошибка обработки файла'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Ошибка обработки файла"}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SystemComponentViewSet(BaseModelViewSet):
     serializer_class = SystemComponentSerializer
-    filterset_fields = ['system']
-    search_fields = ['name']
-    ordering_fields = ['name', 'created_at']
-    ordering = ['name']
+    filterset_fields = ["system"]
+    search_fields = ["name"]
+    ordering_fields = ["name", "created_at"]
+    ordering = ["name"]
 
     def get_queryset(self):
-        return SystemComponent.objects.select_related('system').all()
+        return SystemComponent.objects.select_related("system").all()
 
 
 class SensorDataViewSet(viewsets.ReadOnlyModelViewSet):
@@ -117,25 +127,25 @@ class SensorDataViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['system', 'component']
-    ordering_fields = ['timestamp']
-    ordering = ['-timestamp']
+    filterset_fields = ["system", "component"]
+    ordering_fields = ["timestamp"]
+    ordering = ["-timestamp"]
 
     def get_queryset(self):
-        return SensorData.objects.select_related('system', 'component').all()
+        return SensorData.objects.select_related("system", "component").all()
 
 
 class DiagnosticReportViewSet(BaseModelViewSet):
     serializer_class = DiagnosticReportSerializer
-    filterset_fields = ['system', 'severity', 'status']
-    search_fields = ['title']
-    ordering_fields = ['created_at', 'completed_at']
-    ordering = ['-created_at']
+    filterset_fields = ["system", "severity", "status"]
+    search_fields = ["title"]
+    ordering_fields = ["created_at", "completed_at"]
+    ordering = ["-created_at"]
 
     def get_queryset(self):
-        return DiagnosticReport.objects.select_related('system', 'created_by').all()
+        return DiagnosticReport.objects.select_related("system", "created_by").all()
 
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         report = self.get_object()
         report.mark_completed()
@@ -145,9 +155,9 @@ class DiagnosticReportViewSet(BaseModelViewSet):
 
 class MaintenanceScheduleViewSet(BaseModelViewSet):
     serializer_class = MaintenanceScheduleSerializer
-    filterset_fields = ['system']
-    ordering_fields = ['schedule_date']
-    ordering = ['schedule_date']
+    filterset_fields = ["system"]
+    ordering_fields = ["schedule_date"]
+    ordering = ["schedule_date"]
 
     def get_queryset(self):
-        return MaintenanceSchedule.objects.select_related('system').all()
+        return MaintenanceSchedule.objects.select_related("system").all()
