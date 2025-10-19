@@ -121,11 +121,16 @@ class VectorIndex:
 
     def to_bytes(self) -> bytes:
         assert self._index is not None, "Index not built/loaded"
-        return faiss.serialize_index(self._index)
+        vec = faiss.serialize_index(self._index)
+        # vec is faiss.VectorUint8 -> convert to bytes via numpy for portability (Windows)
+        arr = np.array(vec, dtype="uint8")
+        return bytes(arr)
 
     @classmethod
     def from_bytes(cls, data: bytes) -> "VectorIndex":
-        index = faiss.deserialize_index(data)
+        # faiss expects a numpy array buffer (uint8) for deserialization on some platforms (e.g., Windows)
+        arr = np.frombuffer(data, dtype="uint8")
+        index = faiss.deserialize_index(arr)
         dim = index.d
         obj = cls(dim=dim)
         obj._index = index
