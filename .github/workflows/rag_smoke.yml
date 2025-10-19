@@ -46,3 +46,28 @@ jobs:
           EMBEDDING_MODEL: nomic-embed-text
         run: |
           python test_rag.py
+
+  rag-smoke-fallback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install sentence-transformers
+
+      - name: Build index (CI fallback)
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: |
+          make rag-ci-fallback
