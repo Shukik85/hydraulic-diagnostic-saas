@@ -1,55 +1,131 @@
 import os
 import sys
 import django
-from apps.rag_assistant.rag_core import default_local_orchestrator
+import time
+from typing import List, Dict, Any
+import numpy as np
 
-# Добавляем текущую директорию в путь
-sys.path.insert(0, '.')
+from apps.rag_assistant.rag_core import RAGOrchestrator, LocalStorageBackend, EmbeddingsProvider, DEFAULT_LOCAL_STORAGE
+from apps.rag_assistant.llm_factory import LLMFactory
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
-# Минимальные переменные окружения
-os.environ.setdefault('SECRET_KEY', 'test-key')
-os.environ.setdefault('DEBUG', 'True')
-os.environ.setdefault('DATABASE_NAME', 'test_db')
-os.environ.setdefault('DATABASE_USER', 'test_user')
-os.environ.setdefault('DATABASE_PASSWORD', 'test_pass')
-os.environ.setdefault('DATABASE_HOST', 'localhost')
-os.environ.setdefault('DATABASE_PORT', '5432')
-os.environ.setdefault('REDIS_URL', 'redis://localhost:6379/1')
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
+# Инициализация Django окружения, если требуется доступ к settings
+BASE_DIR = os.path.dirname(__file__)
+sys.path.insert(0, BASE_DIR)
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 django.setup()
 
 
+def format_docs(docs: List[Dict[str, Any]]) -> str:
+    return "\n\n".join(d["content"] for d in docs if d.get("content"))
+
+
+def build_rag_chain(vindex, embedder, llm):
+    def _encode(texts: List[str]) -> np.ndarray:
+        embs = embedder.embed_documents(texts)
+        arr = np.array(embs, dtype="float32")
+        norms = np.linalg.norm(arr, axis=1, keepdims=True) + 1e-12
+        return (arr / norms).astype("float32")
+
+    docs_list = (vindex.metadata or {}).get("docs", [])
+
+    def retrieve(question: str):
+        q_emb = _encode([question])
+        _, indices = vindex.search(q_emb, k=4)
+        results = []
+        for i in indices[0]:
+            if 0 <= i < len(docs_list):
+                results.append({"content": docs_list[i], "meta": {"idx": int(i)}})
+        return results
+
+    prompt = ChatPromptTemplate.from_template(
+        """
+        You are a helpful assistant for hydraulic diagnostics.
+        Use the following retrieved context to answer the user's question concisely and accurately.
+        If the answer is not present in the context, say you don't know.
+
+        Context:
+        {context}
+
+        Question:
+        {question}
+
+        Answer in the same language as the question.
+        """
+    )
+    parser = StrOutputParser()
+
+    chain = (
+        {"question": RunnablePassthrough()}
+        | {"docs": RunnableLambda(lambda x: retrieve(x["question"]))}
+        | RunnableLambda(lambda x: {"question": x["question"], "context": format_docs(x["docs"])})
+        | prompt
+        | llm
+        | parser
+    )
+    return chain
+
+
 def main():
-    print("🚀 Testing RAG core...")
+    print("✅ AI Engine и RAG система инициализированы")
 
-    orch = default_local_orchestrator()
-
+    # 1) Данные (можете заменить на свои)
     docs = [
         "Hydraulic pressure is low, check pump operation and fluid levels",
-        "Temperature sensor shows high readings, cooling system may need attention",
-        "Oil contamination detected in hydraulic system, replace filters",
+        "Pressure relief valve stuck open, system cannot maintain pressure",
         "Pump failure suspected due to unusual noise and vibration patterns",
-        "Pressure relief valve stuck open, system cannot maintain pressure"
+        "Filter clogged, causing cavitation and reduced flow",
+        "Air in hydraulic lines can lead to spongy response and delayed actuation",
     ]
+    version = "v_test_v2"
 
-    print("📦 Building embeddings and index...")
-    path = orch.build_and_save(docs, version="test_v1", metadata={"test": True, "docs_count": len(docs)})
-    print(f"✅ Index saved to: {path}")
+    # 2) Сборка индекса (сохранение docs в metadata)
+    print("📦 Building embeddings and index via Ollama (nomic-embed-text)...")
+    storage = LocalStorageBackend(base_path=os.path.abspath(DEFAULT_LOCAL_STORAGE))
+    # В этом тесте embedder rag_core не используем — вместо него Ollama embeddings из LLMFactory
+    # но orchestrator требует EmbeddingsProvider, поэтому подставим любой (он не будет использоваться ниже)
+    dummy_embedder = EmbeddingsProvider(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    orchestrator = RAGOrchestrator(storage=storage, embedder=dummy_embedder, index_metric="ip")
+    orchestrator()
 
-    print("🔍 Testing search...")
-    vindex = orch.load_index("test_v1")
-    query_vectors = orch.embedder.encode(["pump problems", "pressure issues"])
-    distances, indices = vindex.search(query_vectors, k=2)
+    # Векторизацию выполним через OllamaEmbeddings, чтобы индекс соответствовал ретриверу
+    ollama_embedder = LLMFactory.create_embedder()
+    embs = np.array(ollama_embedder.embed_documents(docs), dtype="float32")
+    norms = np.linalg.norm(embs, axis=1, keepdims=True) + 1e-12
+    embs = (embs / norms).astype("float32")
 
-    print("\n📋 Results:")
-    print("Query 1 - 'pump problems':")
-    for i, (idx, score) in enumerate(zip(indices[0], distances[0])):
-        print(f"  {i+1}. Score: {score:.3f} - {docs[idx]}")
+    # Соберем индекс вручную, затем сохраним через orchestrator.save_index
+    from apps.rag_assistant.rag_core import VectorIndex
+    vindex = VectorIndex(dim=embs.shape[1], metric="ip")
+    vindex.build(embs)
+    index_bytes = vindex.to_bytes()
+    meta = {"dim": embs.shape[1], "metric": "ip", "docs": docs}
+    storage.save_index(version, index_bytes, meta)
 
-    print("\nQuery 2 - 'pressure issues':")
-    for i, (idx, score) in enumerate(zip(indices[1], distances[1])):
-        print(f"  {i+1}. Score: {score:.3f} - {docs[idx]}")
+    print(f"✅ Index saved to: {os.path.join(DEFAULT_LOCAL_STORAGE, f'v_{version}')}")
+
+    # 3) Загрузка индекса и сборка цепочки
+    idx_bytes, loaded_meta = storage.load_index(version)
+    vindex2 = VectorIndex.from_bytes(idx_bytes)
+    vindex2.metadata = loaded_meta
+
+    llm = LLMFactory.create_chat_model()  # qwen3:8b по умолчанию
+
+    chain = build_rag_chain(vindex2, ollama_embedder, llm)
+
+    # 4) Запросы
+    print("🔍 Testing RAG chain...")
+    queries = ["pump problems", "pressure issues", "air in lines"]
+    for i, q in enumerate(queries, 1):
+        t0 = time.time()
+        answer = chain.invoke({"question": q})
+        dt = time.time() - t0
+        print(f"\nQuery {i} - '{q}':")
+        print("Answer:", answer)
+        print(f"(took {dt:.2f}s)")
 
     print("\n🎉 RAG test completed successfully!")
 
