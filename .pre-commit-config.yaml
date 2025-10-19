@@ -44,7 +44,7 @@ repos:
         args: [--target-version, "5.2"]
 
   - repo: https://github.com/GitGuardian/ggshield
-    rev: v1.32.1
+    rev: v1.43.0
     hooks:
       - id: ggshield
         stages: [pre-commit]
@@ -113,13 +113,6 @@ repos:
     hooks:
       - id: hadolint
         args: [--ignore, DL3008, --ignore, DL3009, --ignore, DL3015]
-
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.3.3
-    hooks:
-      - id: prettier
-        types_or: [yaml, markdown]
-        args: [--tab-width=2]
 
   - repo: https://github.com/dotenv-linter/dotenv-linter
     rev: v3.3.0
