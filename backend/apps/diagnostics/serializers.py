@@ -5,7 +5,6 @@ from rest_framework import serializers
 from .models import (
     DiagnosticReport,
     HydraulicSystem,
-    MaintenanceSchedule,
     SensorData,
     SystemComponent,
 )
@@ -73,7 +72,6 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
     status_display = serializers.SerializerMethodField()
     criticality_display = serializers.SerializerMethodField()
     latest_activity = serializers.SerializerMethodField()
-    health_score = serializers.FloatField(read_only=True)
 
     class Meta:
         model = HydraulicSystem
@@ -90,14 +88,12 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
             "created_at",
             "updated_at",
             "latest_activity",
-            "health_score",
         ]
         read_only_fields = [
             "id",
             "created_at",
             "updated_at",
             "latest_activity",
-            "health_score",
         ]
 
     def get_system_type_display(self, obj):
@@ -135,7 +131,6 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
             "ai_confidence",
             "created_by",
             "created_at",
-            "completed_at",
             "updated_at",
         ]
         read_only_fields = [
@@ -145,7 +140,6 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
             "status_display",
             "created_by",
             "created_at",
-            "completed_at",
             "updated_at",
         ]
 
@@ -156,22 +150,6 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
         return self.get_choice_display(obj, "status")
 
 
-class MaintenanceScheduleSerializer(serializers.ModelSerializer):
-    """Сериализатор графика обслуживания."""
-
-    class Meta:
-        model = MaintenanceSchedule
-        fields = [
-            "id",
-            "system",
-            "schedule_date",
-            "description",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["id", "created_at", "updated_at"]
-
-
 class DiagnosticEngineSettingsSerializer(serializers.Serializer):
     """
     Пример сериализатора настроек для DiagnosticEngine.
@@ -180,7 +158,3 @@ class DiagnosticEngineSettingsSerializer(serializers.Serializer):
 
     model_type = serializers.ChoiceField(choices=["isolation_forest", "random_forest"])
     threshold = serializers.FloatField(min_value=0, max_value=1)
-
-
-# Дополнительные сериализаторы (Alerts, Diagnoses и т.д.) можно добавить по аналогии,
-# следуя шаблонам ModelSerializer, ChoiceDisplayMixin и read_only_fields.
