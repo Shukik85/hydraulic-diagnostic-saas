@@ -1,0 +1,142 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hydraulic-diagnostic-saas"
+version = "0.1.0"
+description = "SaaS платформа для диагностики гидравлических систем"
+requires-python = ">=3.10"
+authors = [
+    {name = "Plotnikov Aleksandr", email = "shukik85@ya.ru"}
+]
+keywords = ["django", "hydraulic", "diagnostic", "saas", "rag", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Scientific/Engineering",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311', 'py312', 'py313']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+  | node_modules
+  | staticfiles
+  | static
+  | media
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip = [
+    "migrations",
+    "venv",
+    ".venv",
+    "node_modules",
+    "staticfiles",
+    "static",
+    "media"
+]
+known_django = ["django"]
+known_first_party = ["core", "apps"]
+sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+
+[tool.bandit]
+exclude_dirs = [
+    "migrations",
+    "venv",
+    ".venv", 
+    "node_modules",
+    "staticfiles",
+    "static",
+    "media",
+    "tests"
+]
+skips = ["B101", "B601", "B603"]
+# B101: Test for use of assert
+# B601: paramiko calls
+# B603: subprocess_without_shell_equals_true
+
+[tool.coverage.run]
+source = ["."] 
+omit = [
+    "*/migrations/*",
+    "*/venv/*",
+    "*/.venv/*",
+    "manage.py",
+    "*/settings/*",
+    "*/wsgi.py",
+    "*/asgi.py",
+    "*/tests/*",
+    "*/node_modules/*",
+    "*/staticfiles/*",
+    "*/static/*",
+    "*/media/*"
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "class .*\\(Protocol\\):",
+    "@(abc\.)?abstractmethod"
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "core.settings.test"
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: медленные тесты",
+    "integration: интеграционные тесты",
+    "unit: модульные тесты"
+]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.djlint]
+profile = "django"
+max_line_length = 88
+format_css = true
+format_js = true
+ignore = "H006,H030,H031"  # игнорировать некоторые Django ошибки
+include = "H017,H035"  # включить полезные правила
