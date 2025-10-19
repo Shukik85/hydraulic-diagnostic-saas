@@ -1,0 +1,6 @@
+{
+  "dim": 384,
+  "metric": "ip",
+  "test": true,
+  "docs_count": 5
+}
