@@ -1,0 +1,48 @@
+name: RAG Smoke (self-hosted Ollama)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "backend/apps/rag_assistant/**"
+      - "backend/test_rag.py"
+      - "backend/requirements.txt"
+  pull_request:
+    paths:
+      - "backend/apps/rag_assistant/**"
+      - "backend/test_rag.py"
+      - "backend/requirements.txt"
+
+jobs:
+  rag-smoke:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ensure Ollama models
+        run: |
+          ollama pull qwen3:8b
+          ollama pull nomic-embed-text
+
+      - name: Run RAG smoke test (Ollama)
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+          LLM_PROVIDER: ollama
+          LLM_MODEL: qwen3:8b
+          EMBEDDING_PROVIDER: ollama
+          EMBEDDING_MODEL: nomic-embed-text
+        run: |
+          python test_rag.py
