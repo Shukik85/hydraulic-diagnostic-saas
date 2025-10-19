@@ -1,11 +1,13 @@
 import unittest
 from datetime import datetime, timedelta
 
-import pandas as pd
-from apps.diagnostics.ai_engine import ai_engine
-from apps.diagnostics.models import HydraulicSystem, SensorData
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+
+import pandas as pd
+
+from apps.diagnostics.ai_engine import ai_engine
+from apps.diagnostics.models import HydraulicSystem, SensorData
 
 User = get_user_model()
 

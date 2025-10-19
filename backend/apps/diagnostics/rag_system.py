@@ -5,8 +5,9 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-import numpy as np
 from django.conf import settings
+
+import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -180,8 +181,8 @@ class HydraulicKnowledgeBase:
         for doc in base_knowledge:
             cursor.execute(
                 """
-                INSERT OR REPLACE INTO knowledge_documents 
-                (title, content, category, tags, source) 
+                INSERT OR REPLACE INTO knowledge_documents
+                (title, content, category, tags, source)
                 VALUES (?, ?, ?, ?, ?)
             """,
                 (
@@ -292,8 +293,8 @@ class HydraulicKnowledgeBase:
 
             cursor.execute(
                 """
-                INSERT INTO diagnostic_cases 
-                (problem_description, symptoms, solution, system_type, success_rate) 
+                INSERT INTO diagnostic_cases
+                (problem_description, symptoms, solution, system_type, success_rate)
                 VALUES (?, ?, ?, ?, ?)
             """,
                 (problem, json.dumps(symptoms), solution, system_type, success_rate),
@@ -482,8 +483,8 @@ class HydraulicKnowledgeBase:
             for doc in new_documents:
                 cursor.execute(
                     """
-                    INSERT INTO knowledge_documents 
-                    (title, content, category, tags, source) 
+                    INSERT INTO knowledge_documents
+                    (title, content, category, tags, source)
                     VALUES (?, ?, ?, ?, ?)
                 """,
                     (

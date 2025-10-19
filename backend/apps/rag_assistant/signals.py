@@ -4,7 +4,7 @@ from django.core.cache import cache
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
-from .models import Document, RagSystem, RagQueryLog
+from .models import Document, RagQueryLog, RagSystem
 
 logger = logging.getLogger(__name__)
 

@@ -95,7 +95,14 @@ CACHE_MIDDLEWARE_SECONDS = 300  # 5 минут
 CACHE_MIDDLEWARE_KEY_PREFIX = "hydraulic"
 
 # Static Files оптимизация
-STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
 
 # Улучшенные настройки REST Framework
 REST_FRAMEWORK = base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}

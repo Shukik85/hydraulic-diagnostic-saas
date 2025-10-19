@@ -5,12 +5,13 @@ import logging
 import time
 from typing import Any, Dict
 
-import redis
-from decouple import config
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
 from django.http import JsonResponse
+
+import redis
+from decouple import config
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -19,6 +20,7 @@ from rest_framework.response import Response
 # Celery imports
 try:
     from celery.app.control import Inspect
+
     from core.celery import app as celery_app
 
     CELERY_AVAILABLE = True

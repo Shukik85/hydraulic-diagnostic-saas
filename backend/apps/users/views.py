@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
-from rest_framework import filters, generics, permissions, status, viewsets, mixins
+
+from rest_framework import filters, generics, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -42,11 +43,11 @@ class UserRegistrationView(generics.CreateAPIView):
             action="login",
             description="Регистрация",
             ip_address=self.get_client_ip(),
-            user_agent=self.request.META.get("HTTP_USER_AGENT", ""),
+            user_agent=self.request.headers.get("user-agent", ""),
         )
 
     def get_client_ip(self):
-        xff = self.request.META.get("HTTP_X_FORWARDED_FOR")
+        xff = self.request.headers.get("x-forwarded-for")
         return xff.split(",")[0] if xff else self.request.META.get("REMOTE_ADDR")
 
 
