@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hashlib
 import os
 import tempfile
@@ -10,17 +12,11 @@ from django.db import transaction
 import bleach  # type: ignore[import-untyped]
 import pydantic
 from django_ratelimit.decorators import ratelimit
-from langchain.chains import RetrievalQA
-from langchain.document_loaders import (
-    MarkdownLoader,
-    PDFMinerLoader,
-    TextLoader,
-    UnstructuredWordDocumentLoader,
-)
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import FAISS
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
+from .llm_factory import LLMFactory
 from .models import Document, RagQueryLog, RagSystem
 
 # Константы для валидации
@@ -35,10 +31,8 @@ FAQ_ANSWER_TTL = 86400  # 24 часа
 CACHE_STATS_KEY = "cache_stats"
 
 LOADER_MAP = {
-    "txt": TextLoader,
-    "pdf": PDFMinerLoader,
-    "docx": UnstructuredWordDocumentLoader,
-    "md": MarkdownLoader,
+    # В текущей миграции оставляем только текстовые форматы,
+    # при необходимости подключим unstructured/pdfminer позднее.
 }
 
 
@@ -89,10 +83,6 @@ class DocumentInput(pydantic.BaseModel):
     def validate_format(cls, v):
         if not isinstance(v, str):
             raise ValueError("Format must be a string")
-        if v not in LOADER_MAP:
-            raise ValueError(
-                f"Unsupported format. Supported formats: {list(LOADER_MAP.keys())}"
-            )
         return v.strip().lower()
 
     @pydantic.validator("metadata")
@@ -143,72 +133,14 @@ class RagAssistant:
             raise TypeError("system must be an instance of RagSystem")
 
         self.system = system
-        self.embedding = OpenAIEmbeddings()
-        self.index = self._load_index()
-
-    def _load_index(self):
-        """Загрузка индекса с валидацией"""
-        if self.system.index_config is not None and not isinstance(
-            self.system.index_config, dict
-        ):
-            raise TypeError("index_config must be a dictionary")
-
-        config = self.system.index_config or {}
-        if self.system.index_type == "faiss":
-            path = config.get("index_path") or f"/tmp/{self.system.name}.faiss"
-            if not isinstance(path, str):
-                raise TypeError("index_path must be a string")
-
-            if os.path.exists(path):
-                return FAISS.load_local(path, self.embedding)
-            return FAISS(self.embedding.embed_query, [])
-        raise NotImplementedError("Only FAISS index type is currently supported")
+        # LLM и эмбеддинги через Ollama по умолчанию (переключаемо через settings)
+        self.llm = LLMFactory.create_chat_model()
+        self.embedder = LLMFactory.create_embedder()
 
     def _get_cache_key(
         self, key_type: str, identifier: str, version: str = CACHE_VERSION
     ) -> str:
         return f"rag:{self.system.id}:{key_type}:{identifier}:{version}"
-
-    def _invalidate_document_cache(self, doc_id: int):
-        cache_keys_to_delete = [
-            self._get_cache_key("doc_embedding", str(doc_id)),
-            self._get_cache_key("doc_chunks", str(doc_id)),
-        ]
-        cache.delete_many(cache_keys_to_delete)
-
-    def _cache_document_embedding(self, doc_id: int, embedding: List[float]):
-        cache_key = self._get_cache_key("doc_embedding", str(doc_id))
-        cache.set(cache_key, embedding, timeout=DOC_EMBEDDING_TTL)
-
-    def _get_cached_document_embedding(self, doc_id: int) -> Optional[List[float]]:
-        cache_key = self._get_cache_key("doc_embedding", str(doc_id))
-        cached = cache.get(cache_key)
-        if cached is not None:
-            CacheStats.increment_hit()
-            return cached
-        CacheStats.increment_miss()
-        return None
-
-    def _cache_search_result(
-        self, query: str, category: Optional[str], results: List[Dict]
-    ):
-        cache_key = self._get_cache_key(
-            "search", f"{hashlib.md5(query.encode()).hexdigest()}:{category}"
-        )
-        cache.set(cache_key, results, timeout=SEARCH_RESULT_TTL)
-
-    def _get_cached_search_result(
-        self, query: str, category: Optional[str]
-    ) -> Optional[List[Dict]]:
-        cache_key = self._get_cache_key(
-            "search", f"{hashlib.md5(query.encode()).hexdigest()}:{category}"
-        )
-        cached = cache.get(cache_key)
-        if cached is not None:
-            CacheStats.increment_hit()
-            return cached
-        CacheStats.increment_miss()
-        return None
 
     def _cache_faq_answer(self, question: str, answer: str):
         cache_key = self._get_cache_key(
@@ -227,61 +159,72 @@ class RagAssistant:
         CacheStats.increment_miss()
         return None
 
-    @transaction.atomic
-    def index_document(self, doc: Document):
-        try:
-            validated_doc = DocumentInput(
-                content=doc.content, format=doc.format, metadata=doc.metadata or {}
-            )
-        except pydantic.ValidationError as e:
-            raise ValidationError(f"Document validation failed: {e}")
+    # --------- Retrieval адаптер над вашим FAISS индексом из rag_core --------- #
 
-        doc.content = validated_doc.content
-        doc.format = validated_doc.format
-        doc.metadata = validated_doc.metadata
+    def _build_retriever(self):
+        # Предполагается, что индекс и метаданные (docs) доступны через rag_core orchestrator
+        # Здесь упрощённо: получаем из системы путь/версию индекса
+        from .rag_core import default_local_orchestrator
 
-        self._invalidate_document_cache(doc.id)
+        orchestrator = default_local_orchestrator()
+        vindex = orchestrator.load_index(self.system.index_version or "test_v1")
+        docs_list = (vindex.metadata or {}).get("docs", [])
 
-        loader_cls = LOADER_MAP.get(doc.format)
-        if loader_cls is None:
-            raise ValueError(f"Unsupported document format: {doc.format}")
+        def _retrieve(question: str):
+            q_emb = self._encode([question])
+            _, indices = vindex.search(q_emb, k=4)
+            results = []
+            for i in indices[0]:
+                if 0 <= i < len(docs_list):
+                    results.append({"content": docs_list[i], "meta": {"idx": int(i)}})
+            return results
 
-        loader = loader_cls(
-            file_path=doc.metadata.get("file_path") or tmp_file_for(doc)
+        return _retrieve
+
+    def _encode(self, texts: List[str]):
+        # OllamaEmbeddings интерфейс возвращает список векторов
+        emb = self.embedder.embed_documents(texts)
+        # нормализуем для inner product (опционально)
+        import numpy as np
+
+        arr = np.array(emb, dtype="float32")
+        norms = np.linalg.norm(arr, axis=1, keepdims=True) + 1e-12
+        return (arr / norms).astype("float32")
+
+    # -------------------------- LangChain 1.x chain -------------------------- #
+
+    def _build_chain(self):
+        prompt = ChatPromptTemplate.from_template(
+            """
+            You are a helpful assistant for hydraulic diagnostics.
+            Use the following retrieved context to answer the user's question concisely and accurately.
+            If the answer is not present in the context, say you don't know.
+
+            Context:
+            {context}
+
+            Question:
+            {question}
+
+            Answer in the same language as the question.
+            """
         )
-        pages = loader.load()
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        chunks = splitter.split_documents(pages)
-        self.index.add_documents(chunks)
-        self.index.save_local(f"/tmp/{self.system.name}.faiss")
+        parser = StrOutputParser()
 
-    def search_documents(
-        self, query: str, category: Optional[str] = None, ttl: int = 3600
-    ) -> List[Dict]:
-        cached_results = self._get_cached_search_result(query, category)
-        if cached_results is not None:
-            return cached_results
+        retriever_fn = self._build_retriever()
 
-        results = self._perform_search(query, category)
-        self._cache_search_result(query, category, results)
-        return results
+        def format_docs(docs: List[Dict[str, Any]]) -> str:
+            return "\n\n".join(d["content"] for d in docs if d.get("content"))
 
-    def _perform_search(self, query: str, category: Optional[str] = None) -> List[Dict]:
-        query_embedding = self._get_or_generate_embedding(query)
-        docs = self.index.similarity_search_by_vector(query_embedding, k=10)
-        results: List[Dict[str, Any]] = []
-        for doc in docs:
-            results.append(
-                {
-                    "content": doc.page_content,
-                    "metadata": doc.metadata,
-                    "score": getattr(doc, "similarity", None),
-                }
-            )
-        return results
-
-    def _get_or_generate_embedding(self, text: str) -> List[float]:
-        return self.embedding.embed_query(text)
+        chain = (
+            {"question": RunnablePassthrough()}
+            | {"docs": RunnableLambda(lambda x: retriever_fn(x["question"]))}
+            | RunnableLambda(lambda x: {"question": x["question"], "context": format_docs(x["docs"])})
+            | prompt
+            | self.llm
+            | parser
+        )
+        return chain
 
     @ratelimit(key="user_or_ip", rate="10/m", block=True)
     def answer(self, query: str, user_id: Optional[int] = None):
@@ -295,18 +238,11 @@ class RagAssistant:
         except pydantic.ValidationError as e:
             raise ValidationError(f"Query validation failed: {e}")
 
-        validated_query = validated_input.query
-        validated_user_id = validated_input.user_id
+        chain = self._build_chain()
+        result: str = chain.invoke({"question": validated_input.query})
 
-        qa = RetrievalQA.from_chain_type(
-            llm=self.system.model_name,
-            chain_type="stuff",
-            retriever=self.index.as_retriever(),
-        )
-
-        result = qa.run(validated_query)
-        self._cache_faq_answer(validated_query, result)
-        self._log_query(validated_query, result, validated_user_id)
+        self._cache_faq_answer(validated_input.query, result)
+        self._log_query(validated_input.query, result, validated_input.user_id)
         return result
 
     @transaction.atomic
