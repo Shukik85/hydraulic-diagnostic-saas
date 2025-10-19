@@ -12,6 +12,9 @@ from .serializers import (
     UserCreateSerializer,
     UserDetailSerializer,
     UserProfileSerializer,
+)
+from .serializers_auth_and_stats import (
+    CustomTokenObtainPairSerializer,
     UserStatsSerializer,
 )
 from .serializers_change_password import ChangePasswordSerializer
@@ -105,3 +108,4 @@ class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
         # По умолчанию возвращаем активность текущего пользователя
         self.queryset = self.queryset.filter(user=request.user)
         return super().list(request, *args, **kwargs)
+}
