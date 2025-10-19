@@ -33,6 +33,7 @@ whitenoise>=6.8.2
 uvicorn[standard]>=0.30.6  # for ASGI runs
 
 # Security extras (optional)
+bleach>=6.1.0
 django-csp>=3.8
 
 # Users: images support
