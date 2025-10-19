@@ -20,8 +20,12 @@ class Document(models.Model):
 
     title = models.CharField(max_length=255, verbose_name="Название")
     content = models.TextField(verbose_name="Содержимое")
-    format = models.CharField(max_length=10, choices=FORMAT_CHOICES, verbose_name="Формат")
-    language = models.CharField(max_length=10, choices=LANGUAGE_CHOICES, verbose_name="Язык")
+    format = models.CharField(
+        max_length=10, choices=FORMAT_CHOICES, verbose_name="Формат"
+    )
+    language = models.CharField(
+        max_length=10, choices=LANGUAGE_CHOICES, verbose_name="Язык"
+    )
     metadata = JSONField(default=dict, verbose_name="Метаданные")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -44,7 +48,9 @@ class RagSystem(models.Model):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     model_name = models.CharField(max_length=100, default="openai/gpt-3.5-turbo")
-    index_type = models.CharField(max_length=50, default="faiss")  # faiss, elasticsearch, pinecone
+    index_type = models.CharField(
+        max_length=50, default="faiss"
+    )  # faiss, elasticsearch, pinecone
     index_config = JSONField(default=dict, verbose_name="Настройки индексатора")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -61,7 +67,9 @@ class RagQueryLog(models.Model):
     """Логи запросов и ответов."""
 
     system = models.ForeignKey(RagSystem, on_delete=models.CASCADE, related_name="logs")
-    document = models.ForeignKey(Document, on_delete=models.SET_NULL, null=True, blank=True)
+    document = models.ForeignKey(
+        Document, on_delete=models.SET_NULL, null=True, blank=True
+    )
     query_text = models.TextField()
     response_text = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True, db_index=True)

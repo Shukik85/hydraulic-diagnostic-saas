@@ -17,7 +17,9 @@ class HydraulicKnowledgeBase:
     """RAG система для технических знаний по гидравлике"""
 
     def __init__(self):
-        self.vectorizer = TfidfVectorizer(max_features=1000, stop_words=None, ngram_range=(1, 2))
+        self.vectorizer = TfidfVectorizer(
+            max_features=1000, stop_words=None, ngram_range=(1, 2)
+        )
         self.knowledge_vectors = None
         self.knowledge_texts: List[str] = []
         self.knowledge_metadata: List[Dict[str, Any]] = []
@@ -36,7 +38,9 @@ class HydraulicKnowledgeBase:
             # Построение векторов
             if self.knowledge_texts:
                 self._build_vectors()
-                logger.info(f"Загружено {len(self.knowledge_texts)} документов в базу знаний")
+                logger.info(
+                    f"Загружено {len(self.knowledge_texts)} документов в базу знаний"
+                )
 
         except Exception as e:
             logger.error(f"Ошибка инициализации базы знаний: {e}")
@@ -318,13 +322,17 @@ class HydraulicKnowledgeBase:
         except Exception as e:
             logger.error(f"Ошибка добавления случая: {e}")
 
-    def get_similar_cases(self, current_symptoms: List[str], top_k: int = 3) -> List[Dict[str, Any]]:
+    def get_similar_cases(
+        self, current_symptoms: List[str], top_k: int = 3
+    ) -> List[Dict[str, Any]]:
         """Поиск похожих диагностических случаев"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
 
-            cursor.execute("SELECT * FROM diagnostic_cases ORDER BY created_at DESC LIMIT 100")
+            cursor.execute(
+                "SELECT * FROM diagnostic_cases ORDER BY created_at DESC LIMIT 100"
+            )
             cases = cursor.fetchall()
             conn.close()
 
@@ -443,7 +451,9 @@ class HydraulicKnowledgeBase:
             if any(keyword in sentence.lower() for keyword in keywords):
                 recommendations.append(sentence.strip())
 
-        return ". ".join(recommendations[:2]) if recommendations else content[:200] + "..."
+        return (
+            ". ".join(recommendations[:2]) if recommendations else content[:200] + "..."
+        )
 
     def _extract_relevant_part(self, content: str, question: str) -> str:
         """Извлечение наиболее релевантной части документа для ответа"""
@@ -512,7 +522,9 @@ class HydraulicKnowledgeBase:
             cursor.execute("SELECT COUNT(*) FROM diagnostic_cases")
             case_count = cursor.fetchone()[0]
 
-            cursor.execute("SELECT category, COUNT(*) FROM knowledge_documents GROUP BY category")
+            cursor.execute(
+                "SELECT category, COUNT(*) FROM knowledge_documents GROUP BY category"
+            )
             categories = dict(cursor.fetchall())
 
             conn.close()
@@ -522,7 +534,9 @@ class HydraulicKnowledgeBase:
                 "diagnostic_cases": case_count,
                 "categories": categories,
                 "vector_dimensions": (
-                    self.vectorizer.max_features if hasattr(self.vectorizer, "max_features") else 0
+                    self.vectorizer.max_features
+                    if hasattr(self.vectorizer, "max_features")
+                    else 0
                 ),
                 "last_updated": datetime.now().isoformat(),
             }

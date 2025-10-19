@@ -208,7 +208,7 @@ class AIEngineTestCase(TestCase):
                 timestamp=datetime.now(),
                 unit="test",
                 warning_message="Test critical event",
-                **data
+                **data,
             )
 
         sensor_data = self.system.sensor_data.all()

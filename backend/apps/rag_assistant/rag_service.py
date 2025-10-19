@@ -52,7 +52,9 @@ class QueryInput(pydantic.BaseModel):
         if not isinstance(v, str):
             raise ValueError("Query must be a string")
         if len(v) > MAX_QUERY_LENGTH:
-            raise ValueError(f"Query too long. Maximum length is {MAX_QUERY_LENGTH} characters")
+            raise ValueError(
+                f"Query too long. Maximum length is {MAX_QUERY_LENGTH} characters"
+            )
         # Санитизация HTML-тегов
         sanitized = bleach.clean(v, tags=[], attributes={}, strip=True)
         return sanitized.strip()
@@ -76,7 +78,9 @@ class DocumentInput(pydantic.BaseModel):
         if not isinstance(v, str):
             raise ValueError("Content must be a string")
         if len(v.encode("utf-8")) > MAX_CONTENT_SIZE:
-            raise ValueError(f"Content too large. Maximum size is {MAX_CONTENT_SIZE} bytes")
+            raise ValueError(
+                f"Content too large. Maximum size is {MAX_CONTENT_SIZE} bytes"
+            )
         # Санитизация HTML-тегов
         return bleach.clean(v, tags=[], attributes={}, strip=True)
 
@@ -85,7 +89,9 @@ class DocumentInput(pydantic.BaseModel):
         if not isinstance(v, str):
             raise ValueError("Format must be a string")
         if v not in LOADER_MAP:
-            raise ValueError(f"Unsupported format. Supported formats: {list(LOADER_MAP.keys())}")
+            raise ValueError(
+                f"Unsupported format. Supported formats: {list(LOADER_MAP.keys())}"
+            )
         return v.strip().lower()
 
     @pydantic.validator("metadata")
@@ -96,7 +102,9 @@ class DocumentInput(pydantic.BaseModel):
         sanitized_metadata = {}
         for key, value in v.items():
             if isinstance(value, str):
-                sanitized_metadata[key] = bleach.clean(value, tags=[], attributes={}, strip=True)
+                sanitized_metadata[key] = bleach.clean(
+                    value, tags=[], attributes={}, strip=True
+                )
             else:
                 sanitized_metadata[key] = value
         return sanitized_metadata
@@ -139,7 +147,9 @@ class RagAssistant:
 
     def _load_index(self):
         """Загрузка индекса с валидацией"""
-        if self.system.index_config is not None and not isinstance(self.system.index_config, dict):
+        if self.system.index_config is not None and not isinstance(
+            self.system.index_config, dict
+        ):
             raise TypeError("index_config must be a dictionary")
 
         config = self.system.index_config or {}
@@ -153,7 +163,9 @@ class RagAssistant:
             return FAISS(self.embedding.embed_query, [])
         raise NotImplementedError("Only FAISS index type is currently supported")
 
-    def _get_cache_key(self, key_type: str, identifier: str, version: str = CACHE_VERSION) -> str:
+    def _get_cache_key(
+        self, key_type: str, identifier: str, version: str = CACHE_VERSION
+    ) -> str:
         return f"rag:{self.system.id}:{key_type}:{identifier}:{version}"
 
     def _invalidate_document_cache(self, doc_id: int):
@@ -176,7 +188,9 @@ class RagAssistant:
         CacheStats.increment_miss()
         return None
 
-    def _cache_search_result(self, query: str, category: Optional[str], results: List[Dict]):
+    def _cache_search_result(
+        self, query: str, category: Optional[str], results: List[Dict]
+    ):
         cache_key = self._get_cache_key(
             "search", f"{hashlib.md5(query.encode()).hexdigest()}:{category}"
         )
@@ -196,11 +210,15 @@ class RagAssistant:
         return None
 
     def _cache_faq_answer(self, question: str, answer: str):
-        cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
+        cache_key = self._get_cache_key(
+            "faq", hashlib.md5(question.encode()).hexdigest()
+        )
         cache.set(cache_key, answer, timeout=FAQ_ANSWER_TTL)
 
     def _get_cached_faq_answer(self, question: str) -> Optional[str]:
-        cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
+        cache_key = self._get_cache_key(
+            "faq", hashlib.md5(question.encode()).hexdigest()
+        )
         cached = cache.get(cache_key)
         if cached is not None:
             CacheStats.increment_hit()
@@ -227,7 +245,9 @@ class RagAssistant:
         if loader_cls is None:
             raise ValueError(f"Unsupported document format: {doc.format}")
 
-        loader = loader_cls(file_path=doc.metadata.get("file_path") or tmp_file_for(doc))
+        loader = loader_cls(
+            file_path=doc.metadata.get("file_path") or tmp_file_for(doc)
+        )
         pages = loader.load()
         splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
         chunks = splitter.split_documents(pages)
@@ -332,7 +352,9 @@ def tmp_file_for(doc: Document):
 
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
-            sanitized_content = bleach.clean(doc.content, tags=[], attributes={}, strip=True)
+            sanitized_content = bleach.clean(
+                doc.content, tags=[], attributes={}, strip=True
+            )
             f.write(sanitized_content)
     except Exception as e:
         if os.path.exists(path):

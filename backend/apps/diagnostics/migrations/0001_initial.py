@@ -32,7 +32,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "name",
-                    models.CharField(max_length=100, unique=True, verbose_name="Название"),
+                    models.CharField(
+                        max_length=100, unique=True, verbose_name="Название"
+                    ),
                 ),
                 (
                     "code",
@@ -49,23 +51,33 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "normal_max",
-                    models.FloatField(blank=True, null=True, verbose_name="Макс. норма"),
+                    models.FloatField(
+                        blank=True, null=True, verbose_name="Макс. норма"
+                    ),
                 ),
                 (
                     "warning_min",
-                    models.FloatField(blank=True, null=True, verbose_name="Мин. предупреждение"),
+                    models.FloatField(
+                        blank=True, null=True, verbose_name="Мин. предупреждение"
+                    ),
                 ),
                 (
                     "warning_max",
-                    models.FloatField(blank=True, null=True, verbose_name="Макс. предупреждение"),
+                    models.FloatField(
+                        blank=True, null=True, verbose_name="Макс. предупреждение"
+                    ),
                 ),
                 (
                     "critical_min",
-                    models.FloatField(blank=True, null=True, verbose_name="Мин. критичное"),
+                    models.FloatField(
+                        blank=True, null=True, verbose_name="Мин. критичное"
+                    ),
                 ),
                 (
                     "critical_max",
-                    models.FloatField(blank=True, null=True, verbose_name="Макс. критичное"),
+                    models.FloatField(
+                        blank=True, null=True, verbose_name="Макс. критичное"
+                    ),
                 ),
                 (
                     "is_active",
@@ -114,7 +126,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "manufacturer",
-                    models.CharField(blank=True, max_length=100, verbose_name="Производитель"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Производитель"
+                    ),
                 ),
                 (
                     "model",
@@ -122,7 +136,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "serial_number",
-                    models.CharField(blank=True, max_length=100, verbose_name="Серийный номер"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Серийный номер"
+                    ),
                 ),
                 (
                     "max_pressure",
@@ -195,19 +211,27 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "location",
-                    models.CharField(blank=True, max_length=200, verbose_name="Местоположение"),
+                    models.CharField(
+                        blank=True, max_length=200, verbose_name="Местоположение"
+                    ),
                 ),
                 (
                     "installation_date",
-                    models.DateField(blank=True, null=True, verbose_name="Дата установки"),
+                    models.DateField(
+                        blank=True, null=True, verbose_name="Дата установки"
+                    ),
                 ),
                 (
                     "last_maintenance",
-                    models.DateTimeField(blank=True, null=True, verbose_name="Последнее ТО"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Последнее ТО"
+                    ),
                 ),
                 (
                     "next_maintenance",
-                    models.DateTimeField(blank=True, null=True, verbose_name="Следующее ТО"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Следующее ТО"
+                    ),
                 ),
                 (
                     "created_at",
@@ -328,7 +352,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "completed_at",
-                    models.DateTimeField(blank=True, null=True, verbose_name="Завершен"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Завершен"
+                    ),
                 ),
                 (
                     "updated_at",
@@ -415,7 +441,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "completed_at",
-                    models.DateTimeField(blank=True, null=True, verbose_name="Завершено"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Завершено"
+                    ),
                 ),
                 (
                     "estimated_duration",
@@ -435,7 +463,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "materials_used",
-                    models.JSONField(default=list, verbose_name="Использованные материалы"),
+                    models.JSONField(
+                        default=list, verbose_name="Использованные материалы"
+                    ),
                 ),
                 (
                     "estimated_cost",
@@ -459,7 +489,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "success",
-                    models.BooleanField(blank=True, null=True, verbose_name="Успешно выполнено"),
+                    models.BooleanField(
+                        blank=True, null=True, verbose_name="Успешно выполнено"
+                    ),
                 ),
                 ("notes", models.TextField(blank=True, verbose_name="Заметки")),
                 (
@@ -535,7 +567,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "sensor_id",
-                    models.CharField(blank=True, max_length=100, verbose_name="ID датчика"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="ID датчика"
+                    ),
                 ),
                 ("value", models.FloatField(verbose_name="Значение")),
                 (
@@ -569,11 +603,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "warning_message",
-                    models.TextField(blank=True, verbose_name="Сообщение предупреждения"),
+                    models.TextField(
+                        blank=True, verbose_name="Сообщение предупреждения"
+                    ),
                 ),
                 (
                     "raw_data",
-                    models.JSONField(blank=True, default=dict, verbose_name="Сырые данные"),
+                    models.JSONField(
+                        blank=True, default=dict, verbose_name="Сырые данные"
+                    ),
                 ),
                 (
                     "quality_score",
@@ -588,7 +626,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "deviation_from_normal",
-                    models.FloatField(blank=True, null=True, verbose_name="Отклонение от нормы"),
+                    models.FloatField(
+                        blank=True, null=True, verbose_name="Отклонение от нормы"
+                    ),
                 ),
                 (
                     "trend_direction",
@@ -686,11 +726,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "acknowledged_at",
-                    models.DateTimeField(blank=True, null=True, verbose_name="Время принятия"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Время принятия"
+                    ),
                 ),
                 (
                     "resolved_at",
-                    models.DateTimeField(blank=True, null=True, verbose_name="Время решения"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Время решения"
+                    ),
                 ),
                 (
                     "resolution_notes",
@@ -781,7 +825,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "manufacturer",
-                    models.CharField(blank=True, max_length=100, verbose_name="Производитель"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Производитель"
+                    ),
                 ),
                 (
                     "model",
@@ -789,11 +835,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "serial_number",
-                    models.CharField(blank=True, max_length=100, verbose_name="Серийный номер"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Серийный номер"
+                    ),
                 ),
                 (
                     "part_number",
-                    models.CharField(blank=True, max_length=100, verbose_name="Номер детали"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Номер детали"
+                    ),
                 ),
                 (
                     "status",
@@ -823,15 +873,21 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "installation_date",
-                    models.DateField(blank=True, null=True, verbose_name="Дата установки"),
+                    models.DateField(
+                        blank=True, null=True, verbose_name="Дата установки"
+                    ),
                 ),
                 (
                     "last_inspection",
-                    models.DateTimeField(blank=True, null=True, verbose_name="Последняя проверка"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Последняя проверка"
+                    ),
                 ),
                 (
                     "next_maintenance",
-                    models.DateTimeField(blank=True, null=True, verbose_name="Следующее ТО"),
+                    models.DateTimeField(
+                        blank=True, null=True, verbose_name="Следующее ТО"
+                    ),
                 ),
                 (
                     "specifications",
@@ -843,7 +899,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "maintenance_history",
-                    models.JSONField(blank=True, default=list, verbose_name="История обслуживания"),
+                    models.JSONField(
+                        blank=True, default=list, verbose_name="История обслуживания"
+                    ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
@@ -864,7 +922,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="hydraulicsystem",
-            index=models.Index(fields=["owner", "status"], name="diagnostics_owner_i_e6d6bb_idx"),
+            index=models.Index(
+                fields=["owner", "status"], name="diagnostics_owner_i_e6d6bb_idx"
+            ),
         ),
         migrations.AddIndex(
             model_name="hydraulicsystem",
@@ -874,7 +934,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="hydraulicsystem",
-            index=models.Index(fields=["-created_at"], name="diagnostics_created_391a1d_idx"),
+            index=models.Index(
+                fields=["-created_at"], name="diagnostics_created_391a1d_idx"
+            ),
         ),
         migrations.AddIndex(
             model_name="diagnosticreport",
@@ -897,11 +959,15 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="maintenancerecord",
-            index=models.Index(fields=["system", "status"], name="diagnostics_system__fbe79b_idx"),
+            index=models.Index(
+                fields=["system", "status"], name="diagnostics_system__fbe79b_idx"
+            ),
         ),
         migrations.AddIndex(
             model_name="maintenancerecord",
-            index=models.Index(fields=["scheduled_date"], name="diagnostics_schedul_aa537b_idx"),
+            index=models.Index(
+                fields=["scheduled_date"], name="diagnostics_schedul_aa537b_idx"
+            ),
         ),
         migrations.AddIndex(
             model_name="maintenancerecord",
@@ -931,7 +997,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="sensordata",
-            index=models.Index(fields=["-timestamp"], name="diagnostics_timesta_8cc67a_idx"),
+            index=models.Index(
+                fields=["-timestamp"], name="diagnostics_timesta_8cc67a_idx"
+            ),
         ),
         migrations.AddIndex(
             model_name="alert",
@@ -963,6 +1031,8 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="systemcomponent",
-            index=models.Index(fields=["system", "status"], name="diagnostics_system__0f5ff3_idx"),
+            index=models.Index(
+                fields=["system", "status"], name="diagnostics_system__0f5ff3_idx"
+            ),
         ),
     ]

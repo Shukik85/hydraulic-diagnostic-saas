@@ -50,7 +50,9 @@ class UserRegistrationView(generics.CreateAPIView):
         return xff.split(",")[0] if xff else self.request.META.get("REMOTE_ADDR")
 
 
-class UserViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin, mixins.UpdateModelMixin):
+class UserViewSet(
+    viewsets.GenericViewSet, mixins.RetrieveModelMixin, mixins.UpdateModelMixin
+):
     """Просмотр и обновление данных пользователя."""
 
     queryset = User.objects.all()
@@ -58,7 +60,9 @@ class UserViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin, mixins.Upd
     permission_classes = [permissions.IsAuthenticated]
     lookup_field = "pk"
 
-    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+    )
     def change_password(self, request, pk=None):
         """Сменить пароль."""
         user = self.get_object()
@@ -67,7 +71,9 @@ class UserViewSet(viewsets.GenericViewSet, mixins.RetrieveModelMixin, mixins.Upd
         serializer.save()
         return Response({"detail": "Пароль изменён"}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=["get"], permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=True, methods=["get"], permission_classes=[permissions.IsAuthenticated]
+    )
     def stats(self, request, pk=None):
         """Статистика пользователя."""
         user = self.get_object()

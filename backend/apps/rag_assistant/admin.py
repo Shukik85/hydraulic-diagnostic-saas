@@ -43,4 +43,8 @@ class RagQueryLogAdmin(admin.ModelAdmin):
 
     @admin.display(description="Запрос")
     def query_text_preview(self, obj):
-        return (obj.query_text[:100] + "...") if len(obj.query_text) > 100 else obj.query_text
+        return (
+            (obj.query_text[:100] + "...")
+            if len(obj.query_text) > 100
+            else obj.query_text
+        )

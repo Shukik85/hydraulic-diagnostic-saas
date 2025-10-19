@@ -9,7 +9,9 @@ from decouple import Csv, config
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
-SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-in-production-key-12345")
+SECRET_KEY = config(
+    "SECRET_KEY", default="django-insecure-change-in-production-key-12345"
+)
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
 
@@ -59,7 +61,9 @@ MIDDLEWARE = [
 # Для django-debug-toolbar (в development):
 if DEBUG:
     INSTALLED_APPS += ["debug_toolbar"]
-    MIDDLEWARE.insert(-2, "debug_toolbar.middleware.DebugToolbarMiddleware")  # Перед Performance
+    MIDDLEWARE.insert(
+        -2, "debug_toolbar.middleware.DebugToolbarMiddleware"
+    )  # Перед Performance
     INTERNAL_IPS = ["127.0.0.1", "localhost"]
 
 ROOT_URLCONF = "core.urls"
@@ -93,7 +97,9 @@ DATABASES = {
 }
 
 # Оптимизация соединений с БД
-DATABASES["default"]["CONN_MAX_AGE"] = config("DATABASE_CONN_MAX_AGE", default=600, cast=int)
+DATABASES["default"]["CONN_MAX_AGE"] = config(
+    "DATABASE_CONN_MAX_AGE", default=600, cast=int
+)
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 # Redis Configuration
@@ -128,7 +134,9 @@ CACHES = {
             "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
         },
         "KEY_PREFIX": "ai_operations",
-        "TIMEOUT": config("AI_CACHE_TIMEOUT", default=86400, cast=int),  # 24 часа для AI
+        "TIMEOUT": config(
+            "AI_CACHE_TIMEOUT", default=86400, cast=int
+        ),  # 24 часа для AI
     },
 }
 

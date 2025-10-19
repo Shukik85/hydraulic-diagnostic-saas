@@ -60,7 +60,9 @@ class StandardResultsSetPagination(PageNumberPagination):
         try:
             self.page = paginator.page(page_number)
         except InvalidPage as exc:
-            msg = self.invalid_page_message.format(page_number=page_number, message=str(exc))
+            msg = self.invalid_page_message.format(
+                page_number=page_number, message=str(exc)
+            )
             raise NotFound(msg)
 
         if paginator.num_pages > 1 and self.template is not None:
@@ -122,7 +124,9 @@ class LargeResultsSetPagination(PageNumberPagination):
         if not self.page.has_next():
             return None
         url = self.request.build_absolute_uri()
-        return replace_query_param(url, self.page_query_param, self.page.paginator.num_pages)
+        return replace_query_param(
+            url, self.page_query_param, self.page.paginator.num_pages
+        )
 
 
 class SmallResultsSetPagination(PageNumberPagination):

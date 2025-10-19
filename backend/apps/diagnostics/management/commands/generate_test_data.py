@@ -15,8 +15,12 @@ class Command(BaseCommand):
     help = "Генерация реалистичных тестовых данных для гидравлических систем"
 
     def add_arguments(self, parser):
-        parser.add_argument("--systems", type=int, default=5, help="Количество систем для создания")
-        parser.add_argument("--sensors", type=int, default=100, help="Записей датчиков на систему")
+        parser.add_argument(
+            "--systems", type=int, default=5, help="Количество систем для создания"
+        )
+        parser.add_argument(
+            "--sensors", type=int, default=100, help="Записей датчиков на систему"
+        )
         parser.add_argument("--days", type=int, default=7, help="Период данных в днях")
         parser.add_argument(
             "--user-id",
@@ -40,7 +44,9 @@ class Command(BaseCommand):
 
             if not user:
                 self.stdout.write(
-                    self.style.ERROR("Пользователь не найден. Создайте пользователя сначала.")
+                    self.style.ERROR(
+                        "Пользователь не найден. Создайте пользователя сначала."
+                    )
                 )
                 return
 
@@ -167,11 +173,18 @@ class Command(BaseCommand):
 
                         # Рассчет итоговых значений
                         current_pressure = (
-                            base_pressure + daily_pressure_offset + pressure_drift + pressure_noise
+                            base_pressure
+                            + daily_pressure_offset
+                            + pressure_drift
+                            + pressure_noise
                         )
-                        current_temp = base_temp + daily_temp_offset + temp_drift + temp_noise
+                        current_temp = (
+                            base_temp + daily_temp_offset + temp_drift + temp_noise
+                        )
                         current_flow = base_flow + daily_flow_offset + flow_noise
-                        current_vibration = base_vibration + vibration_drift + vibration_noise
+                        current_vibration = (
+                            base_vibration + vibration_drift + vibration_noise
+                        )
 
                         # Ограничение значений в реалистичных пределах
                         current_pressure = max(50, min(500, current_pressure))
@@ -181,7 +194,8 @@ class Command(BaseCommand):
 
                         # Определение критичности
                         is_critical_pressure = (
-                            current_pressure > system.max_pressure * 0.95 or current_pressure < 80
+                            current_pressure > system.max_pressure * 0.95
+                            or current_pressure < 80
                         )
                         is_critical_temp = current_temp > 85 or current_temp < 15
                         is_critical_flow = current_flow < base_flow * 0.7
@@ -195,7 +209,9 @@ class Command(BaseCommand):
                                 "unit": "bar",
                                 "is_critical": is_critical_pressure,
                                 "warning_message": (
-                                    "Критическое давление!" if is_critical_pressure else ""
+                                    "Критическое давление!"
+                                    if is_critical_pressure
+                                    else ""
                                 ),
                             },
                             {
@@ -204,7 +220,9 @@ class Command(BaseCommand):
                                 "unit": "°C",
                                 "is_critical": is_critical_temp,
                                 "warning_message": (
-                                    "Критическая температура!" if is_critical_temp else ""
+                                    "Критическая температура!"
+                                    if is_critical_temp
+                                    else ""
                                 ),
                             },
                             {
@@ -212,7 +230,9 @@ class Command(BaseCommand):
                                 "value": round(current_flow, 2),
                                 "unit": "л/мин",
                                 "is_critical": is_critical_flow,
-                                "warning_message": ("Низкий расход!" if is_critical_flow else ""),
+                                "warning_message": (
+                                    "Низкий расход!" if is_critical_flow else ""
+                                ),
                             },
                             {
                                 "sensor_type": "vibration",
@@ -227,14 +247,18 @@ class Command(BaseCommand):
 
                         for sensor_data in sensor_types_data:
                             sensors_for_system.append(
-                                SensorData(system=system, timestamp=timestamp, **sensor_data)
+                                SensorData(
+                                    system=system, timestamp=timestamp, **sensor_data
+                                )
                             )
 
                 # Массовое создание данных датчиков
                 if sensors_for_system:
                     SensorData.objects.bulk_create(sensors_for_system, batch_size=500)
                     total_sensors_created += len(sensors_for_system)
-                    self.stdout.write(f"  → Создано {len(sensors_for_system)} записей датчиков")
+                    self.stdout.write(
+                        f"  → Создано {len(sensors_for_system)} записей датчиков"
+                    )
 
                 # Создание диагностических отчетов на основе критических событий
                 critical_events = SensorData.objects.filter(
@@ -301,7 +325,9 @@ class Command(BaseCommand):
                                         ],
                                         "urgency_level": severity,
                                         "estimated_repair_time": (
-                                            "2-4 часа" if severity == "warning" else "4-8 часов"
+                                            "2-4 часа"
+                                            if severity == "warning"
+                                            else "4-8 часов"
                                         ),
                                     },
                                     ensure_ascii=False,

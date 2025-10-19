@@ -39,7 +39,10 @@ def process_critical_sensor_data(sender, instance, created, **kwargs):
                 if recent_reports == 0:
                     DiagnosticReport.objects.create(
                         system=instance.system,
-                        title=("Автоматический отчет - " "Множественные критические события"),
+                        title=(
+                            "Автоматический отчет - "
+                            "Множественные критические события"
+                        ),
                         description=(
                             f"Система {instance.system.name} зафиксировала "(
                                 f"{recent_critical} критических событий"
@@ -51,7 +54,8 @@ def process_critical_sensor_data(sender, instance, created, **kwargs):
                     )
 
                     logger.error(
-                        f"🚨 Создан автоматический критический отчет для " f"{instance.system.name}"
+                        f"🚨 Создан автоматический критический отчет для "
+                        f"{instance.system.name}"
                     )
 
         except Exception as e:
@@ -101,7 +105,8 @@ def process_diagnostic_report(sender, instance, created, **kwargs):
         try:
             logger.info(
                 f"📋 Создан отчет: {instance.title} "(
-                    f"(система: {instance.system.name}, " f"серьезность: {instance.severity})"
+                    f"(система: {instance.system.name}, "
+                    f"серьезность: {instance.severity})"
                 )
             )
 

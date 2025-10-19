@@ -32,21 +32,27 @@ class Command(BaseCommand):
             systems = HydraulicSystem.objects.filter(id=system_id, is_active=True)
             if not systems.exists():
                 self.stdout.write(
-                    self.style.ERROR(f"System with ID {system_id} not found or inactive")
+                    self.style.ERROR(
+                        f"System with ID {system_id} not found or inactive"
+                    )
                 )
                 return
         else:
             systems = HydraulicSystem.objects.filter(is_active=True)
 
         total_systems = systems.count()
-        self.stdout.write(self.style.SUCCESS(f"Found {total_systems} active system(s) to analyze"))
+        self.stdout.write(
+            self.style.SUCCESS(f"Found {total_systems} active system(s) to analyze")
+        )
 
         success_count = 0
         error_count = 0
 
         for system in systems:
             try:
-                self.stdout.write(f"\nAnalyzing system: {system.name} (ID: {system.id})")
+                self.stdout.write(
+                    f"\nAnalyzing system: {system.name} (ID: {system.id})"
+                )
 
                 # Check if system has recent diagnostics
                 if not force:
@@ -88,7 +94,9 @@ class Command(BaseCommand):
                     error_count += 1
 
             except Exception as e:
-                logger.error(f"Error analyzing system {system.id}: {str(e)}", exc_info=True)
+                logger.error(
+                    f"Error analyzing system {system.id}: {str(e)}", exc_info=True
+                )
                 self.stdout.write(self.style.ERROR(f"  ✗ Error: {str(e)}"))
                 error_count += 1
 

@@ -54,8 +54,12 @@ class HydraulicSystem(models.Model):
         verbose_name="Критичность",
         db_index=True,
     )
-    location = models.CharField(max_length=200, blank=True, verbose_name="Местоположение")
-    installation_date = models.DateField(null=True, blank=True, verbose_name="Дата установки")
+    location = models.CharField(
+        max_length=200, blank=True, verbose_name="Местоположение"
+    )
+    installation_date = models.DateField(
+        null=True, blank=True, verbose_name="Дата установки"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -94,7 +98,9 @@ class SystemComponent(models.Model):
         db_index=True,
     )
     name = models.CharField(max_length=200, verbose_name="Название компонента")
-    specification = models.JSONField(blank=True, null=True, verbose_name="Характеристики")
+    specification = models.JSONField(
+        blank=True, null=True, verbose_name="Характеристики"
+    )
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -142,7 +148,9 @@ class SensorData(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.system.name} – {self.component.name} @ {self.timestamp.isoformat()}"
+        return (
+            f"{self.system.name} – {self.component.name} @ {self.timestamp.isoformat()}"
+        )
 
 
 class DiagnosticReport(models.Model):

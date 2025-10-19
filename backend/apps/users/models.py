@@ -15,11 +15,17 @@ class User(AbstractUser):
     experience_years = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Стаж работы (лет)"
     )
-    specialization = models.CharField(max_length=100, blank=True, verbose_name="Специализация")
+    specialization = models.CharField(
+        max_length=100, blank=True, verbose_name="Специализация"
+    )
 
     # Настройки уведомлений
-    email_notifications = models.BooleanField(default=True, verbose_name="Email уведомления")
-    push_notifications = models.BooleanField(default=True, verbose_name="Push уведомления")
+    email_notifications = models.BooleanField(
+        default=True, verbose_name="Email уведомления"
+    )
+    push_notifications = models.BooleanField(
+        default=True, verbose_name="Push уведомления"
+    )
     critical_alerts_only = models.BooleanField(
         default=False, verbose_name="Только критичные уведомления"
     )
@@ -27,11 +33,17 @@ class User(AbstractUser):
     # Метаданные
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлен")
-    last_activity = models.DateTimeField(default=timezone.now, verbose_name="Последняя активность")
+    last_activity = models.DateTimeField(
+        default=timezone.now, verbose_name="Последняя активность"
+    )
 
     # Статистика
-    systems_count = models.PositiveIntegerField(default=0, verbose_name="Количество систем")
-    reports_generated = models.PositiveIntegerField(default=0, verbose_name="Отчетов создано")
+    systems_count = models.PositiveIntegerField(
+        default=0, verbose_name="Количество систем"
+    )
+    reports_generated = models.PositiveIntegerField(
+        default=0, verbose_name="Отчетов создано"
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
@@ -57,10 +69,16 @@ class User(AbstractUser):
 class UserProfile(models.Model):
     """Дополнительный профиль пользователя"""
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Пользователь")
-    avatar = models.ImageField(upload_to="avatars/", blank=True, null=True, verbose_name="Аватар")
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, verbose_name="Пользователь"
+    )
+    avatar = models.ImageField(
+        upload_to="avatars/", blank=True, null=True, verbose_name="Аватар"
+    )
     bio = models.TextField(blank=True, max_length=500, verbose_name="О себе")
-    location = models.CharField(max_length=100, blank=True, verbose_name="Местоположение")
+    location = models.CharField(
+        max_length=100, blank=True, verbose_name="Местоположение"
+    )
     website = models.URLField(blank=True, verbose_name="Веб-сайт")
 
     # Настройки интерфейса
@@ -83,7 +101,9 @@ class UserProfile(models.Model):
         default="ru",
         verbose_name="Язык",
     )
-    timezone = models.CharField(max_length=50, default="Europe/Moscow", verbose_name="Часовой пояс")
+    timezone = models.CharField(
+        max_length=50, default="Europe/Moscow", verbose_name="Часовой пояс"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -111,10 +131,16 @@ class UserActivity(models.Model):
         ("ai_query", "Запрос к AI"),
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
-    action = models.CharField(max_length=50, choices=ACTION_TYPES, verbose_name="Действие")
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, verbose_name="Пользователь"
+    )
+    action = models.CharField(
+        max_length=50, choices=ACTION_TYPES, verbose_name="Действие"
+    )
     description = models.TextField(blank=True, verbose_name="Описание")
-    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP адрес")
+    ip_address = models.GenericIPAddressField(
+        null=True, blank=True, verbose_name="IP адрес"
+    )
     user_agent = models.TextField(blank=True, verbose_name="User Agent")
 
     # Дополнительные данные в JSON формате

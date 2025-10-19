@@ -35,12 +35,16 @@ def api_metrics(request):
 
     metrics = {
         "requests": {
-            "current_hour": cache.get(f"performance_metrics:{current_hour}:requests", 0),
+            "current_hour": cache.get(
+                f"performance_metrics:{current_hour}:requests", 0
+            ),
             "today": cache.get(f"performance_metrics:{current_day}:requests", 0),
         },
         "ai_operations": {
             "current_hour": cache.get(f"ai_metrics:{current_hour}:ai_requests", 0),
-            "slow_operations_hour": cache.get(f"ai_metrics:{current_hour}:slow_ai_requests", 0),
+            "slow_operations_hour": cache.get(
+                f"ai_metrics:{current_hour}:slow_ai_requests", 0
+            ),
         },
         "performance": {
             "avg_response_time_ms": cache.get(

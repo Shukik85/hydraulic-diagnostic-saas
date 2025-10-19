@@ -20,7 +20,9 @@ class DiagnosticEngine:
         "oil_level": {"min": 20, "max": 100},  # %
     }
 
-    def analyze_system(self, system_id: int, sensor_data: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze_system(
+        self, system_id: int, sensor_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Основной метод анализа системы.
 
@@ -86,7 +88,9 @@ class DiagnosticEngine:
                         "threshold": self.ANOMALY_THRESHOLDS.get(parameter, {}),
                         "severity": severity,
                         "timestamp": timezone.now(),
-                        "message": self._get_anomaly_message(parameter, value, severity),
+                        "message": self._get_anomaly_message(
+                            parameter, value, severity
+                        ),
                     }
                 )
 
@@ -295,15 +299,21 @@ class DiagnosticEngine:
             severity = anomaly["severity"]
 
             if parameter == "pressure" and severity == "critical":
-                recommendations.append("Немедленно остановите систему и проверьте на утечки")
+                recommendations.append(
+                    "Немедленно остановите систему и проверьте на утечки"
+                )
             elif parameter == "temperature" and severity == "critical":
                 recommendations.append(
                     "Остановите систему для охлаждения, проверьте систему охлаждения"
                 )
             elif parameter == "oil_level" and severity == "critical":
-                recommendations.append("Долейте гидравлическое масло до нормального уровня")
+                recommendations.append(
+                    "Долейте гидравлическое масло до нормального уровня"
+                )
             elif parameter == "vibration" and severity == "critical":
-                recommendations.append("Проверьте подшипники и крепления, возможен дисбаланс")
+                recommendations.append(
+                    "Проверьте подшипники и крепления, возможен дисбаланс"
+                )
             else:
                 recommendations.append(
                     f"Контролируйте параметр '{parameter}' и при необходимости обратитесь к специалисту"

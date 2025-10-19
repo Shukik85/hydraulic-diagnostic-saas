@@ -60,7 +60,9 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
 
         # Выход из всех групп
         if self.room_group_name:
-            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+            await self.channel_layer.group_discard(
+                self.room_group_name, self.channel_name
+            )
 
         # Отписка от систем
         for system_id in list(self.subscribed_systems):
@@ -102,7 +104,9 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         token = data.get("token")
 
         if not token:
-            await self.send_message({"type": "auth_failed", "message": "Токен не предоставлен"})
+            await self.send_message(
+                {"type": "auth_failed", "message": "Токен не предоставлен"}
+            )
             return
 
         # Простая проверка токена (в реальном приложении использовать JWT)
@@ -130,11 +134,15 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
             logger.info(f"Пользователь {user.username} аутентифицирован в WebSocket")
 
         else:
-            await self.send_message({"type": "auth_failed", "message": "Неверный токен"})
+            await self.send_message(
+                {"type": "auth_failed", "message": "Неверный токен"}
+            )
 
     async def handle_ping(self, data):
         """Обработка ping запроса"""
-        await self.send_message({"type": "pong", "timestamp": datetime.now().isoformat()})
+        await self.send_message(
+            {"type": "pong", "timestamp": datetime.now().isoformat()}
+        )
 
     async def handle_subscribe(self, data):
         """Подписка на общие каналы"""
@@ -441,7 +449,9 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
 
             for sensor_type in sensor_types:
                 data = (
-                    SensorData.objects.filter(system_id=system_id, sensor_type=sensor_type)
+                    SensorData.objects.filter(
+                        system_id=system_id, sensor_type=sensor_type
+                    )
                     .order_by("-timestamp")
                     .first()
                 )

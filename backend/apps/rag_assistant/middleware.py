@@ -27,8 +27,12 @@ class PerformanceMonitoringMiddleware(MiddlewareMixin):
 
     def __init__(self, get_response):
         self.get_response = get_response
-        self.slow_request_threshold = getattr(settings, "SLOW_REQUEST_THRESHOLD", 1.0)  # 1 секунда
-        self.very_slow_threshold = getattr(settings, "VERY_SLOW_THRESHOLD", 5.0)  # 5 секунд
+        self.slow_request_threshold = getattr(
+            settings, "SLOW_REQUEST_THRESHOLD", 1.0
+        )  # 1 секунда
+        self.very_slow_threshold = getattr(
+            settings, "VERY_SLOW_THRESHOLD", 5.0
+        )  # 5 секунд
 
     def __call__(self, request):
         # Начало замера
@@ -130,7 +134,9 @@ class PerformanceMonitoringMiddleware(MiddlewareMixin):
             avg_key = f"{hourly_key}:avg_duration"
             current_avg = cache.get(avg_key, 0)
             request_count = cache.get(f"{hourly_key}:requests", 1)
-            new_avg = ((current_avg * (request_count - 1)) + metrics["duration_ms"]) / request_count
+            new_avg = (
+                (current_avg * (request_count - 1)) + metrics["duration_ms"]
+            ) / request_count
             cache.set(avg_key, round(new_avg, 2), timeout=3600 * 24)
 
         except Exception as e:

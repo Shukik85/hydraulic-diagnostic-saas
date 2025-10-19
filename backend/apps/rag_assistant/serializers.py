@@ -53,7 +53,9 @@ class RagSystemSerializer(serializers.ModelSerializer):
 class RagQueryLogSerializer(serializers.ModelSerializer):
     # Eager loading для связанных объектов
     system_name = serializers.CharField(source="system.name", read_only=True)
-    document_title = serializers.CharField(source="document.title", read_only=True, allow_null=True)
+    document_title = serializers.CharField(
+        source="document.title", read_only=True, allow_null=True
+    )
 
     class Meta:
         model = RagQueryLog

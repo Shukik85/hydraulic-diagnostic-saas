@@ -174,7 +174,9 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
             )
 
         # Проверяем существование документов
-        existing_docs = Document.objects.filter(id__in=document_ids).values_list("id", flat=True)
+        existing_docs = Document.objects.filter(id__in=document_ids).values_list(
+            "id", flat=True
+        )
 
         if len(existing_docs) != len(document_ids):
             missing_ids = set(document_ids) - set(existing_docs)
@@ -238,7 +240,9 @@ class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
         query_text = request.data.get("query")
 
         if not query_text:
-            return Response({"error": "Query text is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Query text is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             # Создаем RAG ассистента
@@ -260,7 +264,9 @@ class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
                     "query_length": len(query_text),
                     "response_length": len(result),
                     "duration_ms": round(duration * 1000, 2),
-                    "user_id": (request.user.id if request.user.is_authenticated else None),
+                    "user_id": (
+                        request.user.id if request.user.is_authenticated else None
+                    ),
                     "action": "rag_query",
                 },
             )

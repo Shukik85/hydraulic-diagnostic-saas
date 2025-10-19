@@ -65,14 +65,18 @@ class HydraulicSystemViewSet(BaseModelViewSet):
     @action(detail=True, methods=["get"])
     def sensor_data(self, request, pk=None):
         system = self.get_object()
-        data = system.sensor_data.select_related("component").order_by("-timestamp")[:100]
+        data = system.sensor_data.select_related("component").order_by("-timestamp")[
+            :100
+        ]
         serializer = SensorDataSerializer(data, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=["get"])
     def reports(self, request, pk=None):
         system = self.get_object()
-        reports = system.diagnostic_reports.select_related("created_by").order_by("-created_at")
+        reports = system.diagnostic_reports.select_related("created_by").order_by(
+            "-created_at"
+        )
         serializer = DiagnosticReportSerializer(reports, many=True)
         return Response(serializer.data)
 
@@ -102,13 +106,19 @@ class HydraulicSystemViewSet(BaseModelViewSet):
         self.get_object()
         uploaded = request.FILES.get("file")
         if not uploaded:
-            return Response({"error": "Файл не найден"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Файл не найден"}, status=status.HTTP_400_BAD_REQUEST
+            )
         try:
             # TODO: parse and save SensorData via pandas or openpyxl
-            return Response({"message": "Файл успешно обработан"}, status=status.HTTP_201_CREATED)
+            return Response(
+                {"message": "Файл успешно обработан"}, status=status.HTTP_201_CREATED
+            )
         except Exception as e:
             logger.error(f"Ошибка загрузки файла для системы {pk}: {e}")
-            return Response({"error": "Ошибка обработки файла"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Ошибка обработки файла"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class SystemComponentViewSet(BaseModelViewSet):

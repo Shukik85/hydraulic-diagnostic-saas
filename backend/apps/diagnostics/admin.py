@@ -130,7 +130,9 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
             critical_count = obj.sensor_data.filter(
                 timestamp__gte=week_ago, is_critical=True
             ).count()
-            reports_count = obj.diagnostic_reports.filter(created_at__gte=week_ago).count()
+            reports_count = obj.diagnostic_reports.filter(
+                created_at__gte=week_ago
+            ).count()
 
             stats_html = f"""
             <div style="background: #f8f9fa; padding: 10px; border-radius: 5px;">
@@ -160,7 +162,9 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
                 )
                 count += 1
             except Exception as e:
-                self.message_user(request, f"Ошибка диагностики {system.name}: {e}", level="ERROR")
+                self.message_user(
+                    request, f"Ошибка диагностики {system.name}: {e}", level="ERROR"
+                )
 
         self.message_user(request, f"Диагностика запущена для {count} систем")
 
@@ -187,7 +191,9 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
     @admin.action(description="📤 Экспорт данных")
     def export_system_data(self, request, queryset):
         """Экспорт данных систем"""
-        self.message_user(request, f"Экспорт {queryset.count()} систем (функция в разработке)")
+        self.message_user(
+            request, f"Экспорт {queryset.count()} систем (функция в разработке)"
+        )
 
 
 @admin.register(SensorData)
@@ -231,7 +237,9 @@ class SensorDataAdmin(admin.ModelAdmin):
     def critical_indicator(self, obj):
         """Индикатор критичности"""
         if obj.is_critical:
-            return format_html('<span style="color: red; font-weight: bold;">🔴 Критично</span>')
+            return format_html(
+                '<span style="color: red; font-weight: bold;">🔴 Критично</span>'
+            )
         return format_html('<span style="color: green;">🟢 Норма</span>')
 
     @admin.display(description="Владелец", ordering="system__owner__username")
@@ -340,19 +348,21 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
             return "AI анализ отсутствует"
 
         try:
-            analysis = json.loads(obj.ai_analysis) if isinstance(obj.ai_analysis, str) else obj.ai_analysis
+            analysis = (
+                json.loads(obj.ai_analysis)
+                if isinstance(obj.ai_analysis, str)
+                else obj.ai_analysis
+            )
 
-            preview_html = "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'>"
+            preview_html = (
+                "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'>"
+            )
             if "system_health" in analysis:
                 health = analysis["system_health"]
-                preview_html += (
-                    f"<p><strong>Состояние системы:</strong> {health.get('score', 'N/A')}%</p>"
-                )
+                preview_html += f"<p><strong>Состояние системы:</strong> {health.get('score', 'N/A')}%</p>"
             if "anomalies" in analysis:
                 anomalies = analysis["anomalies"]
-                preview_html += (
-                    f"<p><strong>Аномалии:</strong> {len(anomalies.get('anomalies', []))}</p>"
-                )
+                preview_html += f"<p><strong>Аномалии:</strong> {len(anomalies.get('anomalies', []))}</p>"
             if "recommendations" in analysis:
                 recs = analysis["recommendations"]
                 preview_html += f"<p><strong>Рекомендации:</strong> {len(recs)}</p>"
@@ -371,7 +381,9 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
     @admin.action(description="📤 Экспорт отчетов")
     def export_reports(self, request, queryset):
         """Экспорт отчетов"""
-        self.message_user(request, f"Экспорт {queryset.count()} отчетов (функция в разработке)")
+        self.message_user(
+            request, f"Экспорт {queryset.count()} отчетов (функция в разработке)"
+        )
 
     @admin.action(description="🤖 Регенерировать AI анализ")
     def regenerate_ai_analysis(self, request, queryset):

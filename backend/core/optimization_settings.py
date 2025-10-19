@@ -10,8 +10,12 @@ DATABASES = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
 if "default" in DATABASES:
     DATABASES["default"].update(
         {
-            "CONN_MAX_AGE": config("DATABASE_CONN_MAX_AGE", default=600, cast=int),  # 10 минут
-            "CONN_HEALTH_CHECKS": config("DATABASE_CONN_HEALTH_CHECKS", default=True, cast=bool),
+            "CONN_MAX_AGE": config(
+                "DATABASE_CONN_MAX_AGE", default=600, cast=int
+            ),  # 10 минут
+            "CONN_HEALTH_CHECKS": config(
+                "DATABASE_CONN_HEALTH_CHECKS", default=True, cast=bool
+            ),
         }
     )
 
@@ -46,14 +50,19 @@ CACHES = {
     # Отдельный кеш для AI операций
     "ai_cache": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": config("AI_REDIS_URL", default=config("REDIS_URL", default="redis://localhost:6379/0")),
+        "LOCATION": config(
+            "AI_REDIS_URL",
+            default=config("REDIS_URL", default="redis://localhost:6379/0"),
+        ),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "CONNECTION_POOL_KWARGS": {"max_connections": 20},
             "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
         },
         "KEY_PREFIX": "ai_operations",
-        "TIMEOUT": config("AI_CACHE_TIMEOUT", default=86400, cast=int),  # 24 часа для AI
+        "TIMEOUT": config(
+            "AI_CACHE_TIMEOUT", default=86400, cast=int
+        ),  # 24 часа для AI
     },
 }
 

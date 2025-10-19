@@ -50,7 +50,9 @@ def task_performance_monitor(task_name: str, **metadata):
 
 
 @shared_task(bind=True, max_retries=MAX_RETRIES)
-def process_document_async(self, document_id: int, reindex: bool = False) -> Dict[str, Any]:
+def process_document_async(
+    self, document_id: int, reindex: bool = False
+) -> Dict[str, Any]:
     """
     Асинхронная обработка документа с:
     - Retry механизмом
@@ -62,7 +64,9 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
     _ = self.request.id
 
     try:
-        with task_performance_monitor("process_document", document_id=document_id, reindex=reindex):
+        with task_performance_monitor(
+            "process_document", document_id=document_id, reindex=reindex
+        ):
             # Обновляем статус задачи
             self.update_state(
                 state="PROGRESS",
@@ -75,7 +79,9 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
 
             # Получаем документ
             try:
-                document = Document.objects.select_related("rag_system").get(id=document_id)
+                document = Document.objects.select_related("rag_system").get(
+                    id=document_id
+                )
             except Document.DoesNotExist:
                 logger.error(f"Document {document_id} not found")
                 return {"status": "error", "error": f"Document {document_id} not found"}
@@ -135,7 +141,9 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
                 },
             )
 
-            logger.info(f"Document {document_id} processed successfully (reindex: {reindex})")
+            logger.info(
+                f"Document {document_id} processed successfully (reindex: {reindex})"
+            )
 
             return {
                 "status": "success",
@@ -163,7 +171,9 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
             logger.info(
                 f"Retrying document processing {document_id} (attempt {self.request.retries + 1})"
             )
-            raise self.retry(countdown=RETRY_COUNTDOWN * (self.request.retries + 1), exc=exc)
+            raise self.retry(
+                countdown=RETRY_COUNTDOWN * (self.request.retries + 1), exc=exc
+            )
 
         return {
             "status": "error",
@@ -198,7 +208,9 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
         with task_performance_monitor("batch_index_documents", total_docs=total_docs):
 
             # Получаем все документы одним запросом
-            documents = Document.objects.select_related("rag_system").filter(id__in=document_ids)
+            documents = Document.objects.select_related("rag_system").filter(
+                id__in=document_ids
+            )
 
             # Группируем по RAG системам для эффективности
             docs_by_system: Dict[int, Dict[str, Any]] = {}
@@ -256,7 +268,9 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
                                 "system_id": system_id,
                             }
                             errors.append(error_info)
-                            logger.error(f"Error processing document {doc.id}: {str(e)}")
+                            logger.error(
+                                f"Error processing document {doc.id}: {str(e)}"
+                            )
 
                 except Exception as e:
                     logger.error(
@@ -288,7 +302,9 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
             }
 
             if success_count == total_docs:
-                logger.info(f"Batch processing completed successfully: {success_count}/{total_docs}")
+                logger.info(
+                    f"Batch processing completed successfully: {success_count}/{total_docs}"
+                )
             else:
                 logger.warning(
                     (
@@ -300,7 +316,9 @@ def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]
             return result
 
     except Exception as exc:
-        logger.error(f"Critical error in batch processing: {str(exc)}\n{traceback.format_exc()}")
+        logger.error(
+            f"Critical error in batch processing: {str(exc)}\n{traceback.format_exc()}"
+        )
 
         # Retry механизм
         if self.request.retries < MAX_RETRIES:
@@ -331,7 +349,9 @@ def cleanup_old_query_logs(self, days_to_keep: int = 30) -> Dict[str, Any]:
             cutoff_date = timezone.now() - timezone.timedelta(days=days_to_keep)
 
             # Подсчитываем количество старых записей
-            old_logs_count = RagQueryLog.objects.filter(timestamp__lt=cutoff_date).count()
+            old_logs_count = RagQueryLog.objects.filter(
+                timestamp__lt=cutoff_date
+            ).count()
 
             if old_logs_count == 0:
                 logger.info("No old query logs to clean up")
@@ -343,7 +363,9 @@ def cleanup_old_query_logs(self, days_to_keep: int = 30) -> Dict[str, Any]:
 
             # Удаляем старые записи пакетами
             with transaction.atomic():
-                deleted_count = RagQueryLog.objects.filter(timestamp__lt=cutoff_date).delete()[0]
+                deleted_count = RagQueryLog.objects.filter(
+                    timestamp__lt=cutoff_date
+                ).delete()[0]
 
             logger.info(
                 f"Cleaned up {deleted_count} old query logs (older than {days_to_keep} days)"
@@ -357,7 +379,9 @@ def cleanup_old_query_logs(self, days_to_keep: int = 30) -> Dict[str, Any]:
             }
 
     except Exception as exc:
-        logger.error(f"Error cleaning up old logs: {str(exc)}\n{traceback.format_exc()}")
+        logger.error(
+            f"Error cleaning up old logs: {str(exc)}\n{traceback.format_exc()}"
+        )
 
         if self.request.retries < MAX_RETRIES:
             raise self.retry(countdown=RETRY_COUNTDOWN, exc=exc)
@@ -429,7 +453,9 @@ def generate_performance_report() -> Dict[str, Any]:
 
             # Сбор метрик за последние 24 часа
             for hour in range(24):
-                hour_key = time.strftime("%Y-%m-%d:%H", time.localtime(time.time() - hour * 3600))
+                hour_key = time.strftime(
+                    "%Y-%m-%d:%H", time.localtime(time.time() - hour * 3600)
+                )
 
                 requests = cache.get(f"performance_metrics:{hour_key}:requests", 0)
                 ai_requests = cache.get(f"ai_metrics:{hour_key}:ai_requests", 0)

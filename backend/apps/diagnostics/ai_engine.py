@@ -16,7 +16,9 @@ class HydraulicSystemAIEngine:
 
     def __init__(self):
         self.anomaly_detector = IsolationForest(contamination=0.1, random_state=42)
-        self.performance_predictor = RandomForestRegressor(n_estimators=100, random_state=42)
+        self.performance_predictor = RandomForestRegressor(
+            n_estimators=100, random_state=42
+        )
         self.scaler = StandardScaler()
         self.clustering_model = DBSCAN(eps=0.5, min_samples=5)
         self.is_trained = False
@@ -88,7 +90,9 @@ class HydraulicSystemAIEngine:
                 "samples_count": len(sensor_data),
                 "features_count": features.shape,
                 "training_date": timezone.now(),
-                "anomaly_threshold": float(getattr(self.anomaly_detector, "offset_", 0.0)),
+                "anomaly_threshold": float(
+                    getattr(self.anomaly_detector, "offset_", 0.0)
+                ),
                 "feature_importance": (
                     self._get_feature_importance(features)
                     if hasattr(self.performance_predictor, "feature_importances_")
@@ -131,7 +135,9 @@ class HydraulicSystemAIEngine:
                             "value": float(row.get("value", 0)),
                             "anomaly_score": float(score),
                             "severity": self._calculate_anomaly_severity(score),
-                            "description": self._generate_anomaly_description(row, score),
+                            "description": self._generate_anomaly_description(
+                                row, score
+                            ),
                         }
                     )
 
@@ -141,7 +147,9 @@ class HydraulicSystemAIEngine:
             logger.error(f"Ошибка обнаружения аномалий: {e}")
             return []
 
-    def predict_failure_probability(self, system_data: Dict[str, Any]) -> Dict[str, Any]:
+    def predict_failure_probability(
+        self, system_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Предсказание вероятности отказа системы"""
         try:
             # Анализ трендов в данных
@@ -164,8 +172,12 @@ class HydraulicSystemAIEngine:
                 "predicted_time_to_failure": self._estimate_time_to_failure(
                     failure_probability, trends
                 ),
-                "contributing_factors": self._identify_risk_factors(trends, component_health),
-                "recommendations": self._generate_recommendations(failure_probability, trends),
+                "contributing_factors": self._identify_risk_factors(
+                    trends, component_health
+                ),
+                "recommendations": self._generate_recommendations(
+                    failure_probability, trends
+                ),
             }
 
             return prediction
@@ -178,7 +190,9 @@ class HydraulicSystemAIEngine:
                 "error": str(e),
             }
 
-    def generate_diagnostic_insights(self, system_data: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_diagnostic_insights(
+        self, system_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Генерация диагностических инсайтов"""
         try:
             insights: Dict[str, Any] = {
@@ -202,6 +216,7 @@ class HydraulicSystemAIEngine:
             return {"error": str(e)}
 
     # ... (остальной код без изменений, с удалением пробелов на пустых строках) ...
+
 
 # Глобальный экземпляр AI движка
 ai_engine = HydraulicSystemAIEngine()

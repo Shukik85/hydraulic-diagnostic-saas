@@ -47,7 +47,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Оптимизированный queryset с eager loading"""
         queryset = (
-            Document.objects.select_related("user")  # если есть ForeignKey на пользователя
+            Document.objects.select_related(
+                "user"
+            )  # если есть ForeignKey на пользователя
             .prefetch_related(
                 # prefetch для ManyToMany отношений, если есть
             )
@@ -82,7 +84,9 @@ class RagSystemViewSet(viewsets.ModelViewSet):
                 "query_logs",
                 queryset=RagQueryLog.objects.select_related("document").only(
                     "id", "query_text", "timestamp"
-                )[:10],  # Ограничиваем количество для оптимизации
+                )[
+                    :10
+                ],  # Ограничиваем количество для оптимизации
             ),
         )
 
@@ -119,7 +123,9 @@ class RagSystemViewSet(viewsets.ModelViewSet):
         text = request.data.get("query")
 
         if not text:
-            return Response({"error": "Query text is required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": "Query text is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
             # Измеряем время выполнения запроса
@@ -134,11 +140,15 @@ class RagSystemViewSet(viewsets.ModelViewSet):
                     f"Slow RAG query processing: {duration:.2f}ms for query: {text[:50]}..."
                 )
 
-            _ = RagQueryLog.objects.create(system=system, query_text=text, response_text=answer)
+            _ = RagQueryLog.objects.create(
+                system=system, query_text=text, response_text=answer
+            )
             return Response({"answer": answer}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error in RAG query: {str(e)}")
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=["get"])
     def stats(self, request, pk=None):

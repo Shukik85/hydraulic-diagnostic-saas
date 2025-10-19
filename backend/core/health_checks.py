@@ -134,7 +134,11 @@ def check_celery() -> Dict[str, Any]:
 
         # Подсчитываем статистику
         total_workers = len(stats) if stats else 0
-        active_tasks = sum(len(tasks) for tasks in active_workers.values()) if active_workers else 0
+        active_tasks = (
+            sum(len(tasks) for tasks in active_workers.values())
+            if active_workers
+            else 0
+        )
 
         return {
             "status": "healthy",
@@ -190,7 +194,9 @@ def get_system_metrics() -> Dict[str, Any]:
             "cpu_usage_percent": psutil.cpu_percent(),
             "memory_usage_percent": psutil.virtual_memory().percent,
             "disk_usage_percent": psutil.disk_usage("/").percent,
-            "load_average": (psutil.getloadavg() if hasattr(psutil, "getloadavg") else None),
+            "load_average": (
+                psutil.getloadavg() if hasattr(psutil, "getloadavg") else None
+            ),
         }
     except ImportError:
         return {"note": "psutil not installed - system metrics unavailable"}

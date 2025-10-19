@@ -39,7 +39,9 @@ app.conf.update(
     task_send_sent_event=True,
     # Оптимизация для production
     task_time_limit=config("CELERY_TASK_TIME_LIMIT", default=300, cast=int),  # 5 минут
-    task_soft_time_limit=config("CELERY_TASK_SOFT_TIME_LIMIT", default=240, cast=int),  # 4 минуты
+    task_soft_time_limit=config(
+        "CELERY_TASK_SOFT_TIME_LIMIT", default=240, cast=int
+    ),  # 4 минуты
     worker_max_memory_per_child=config(
         "CELERY_WORKER_MAX_MEMORY_PER_CHILD", default=200000, cast=int
     ),  # 200MB
@@ -72,7 +74,9 @@ logger = get_task_logger(__name__)
 
 
 @task_prerun.connect
-def task_prerun_handler(sender=None, task_id=None, task=None, args=None, kwargs=None, **kwds):
+def task_prerun_handler(
+    sender=None, task_id=None, task=None, args=None, kwargs=None, **kwds
+):
     logger.info(f"Task {task.name} started: {task_id}")
 
 

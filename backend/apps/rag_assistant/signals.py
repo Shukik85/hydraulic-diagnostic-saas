@@ -48,5 +48,8 @@ def rag_system_deleted(sender, instance, **kwargs):
 def rag_query_logged(sender, instance, created, **kwargs):
     """Создание логов запросов — можно обновлять метрики в кэше."""
     if created:
-        cache.incr(f"ai_metrics:{instance.timestamp.strftime('%Y-%m-%d:%H')}:ai_requests", ignore_key_check=True)
+        cache.incr(
+            f"ai_metrics:{instance.timestamp.strftime('%Y-%m-%d:%H')}:ai_requests",
+            ignore_key_check=True,
+        )
         logger.debug("RAG запрос залогирован")

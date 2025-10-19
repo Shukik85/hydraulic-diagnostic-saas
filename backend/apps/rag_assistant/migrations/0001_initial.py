@@ -50,7 +50,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "embedding_dimensions",
-                    models.PositiveIntegerField(default=384, verbose_name="Размерность векторов"),
+                    models.PositiveIntegerField(
+                        default=384, verbose_name="Размерность векторов"
+                    ),
                 ),
                 (
                     "search_top_k",
@@ -71,11 +73,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "chunk_size",
-                    models.PositiveIntegerField(default=512, verbose_name="Размер фрагмента"),
+                    models.PositiveIntegerField(
+                        default=512, verbose_name="Размер фрагмента"
+                    ),
                 ),
                 (
                     "chunk_overlap",
-                    models.PositiveIntegerField(default=128, verbose_name="Перекрытие фрагментов"),
+                    models.PositiveIntegerField(
+                        default=128, verbose_name="Перекрытие фрагментов"
+                    ),
                 ),
                 (
                     "max_response_tokens",
@@ -96,15 +102,21 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "enable_caching",
-                    models.BooleanField(default=True, verbose_name="Включить кэширование"),
+                    models.BooleanField(
+                        default=True, verbose_name="Включить кэширование"
+                    ),
                 ),
                 (
                     "cache_ttl_hours",
-                    models.PositiveIntegerField(default=24, verbose_name="TTL кэша (часы)"),
+                    models.PositiveIntegerField(
+                        default=24, verbose_name="TTL кэша (часы)"
+                    ),
                 ),
                 (
                     "is_active",
-                    models.BooleanField(default=True, verbose_name="Активные настройки"),
+                    models.BooleanField(
+                        default=True, verbose_name="Активные настройки"
+                    ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
@@ -156,15 +168,21 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "keywords",
-                    models.JSONField(blank=True, default=list, verbose_name="Ключевые слова"),
+                    models.JSONField(
+                        blank=True, default=list, verbose_name="Ключевые слова"
+                    ),
                 ),
                 (
                     "document_type",
-                    models.CharField(blank=True, max_length=100, verbose_name="Тип документа"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Тип документа"
+                    ),
                 ),
                 (
                     "document_number",
-                    models.CharField(blank=True, max_length=100, verbose_name="Номер документа"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Номер документа"
+                    ),
                 ),
                 (
                     "version",
@@ -172,7 +190,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "publication_date",
-                    models.DateField(blank=True, null=True, verbose_name="Дата публикации"),
+                    models.DateField(
+                        blank=True, null=True, verbose_name="Дата публикации"
+                    ),
                 ),
                 (
                     "embedding_vector",
@@ -182,7 +202,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "embedding_model",
-                    models.CharField(blank=True, max_length=100, verbose_name="Модель эмбеддингов"),
+                    models.CharField(
+                        blank=True, max_length=100, verbose_name="Модель эмбеддингов"
+                    ),
                 ),
                 (
                     "status",
@@ -204,7 +226,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "search_count",
-                    models.PositiveIntegerField(default=0, verbose_name="Количество поисков"),
+                    models.PositiveIntegerField(
+                        default=0, verbose_name="Количество поисков"
+                    ),
                 ),
                 (
                     "relevance_score",
@@ -269,19 +293,27 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "embedding_vector",
-                    models.JSONField(default=list, verbose_name="Векторное представление"),
+                    models.JSONField(
+                        default=list, verbose_name="Векторное представление"
+                    ),
                 ),
                 (
                     "word_count",
-                    models.PositiveIntegerField(default=0, verbose_name="Количество слов"),
+                    models.PositiveIntegerField(
+                        default=0, verbose_name="Количество слов"
+                    ),
                 ),
                 (
                     "char_count",
-                    models.PositiveIntegerField(default=0, verbose_name="Количество символов"),
+                    models.PositiveIntegerField(
+                        default=0, verbose_name="Количество символов"
+                    ),
                 ),
                 (
                     "section_title",
-                    models.CharField(blank=True, max_length=200, verbose_name="Название раздела"),
+                    models.CharField(
+                        blank=True, max_length=200, verbose_name="Название раздела"
+                    ),
                 ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
@@ -363,7 +395,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "context_data",
-                    models.JSONField(blank=True, default=dict, verbose_name="Контекст беседы"),
+                    models.JSONField(
+                        blank=True, default=dict, verbose_name="Контекст беседы"
+                    ),
                 ),
                 (
                     "system_prompt",
@@ -371,11 +405,15 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "message_count",
-                    models.PositiveIntegerField(default=0, verbose_name="Количество сообщений"),
+                    models.PositiveIntegerField(
+                        default=0, verbose_name="Количество сообщений"
+                    ),
                 ),
                 (
                     "total_tokens",
-                    models.PositiveIntegerField(default=0, verbose_name="Общее количество токенов"),
+                    models.PositiveIntegerField(
+                        default=0, verbose_name="Общее количество токенов"
+                    ),
                 ),
                 (
                     "is_active",
@@ -383,7 +421,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "last_activity",
-                    models.DateTimeField(auto_now=True, verbose_name="Последняя активность"),
+                    models.DateTimeField(
+                        auto_now=True, verbose_name="Последняя активность"
+                    ),
                 ),
                 (
                     "created_at",
@@ -431,11 +471,15 @@ class Migration(migrations.Migration):
                 ("content", models.TextField(verbose_name="Содержимое")),
                 (
                     "token_count",
-                    models.PositiveIntegerField(default=0, verbose_name="Количество токенов"),
+                    models.PositiveIntegerField(
+                        default=0, verbose_name="Количество токенов"
+                    ),
                 ),
                 (
                     "response_time",
-                    models.DurationField(blank=True, null=True, verbose_name="Время ответа"),
+                    models.DurationField(
+                        blank=True, null=True, verbose_name="Время ответа"
+                    ),
                 ),
                 (
                     "created_at",
@@ -524,7 +568,9 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "processing_time",
-                    models.DurationField(blank=True, null=True, verbose_name="Время обработки"),
+                    models.DurationField(
+                        blank=True, null=True, verbose_name="Время обработки"
+                    ),
                 ),
                 (
                     "error_message",
@@ -598,7 +644,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="knowledgebase",
-            index=models.Index(fields=["document_number"], name="rag_assista_documen_5880bd_idx"),
+            index=models.Index(
+                fields=["document_number"], name="rag_assista_documen_5880bd_idx"
+            ),
         ),
         migrations.AddIndex(
             model_name="documentchunk",

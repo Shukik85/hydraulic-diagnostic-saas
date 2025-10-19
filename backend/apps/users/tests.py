@@ -63,7 +63,9 @@ def test_change_password(api_client, user_data):
     # Change password
     url = reverse("users-change-password", args=[login_resp.data["user"]["id"]])
     new_pass = "NewStrong123"
-    resp = api_client.post(url, {"old_password": user_data["password"], "new_password": new_pass})
+    resp = api_client.post(
+        url, {"old_password": user_data["password"], "new_password": new_pass}
+    )
     assert resp.status_code == status.HTTP_200_OK
     # Re-login with new password
     api_client.credentials()  # clear

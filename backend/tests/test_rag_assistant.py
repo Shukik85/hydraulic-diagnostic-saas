@@ -62,7 +62,9 @@ def test_document_crud(auth_client):
 
     # Update
     upd = {"language": "en", "content": "Hello"}
-    r3 = auth_client.patch(f"/api/rag_assistant/documents/{doc_id}/", upd, format="json")
+    r3 = auth_client.patch(
+        f"/api/rag_assistant/documents/{doc_id}/", upd, format="json"
+    )
     assert r3.status_code == status.HTTP_200_OK
     assert r3.data["language"] == "en"
 
