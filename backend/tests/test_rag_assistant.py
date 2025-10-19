@@ -74,7 +74,7 @@ def test_document_crud(auth_client):
 @pytest.mark.django_db
 def test_index_and_query(auth_client, rag_system, tmp_path):
     # Create document and associate
-    doc = Document.objects.create(
+    _ = Document.objects.create(
         title="Hello",
         content="Hello world",
         format="txt",
@@ -84,7 +84,8 @@ def test_index_and_query(auth_client, rag_system, tmp_path):
 
     # Index via API
     r1 = auth_client.post(f"/api/rag_assistant/systems/{rag_system.id}/index/")
-    assert r1.status_code == status.HTTP_200_OK
+    # В текущей реализации index возвращает 202 (асинхронная задача)
+    assert r1.status_code in (status.HTTP_200_OK, status.HTTP_202_ACCEPTED)
 
     # Query via API
     query_data = {"query": "world"}
@@ -98,6 +99,7 @@ def test_index_and_query(auth_client, rag_system, tmp_path):
     logs = RagQueryLog.objects.filter(system=rag_system)
     assert logs.exists()
     log = logs.first()
+    assert log is not None
     assert log.query_text == "world"
     assert log.response_text is not None
 
