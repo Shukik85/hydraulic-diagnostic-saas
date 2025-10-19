@@ -59,10 +59,9 @@ class UserAdmin(BaseUserAdmin):
 
     readonly_fields = ["last_activity", "created_at", "systems_count"]
 
+    @admin.display(description="Полное имя")
     def get_full_name(self, obj):
         return obj.get_full_name() or obj.username
-
-    get_full_name.short_description = "Полное имя"
 
 
 @admin.register(UserProfile)
