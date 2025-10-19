@@ -74,17 +74,16 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
     actions = ["run_diagnostics", "generate_health_report", "export_system_data"]
 
+    @admin.display(description="Состояние")
     def health_indicator(self, obj):
         """Индикатор здоровья системы"""
         try:
-            # Получение данных за последние 24 часа
             day_ago = datetime.now() - timedelta(days=1)
             recent_data = obj.sensor_data.filter(timestamp__gte=day_ago)
 
             if not recent_data.exists():
                 return format_html('<span style="color: gray;">⚪ Нет данных</span>')
 
-            # Подсчет критических событий
             critical_count = recent_data.filter(is_critical=True).count()
             total_count = recent_data.count()
 
@@ -105,8 +104,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
         except Exception:
             return format_html('<span style="color: gray;">⚪ Ошибка</span>')
 
-    health_indicator.short_description = "Состояние"
-
+    @admin.display(description="Последние данные")
     def last_sensor_data(self, obj):
         """Последние данные датчика"""
         latest = obj.sensor_data.order_by("-timestamp").first()
@@ -122,14 +120,12 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
             )
         return "Нет данных"
 
-    last_sensor_data.short_description = "Последние данные"
-
+    @admin.display(description="Статистика")
     def system_statistics(self, obj):
         """Статистика системы"""
         try:
             week_ago = datetime.now() - timedelta(days=7)
 
-            # Статистика за неделю
             sensor_count = obj.sensor_data.filter(timestamp__gte=week_ago).count()
             critical_count = obj.sensor_data.filter(
                 timestamp__gte=week_ago, is_critical=True
@@ -150,15 +146,12 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
         except Exception as e:
             return f"Ошибка расчета статистики: {e}"
 
-    system_statistics.short_description = "Статистика"
-
+    @admin.action(description="🔍 Запустить диагностику")
     def run_diagnostics(self, request, queryset):
         """Запуск диагностики для выбранных систем"""
         count = 0
         for system in queryset:
             try:
-                # Здесь будет вызов AI диагностики
-                # Пока создаем простой отчет
                 DiagnosticReport.objects.create(
                     system=system,
                     title=f"Административная диагностика - {datetime.now().strftime('%d.%m.%Y %H:%M')}",
@@ -171,8 +164,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
         self.message_user(request, f"Диагностика запущена для {count} систем")
 
-    run_diagnostics.short_description = "🔍 Запустить диагностику"
-
+    @admin.action(description="📊 Сводный отчет")
     def generate_health_report(self, request, queryset):
         """Генерация отчета о состоянии систем"""
         total_systems = queryset.count()
@@ -192,14 +184,10 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
             f"Отчет: {healthy_systems}/{total_systems} систем в хорошем состоянии",
         )
 
-    generate_health_report.short_description = "📊 Сводный отчет"
-
+    @admin.action(description="📤 Экспорт данных")
     def export_system_data(self, request, queryset):
         """Экспорт данных систем"""
-        # Здесь может быть логика экспорта в CSV/Excel
         self.message_user(request, f"Экспорт {queryset.count()} систем (функция в разработке)")
-
-    export_system_data.short_description = "📤 Экспорт данных"
 
 
 @admin.register(SensorData)
@@ -231,36 +219,29 @@ class SensorDataAdmin(admin.ModelAdmin):
     ]
 
     readonly_fields = ["created_at"]
-
     date_hierarchy = "timestamp"
-
     list_per_page = 50
 
+    @admin.display(description="Значение", ordering="value")
     def value_with_unit(self, obj):
         """Значение с единицей измерения"""
         return f"{obj.value} {obj.unit}"
 
-    value_with_unit.short_description = "Значение"
-    value_with_unit.admin_order_field = "value"
-
+    @admin.display(description="Статус", ordering="is_critical")
     def critical_indicator(self, obj):
         """Индикатор критичности"""
         if obj.is_critical:
             return format_html('<span style="color: red; font-weight: bold;">🔴 Критично</span>')
         return format_html('<span style="color: green;">🟢 Норма</span>')
 
-    critical_indicator.short_description = "Статус"
-    critical_indicator.admin_order_field = "is_critical"
-
+    @admin.display(description="Владелец", ordering="system__owner__username")
     def system_owner(self, obj):
         """Владелец системы"""
         return obj.system.owner.username
 
-    system_owner.short_description = "Владелец"
-    system_owner.admin_order_field = "system__owner__username"
-
     actions = ["mark_as_critical", "mark_as_normal", "export_sensor_data"]
 
+    @admin.action(description="⚠️ Отметить как критические")
     def mark_as_critical(self, request, queryset):
         """Отметить как критические"""
         updated = queryset.update(
@@ -268,14 +249,11 @@ class SensorDataAdmin(admin.ModelAdmin):
         )
         self.message_user(request, f"{updated} записей отмечены как критические")
 
-    mark_as_critical.short_description = "⚠️ Отметить как критические"
-
+    @admin.action(description="✅ Отметить как нормальные")
     def mark_as_normal(self, request, queryset):
         """Отметить как нормальные"""
         updated = queryset.update(is_critical=False, warning_message="")
         self.message_user(request, f"{updated} записей отмечены как нормальные")
-
-    mark_as_normal.short_description = "✅ Отметить как нормальные"
 
 
 @admin.register(DiagnosticReport)
@@ -322,6 +300,7 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
 
     date_hierarchy = "created_at"
 
+    @admin.display(description="Серьезность", ordering="severity")
     def severity_indicator(self, obj):
         """Индикатор серьезности"""
         colors = {
@@ -330,7 +309,6 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
             "error": "red",
             "critical": "darkred",
         }
-
         icons = {"info": "ℹ️", "warning": "⚠️", "error": "❌", "critical": "🚨"}
 
         color = colors.get(obj.severity, "gray")
@@ -343,76 +321,59 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
             obj.get_severity_display(),
         )
 
-    severity_indicator.short_description = "Серьезность"
-    severity_indicator.admin_order_field = "severity"
-
+    @admin.display(description="Владелец", ordering="system__owner__username")
     def system_owner(self, obj):
         """Владелец системы"""
         return obj.system.owner.username
 
-    system_owner.short_description = "Владелец"
-    system_owner.admin_order_field = "system__owner__username"
-
+    @admin.display(description="AI анализ")
     def has_ai_analysis(self, obj):
         """Наличие AI анализа"""
         if obj.ai_analysis:
             return format_html('<span style="color: green;">🤖 Да</span>')
         return format_html('<span style="color: gray;">❌ Нет</span>')
 
-    has_ai_analysis.short_description = "AI анализ"
-
+    @admin.display(description="Превью AI анализа")
     def ai_analysis_preview(self, obj):
         """Превью AI анализа"""
         if not obj.ai_analysis:
             return "AI анализ отсутствует"
 
         try:
-            if isinstance(obj.ai_analysis, str):
-                analysis = json.loads(obj.ai_analysis)
-            else:
-                analysis = obj.ai_analysis
+            analysis = json.loads(obj.ai_analysis) if isinstance(obj.ai_analysis, str) else obj.ai_analysis
 
             preview_html = "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'>"
-
-            # Основные метрики
             if "system_health" in analysis:
                 health = analysis["system_health"]
                 preview_html += (
                     f"<p><strong>Состояние системы:</strong> {health.get('score', 'N/A')}%</p>"
                 )
-
             if "anomalies" in analysis:
                 anomalies = analysis["anomalies"]
                 preview_html += (
                     f"<p><strong>Аномалии:</strong> {len(anomalies.get('anomalies', []))}</p>"
                 )
-
             if "recommendations" in analysis:
                 recs = analysis["recommendations"]
                 preview_html += f"<p><strong>Рекомендации:</strong> {len(recs)}</p>"
                 if recs:
                     preview_html += "<ul>"
-                    for rec in recs[:3]:  # Первые 3 рекомендации
+                    for rec in recs[:3]:
                         preview_html += f"<li>{rec.get('title', 'N/A')}</li>"
                     preview_html += "</ul>"
-
             preview_html += "</div>"
-
             return mark_safe(preview_html)
-
         except Exception as e:
             return f"Ошибка парсинга AI анализа: {e}"
 
-    ai_analysis_preview.short_description = "Превью AI анализа"
-
     actions = ["export_reports", "regenerate_ai_analysis"]
 
+    @admin.action(description="📤 Экспорт отчетов")
     def export_reports(self, request, queryset):
         """Экспорт отчетов"""
         self.message_user(request, f"Экспорт {queryset.count()} отчетов (функция в разработке)")
 
-    export_reports.short_description = "📤 Экспорт отчетов"
-
+    @admin.action(description="🤖 Регенерировать AI анализ")
     def regenerate_ai_analysis(self, request, queryset):
         """Регенерация AI анализа"""
         count = 0
@@ -428,8 +389,6 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
                 )
 
         self.message_user(request, f"AI анализ регенерирован для {count} отчетов")
-
-    regenerate_ai_analysis.short_description = "🤖 Регенерировать AI анализ"
 
 
 # Дополнительная конфигурация админки
