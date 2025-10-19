@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Protocol, Tuple, Dict, Any, Optional
 
 import faiss  # type: ignore
-import joblib
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
@@ -102,6 +101,7 @@ class VectorIndex:
     dim: int
     metric: str = "ip"  # inner product (cosine when vectors are l2-normalized)
     _index: Optional[faiss.Index] = None
+    metadata: Dict[str, Any] | None = None
 
     def build(self, vectors: np.ndarray) -> None:
         assert vectors.ndim == 2 and vectors.shape[1] == self.dim
@@ -155,10 +155,11 @@ class RAGOrchestrator:
         vindex.build(vectors)
         index_bytes = vindex.to_bytes()
 
-        # Save index + metadata (store doc ids if needed)
+        # Save index + metadata (store doc ids/texts for retrieval)
         meta = {
             "dim": vdim,
             "metric": self.index_metric,
+            "docs": docs,
             **metadata,
         }
         path = self.storage.save_index(version, index_bytes, meta)
@@ -167,7 +168,7 @@ class RAGOrchestrator:
     def load_index(self, version: str) -> VectorIndex:
         idx_bytes, meta = self.storage.load_index(version)
         vindex = VectorIndex.from_bytes(idx_bytes)
-        # optional: validate meta["dim"] == vindex.dim
+        vindex.metadata = meta
         return vindex
 
 
