@@ -1,30 +1,26 @@
 # core/optimization_settings.py
 # ОПТИМИЗАЦИЯ ПРОИЗВОДИТЕЛЬНОСТИ
 
-
 from decouple import config
 
-from .settings import *
+from . import settings as base
 
 # Database Connection Pooling - КРИТИЧНО для production
-DATABASES["default"].update(
-    {
-        "CONN_MAX_AGE": config("DATABASE_CONN_MAX_AGE", default=600, cast=int),  # 10 минут
-        "CONN_HEALTH_CHECKS": config("DATABASE_CONN_HEALTH_CHECKS", default=True, cast=bool),
-        "OPTIONS": {
-            "MAX_CONNS": 20,
-            "MIN_CONNS": 5,
-            # PostgreSQL оптимизация
-            "OPTIONS": {
-                "MAX_CONNS": 20,
-            },
-        },
-    }
-)
+DATABASES = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
+if "default" in DATABASES:
+    DATABASES["default"].update(
+        {
+            "CONN_MAX_AGE": config("DATABASE_CONN_MAX_AGE", default=600, cast=int),  # 10 минут
+            "CONN_HEALTH_CHECKS": config("DATABASE_CONN_HEALTH_CHECKS", default=True, cast=bool),
+        }
+    )
 
 # Мониторинг медленных запросов - ОЧЕНЬ ВАЖНО
+LOGGING = base.LOGGING.copy() if hasattr(base, "LOGGING") else {}
+LOGGING.setdefault("loggers", {})
+LOGGING.setdefault("handlers", {})
 LOGGING["loggers"]["django.db.backends"] = {
-    "level": "DEBUG" if DEBUG else "WARNING",
+    "level": "DEBUG" if getattr(base, "DEBUG", False) else "WARNING",
     "handlers": ["slow_query_file"],
     "propagate": False,
 }
@@ -50,7 +46,7 @@ CACHES = {
     # Отдельный кеш для AI операций
     "ai_cache": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": config("AI_REDIS_URL", default=REDIS_URL),
+        "LOCATION": config("AI_REDIS_URL", default=config("REDIS_URL", default="redis://localhost:6379/0")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "CONNECTION_POOL_KWARGS": {"max_connections": 20},
@@ -65,7 +61,7 @@ CACHES = {
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
 SESSION_COOKIE_AGE = 86400  # 24 часа
-SESSION_SAVE_EVERY_REQUEST = False  # Оптимизация
+SESSION_SAVE_EVERY_REQUEST = False
 
 # Middleware оптимизация - порядок важен!
 MIDDLEWARE = [
@@ -80,7 +76,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "apps.rag_assistant.middleware.PerformanceMonitoringMiddleware",  # Новый middleware!
+    "apps.rag_assistant.middleware.PerformanceMonitoringMiddleware",
     "django.middleware.cache.FetchFromCacheMiddleware",  # Последним!
 ]
 
@@ -93,11 +89,11 @@ CACHE_MIDDLEWARE_KEY_PREFIX = "hydraulic"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 # Улучшенные настройки REST Framework
+REST_FRAMEWORK = base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
 REST_FRAMEWORK.update(
     {
         "DEFAULT_RENDERER_CLASSES": [
             "rest_framework.renderers.JSONRenderer",
-            # 'rest_framework.renderers.BrowsableAPIRenderer',  # Отключен для production
         ],
         "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardResultsSetPagination",
         "PAGE_SIZE": 20,
@@ -106,12 +102,12 @@ REST_FRAMEWORK.update(
             "rest_framework.filters.SearchFilter",
             "rest_framework.filters.OrderingFilter",
         ],
-        # Кеширование API ответов
         "DEFAULT_CONTENT_NEGOTIATION_CLASS": "rest_framework.content_negotiation.DefaultContentNegotiation",
     }
 )
 
 # Оптимизация AI настроек
+AI_SETTINGS = base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
 AI_SETTINGS.update(
     {
         "ENABLE_CACHING": True,
@@ -131,51 +127,59 @@ FILE_UPLOAD_HANDLERS = [
 ]
 
 # Template оптимизация
-TEMPLATES[0]["OPTIONS"].update(
-    {
-        "context_processors": [
-            "django.template.context_processors.debug",
-            "django.template.context_processors.request",
-            "django.contrib.auth.context_processors.auth",
-            "django.contrib.messages.context_processors.messages",
-        ],
-        "loaders": (
-            [
-                (
-                    "django.template.loaders.cached.Loader",
-                    [
-                        "django.template.loaders.filesystem.Loader",
-                        "django.template.loaders.app_directories.Loader",
-                    ],
-                ),
-            ]
-            if not DEBUG
-            else [
-                "django.template.loaders.filesystem.Loader",
-                "django.template.loaders.app_directories.Loader",
-            ]
-        ),
-    }
-)
+TEMPLATES = base.TEMPLATES.copy() if hasattr(base, "TEMPLATES") else []
+if TEMPLATES:
+    TEMPLATES[0] = TEMPLATES[0].copy()
+    options = TEMPLATES[0].get("OPTIONS", {})
+    options = options.copy()
+    options.update(
+        {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+            ],
+            "loaders": (
+                [
+                    (
+                        "django.template.loaders.cached.Loader",
+                        [
+                            "django.template.loaders.filesystem.Loader",
+                            "django.template.loaders.app_directories.Loader",
+                        ],
+                    ),
+                ]
+                if not getattr(base, "DEBUG", False)
+                else [
+                    "django.template.loaders.filesystem.Loader",
+                    "django.template.loaders.app_directories.Loader",
+                ]
+            ),
+        }
+    )
+    TEMPLATES[0]["OPTIONS"] = options
 
 # Оптимизация логирования
-LOGGING["handlers"]["performance"] = {
-    "class": "logging.handlers.RotatingFileHandler",
-    "filename": str(LOGS_DIR / "performance.log"),
-    "maxBytes": 1024 * 1024 * 20,  # 20MB
-    "backupCount": 5,
-    "formatter": "verbose",
-    "level": "INFO",
-}
-
-LOGGING["loggers"]["performance"] = {
-    "handlers": ["performance"],
-    "level": "INFO",
-    "propagate": False,
-}
+LOGS_DIR = getattr(base, "LOGS_DIR", None)
+if LOGS_DIR is not None:
+    LOGGING.setdefault("handlers", {})
+    LOGGING["handlers"]["performance"] = {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": str(LOGS_DIR / "performance.log"),
+        "maxBytes": 1024 * 1024 * 20,  # 20MB
+        "backupCount": 5,
+        "formatter": "verbose",
+        "level": "INFO",
+    }
+    LOGGING["loggers"]["performance"] = {
+        "handlers": ["performance"],
+        "level": "INFO",
+        "propagate": False,
+    }
 
 # Email оптимизация - async email sending
-if not DEBUG:
+if not getattr(base, "DEBUG", False):
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = config("EMAIL_HOST", default="localhost")
     EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
