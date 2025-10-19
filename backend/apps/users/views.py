@@ -8,14 +8,13 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .models import UserActivity, UserProfile
 from .serializers import (
-    ChangePasswordSerializer,
-    CustomTokenObtainPairSerializer,
     UserActivitySerializer,
     UserCreateSerializer,
     UserDetailSerializer,
     UserProfileSerializer,
     UserStatsSerializer,
 )
+from .serializers_change_password import ChangePasswordSerializer
 
 User = get_user_model()
 
