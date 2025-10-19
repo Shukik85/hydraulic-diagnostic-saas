@@ -28,27 +28,27 @@ classifiers = [
 
 [tool.black]
 line-length = 88
-target-version = ['py310', 'py311', 'py312', 'py313']
-include = "\.pyi?$"
-exclude = """
-/(\
-    \.eggs|\
-    \.git|\
-    \.mypy_cache|\
-    \.tox|\
-    \.venv|\
-    venv|\
-    _build|\
-    buck-out|\
-    build|\
-    dist|\
-    migrations|\
-    node_modules|\
-    staticfiles|\
-    static|\
-    media\
-)/
-"""
+target-version = ["py310", "py311", "py312", "py313"]
+include = '\.pyi?$'
+exclude = '''
+(
+  \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+  | node_modules
+  | staticfiles
+  | static
+  | media
+)
+'''
 
 [tool.isort]
 profile = "black"
@@ -111,8 +111,8 @@ exclude_lines = [
     "raise AssertionError",
     "raise NotImplementedError",
     "if __name__ == '__main__':",
-    "class .*(Protocol):",
-    "@(abc\.)?abstractmethod"
+    "class .*Protocol.*:",
+    "@(abc\\.)?abstractmethod"
 ]
 
 [tool.coverage.html]
