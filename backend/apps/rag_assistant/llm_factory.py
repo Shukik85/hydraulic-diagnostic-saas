@@ -1,0 +1,39 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Optional
+
+from django.conf import settings
+
+# LangChain 1.x providers
+from langchain_community.chat_models import ChatOllama  # type: ignore
+from langchain_community.embeddings import OllamaEmbeddings  # type: ignore
+
+
+@dataclass
+class LLMConfig:
+    provider: str = getattr(settings, "LLM_PROVIDER", "ollama")
+    model: str = getattr(settings, "LLM_MODEL", "qwen3:8b")
+    temperature: float = float(getattr(settings, "LLM_TEMPERATURE", 0.1))
+
+
+@dataclass
+class EmbeddingConfig:
+    provider: str = getattr(settings, "EMBEDDING_PROVIDER", "ollama")
+    model: str = getattr(settings, "EMBEDDING_MODEL", "nomic-embed-text")
+
+
+class LLMFactory:
+    @staticmethod
+    def create_chat_model(cfg: Optional[LLMConfig] = None):
+        cfg = cfg or LLMConfig()
+        if cfg.provider == "ollama":
+            return ChatOllama(model=cfg.model, temperature=cfg.temperature)
+        raise ValueError(f"Unsupported LLM provider: {cfg.provider}")
+
+    @staticmethod
+    def create_embedder(cfg: Optional[EmbeddingConfig] = None):
+        cfg = cfg or EmbeddingConfig()
+        if cfg.provider == "ollama":
+            return OllamaEmbeddings(model=cfg.model)
+        raise ValueError(f"Unsupported Embedding provider: {cfg.provider}")
