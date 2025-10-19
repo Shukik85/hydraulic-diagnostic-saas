@@ -13,14 +13,12 @@ from rest_framework.response import Response
 from .models import (
     DiagnosticReport,
     HydraulicSystem,
-    MaintenanceSchedule,
     SensorData,
     SystemComponent,
 )
 from .serializers import (
     DiagnosticReportSerializer,
     HydraulicSystemListSerializer,
-    MaintenanceScheduleSerializer,
     SensorDataSerializer,
     SystemComponentSerializer,
 )
@@ -81,27 +79,6 @@ class HydraulicSystemViewSet(BaseModelViewSet):
         serializer = DiagnosticReportSerializer(reports, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["post"])
-    def diagnose(self, request, pk=None):
-        system = self.get_object()
-        try:
-            report = DiagnosticReport.objects.create(
-                system=system,
-                title=f"Автоматическая диагностика - {timezone.now():%Y-%m-%d %H:%M}",
-                severity="info",
-                status="pending",
-                created_by=request.user,
-            )
-            # TODO: integrate DiagnosticEngine here
-            serializer = DiagnosticReportSerializer(report)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            logger.error(f"Ошибка диагностики системы {pk}: {e}")
-            return Response(
-                {"error": "Ошибка при выполнении диагностики"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
     @action(detail=True, methods=["post"], parser_classes=[MultiPartParser, FormParser])
     def upload_sensor_data(self, request, pk=None):
         self.get_object()
@@ -111,7 +88,7 @@ class HydraulicSystemViewSet(BaseModelViewSet):
                 {"error": "Файл не найден"}, status=status.HTTP_400_BAD_REQUEST
             )
         try:
-            # TODO: parse and save SensorData via pandas or openpyxl
+            # TODO: parse and save SensorData via pdfminer/unstructured pipeline
             return Response(
                 {"message": "Файл успешно обработан"}, status=status.HTTP_201_CREATED
             )
@@ -150,7 +127,7 @@ class DiagnosticReportViewSet(BaseModelViewSet):
     serializer_class = DiagnosticReportSerializer
     filterset_fields = ["system", "severity", "status"]
     search_fields = ["title"]
-    ordering_fields = ["created_at", "completed_at"]
+    ordering_fields = ["created_at"]
     ordering = ["-created_at"]
 
     def get_queryset(self):
@@ -159,16 +136,7 @@ class DiagnosticReportViewSet(BaseModelViewSet):
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
         report = self.get_object()
-        report.mark_completed()
+        report.status = "closed"
+        report.save(update_fields=["status"])  # timestamp handled in model if needed
         serializer = self.get_serializer(report)
         return Response(serializer.data)
-
-
-class MaintenanceScheduleViewSet(BaseModelViewSet):
-    serializer_class = MaintenanceScheduleSerializer
-    filterset_fields = ["system"]
-    ordering_fields = ["schedule_date"]
-    ordering = ["schedule_date"]
-
-    def get_queryset(self):
-        return MaintenanceSchedule.objects.select_related("system").all()
