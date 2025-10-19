@@ -3,7 +3,7 @@ import os
 import tempfile
 from typing import Any, Dict, List, Optional
 
-import bleach
+import bleach  # type: ignore[import-untyped]
 import pydantic
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
@@ -130,7 +130,6 @@ class CacheStats:
 
 class RagAssistant:
     def __init__(self, system: RagSystem):
-        # Валидация входной системы
         if not isinstance(system, RagSystem):
             raise TypeError("system must be an instance of RagSystem")
 
@@ -152,15 +151,12 @@ class RagAssistant:
             if os.path.exists(path):
                 return FAISS.load_local(path, self.embedding)
             return FAISS(self.embedding.embed_query, [])
-        # добавить другие индексаторы
         raise NotImplementedError("Only FAISS index type is currently supported")
 
     def _get_cache_key(self, key_type: str, identifier: str, version: str = CACHE_VERSION) -> str:
-        """Генерация ключа кеша с версионированием"""
         return f"rag:{self.system.id}:{key_type}:{identifier}:{version}"
 
     def _invalidate_document_cache(self, doc_id: int):
-        """Инвалидация кеша для конкретного документа"""
         cache_keys_to_delete = [
             self._get_cache_key("doc_embedding", str(doc_id)),
             self._get_cache_key("doc_chunks", str(doc_id)),
@@ -168,12 +164,10 @@ class RagAssistant:
         cache.delete_many(cache_keys_to_delete)
 
     def _cache_document_embedding(self, doc_id: int, embedding: List[float]):
-        """Кеширование эмбеддинга документа"""
         cache_key = self._get_cache_key("doc_embedding", str(doc_id))
         cache.set(cache_key, embedding, timeout=DOC_EMBEDDING_TTL)
 
     def _get_cached_document_embedding(self, doc_id: int) -> Optional[List[float]]:
-        """Получение закешированного эмбеддинга документа"""
         cache_key = self._get_cache_key("doc_embedding", str(doc_id))
         cached = cache.get(cache_key)
         if cached is not None:
@@ -183,7 +177,6 @@ class RagAssistant:
         return None
 
     def _cache_search_result(self, query: str, category: Optional[str], results: List[Dict]):
-        """Кеширование результатов поиска"""
         cache_key = self._get_cache_key(
             "search", f"{hashlib.md5(query.encode()).hexdigest()}:{category}"
         )
@@ -192,7 +185,6 @@ class RagAssistant:
     def _get_cached_search_result(
         self, query: str, category: Optional[str]
     ) -> Optional[List[Dict]]:
-        """Получение закешированных результатов поиска"""
         cache_key = self._get_cache_key(
             "search", f"{hashlib.md5(query.encode()).hexdigest()}:{category}"
         )
@@ -204,12 +196,10 @@ class RagAssistant:
         return None
 
     def _cache_faq_answer(self, question: str, answer: str):
-        """Кеширование ответа на частый вопрос"""
         cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
         cache.set(cache_key, answer, timeout=FAQ_ANSWER_TTL)
 
     def _get_cached_faq_answer(self, question: str) -> Optional[str]:
-        """Получение закешированного ответа на частый вопрос"""
         cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
         cached = cache.get(cache_key)
         if cached is not None:
@@ -220,8 +210,6 @@ class RagAssistant:
 
     @transaction.atomic
     def index_document(self, doc: Document):
-        """Индексация документа с валидацией входных данных и инвалидацией кеша"""
-        # Валидация документа через Pydantic
         try:
             validated_doc = DocumentInput(
                 content=doc.content, format=doc.format, metadata=doc.metadata or {}
@@ -229,12 +217,10 @@ class RagAssistant:
         except pydantic.ValidationError as e:
             raise ValidationError(f"Document validation failed: {e}")
 
-        # Обновление документа валидированными данными
         doc.content = validated_doc.content
         doc.format = validated_doc.format
         doc.metadata = validated_doc.metadata
 
-        # Инвалидация кеша перед обновлением
         self._invalidate_document_cache(doc.id)
 
         loader_cls = LOADER_MAP.get(doc.format)
@@ -251,30 +237,18 @@ class RagAssistant:
     def search_documents(
         self, query: str, category: Optional[str] = None, ttl: int = 3600
     ) -> List[Dict]:
-        """Поиск документов с кешированием результатов"""
-        # Проверка кеша
         cached_results = self._get_cached_search_result(query, category)
         if cached_results is not None:
             return cached_results
 
-        # Выполнение поиска
         results = self._perform_search(query, category)
-
-        # Кеширование результатов
         self._cache_search_result(query, category, results)
-
         return results
 
     def _perform_search(self, query: str, category: Optional[str] = None) -> List[Dict]:
-        """Выполнение фактического поиска документов"""
-        # Генерация эмбеддинга для запроса с возможным кешированием
         query_embedding = self._get_or_generate_embedding(query)
-
-        # Поиск в индексе
         docs = self.index.similarity_search_by_vector(query_embedding, k=10)
-
-        # Форматирование результатов
-        results = []
+        results: List[Dict[str, Any]] = []
         for doc in docs:
             results.append(
                 {
@@ -283,24 +257,18 @@ class RagAssistant:
                     "score": getattr(doc, "similarity", None),
                 }
             )
-
         return results
 
     def _get_or_generate_embedding(self, text: str) -> List[float]:
-        """Получение или генерация эмбеддинга с кешированием"""
-        # Для запросов не кешируем эмбеддинги, только для документов
         return self.embedding.embed_query(text)
 
     @ratelimit(key="user_or_ip", rate="10/m", block=True)
     def answer(self, query: str, user_id: Optional[int] = None):
-        """Ответ на запрос с валидацией, rate limiting и кешированием"""
-        # Проверка кеша для частых вопросов
         cached_answer = self._get_cached_faq_answer(query)
         if cached_answer is not None:
             self._log_query(query, cached_answer, user_id)
             return cached_answer
 
-        # Валидация входных данных через Pydantic
         try:
             validated_input = QueryInput(query=query, user_id=user_id)
         except pydantic.ValidationError as e:
@@ -309,28 +277,19 @@ class RagAssistant:
         validated_query = validated_input.query
         validated_user_id = validated_input.user_id
 
-        # Создание QA цепочки
         qa = RetrievalQA.from_chain_type(
             llm=self.system.model_name,
             chain_type="stuff",
             retriever=self.index.as_retriever(),
         )
 
-        # Получение ответа
         result = qa.run(validated_query)
-
-        # Кеширование ответа на частый вопрос
         self._cache_faq_answer(validated_query, result)
-
-        # Логирование запроса с параметризированным запросом
         self._log_query(validated_query, result, validated_user_id)
-
         return result
 
     @transaction.atomic
     def _log_query(self, query: str, response: str, user_id: Optional[int] = None):
-        """Логирование запроса с использованием параметризированных запросов"""
-        # Все данные передаются как параметры, Django ORM автоматически использует параметризованные запросы
         RagQueryLog.objects.create(
             system=self.system,
             query_text=query,
@@ -339,7 +298,6 @@ class RagAssistant:
         )
 
     def get_cache_stats(self) -> Dict[str, Any]:
-        """Получение статистики кеширования"""
         stats = CacheStats.get_stats()
         hit_rate = CacheStats.get_hit_rate()
         return {
@@ -350,13 +308,10 @@ class RagAssistant:
         }
 
     def clear_cache_stats(self):
-        """Очистка статистики кеширования"""
         cache.delete(CACHE_STATS_KEY)
 
 
 def tmp_file_for(doc: Document):
-    """Вспомогательная запись контента во временный файл с валидацией"""
-    # Валидация документа
     if not isinstance(doc, Document):
         raise TypeError("doc must be an instance of Document")
 
@@ -369,7 +324,6 @@ def tmp_file_for(doc: Document):
     suffix = f".{doc.format}"
     fd, path = tempfile.mkstemp(suffix=suffix)
 
-    # Проверка размера контента перед записью
     content_bytes = doc.content.encode("utf-8")
     if len(content_bytes) > MAX_CONTENT_SIZE:
         os.close(fd)
@@ -378,11 +332,9 @@ def tmp_file_for(doc: Document):
 
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
-            # Санитизация перед записью
             sanitized_content = bleach.clean(doc.content, tags=[], attributes={}, strip=True)
             f.write(sanitized_content)
     except Exception as e:
-        # Убедиться, что временный файл удален в случае ошибки
         if os.path.exists(path):
             os.unlink(path)
         raise e
