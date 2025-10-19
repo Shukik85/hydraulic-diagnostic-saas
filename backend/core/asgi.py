@@ -1,17 +1,21 @@
 import os
 
-from channels.auth import AuthMiddlewareStack
-from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
-# Импорт WebSocket роутинг
-from apps.diagnostics import routing
+# Если Channels и diagnostics.routing доступны — используем их, иначе чистый ASGI
+try:
+    from channels.auth import AuthMiddlewareStack  # type: ignore
+    from channels.routing import ProtocolTypeRouter, URLRouter  # type: ignore
+    from apps.diagnostics import routing  # type: ignore
 
-application = ProtocolTypeRouter(
-    {
-        "http": get_asgi_application(),
-        "websocket": AuthMiddlewareStack(URLRouter(routing.websocket_urlpatterns)),
-    }
-)
+    application = ProtocolTypeRouter(
+        {
+            "http": get_asgi_application(),
+            "websocket": AuthMiddlewareStack(URLRouter(routing.websocket_urlpatterns)),
+        }
+    )
+except Exception:  # pragma: no cover
+    # Fallback: только HTTP ASGI приложение
+    application = get_asgi_application()
