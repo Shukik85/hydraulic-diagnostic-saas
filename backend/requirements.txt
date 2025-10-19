@@ -43,6 +43,7 @@ pillow>=10.4.0
 celery>=5.4.0
 
 # RAG local models (embeddings + ANN + numeric stack)
+langchain>=1.0.0
 sentence-transformers>=3.0.1
 torch>=2.4.0
 faiss-cpu>=1.8.0.post1
