@@ -39,7 +39,7 @@ django-csp>=3.8
 pillow>=10.4.0
 
 # Celery worker in production
-gelery>=5.4.0
+сelery>=5.4.0
 
 # RAG local models (embeddings + ANN + numeric stack)
 sentence-transformers>=3.0.1
