@@ -108,4 +108,3 @@ class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
         # По умолчанию возвращаем активность текущего пользователя
         self.queryset = self.queryset.filter(user=request.user)
         return super().list(request, *args, **kwargs)
-}
