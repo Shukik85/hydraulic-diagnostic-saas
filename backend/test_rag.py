@@ -1,31 +1,37 @@
 import os
 import sys
-import django
-import time
-from typing import List, Dict, Any
-import numpy as np
 
-from apps.rag_assistant.rag_core import RAGOrchestrator, LocalStorageBackend, EmbeddingsProvider, DEFAULT_LOCAL_STORAGE
-from apps.rag_assistant.llm_factory import LLMFactory
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
-
-# Инициализация Django окружения, если требуется доступ к settings
+# Инициализация Django окружения (для доступа к settings, если нужно)
 BASE_DIR = os.path.dirname(__file__)
 sys.path.insert(0, BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
+import django
 django.setup()
+
+import time
+import json
+from typing import List, Dict, Any
+import numpy as np
+
+from apps.rag_assistant.rag_core import (
+    LocalStorageBackend,
+    DEFAULT_LOCAL_STORAGE,
+    VectorIndex,
+)
+from apps.rag_assistant.llm_factory import LLMFactory
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
 
 def format_docs(docs: List[Dict[str, Any]]) -> str:
     return "\n\n".join(d["content"] for d in docs if d.get("content"))
 
 
-def build_rag_chain(vindex, embedder, llm):
+def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
     def _encode(texts: List[str]) -> np.ndarray:
-        embs = embedder.embed_documents(texts)
+        embs = ollama_embedder.embed_documents(texts)
         arr = np.array(embs, dtype="float32")
         norms = np.linalg.norm(arr, axis=1, keepdims=True) + 1e-12
         return (arr / norms).astype("float32")
@@ -72,7 +78,7 @@ def build_rag_chain(vindex, embedder, llm):
 def main():
     print("✅ AI Engine и RAG система инициализированы")
 
-    # 1) Данные (можете заменить на свои)
+    # 1) Исходные документы
     docs = [
         "Hydraulic pressure is low, check pump operation and fluid levels",
         "Pressure relief valve stuck open, system cannot maintain pressure",
@@ -82,30 +88,22 @@ def main():
     ]
     version = "v_test_v2"
 
-    # 2) Сборка индекса (сохранение docs в metadata)
+    # 2) Сборка индекса: embeddings через Ollama для совместимости с retriever
     print("📦 Building embeddings and index via Ollama (nomic-embed-text)...")
     storage = LocalStorageBackend(base_path=os.path.abspath(DEFAULT_LOCAL_STORAGE))
-    # В этом тесте embedder rag_core не используем — вместо него Ollama embeddings из LLMFactory
-    # но orchestrator требует EmbeddingsProvider, поэтому подставим любой (он не будет использоваться ниже)
-    dummy_embedder = EmbeddingsProvider(model_name="sentence-transformers/all-MiniLM-L6-v2")
-    orchestrator = RAGOrchestrator(storage=storage, embedder=dummy_embedder, index_metric="ip")
-    orchestrator()
 
-    # Векторизацию выполним через OllamaEmbeddings, чтобы индекс соответствовал ретриверу
-    ollama_embedder = LLMFactory.create_embedder()
+    # Сгенерировать эмбеддинги через OllamaEmbeddings
+    ollama_embedder = LLMFactory.create_embedder()  # nomic-embed-text
     embs = np.array(ollama_embedder.embed_documents(docs), dtype="float32")
     norms = np.linalg.norm(embs, axis=1, keepdims=True) + 1e-12
     embs = (embs / norms).astype("float32")
 
-    # Соберем индекс вручную, затем сохраним через orchestrator.save_index
-    from apps.rag_assistant.rag_core import VectorIndex
     vindex = VectorIndex(dim=embs.shape[1], metric="ip")
     vindex.build(embs)
     index_bytes = vindex.to_bytes()
     meta = {"dim": embs.shape[1], "metric": "ip", "docs": docs}
-    storage.save_index(version, index_bytes, meta)
-
-    print(f"✅ Index saved to: {os.path.join(DEFAULT_LOCAL_STORAGE, f'v_{version}')}")
+    save_path = storage.save_index(version, index_bytes, meta)
+    print(json.dumps({"event": "index_saved", "path": save_path}, ensure_ascii=False))
 
     # 3) Загрузка индекса и сборка цепочки
     idx_bytes, loaded_meta = storage.load_index(version)
@@ -123,9 +121,8 @@ def main():
         t0 = time.time()
         answer = chain.invoke({"question": q})
         dt = time.time() - t0
-        print(f"\nQuery {i} - '{q}':")
-        print("Answer:", answer)
-        print(f"(took {dt:.2f}s)")
+        payload = {"query": q, "answer": answer, "t_sec": round(dt, 2)}
+        print(json.dumps(payload, ensure_ascii=False))
 
     print("\n🎉 RAG test completed successfully!")
 
