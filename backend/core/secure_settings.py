@@ -3,9 +3,9 @@
 
 from decouple import Csv, config
 
-from .settings import *
+from . import settings as base
 
-# КРИТИЧНО: Никогда не используйте default SECRET_KEY в production
+# Базовые настройки
 SECRET_KEY = config("SECRET_KEY")  # Обязательно через environment variable
 DEBUG = False
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", cast=Csv())
@@ -29,38 +29,46 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600  # 1 час
 
 # Rate Limiting для API - КРИТИЧНО для защиты от атак
-REST_FRAMEWORK["DEFAULT_THROTTLE_CLASSES"] = [
-    "rest_framework.throttling.AnonRateThrottle",
-    "rest_framework.throttling.UserRateThrottle",
-]
-
-REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
-    "anon": "100/day",  # Анонимные пользователи
-    "user": "1000/day",  # Авторизованные пользователи
-    "ai_queries": "50/hour",  # AI операции - особо лимитированы
-    "file_upload": "10/hour",  # Загрузка файлов
-    "login": "5/minute",  # Попытки входа
-}
+REST_FRAMEWORK = base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
+REST_FRAMEWORK.update(
+    {
+        "DEFAULT_THROTTLE_CLASSES": [
+            "rest_framework.throttling.AnonRateThrottle",
+            "rest_framework.throttling.UserRateThrottle",
+        ],
+        "DEFAULT_THROTTLE_RATES": {
+            "anon": "100/day",
+            "user": "1000/day",
+            "ai_queries": "50/hour",
+            "file_upload": "10/hour",
+            "login": "5/minute",
+        },
+    }
+)
 
 # CORS Security - строгие настройки
-CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", cast=Csv())
-CORS_ALLOW_CREDENTIALS = False  # Изменено с True на False для безопасности
-CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", cast=Csv())
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", cast=Csv(), default="")
+CORS_ALLOWED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o]
+CORS_ALLOW_CREDENTIALS = False
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", cast=Csv(), default="")
+CSRF_TRUSTED_ORIGINS = [o for o in CSRF_TRUSTED_ORIGINS if o]
 
 # Дополнительные заголовки безопасности
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_TZ = True
 
 # File Upload Security
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB вместо 100MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 FILE_UPLOAD_PERMISSIONS = 0o644
 
 # ДОПУСТИМЫЕ типы файлов - только безопасные
 ALLOWED_FILE_TYPES = ["txt", "pdf", "docx", "md"]
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 # Logging Security Events
+LOGGING = base.LOGGING.copy() if hasattr(base, "LOGGING") else {}
+LOGGING.setdefault("loggers", {})
 LOGGING["loggers"]["security"] = {
     "handlers": ["file", "error_file"],
     "level": "WARNING",
@@ -68,6 +76,7 @@ LOGGING["loggers"]["security"] = {
 }
 
 # AI Settings Security
+AI_SETTINGS = base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
 AI_SETTINGS.update(
     {
         "MAX_QUERY_LENGTH": 500,
@@ -78,9 +87,14 @@ AI_SETTINGS.update(
 )
 
 # Database Security
-DATABASES["default"]["OPTIONS"] = {
-    "sslmode": "require",
-    "options": "-c default_transaction_isolation=serializable",
-}
+DATABASES = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
+if "default" in DATABASES:
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"].update(
+        {
+            "sslmode": "require",
+            "options": "-c default_transaction_isolation=serializable",
+        }
+    )
 
 print("🔒 SECURE SETTINGS LOADED - Production Security Enabled")
