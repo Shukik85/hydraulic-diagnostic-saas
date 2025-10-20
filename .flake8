@@ -2,6 +2,7 @@
 [flake8]
 max-line-length = 120
 exclude = .venv,.mypy_cache,__pycache__,migrations
+extend-ignore = E203, E701, E704
 per-file-ignores =
     # allow module-level imports after other statements in these modules if needed (temporary)
     backend/apps/diagnostics/websocket_consumers.py:E402,

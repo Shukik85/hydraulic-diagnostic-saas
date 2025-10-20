@@ -1,5 +1,7 @@
 """Unit tests for models."""
 
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from django.utils import timezone
 
 import pytest
@@ -27,8 +29,14 @@ class TestEquipmentModel:
 
     def test_equipment_required_fields(self):
         """Test that required fields are enforced."""
-        with pytest.raises(Exception):
-            Equipment.objects.create(name="")  # Empty name should fail
+        # Используем конкретное исключение вместо общего Exception
+        with pytest.raises(ValidationError):
+            equipment = Equipment(name="")
+            equipment.full_clean()  # Это вызовет ValidationError
+
+        # Альтернативно: проверка IntegrityError при сохранении
+        with pytest.raises(IntegrityError):
+            Equipment.objects.create(name="")
 
 
 @pytest.mark.django_db
@@ -61,3 +69,19 @@ class TestDiagnosisModel:
         diagnosis.save()
         assert diagnosis.status == "completed"
         assert diagnosis.completed_at is not None
+
+    def test_diagnosis_invalid_status(self):
+        """Test that invalid status values are rejected."""
+        equipment = Equipment.objects.create(
+            name="Test Equipment", equipment_type="pump"
+        )
+
+        # Если в модели есть валидация статусов, используем ValidationError
+        with pytest.raises(ValidationError):
+            diagnosis = Diagnosis(
+                equipment=equipment,
+                symptom="Test symptom",
+                status="invalid_status",  # Неверный статус
+                priority="high",
+            )
+            diagnosis.full_clean()

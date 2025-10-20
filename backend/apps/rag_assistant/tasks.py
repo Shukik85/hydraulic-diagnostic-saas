@@ -4,6 +4,7 @@
 import logging
 import time
 import traceback
+from contextlib import contextmanager
 from typing import Any, Dict, List
 
 from django.core.cache import cache
@@ -13,7 +14,6 @@ from django.utils import timezone
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
-from contextmanager import contextmanager
 
 from .models import Document, RagQueryLog, RagSystem
 from .rag_service import RagAssistant
@@ -184,16 +184,76 @@ def process_document_async(
         }
 
 
-@shared_task(bind=True, max_retries=MAX_RETRIES)
-def index_documents_batch_async(
-    self, document_ids: List[int]
-) -> Dict[str, Any]:  # noqa: C901
-    """
-    Пакетная асинхронная обработка множества документов
-    ОПТИМИЗИРОВАННО для минимального количества DB запросов
-    """
+def _process_documents_for_system(system, docs, total_docs, processed, errors, self):
+    """Обработка документов для одной RAG системы"""
+    try:
+        assistant = RagAssistant(system)
 
-    if not document_ids or len(document_ids) == 0:
+        # Обрабатываем документы в этой системе
+        for doc in docs:
+            try:
+                with transaction.atomic():
+                    assistant.index_document(doc)
+
+                processed["count"] += 1
+
+                # Обновляем progress
+                if processed["count"] % TASK_PROGRESS_UPDATE_INTERVAL == 0:
+                    progress_percent = int((processed["count"] / total_docs) * 100)
+                    self.update_state(
+                        state="PROGRESS",
+                        meta={
+                            "current": processed["count"],
+                            "total": total_docs,
+                            "percent": progress_percent,
+                            "status": (
+                                f"Processed {processed['count']}/{total_docs} documents"
+                            ),
+                        },
+                    )
+
+            except Exception as e:
+                error_info = {
+                    "document_id": doc.id,
+                    "document_title": doc.title,
+                    "error": str(e),
+                    "system_id": system.id,
+                }
+                errors.append(error_info)
+                logger.error(f"Error processing document {doc.id}: {str(e)}")
+
+    except Exception as e:
+        logger.error(
+            f"Error initializing RAG assistant for system {system.id}: {str(e)}"
+        )
+        # Добавляем ошибки для всех документов этой системы
+        for doc in docs:
+            errors.append(
+                {
+                    "document_id": doc.id,
+                    "document_title": doc.title,
+                    "error": f"System error: {str(e)}",
+                    "system_id": system.id,
+                }
+            )
+
+
+def _group_documents_by_system(documents):
+    """Группировка документов по RAG системам"""
+    docs_by_system: Dict[int, Dict[str, Any]] = {}
+    for doc in documents:
+        if doc.rag_system.id not in docs_by_system:
+            docs_by_system[doc.rag_system.id] = {
+                "system": doc.rag_system,
+                "docs": [],
+            }
+        docs_by_system[doc.rag_system.id]["docs"].append(doc)
+    return docs_by_system
+
+
+def _validate_batch_input(document_ids):
+    """Валидация входных данных для пакетной обработки"""
+    if not document_ids:
         return {"status": "error", "error": "No documents provided"}
 
     if len(document_ids) > MAX_BATCH_SIZE:
@@ -202,9 +262,24 @@ def index_documents_batch_async(
             "error": f"Batch size too large. Maximum {MAX_BATCH_SIZE} documents per batch",
         }
 
+    return None
+
+
+@shared_task(bind=True, max_retries=MAX_RETRIES)
+def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]:
+    """
+    Пакетная асинхронная обработка множества документов
+    ОПТИМИЗИРОВАННО для минимального количества DB запросов
+    """
+
+    # Валидация входных данных
+    validation_error = _validate_batch_input(document_ids)
+    if validation_error:
+        return validation_error
+
     task_id = self.request.id
     total_docs = len(document_ids)
-    processed = 0
+    processed = {"count": 0}
     errors: List[Dict[str, Any]] = []
 
     try:
@@ -216,14 +291,7 @@ def index_documents_batch_async(
             )
 
             # Группируем по RAG системам для эффективности
-            docs_by_system: Dict[int, Dict[str, Any]] = {}
-            for doc in documents:
-                if doc.rag_system.id not in docs_by_system:
-                    docs_by_system[doc.rag_system.id] = {
-                        "system": doc.rag_system,
-                        "docs": [],
-                    }
-                docs_by_system[doc.rag_system.id]["docs"].append(doc)
+            docs_by_system = _group_documents_by_system(documents)
 
             logger.info(
                 (
@@ -233,65 +301,18 @@ def index_documents_batch_async(
             )
 
             # Обрабатываем каждую RAG систему
-            for system_id, system_data in docs_by_system.items():
-                system = system_data["system"]
-                docs = system_data["docs"]
-
-                try:
-                    assistant = RagAssistant(system)
-
-                    # Обрабатываем документы в этой системе
-                    for i, doc in enumerate(docs, 1):
-                        try:
-                            with transaction.atomic():
-                                assistant.index_document(doc)
-
-                            processed += 1
-
-                            # Обновляем progress
-                            if processed % TASK_PROGRESS_UPDATE_INTERVAL == 0:
-                                progress_percent = int((processed / total_docs) * 100)
-                                self.update_state(
-                                    state="PROGRESS",
-                                    meta={
-                                        "current": processed,
-                                        "total": total_docs,
-                                        "percent": progress_percent,
-                                        "status": (
-                                            f"Processed {processed}/{total_docs} documents"
-                                        ),
-                                    },
-                                )
-
-                        except Exception as e:
-                            error_info = {
-                                "document_id": doc.id,
-                                "document_title": doc.title,
-                                "error": str(e),
-                                "system_id": system_id,
-                            }
-                            errors.append(error_info)
-                            logger.error(
-                                f"Error processing document {doc.id}: {str(e)}"
-                            )
-
-                except Exception as e:
-                    logger.error(
-                        f"Error initializing RAG assistant for system {system_id}: {str(e)}"
-                    )
-                    # Добавляем ошибки для всех документов этой системы
-                    for doc in docs:
-                        errors.append(
-                            {
-                                "document_id": doc.id,
-                                "document_title": doc.title,
-                                "error": f"System error: {str(e)}",
-                                "system_id": system_id,
-                            }
-                        )
+            for system_data in docs_by_system.values():
+                _process_documents_for_system(
+                    system_data["system"],
+                    system_data["docs"],
+                    total_docs,
+                    processed,
+                    errors,
+                    self,
+                )
 
             # Финальный результат
-            success_count = processed - len(errors)
+            success_count = processed["count"] - len(errors)
             error_count = len(errors)
 
             result = {
@@ -452,9 +473,9 @@ def generate_performance_report() -> Dict[str, Any]:
             total_ai_requests = 0
 
             # Сбор метрик за последние 24 часа
-            for hour in range(24):
+            for _ in range(24):
                 hour_key = time.strftime(
-                    "%Y-%m-%d:%H", time.localtime(time.time() - hour * 3600)
+                    "%Y-%m-%d:%H", time.localtime(time.time() - _ * 3600)
                 )
 
                 requests = cache.get(f"performance_metrics:{hour_key}:requests", 0)
