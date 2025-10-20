@@ -4,7 +4,6 @@
 import logging
 import time
 import traceback
-from contextmanager import contextmanager
 from typing import Any, Dict, List
 
 from django.core.cache import cache
@@ -14,6 +13,7 @@ from django.utils import timezone
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
+from contextmanager import contextmanager
 
 from .models import Document, RagQueryLog, RagSystem
 from .rag_service import RagAssistant
@@ -185,7 +185,9 @@ def process_document_async(
 
 
 @shared_task(bind=True, max_retries=MAX_RETRIES)
-def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]:  # noqa: C901
+def index_documents_batch_async(
+    self, document_ids: List[int]
+) -> Dict[str, Any]:  # noqa: C901
     """
     Пакетная асинхронная обработка множества документов
     ОПТИМИЗИРОВАННО для минимального количества DB запросов

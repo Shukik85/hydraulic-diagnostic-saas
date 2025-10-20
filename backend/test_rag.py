@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import django
+
 import numpy as np
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -19,8 +20,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
 # После django.setup() можно безопасно импортировать Django-зависимые модули
-from apps.rag_assistant.llm_factory import LLMFactory
-from apps.rag_assistant.rag_core import (
+from apps.rag_assistant.llm_factory import LLMFactory  # noqa: E402
+from apps.rag_assistant.rag_core import (  # noqa: E402
     DEFAULT_LOCAL_STORAGE,
     LocalStorageBackend,
     VectorIndex,
@@ -121,7 +122,7 @@ def main():
     # 4) Запросы
     print("🔍 Testing RAG chain...")
     queries = ["pump problems", "pressure issues", "air in lines"]
-    for i, q in enumerate(queries, 1):
+    for _i, q in enumerate(queries, 1):
         t0 = time.time()
         answer = chain.invoke({"question": q})
         dt = time.time() - t0

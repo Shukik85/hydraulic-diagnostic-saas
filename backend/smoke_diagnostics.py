@@ -13,7 +13,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
 # После django.setup() можно безопасно импортировать Django модели
-from apps.diagnostics.models import HydraulicSystem, SensorData, SystemComponent
+from apps.diagnostics.models import (  # noqa: E402
+    HydraulicSystem,
+    SensorData,
+    SystemComponent,
+)
 
 
 def main():
