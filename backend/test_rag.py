@@ -13,6 +13,7 @@ import time
 import json
 from typing import List, Dict, Any
 import numpy as np
+from pathlib import Path
 
 from apps.rag_assistant.rag_core import (
     LocalStorageBackend,
@@ -90,7 +91,7 @@ def main():
 
     # 2) Сборка индекса: embeddings через Ollama для совместимости с retriever
     print("📦 Building embeddings and index via Ollama (nomic-embed-text)...")
-    storage = LocalStorageBackend(base_path=os.path.abspath(DEFAULT_LOCAL_STORAGE))
+    storage = LocalStorageBackend(base_path=Path(DEFAULT_LOCAL_STORAGE).absolute())
 
     # Сгенерировать эмбеддинги через OllamaEmbeddings
     ollama_embedder = LLMFactory.create_embedder()  # nomic-embed-text
