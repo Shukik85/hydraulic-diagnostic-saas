@@ -11,6 +11,7 @@ from django.db import transaction
 
 import bleach  # type: ignore[import-untyped]
 import pydantic
+
 # Удаляем проблемный импорт
 # from django_ratelimit.decorators import ratelimit
 from langchain_core.output_parsers import StrOutputParser

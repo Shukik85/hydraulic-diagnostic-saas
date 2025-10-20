@@ -40,4 +40,6 @@ class RagAssistantConfig(AppConfig):
         if missing_packages:
             # Используем print вместо logger для избежания конфликтов
             print(f"⚠️ Отсутствуют пакеты: {', '.join(missing_packages)}")
-            print("ℹ️ Установите их: pip install sentence-transformers scikit-learn numpy pandas")
+            print(
+                "ℹ️ Установите их: pip install sentence-transformers scikit-learn numpy pandas"
+            )
