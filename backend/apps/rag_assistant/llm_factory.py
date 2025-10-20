@@ -5,10 +5,9 @@ from typing import Optional
 
 from django.conf import settings
 
-# LangChain 1.x providers
-from langchain_community.chat_models import ChatOllama  # type: ignore
-from langchain_community.embeddings import OllamaEmbeddings  # type: ignore
-
+# LangChain Ollama provider (modern imports)
+from langchain_ollama import ChatOllama  # type: ignore
+from langchain_ollama import OllamaEmbeddings  # type: ignore
 
 @dataclass
 class LLMConfig:
@@ -16,12 +15,10 @@ class LLMConfig:
     model: str = getattr(settings, "LLM_MODEL", "qwen3:8b")
     temperature: float = float(getattr(settings, "LLM_TEMPERATURE", 0.1))
 
-
 @dataclass
 class EmbeddingConfig:
     provider: str = getattr(settings, "EMBEDDING_PROVIDER", "ollama")
     model: str = getattr(settings, "EMBEDDING_MODEL", "nomic-embed-text")
-
 
 class LLMFactory:
     @staticmethod
