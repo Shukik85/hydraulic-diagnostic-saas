@@ -9,9 +9,9 @@
 
     <!-- Фильтры -->
     <div class="filters">
-      <input 
-        v-model="filters.search" 
-        type="text" 
+      <input
+        v-model="filters.search"
+        type="text"
         placeholder="Поиск по названию..."
         class="search-input"
       />
@@ -27,12 +27,12 @@
     <!-- Состояния загрузки и ошибок -->
     <div v-if="loading" class="loading">Загрузка систем...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
-    
+
     <!-- Список систем -->
     <div v-else-if="filteredSystems.length" class="systems-grid">
-      <div 
-        v-for="system in filteredSystems" 
-        :key="system.id" 
+      <div
+        v-for="system in filteredSystems"
+        :key="system.id"
         class="system-card"
         :class="`status-${system.status}`"
       >
@@ -48,7 +48,7 @@
         </div>
       </div>
     </div>
-    
+
     <div v-else class="no-results">
       Системы не найдены
     </div>
@@ -69,21 +69,21 @@ const filters = ref({
 // Отфильтрованные системы
 const filteredSystems = computed(() => {
   let result = systems.value || []
-  
+
   // Фильтр по поиску
   if (filters.value.search) {
     const searchLower = filters.value.search.toLowerCase()
-    result = result.filter(system => 
+    result = result.filter(system =>
       system.name.toLowerCase().includes(searchLower) ||
       system.location?.toLowerCase().includes(searchLower)
     )
   }
-  
+
   // Фильтр по статусу
   if (filters.value.status) {
     result = result.filter(system => system.status === filters.value.status)
   }
-  
+
   return result
 })
 

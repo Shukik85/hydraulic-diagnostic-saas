@@ -101,7 +101,7 @@ describe('useSystems', () => {
       { id: 1, name: 'System 1', status: 'active' },
       { id: 2, name: 'System 2', status: 'inactive' }
     ]
-    
+
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockSystems
@@ -248,7 +248,7 @@ pushNotification('error', 'Ошибка при загрузке данных')
 #### API composable:
 
 ```js
-const { 
+const {
   notifications,      // Ref<array> - реактивный массив активных уведомлений
   pushNotification,   // (type: string, message: string) => void
   removeNotification  // (id: number) => void

@@ -167,7 +167,7 @@ grep -n "cursor.execute(f" backend/apps/diagnostics/timescale_tasks.py
 # Проверить один из исправленных файлов
 head -n 20 backend/core/settings.py
 ```
-**Ожидаемый результат:** 
+**Ожидаемый результат:**
 - `import structlog` в начале файла (строка ~10)
 - Нет `# noqa: E402`
 

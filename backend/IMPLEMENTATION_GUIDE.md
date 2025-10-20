@@ -161,7 +161,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('rag_assistant', '0001_initial'),
     ]
-    
+
     operations = [
         migrations.RunSQL(
             "CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_document_language ON rag_assistant_document(language);"

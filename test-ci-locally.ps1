@@ -14,7 +14,7 @@ Push-Location backend
 try {
     Write-Host "1️⃣ Установка зависимостей для тестирования..." -ForegroundColor Yellow
     pip install black isort flake8 mypy pytest pytest-django pytest-cov
-    
+
     Write-Host ""
     Write-Host "2️⃣ Проверка Black (форматирование)..." -ForegroundColor Yellow
     $blackResult = black --check . 2>&1
@@ -24,7 +24,7 @@ try {
         exit 1
     }
     Write-Host "✅ Black passed" -ForegroundColor Green
-    
+
     Write-Host ""
     Write-Host "3️⃣ Проверка isort (импорты)..." -ForegroundColor Yellow
     $isortResult = isort --check-only . 2>&1
@@ -34,7 +34,7 @@ try {
         exit 1
     }
     Write-Host "✅ isort passed" -ForegroundColor Green
-    
+
     Write-Host ""
     Write-Host "4️⃣ Проверка flake8 (линтинг)..." -ForegroundColor Yellow
     $flake8Result = flake8 . --max-line-length=100 --exclude=.venv,.mypy_cache,migrations 2>&1
@@ -44,7 +44,7 @@ try {
         exit 1
     }
     Write-Host "✅ flake8 passed" -ForegroundColor Green
-    
+
     Write-Host ""
     Write-Host "5️⃣ Проверка mypy (типы)..." -ForegroundColor Yellow
     $mypyResult = mypy . 2>&1
@@ -54,7 +54,7 @@ try {
     } else {
         Write-Host "✅ mypy passed" -ForegroundColor Green
     }
-    
+
     Write-Host ""
     Write-Host "6️⃣ Проверка миграций..." -ForegroundColor Yellow
     $migrationsResult = python manage.py makemigrations --dry-run --check 2>&1
@@ -64,7 +64,7 @@ try {
         exit 1
     }
     Write-Host "✅ Migrations check passed" -ForegroundColor Green
-    
+
     Write-Host ""
     Write-Host "7️⃣ Запуск тестов..." -ForegroundColor Yellow
     $testResult = pytest -q --disable-warnings --maxfail=1 2>&1
@@ -74,10 +74,10 @@ try {
         exit 1
     }
     Write-Host "✅ Tests passed" -ForegroundColor Green
-    
+
     Write-Host ""
     Write-Host "🎉 Все проверки пройдены! CI должен пройти успешно." -ForegroundColor Green
-    
+
 } catch {
     Write-Host "❌ Произошла ошибка: $_" -ForegroundColor Red
     exit 1

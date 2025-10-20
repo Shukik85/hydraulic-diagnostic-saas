@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Private keys (server-side only)
     apiSecret: process.env.NUXT_API_SECRET || '',
-    
+
     // Public keys (exposed to client)
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
@@ -85,12 +85,12 @@ export default defineNuxtConfig({
     // Server handlers
     routeRules: {
       // Add caching rules
-      '/**': { 
+      '/**': {
         headers: {
           'cache-control': 'public, max-age=0, must-revalidate'
         }
       },
-      '/api/**': { 
+      '/api/**': {
         cors: true,
         headers: {
           'cache-control': 'no-cache'

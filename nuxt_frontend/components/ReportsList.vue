@@ -1,14 +1,14 @@
 <template>
   <div class="reports-list">
     <h2>Отчеты системы</h2>
-    
+
     <!-- Форма создания нового отчета -->
     <div class="report-form">
       <h3>Создать новый отчет</h3>
       <form @submit.prevent="handleCreateReport">
         <div class="form-group">
           <label for="reportTitle">Название отчета:</label>
-          <input 
+          <input
             id="reportTitle"
             v-model="newReport.title"
             type="text"
@@ -16,27 +16,27 @@
             placeholder="Введите название отчета"
           />
         </div>
-        
+
         <div class="form-group">
           <label for="reportDescription">Описание:</label>
-          <textarea 
+          <textarea
             id="reportDescription"
             v-model="newReport.description"
             rows="3"
             placeholder="Описание отчета"
           />
         </div>
-        
+
         <button type="submit" :disabled="loading">{{ loading ? 'Создание...' : 'Создать отчет' }}</button>
       </form>
     </div>
-    
+
     <!-- Список отчетов -->
     <div class="reports-container">
       <div v-if="loading && !reports.length" class="loading">Загрузка отчетов...</div>
       <div v-else-if="error" class="error">{{ error }}</div>
       <div v-else-if="!reports.length" class="empty">Нет отчетов для выбранной системы</div>
-      
+
       <ul v-else class="reports-list-items">
         <li v-for="report in reports" :key="report.id" class="report-item">
           <div class="report-header">
@@ -45,7 +45,7 @@
               <span class="report-date">{{ formatDate(report.created_at) }}</span>
             </div>
             <div class="report-actions">
-              <button 
+              <button
                 @click="toggleExportMenu(report.id)"
                 class="export-button"
                 :class="{ 'active': activeExportMenu === report.id }"
@@ -106,7 +106,7 @@ const handleCreateReport = async () => {
     error.value = 'Не выбрана система'
     return
   }
-  
+
   try {
     await createReport(props.systemId, newReport.value)
     newReport.value = { title: '', description: '' }
@@ -143,7 +143,7 @@ const downloadReport = async (reportId, format) => {
   try {
     const config = useRuntimeConfig()
     const apiUrl = `${config.public.apiUrl}/systems/${props.systemId}/reports/${reportId}/export/?format=${format}`
-    
+
     // Запрос к backend API
     const response = await fetch(apiUrl, {
       method: 'GET',
@@ -151,28 +151,28 @@ const downloadReport = async (reportId, format) => {
         'Accept': format === 'csv' ? 'text/csv' : 'application/json'
       }
     })
-    
+
     if (!response.ok) {
       throw new Error(`Ошибка экспорта: ${response.statusText}`)
     }
-    
+
     // Получение файла как blob
     const blob = await response.blob()
-    
+
     // Создание ссылки для скачивания
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     link.download = `report_${reportId}.${format}`
-    
+
     // Инициирование скачивания
     document.body.appendChild(link)
     link.click()
-    
+
     // Очистка
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-    
+
     // Закрытие меню экспорта
     activeExportMenu.value = null
   } catch (e) {

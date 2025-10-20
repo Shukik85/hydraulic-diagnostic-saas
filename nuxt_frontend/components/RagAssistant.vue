@@ -3,27 +3,27 @@
     <div class="chat-header">
       <h3>RAG Assistant</h3>
     </div>
-    
+
     <div class="messages-container" ref="messagesContainer">
-      <div 
-        v-for="(message, index) in messages" 
-        :key="index" 
+      <div
+        v-for="(message, index) in messages"
+        :key="index"
         :class="['message', message.role]"
       >
         <div class="message-content">{{ message.content }}</div>
       </div>
     </div>
-    
+
     <div class="input-container">
-      <input 
-        v-model="query" 
+      <input
+        v-model="query"
         @keyup.enter="sendMessage"
         placeholder="Введите ваш запрос..."
         class="query-input"
         :disabled="isLoading"
       />
-      <button 
-        @click="sendMessage" 
+      <button
+        @click="sendMessage"
         :disabled="isLoading || !query.trim()"
         class="send-button"
       >
@@ -43,12 +43,12 @@ const messagesContainer = ref(null)
 
 const sendMessage = async () => {
   if (!query.value.trim() || isLoading.value) return
-  
+
   const userQuery = query.value
   query.value = ''
-  
+
   await sendQuery(userQuery)
-  
+
   await nextTick()
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight

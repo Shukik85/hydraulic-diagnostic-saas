@@ -83,9 +83,9 @@ export const useSystems = () => {
    */
   const searchSystems = (query) => {
     if (!query) return systems.value
-    
+
     const searchLower = query.toLowerCase()
-    return systems.value.filter(system => 
+    return systems.value.filter(system =>
       system.name.toLowerCase().includes(searchLower) ||
       system.location?.toLowerCase().includes(searchLower)
     )
@@ -118,7 +118,7 @@ export const useSystems = () => {
     systems,
     loading,
     error,
-    
+
     // Методы
     getSystems,
     getSystemById,

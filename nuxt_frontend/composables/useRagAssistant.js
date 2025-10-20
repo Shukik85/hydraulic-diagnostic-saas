@@ -24,9 +24,9 @@ export const useRagAssistant = () => {
 
       // Тестовая заглушка
       await new Promise(resolve => setTimeout(resolve, 1000))
-      
+
       const mockResponse = generateMockResponse(query)
-      
+
       messages.value.push({
         role: 'assistant',
         content: mockResponse

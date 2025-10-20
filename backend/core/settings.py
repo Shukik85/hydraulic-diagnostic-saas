@@ -299,15 +299,9 @@ CELERY_BEAT_SCHEDULE = {
 # Настройки очередей для разных типов задач
 CELERY_TASK_ROUTES = {
     "apps.diagnostics.timescale_tasks.*": {"queue": "timescale"},
-    "apps.diagnostics.timescale_tasks.cleanup_old_partitions": {
-        "queue": "maintenance"
-    },
-    "apps.diagnostics.timescale_tasks.compress_old_chunks": {
-        "queue": "maintenance"
-    },
-    "apps.diagnostics.timescale_tasks.get_hypertable_stats": {
-        "queue": "monitoring"
-    },
+    "apps.diagnostics.timescale_tasks.cleanup_old_partitions": {"queue": "maintenance"},
+    "apps.diagnostics.timescale_tasks.compress_old_chunks": {"queue": "maintenance"},
+    "apps.diagnostics.timescale_tasks.get_hypertable_stats": {"queue": "monitoring"},
 }
 
 # Настройки для работы с базой данных в Celery задачах

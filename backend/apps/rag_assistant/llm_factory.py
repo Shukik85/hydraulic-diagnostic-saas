@@ -16,10 +16,12 @@ class LLMConfig:
     model: str = getattr(settings, "LLM_MODEL", "qwen3:8b")
     temperature: float = float(getattr(settings, "LLM_TEMPERATURE", 0.1))
 
+
 @dataclass
 class EmbeddingConfig:
     provider: str = getattr(settings, "EMBEDDING_PROVIDER", "ollama")
     model: str = getattr(settings, "EMBEDDING_MODEL", "nomic-embed-text")
+
 
 class LLMFactory:
     @staticmethod

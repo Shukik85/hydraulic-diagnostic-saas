@@ -4,7 +4,7 @@
       <h1>Панель управления гидравлическими системами</h1>
       <button @click="handleLogout" class="logout-btn">Выйти</button>
     </header>
-    
+
     <div class="dashboard-content">
       <!-- Раздел списка систем -->
       <section class="systems-section">
@@ -14,15 +14,15 @@
             + Добавить систему
           </button>
         </div>
-        <SystemsList 
-          @edit="handleEdit" 
+        <SystemsList
+          @edit="handleEdit"
           @delete="handleDelete"
           @select="handleSystemSelect"
         />
       </section>
       <!-- Форма создания/редактирования системы -->
       <section v-if="showForm" class="form-section">
-        <SystemForm 
+        <SystemForm
           :system="selectedSystem"
           @submit="handleFormSubmit"
           @cancel="handleFormCancel"
@@ -216,7 +216,7 @@ onMounted(async () => {
   .dashboard-content {
     grid-template-columns: 1fr;
   }
-  
+
   .form-section,
   .upload-section,
   .reports-section,
@@ -231,11 +231,11 @@ onMounted(async () => {
     flex-direction: column;
     gap: 15px;
   }
-  
+
   .dashboard-header h1 {
     font-size: 20px;
   }
-  
+
   .section-header {
     flex-direction: column;
     align-items: flex-start;

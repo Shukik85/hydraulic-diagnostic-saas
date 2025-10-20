@@ -75,7 +75,7 @@ sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLD
 exclude_dirs = [
     "migrations",
     "venv",
-    ".venv", 
+    ".venv",
     "node_modules",
     "staticfiles",
     "static",

@@ -9,6 +9,7 @@ from django.utils import timezone
 
 # ------------------------ QuerySets & Managers ------------------------ #
 
+
 class HydraulicSystemQuerySet(models.QuerySet):
     def with_prefetch(self):
         return self.prefetch_related(
@@ -61,6 +62,7 @@ class DiagnosticReportQuerySet(models.QuerySet):
 
 # ------------------------------- Models ------------------------------- #
 
+
 class HydraulicSystem(models.Model):
     """Гидравлическая система (оптимизировано под быстрые выборки)."""
 
@@ -85,7 +87,9 @@ class HydraulicSystem(models.Model):
     name = models.CharField(max_length=200, db_index=True)
     description = models.TextField(blank=True)
     system_type = models.CharField(max_length=50, choices=SYSTEM_TYPES, db_index=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active", db_index=True)
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="active", db_index=True
+    )
     criticality = models.CharField(max_length=20, default="medium", db_index=True)
     location = models.CharField(max_length=200, blank=True)
     installation_date = models.DateField(null=True, blank=True)
@@ -140,7 +144,9 @@ class SystemComponent(models.Model):
         db_table = "system_component"
         ordering = ["name"]
         constraints = [
-            models.UniqueConstraint(fields=["system", "name"], name="uniq_component_name_per_system"),
+            models.UniqueConstraint(
+                fields=["system", "name"], name="uniq_component_name_per_system"
+            ),
         ]
         indexes = [
             models.Index(fields=["system", "name"], name="idx_comp_system_name"),
@@ -156,13 +162,17 @@ class SensorData(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     system = models.ForeignKey(HydraulicSystem, on_delete=models.CASCADE, db_index=True)
-    component = models.ForeignKey(SystemComponent, on_delete=models.CASCADE, db_index=True)
+    component = models.ForeignKey(
+        SystemComponent, on_delete=models.CASCADE, db_index=True
+    )
     timestamp = models.DateTimeField(default=timezone.now, db_index=True)
     unit = models.CharField(max_length=32)
     value = models.FloatField()
 
     # Для точных агрегаций (опционально)
-    value_decimal = models.DecimalField(max_digits=18, decimal_places=6, null=True, blank=True)
+    value_decimal = models.DecimalField(
+        max_digits=18, decimal_places=6, null=True, blank=True
+    )
 
     # Сгенерированное поле для агрегатов по дням
     day_bucket = models.GeneratedField(
@@ -179,8 +189,12 @@ class SensorData(models.Model):
         ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["system", "-timestamp"], name="idx_sd_system_ts_desc"),
-            models.Index(fields=["component", "-timestamp"], name="idx_sd_comp_ts_desc"),
-            models.Index(fields=["system", "component", "timestamp"], name="idx_sd_sys_comp_ts"),
+            models.Index(
+                fields=["component", "-timestamp"], name="idx_sd_comp_ts_desc"
+            ),
+            models.Index(
+                fields=["system", "component", "timestamp"], name="idx_sd_sys_comp_ts"
+            ),
             models.Index(fields=["day_bucket"], name="idx_sd_day_bucket"),
         ]
         constraints = [
@@ -219,7 +233,9 @@ class DiagnosticReport(models.Model):
     title = models.CharField(max_length=255, db_index=True)
     severity = models.CharField(max_length=16, choices=SEVERITY_CHOICES, db_index=True)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, db_index=True)
-    ai_confidence = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("0.00"))  # 0..100
+    ai_confidence = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal("0.00")
+    )  # 0..100
     impacted_components_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
@@ -229,7 +245,9 @@ class DiagnosticReport(models.Model):
         db_table = "diagnostic_report"
         ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=["system", "-created_at"], name="idx_dr_system_created_desc"),
+            models.Index(
+                fields=["system", "-created_at"], name="idx_dr_system_created_desc"
+            ),
             models.Index(fields=["severity", "status"], name="idx_dr_severity_status"),
         ]
         constraints = [

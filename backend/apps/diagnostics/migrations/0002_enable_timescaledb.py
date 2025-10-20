@@ -29,7 +29,7 @@ def check_table_is_hypertable(table_name: str = "sensor_data") -> bool:
             cursor.execute(
                 """
                 SELECT EXISTS(
-                    SELECT 1 FROM timescaledb_information.hypertables 
+                    SELECT 1 FROM timescaledb_information.hypertables
                     WHERE hypertable_name = %s
                 );
                 """,
@@ -43,11 +43,11 @@ def check_table_is_hypertable(table_name: str = "sensor_data") -> bool:
 class Migration(migrations.Migration):
     """
     Миграция для включения TimescaleDB и создания hypertable для sensor_data.
-    
+
     CI-совместимая: грациозно обрабатывает отсутствие расширения.
     В dev/prod окружении выполняет полную настройку TimescaleDB.
     """
-    
+
     dependencies = [
         ("diagnostics", "0001_initial"),
     ]
@@ -59,22 +59,22 @@ class Migration(migrations.Migration):
             reverse_sql="-- DROP EXTENSION timescaledb CASCADE; -- Осторожно!",
             state_operations=[],  # Не изменяет модели
         ),
-        
+
         # 2. Преобразуем sensor_data в hypertable (если TimescaleDB доступен)
         migrations.RunSQL(
             sql="""
-                DO $$ 
+                DO $$
                 BEGIN
                     -- Проверяем наличие TimescaleDB расширения
                     IF EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
                         -- Проверяем, не является ли таблица уже hypertable
                         IF NOT EXISTS(
-                            SELECT 1 FROM timescaledb_information.hypertables 
+                            SELECT 1 FROM timescaledb_information.hypertables
                             WHERE hypertable_name = 'sensor_data'
                         ) THEN
                             -- Создаем hypertable с 7-дневным партиционированием
                             PERFORM create_hypertable(
-                                'sensor_data', 
+                                'sensor_data',
                                 by_range('timestamp'),
                                 chunk_time_interval => INTERVAL '7 days',
                                 if_not_exists => TRUE
@@ -89,11 +89,11 @@ class Migration(migrations.Migration):
                 END $$;
             """,
             reverse_sql="""
-                DO $$ 
+                DO $$
                 BEGIN
                     IF EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') THEN
                         IF EXISTS(
-                            SELECT 1 FROM timescaledb_information.hypertables 
+                            SELECT 1 FROM timescaledb_information.hypertables
                             WHERE hypertable_name = 'sensor_data'
                         ) THEN
                             RAISE NOTICE 'TimescaleDB: Cannot automatically revert hypertable. Manual intervention required.';
@@ -104,11 +104,11 @@ class Migration(migrations.Migration):
             """,
             state_operations=[],
         ),
-        
+
         # 3. Настройка сжатия данных (если hypertable создан)
         migrations.RunSQL(
             sql="""
-                DO $$ 
+                DO $$
                 BEGIN
                     IF EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') AND
                        EXISTS(SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'sensor_data') THEN
@@ -125,7 +125,7 @@ class Migration(migrations.Migration):
                 END $$;
             """,
             reverse_sql="""
-                DO $$ 
+                DO $$
                 BEGIN
                     IF EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') AND
                        EXISTS(SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'sensor_data') THEN
@@ -136,17 +136,17 @@ class Migration(migrations.Migration):
             """,
             state_operations=[],
         ),
-        
+
         # 4. Включаем автоматическое сжатие для старых chunk'ов
         migrations.RunSQL(
             sql="""
-                DO $$ 
+                DO $$
                 BEGIN
                     IF EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') AND
                        EXISTS(SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'sensor_data') THEN
                         -- Проверяем, нет ли уже политики сжатия
                         IF NOT EXISTS(
-                            SELECT 1 FROM timescaledb_information.jobs 
+                            SELECT 1 FROM timescaledb_information.jobs
                             WHERE hypertable_name = 'sensor_data' AND proc_name = 'policy_compression'
                         ) THEN
                             PERFORM add_compression_policy('sensor_data', INTERVAL '30 days');
@@ -160,7 +160,7 @@ class Migration(migrations.Migration):
                 END $$;
             """,
             reverse_sql="""
-                DO $$ 
+                DO $$
                 BEGIN
                     IF EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') AND
                        EXISTS(SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'sensor_data') THEN
@@ -171,17 +171,17 @@ class Migration(migrations.Migration):
             """,
             state_operations=[],
         ),
-        
+
         # 5. Настройка политики очистки данных
         migrations.RunSQL(
             sql="""
-                DO $$ 
+                DO $$
                 BEGIN
                     IF EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') AND
                        EXISTS(SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'sensor_data') THEN
                         -- Проверяем, нет ли уже политики очистки
                         IF NOT EXISTS(
-                            SELECT 1 FROM timescaledb_information.jobs 
+                            SELECT 1 FROM timescaledb_information.jobs
                             WHERE hypertable_name = 'sensor_data' AND proc_name = 'policy_retention'
                         ) THEN
                             PERFORM add_retention_policy('sensor_data', INTERVAL '1 year');
@@ -195,7 +195,7 @@ class Migration(migrations.Migration):
                 END $$;
             """,
             reverse_sql="""
-                DO $$ 
+                DO $$
                 BEGIN
                     IF EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'timescaledb') AND
                        EXISTS(SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'sensor_data') THEN

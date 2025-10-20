@@ -69,7 +69,9 @@ def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
     chain = (
         {"question": RunnablePassthrough()}
         | {"docs": RunnableLambda(lambda x: retrieve(x["question"]))}
-        | RunnableLambda(lambda x: {"question": x["question"], "context": format_docs(x["docs"])})
+        | RunnableLambda(
+            lambda x: {"question": x["question"], "context": format_docs(x["docs"])}
+        )
         | prompt
         | llm
         | parser

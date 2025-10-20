@@ -2,34 +2,34 @@
   <div class="login-container">
     <div class="login-card">
       <h1>Вход в систему</h1>
-      
+
       <form @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="email">Email:</label>
-          <input 
+          <input
             id="email"
-            v-model="credentials.email" 
-            type="email" 
+            v-model="credentials.email"
+            type="email"
             required
             :disabled="loading"
           />
         </div>
-        
+
         <div class="form-group">
           <label for="password">Пароль:</label>
-          <input 
+          <input
             id="password"
-            v-model="credentials.password" 
-            type="password" 
+            v-model="credentials.password"
+            type="password"
             required
             :disabled="loading"
           />
         </div>
-        
+
         <div v-if="error" class="error-message">
           {{ error }}
         </div>
-        
+
         <button type="submit" :disabled="loading">
           {{ loading ? 'Вход...' : 'Войти' }}
         </button>
@@ -60,7 +60,7 @@ onMounted(() => {
 const handleLogin = async () => {
   error.value = ''
   loading.value = true
-  
+
   try {
     await login(credentials.value)
     router.push('/dashboard')

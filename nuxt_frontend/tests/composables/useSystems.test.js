@@ -18,7 +18,7 @@ describe('useSystems', () => {
       { id: 1, name: 'System 1', status: 'active' },
       { id: 2, name: 'System 2', status: 'inactive' }
     ]
-    
+
     fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockSystems
@@ -51,7 +51,7 @@ describe('useSystems', () => {
 
   it('should set loading state during fetch', async () => {
     // Arrange
-    fetch.mockImplementationOnce(() => 
+    fetch.mockImplementationOnce(() =>
       new Promise(resolve => setTimeout(() => resolve({
         ok: true,
         json: async () => []
@@ -61,10 +61,10 @@ describe('useSystems', () => {
     // Act
     const { loading, fetchSystems } = useSystems()
     const fetchPromise = fetchSystems()
-    
+
     // Assert - loading should be true during fetch
     expect(loading.value).toBe(true)
-    
+
     await fetchPromise
     expect(loading.value).toBe(false)
   })

@@ -219,7 +219,9 @@ class RagAssistant:
         chain = (
             {"question": RunnablePassthrough()}
             | {"docs": RunnableLambda(lambda x: retriever_fn(x["question"]))}
-            | RunnableLambda(lambda x: {"question": x["question"], "context": format_docs(x["docs"])})
+            | RunnableLambda(
+                lambda x: {"question": x["question"], "context": format_docs(x["docs"])}
+            )
             | prompt
             | self.llm
             | parser
