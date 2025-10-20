@@ -152,7 +152,6 @@ def cleanup_old_partitions(
 
             old_chunks = cursor.fetchall()
             dropped_chunks = []
-            # total_size_freed = 0
 
             for full_name, chunk_name, start_time, end_time, size in old_chunks:
                 try:
@@ -333,7 +332,7 @@ def get_hypertable_stats(table_name: str = "sensor_data") -> Dict[str, Any]:
             "total_chunks": stats[2],
             "compressed_chunks": stats[3],
             "compression_ratio": (
-                f"{(stats[3]/stats[2]*100):.1f}%" if stats[2] > 0 else "0%"
+                f"{(stats[3] / stats[2] * 100):.1f}%" if stats[2] > 0 else "0%"
             ),
             "daily_stats": [
                 {
