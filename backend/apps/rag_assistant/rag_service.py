@@ -11,7 +11,8 @@ from django.db import transaction
 
 import bleach  # type: ignore[import-untyped]
 import pydantic
-from django_ratelimit.decorators import ratelimit
+# Удаляем проблемный импорт
+# from django_ratelimit.decorators import ratelimit
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
@@ -228,7 +229,7 @@ class RagAssistant:
         )
         return chain
 
-    @ratelimit(key="user_or_ip", rate="10/m", block=True)
+    # Удаляем декоратор ratelimit и создаем простую функцию
     def answer(self, query: str, user_id: Optional[int] = None):
         cached_answer = self._get_cached_faq_answer(query)
         if cached_answer is not None:

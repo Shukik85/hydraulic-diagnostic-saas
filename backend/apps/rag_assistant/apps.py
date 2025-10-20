@@ -19,10 +19,11 @@ class RagAssistantConfig(AppConfig):
             # Проверка зависимостей
             self._check_dependencies()
 
-            logger.info("RAG Ассистент приложение инициализировано")
+            # Используем стандартное логирование без structlog
+            print("✅ RAG Ассистент приложение инициализировано")
 
         except Exception as e:
-            logger.error(f"Ошибка инициализации RAG Ассистента: {e}")
+            print(f"❌ Ошибка инициализации RAG Ассистента: {e}")
 
     def _check_dependencies(self):
         """Проверка необходимых зависимостей"""
@@ -37,7 +38,6 @@ class RagAssistantConfig(AppConfig):
                 missing_packages.append(package)
 
         if missing_packages:
-            logger.warning(f"Отсутствуют пакеты: {', '.join(missing_packages)}")
-            logger.warning(
-                "Установите их: pip install sentence-transformers scikit-learn numpy pandas"
-            )
+            # Используем print вместо logger для избежания конфликтов
+            print(f"⚠️ Отсутствуют пакеты: {', '.join(missing_packages)}")
+            print("ℹ️ Установите их: pip install sentence-transformers scikit-learn numpy pandas")
