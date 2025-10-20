@@ -1,0 +1,11 @@
+{
+  "dim": 768,
+  "metric": "ip",
+  "docs": [
+    "Hydraulic pressure is low, check pump operation and fluid levels",
+    "Pressure relief valve stuck open, system cannot maintain pressure",
+    "Pump failure suspected due to unusual noise and vibration patterns",
+    "Filter clogged, causing cavitation and reduced flow",
+    "Air in hydraulic lines can lead to spongy response and delayed actuation"
+  ]
+}
