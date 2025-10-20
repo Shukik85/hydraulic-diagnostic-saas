@@ -1,29 +1,29 @@
+import json
 import os
 import sys
+import time
+from pathlib import Path
+from typing import Any, Dict, List
+
+import django
+import numpy as np
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
 # Инициализация Django окружения (для доступа к settings, если нужно)
 BASE_DIR = os.path.dirname(__file__)
 sys.path.insert(0, BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
-import django
 django.setup()
 
-import time
-import json
-from typing import List, Dict, Any
-import numpy as np
-from pathlib import Path
-
+from apps.rag_assistant.llm_factory import LLMFactory
 from apps.rag_assistant.rag_core import (
-    LocalStorageBackend,
     DEFAULT_LOCAL_STORAGE,
+    LocalStorageBackend,
     VectorIndex,
 )
-from apps.rag_assistant.llm_factory import LLMFactory
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
 
 def format_docs(docs: List[Dict[str, Any]]) -> str:

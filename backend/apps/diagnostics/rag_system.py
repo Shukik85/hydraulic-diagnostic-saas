@@ -5,9 +5,8 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from django.conf import settings
-
 import numpy as np
+from django.conf import settings
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 

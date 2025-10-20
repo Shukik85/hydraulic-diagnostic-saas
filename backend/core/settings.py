@@ -7,6 +7,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import structlog
 from celery.schedules import crontab
 from corsheaders.defaults import default_headers
 from decouple import Csv, config
@@ -345,7 +346,6 @@ AUTH_USER_MODEL = "users.User"
 # ----------------------------------------------------------------------------
 # Logging (structured) with Celery support
 # ----------------------------------------------------------------------------
-import structlog  # noqa: E402
 
 DJANGO_LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO")
 DJANGO_REQUEST_LOG_LEVEL = os.getenv("DJANGO_REQUEST_LOG_LEVEL", "WARNING")

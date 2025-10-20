@@ -1,9 +1,9 @@
 import os
 import sys
-from django.utils import timezone
-from django.db import IntegrityError
+
 import django
-from apps.diagnostics.models import HydraulicSystem, SystemComponent, SensorData
+from django.db import IntegrityError
+from django.utils import timezone
 
 # Настройка Django окружения
 BASE_DIR = os.path.dirname(__file__)
@@ -11,6 +11,8 @@ sys.path.insert(0, BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 django.setup()
+
+from apps.diagnostics.models import HydraulicSystem, SensorData, SystemComponent
 
 
 def main():

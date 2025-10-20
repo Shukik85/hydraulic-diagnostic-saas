@@ -66,9 +66,9 @@ def debug_task(self):
 
 
 from celery.signals import task_failure, task_postrun, task_prerun
+from celery.utils.log import get_task_logger
 
 # ОПТИМИЗАЦИЯ: настройка логгирования Celery
-from celery.utils.log import get_task_logger
 
 logger = get_task_logger(__name__)
 

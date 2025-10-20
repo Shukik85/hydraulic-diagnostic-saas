@@ -2,9 +2,8 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from django.utils import timezone
-
 import pandas as pd
+from django.utils import timezone
 from sklearn.cluster import DBSCAN
 from sklearn.ensemble import IsolationForest, RandomForestRegressor
 from sklearn.preprocessing import StandardScaler

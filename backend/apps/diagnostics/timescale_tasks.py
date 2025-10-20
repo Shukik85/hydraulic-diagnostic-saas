@@ -5,11 +5,11 @@ TimescaleDB задачи для управления партициями и д�
 
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from celery import shared_task
-from django.db import connection, transaction
 from django.conf import settings
+from django.db import connection, transaction
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -139,12 +139,14 @@ def cleanup_old_partitions(
             
             old_chunks = cursor.fetchall()
             dropped_chunks = []
-            total_size_freed = 0
+            # total_size_freed = 0
             
             for full_name, chunk_name, start_time, end_time, size in old_chunks:
                 try:
                     # Удаляем chunk
-                    cursor.execute(f"SELECT drop_chunk('{full_name}', if_exists => true)")
+                    cursor.execute(
+                        "SELECT drop_chunk(%s, if_exists => true)", [full_name]
+                    )
                     dropped_chunks.append({
                         'name': chunk_name,
                         'range_start': start_time.isoformat(),
@@ -214,7 +216,7 @@ def compress_old_chunks(
             
             for full_name, chunk_name, start_time, end_time in uncompressed_chunks:
                 try:
-                    cursor.execute(f"SELECT compress_chunk('{full_name}')")
+                    cursor.execute("SELECT compress_chunk(%s)", [full_name])
                     compressed_chunks.append({
                         'name': chunk_name,
                         'range_start': start_time.isoformat(),

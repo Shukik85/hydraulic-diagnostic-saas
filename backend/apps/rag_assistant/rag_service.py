@@ -5,12 +5,11 @@ import os
 import tempfile
 from typing import Any, Dict, List, Optional
 
+import bleach  # type: ignore[import-untyped]
+import pydantic
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
-
-import bleach  # type: ignore[import-untyped]
-import pydantic
 from django_ratelimit.decorators import ratelimit
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
