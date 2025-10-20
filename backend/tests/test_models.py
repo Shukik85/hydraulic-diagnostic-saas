@@ -1,8 +1,10 @@
 """Unit tests for models."""
 
-import pytest
-from apps.diagnostics.models import Diagnosis, Equipment
 from django.utils import timezone
+
+import pytest
+
+from apps.diagnostics.models import Diagnosis, Equipment
 
 
 @pytest.mark.django_db

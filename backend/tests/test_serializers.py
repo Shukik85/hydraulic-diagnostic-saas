@@ -1,6 +1,7 @@
 """Unit tests for serializers."""
 
 import pytest
+
 from apps.diagnostics.serializers import DiagnosisSerializer, EquipmentSerializer
 
 

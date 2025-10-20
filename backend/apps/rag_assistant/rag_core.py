@@ -5,12 +5,11 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, Tuple, Dict, Any, Optional
+from typing import Any, Dict, Optional, Protocol, Tuple
 
 import faiss  # type: ignore
 import numpy as np
 from sentence_transformers import SentenceTransformer
-
 
 # ---------------------------- Storage Layer ---------------------------- #
 

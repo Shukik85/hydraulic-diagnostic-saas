@@ -1,10 +1,12 @@
 """Integration tests for viewsets."""
 
-import pytest
-from apps.diagnostics.models import Diagnosis, Equipment
 from django.urls import reverse
+
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
+
+from apps.diagnostics.models import Diagnosis, Equipment
 
 
 @pytest.fixture

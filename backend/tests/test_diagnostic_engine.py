@@ -1,9 +1,10 @@
 from datetime import datetime
 from decimal import Decimal
 
+from django.test import TestCase
+
 from apps.diagnostics.engine import DiagnosticEngine
 from apps.diagnostics.models import Equipment, Sensor, SensorData
-from django.test import TestCase
 
 
 class DiagnosticEngineTestCase(TestCase):

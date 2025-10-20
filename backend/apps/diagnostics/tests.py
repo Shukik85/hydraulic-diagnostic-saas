@@ -1,9 +1,11 @@
-import pytest
-from apps.diagnostics.models import HydraulicSystem, SystemComponent
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
+
+from apps.diagnostics.models import HydraulicSystem, SystemComponent
 
 User = get_user_model()
 

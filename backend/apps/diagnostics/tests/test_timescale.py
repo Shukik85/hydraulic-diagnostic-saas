@@ -8,18 +8,18 @@ import sys
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.test import TestCase, TransactionTestCase
-from django.db import connection, transaction
-from django.utils import timezone
 from django.conf import settings
+from django.db import connection, transaction
+from django.test import TestCase, TransactionTestCase
+from django.utils import timezone
 
-from apps.diagnostics.models import HydraulicSystem, SystemComponent, SensorData
+from apps.diagnostics.models import HydraulicSystem, SensorData, SystemComponent
 from apps.diagnostics.timescale_tasks import (
-    ensure_partitions_for_range,
-    cleanup_old_partitions, 
+    cleanup_old_partitions,
     compress_old_chunks,
+    ensure_partitions_for_range,
     get_hypertable_stats,
-    timescale_health_check
+    timescale_health_check,
 )
 
 
@@ -250,7 +250,7 @@ class TimescaleDBPerformanceTest(TimescaleDBTestCase):
             self.skipTest("TimescaleDB extension not available")
             
         import time
-        
+
         # Создаем большое количество данных
         now = timezone.now()
         sensor_data_list = []
@@ -290,7 +290,7 @@ class TimescaleDBPerformanceTest(TimescaleDBTestCase):
             self.skipTest("TimescaleDB extension not available")
             
         import time
-        
+
         # Создаем данные за последние 30 дней
         now = timezone.now()
         for day in range(30):

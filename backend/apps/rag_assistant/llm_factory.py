@@ -9,6 +9,7 @@ from django.conf import settings
 from langchain_ollama import ChatOllama  # type: ignore
 from langchain_ollama import OllamaEmbeddings  # type: ignore
 
+
 @dataclass
 class LLMConfig:
     provider: str = getattr(settings, "LLM_PROVIDER", "ollama")

@@ -7,7 +7,6 @@ from django.db.models import Q
 from django.db.models.functions import TruncDay
 from django.utils import timezone
 
-
 # ------------------------ QuerySets & Managers ------------------------ #
 
 class HydraulicSystemQuerySet(models.QuerySet):
