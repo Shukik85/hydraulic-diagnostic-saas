@@ -350,7 +350,6 @@ class Command(BaseCommand):
         sensors_count = options["sensors"]
         days_back = options["days"]
         user_id = options["user_id"]
-
         try:
             user = self._get_user(user_id)
             if not user:
