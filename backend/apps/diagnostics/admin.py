@@ -140,7 +140,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
                 <p><strong>Записи датчиков:</strong> {sensor_count}</p>
                 <p><strong>Критические события:</strong> {critical_count}</p>
                 <p><strong>Диагностических отчетов:</strong> {reports_count}</p>
-                <p><strong>Среднее критических событий в день:</strong> {round(critical_count/7, 1)}</p>
+                <p><strong>Среднее критических событий в день:</strong> {round(critical_count / 7, 1)}</p>
             </div>
             """
 
