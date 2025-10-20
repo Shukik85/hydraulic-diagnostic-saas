@@ -1,8 +1,9 @@
 # Production requirements for hydraulic-diagnostic-saas (Django 5.2.7, 2025)
+# Updated with TimescaleDB and Celery Beat support
 
 # Core
 Django==5.2.7
-psycopg[binary,pool]>=3.2.1,<4.0  # native pooling for Django 5.1+
+psycopg[binary,pool]>=3.2.1,<4.0  # native pooling for Django 5.1+ (supports TimescaleDB)
 python-decouple>=3.8
 
 # API & Filters
@@ -39,8 +40,11 @@ django-csp>=3.8
 # Users: images support
 pillow>=10.4.0
 
-# Celery worker in production
+# Celery worker in production + TimescaleDB automation
 celery>=5.4.0
+django-celery-beat>=2.5.0  # Database-backed periodic tasks for TimescaleDB management
+flower>=2.0.1  # Celery monitoring UI
+pytz>=2024.1  # Timezone support for TimescaleDB tasks
 
 # RAG local models (LangChain 1.x + Ollama)
 langchain>=1.0.0
