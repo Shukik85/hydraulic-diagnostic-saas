@@ -1,9 +1,15 @@
+"""Django settings for hydraulic-diagnostic-saas project.
+
+CI-compatible with TimescaleDB and Celery Beat integration.
+"""
+
 import os
-from pathlib import Path
 from datetime import timedelta
-from decouple import config, Csv
-from corsheaders.defaults import default_headers
+from pathlib import Path
+
 from celery.schedules import crontab
+from corsheaders.defaults import default_headers
+from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -12,7 +18,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ----------------------------------------------------------------------------
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=Csv()) or ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=Csv()) or [
+    "localhost",
+    "127.0.0.1",
+]
 CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv()) or []
 
 # ----------------------------------------------------------------------------
@@ -32,7 +41,7 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "django_filters",
-    "django_celery_beat",  # Database-backed periodic tasks for TimescaleDB management
+    "django_celery_beat",  # Database-backed periodic tasks for TimescaleDB
 ]
 
 LOCAL_APPS = [
@@ -142,7 +151,9 @@ SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=31536000, cast=int)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_REFERRER_POLICY = config("SECURE_REFERRER_POLICY", default="no-referrer-when-downgrade")
+SECURE_REFERRER_POLICY = config(
+    "SECURE_REFERRER_POLICY", default="no-referrer-when-downgrade"
+)
 X_FRAME_OPTIONS = "DENY"
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
@@ -198,8 +209,10 @@ SIMPLE_JWT = {
 # ----------------------------------------------------------------------------
 TIMESCALE_ENABLED = config("TIMESCALE_ENABLED", default=False, cast=bool)
 TIMESCALE_SETTINGS = {
-    "DEFAULT_CHUNK_TIME_INTERVAL": config("TIMESCALE_CHUNK_TIME_INTERVAL", default="7 days"),
-    "DEFAULT_COMPRESSION_AGE": "30 days", 
+    "DEFAULT_CHUNK_TIME_INTERVAL": config(
+        "TIMESCALE_CHUNK_TIME_INTERVAL", default="7 days"
+    ),
+    "DEFAULT_COMPRESSION_AGE": "30 days",
     "DEFAULT_RETENTION_PERIOD": "1 year",
     "MAINTENANCE_WINDOW_HOUR": 2,  # Час для выполнения обслуживания
     "ENABLE_AUTO_COMPRESSION": True,
@@ -210,9 +223,9 @@ TIMESCALE_SETTINGS = {
             "time_column": "timestamp",
             "chunk_time_interval": "7 days",
             "compress_segmentby": ["system_id", "component_id"],
-            "compress_orderby": "timestamp DESC"
+            "compress_orderby": "timestamp DESC",
         }
-    ]
+    ],
 }
 
 # ----------------------------------------------------------------------------
@@ -223,7 +236,9 @@ CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://redis:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
-CELERY_TIMEZONE = TIME_ZONE = "UTC"
+# Fix multiple assignment for flake8 compatibility
+TIME_ZONE = "UTC"
+CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = True
 
 # Celery Beat Schedule для TimescaleDB управления
@@ -235,9 +250,8 @@ CELERY_BEAT_SCHEDULE = {
         "args": ("sensor_data", "90 days"),
         "options": {
             "queue": "maintenance",
-        }
+        },
     },
-    
     # Еженедельное сжатие старых chunk'ов по воскресеньям в 3:00
     "compress-old-timescale-chunks": {
         "task": "apps.diagnostics.timescale_tasks.compress_old_chunks",
@@ -245,9 +259,8 @@ CELERY_BEAT_SCHEDULE = {
         "args": ("sensor_data", "30 days"),
         "options": {
             "queue": "maintenance",
-        }
+        },
     },
-    
     # Проверка создания партиций на будущее каждые 6 часов
     "ensure-future-partitions": {
         "task": "apps.diagnostics.timescale_tasks.ensure_partitions_for_range",
@@ -255,14 +268,13 @@ CELERY_BEAT_SCHEDULE = {
         "kwargs": {
             "table_name": "sensor_data",
             "start_time": None,  # Текущее время
-            "end_time": None,    # +30 дней от текущего времени
-            "chunk_interval": "7 days"
+            "end_time": None,  # +30 дней от текущего времени
+            "chunk_interval": "7 days",
         },
         "options": {
             "queue": "maintenance",
-        }
+        },
     },
-    
     # Сбор статистики по hypertables каждый час
     "collect-hypertable-stats": {
         "task": "apps.diagnostics.timescale_tasks.get_hypertable_stats",
@@ -270,43 +282,48 @@ CELERY_BEAT_SCHEDULE = {
         "args": ("sensor_data",),
         "options": {
             "queue": "monitoring",
-        }
+        },
     },
-    
     # Проверка здоровья TimescaleDB каждые 15 минут
     "timescale-health-check": {
         "task": "apps.diagnostics.timescale_tasks.timescale_health_check",
         "schedule": timedelta(minutes=15),
         "options": {
             "queue": "monitoring",
-            "expires": 300  # Задача истекает через 5 минут
-        }
-    }
+            "expires": 300,  # Задача истекает через 5 минут
+        },
+    },
 }
 
 # Настройки очередей для разных типов задач
 CELERY_TASK_ROUTES = {
     "apps.diagnostics.timescale_tasks.*": {"queue": "timescale"},
-    "apps.diagnostics.timescale_tasks.cleanup_old_partitions": {"queue": "maintenance"},
-    "apps.diagnostics.timescale_tasks.compress_old_chunks": {"queue": "maintenance"},
-    "apps.diagnostics.timescale_tasks.get_hypertable_stats": {"queue": "monitoring"},
+    "apps.diagnostics.timescale_tasks.cleanup_old_partitions": {
+        "queue": "maintenance"
+    },
+    "apps.diagnostics.timescale_tasks.compress_old_chunks": {
+        "queue": "maintenance"
+    },
+    "apps.diagnostics.timescale_tasks.get_hypertable_stats": {
+        "queue": "monitoring"
+    },
 }
 
 # Настройки для работы с базой данных в Celery задачах
 CELERY_TASK_ANNOTATIONS = {
     "apps.diagnostics.timescale_tasks.cleanup_old_partitions": {
         "rate_limit": "1/m",  # Не более 1 задачи в минуту
-        "time_limit": 3600,   # Таймаут 1 час
+        "time_limit": 3600,  # Таймаут 1 час
         "soft_time_limit": 3000,  # Мягкий таймаут 50 минут
     },
     "apps.diagnostics.timescale_tasks.compress_old_chunks": {
         "rate_limit": "1/5m",  # Не более 1 задачи в 5 минут
-        "time_limit": 1800,    # Таймаут 30 минут
+        "time_limit": 1800,  # Таймаут 30 минут
     },
     "apps.diagnostics.timescale_tasks.ensure_partitions_for_range": {
         "rate_limit": "10/m",  # До 10 задач в минуту
-        "time_limit": 300,     # Таймаут 5 минут
-    }
+        "time_limit": 300,  # Таймаут 5 минут
+    },
 }
 
 # Настройки для мониторинга производительности
@@ -319,7 +336,6 @@ CELERY_TASK_RESULT_EXPIRES = 3600
 # i18n / tz
 # ----------------------------------------------------------------------------
 LANGUAGE_CODE = "ru-ru"
-TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
 
@@ -361,18 +377,43 @@ LOGGING = {
     },
     "loggers": {
         "django": {"level": DJANGO_LOG_LEVEL},
-        "django.request": {"handlers": ["console"], "level": DJANGO_REQUEST_LOG_LEVEL, "propagate": False},
-        "django.server": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "django.db.backends": {"handlers": ["console"], "level": DJANGO_DATABASE_LOG_LEVEL},
-        "celery": {"handlers": ["console"], "level": CELERY_LOG_LEVEL, "propagate": False},
-        "celery.task": {"handlers": ["console"], "level": CELERY_LOG_LEVEL, "propagate": False},
-        "apps.diagnostics.timescale_tasks": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "django.request": {
+            "handlers": ["console"],
+            "level": DJANGO_REQUEST_LOG_LEVEL,
+            "propagate": False,
+        },
+        "django.server": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": DJANGO_DATABASE_LOG_LEVEL,
+        },
+        "celery": {
+            "handlers": ["console"],
+            "level": CELERY_LOG_LEVEL,
+            "propagate": False,
+        },
+        "celery.task": {
+            "handlers": ["console"],
+            "level": CELERY_LOG_LEVEL,
+            "propagate": False,
+        },
+        "apps.diagnostics.timescale_tasks": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
 
 
 def _add_request_id(_, __, event_dict):
+    """Add request ID to log events."""
     return event_dict
+
 
 structlog.configure(
     processors=[
@@ -394,4 +435,4 @@ structlog.configure(
 # Docker deployment notes (docstring-only)
 # ----------------------------------------------------------------------------
 # WSGI: gunicorn core.wsgi:application -w 4 -b 0.0.0.0:8000
-# ASGI: gunicorn core.asgi:application -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
+# ASGI: gunicorn core.asgi:application -w 4 -k uvicorn.workers.UvicornWorker
