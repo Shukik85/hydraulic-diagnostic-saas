@@ -4,7 +4,7 @@
 import logging
 import time
 import traceback
-from contextlib import contextmanager
+from contextmanager import contextmanager
 from typing import Any, Dict, List
 
 from django.core.cache import cache
@@ -185,7 +185,7 @@ def process_document_async(
 
 
 @shared_task(bind=True, max_retries=MAX_RETRIES)
-def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]:
+def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]:  # noqa: C901
     """
     Пакетная асинхронная обработка множества документов
     ОПТИМИЗИРОВАННО для минимального количества DB запросов
@@ -444,9 +444,6 @@ def generate_performance_report() -> Dict[str, Any]:
 
     try:
         with task_performance_monitor("performance_report"):
-
-            current_time = time.strftime("%Y-%m-%d:%H")
-            _ = time.strftime("%Y-%m-%d", time.localtime(time.time() - 86400))
 
             # Метрики за 24 часа
             total_requests = 0
