@@ -1,47 +1,50 @@
+"""User models with complete type annotations for mypy compliance."""
+from __future__ import annotations
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
 
 class User(AbstractUser):
-    """Расширенная модель пользователя"""
+    """Расширенная модель пользователя с типизацией."""
 
-    email = models.EmailField(unique=True, verbose_name="Email")
-    company = models.CharField(max_length=200, blank=True, verbose_name="Компания")
-    position = models.CharField(max_length=100, blank=True, verbose_name="Должность")
-    phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
+    email: models.EmailField = models.EmailField(unique=True, verbose_name="Email")
+    company: models.CharField = models.CharField(max_length=200, blank=True, verbose_name="Компания")
+    position: models.CharField = models.CharField(max_length=100, blank=True, verbose_name="Должность")
+    phone: models.CharField = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
 
     # Профессиональная информация
-    experience_years = models.PositiveIntegerField(
+    experience_years: models.PositiveIntegerField = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Стаж работы (лет)"
     )
-    specialization = models.CharField(
+    specialization: models.CharField = models.CharField(
         max_length=100, blank=True, verbose_name="Специализация"
     )
 
     # Настройки уведомлений
-    email_notifications = models.BooleanField(
+    email_notifications: models.BooleanField = models.BooleanField(
         default=True, verbose_name="Email уведомления"
     )
-    push_notifications = models.BooleanField(
+    push_notifications: models.BooleanField = models.BooleanField(
         default=True, verbose_name="Push уведомления"
     )
-    critical_alerts_only = models.BooleanField(
+    critical_alerts_only: models.BooleanField = models.BooleanField(
         default=False, verbose_name="Только критичные уведомления"
     )
 
     # Метаданные
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлен")
-    last_activity = models.DateTimeField(
+    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
+    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True, verbose_name="Обновлен")
+    last_activity: models.DateTimeField = models.DateTimeField(
         default=timezone.now, verbose_name="Последняя активность"
     )
 
     # Статистика
-    systems_count = models.PositiveIntegerField(
+    systems_count: models.PositiveIntegerField = models.PositiveIntegerField(
         default=0, verbose_name="Количество систем"
     )
-    reports_generated = models.PositiveIntegerField(
+    reports_generated: models.PositiveIntegerField = models.PositiveIntegerField(
         default=0, verbose_name="Отчетов создано"
     )
 
@@ -53,36 +56,36 @@ class User(AbstractUser):
         verbose_name_plural = "Пользователи"
         db_table = "users_user"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.get_full_name() or self.username} ({self.email})"
 
-    def get_systems_count(self):
-        """Получить количество систем пользователя"""
-        return self.hydraulicsystem_set.count()
+    def get_systems_count(self) -> int:
+        """Получить количество систем пользователя."""
+        return self.hydraulic_systems.count()
 
-    def update_last_activity(self):
-        """Обновить время последней активности"""
+    def update_last_activity(self) -> None:
+        """Обновить время последней активности."""
         self.last_activity = timezone.now()
         self.save(update_fields=["last_activity"])
 
 
 class UserProfile(models.Model):
-    """Дополнительный профиль пользователя"""
+    """Дополнительный профиль пользователя с типизацией."""
 
-    user = models.OneToOneField(
+    user: models.OneToOneField = models.OneToOneField(
         User, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
-    avatar = models.ImageField(
+    avatar: models.ImageField = models.ImageField(
         upload_to="avatars/", blank=True, null=True, verbose_name="Аватар"
     )
-    bio = models.TextField(blank=True, max_length=500, verbose_name="О себе")
-    location = models.CharField(
+    bio: models.TextField = models.TextField(blank=True, max_length=500, verbose_name="О себе")
+    location: models.CharField = models.CharField(
         max_length=100, blank=True, verbose_name="Местоположение"
     )
-    website = models.URLField(blank=True, verbose_name="Веб-сайт")
+    website: models.URLField = models.URLField(blank=True, verbose_name="Веб-сайт")
 
     # Настройки интерфейса
-    theme = models.CharField(
+    theme: models.CharField = models.CharField(
         max_length=20,
         choices=[
             ("light", "Светлая"),
@@ -92,7 +95,7 @@ class UserProfile(models.Model):
         default="light",
         verbose_name="Тема",
     )
-    language = models.CharField(
+    language: models.CharField = models.CharField(
         max_length=10,
         choices=[
             ("ru", "Русский"),
@@ -101,23 +104,23 @@ class UserProfile(models.Model):
         default="ru",
         verbose_name="Язык",
     )
-    timezone = models.CharField(
+    timezone: models.CharField = models.CharField(
         max_length=50, default="Europe/Moscow", verbose_name="Часовой пояс"
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
+    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Профиль пользователя"
         verbose_name_plural = "Профили пользователей"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Профиль {self.user.username}"
 
 
 class UserActivity(models.Model):
-    """Лог активности пользователей"""
+    """Лог активности пользователей с типизацией."""
 
     ACTION_TYPES = [
         ("login", "Вход в систему"),
@@ -131,22 +134,22 @@ class UserActivity(models.Model):
         ("ai_query", "Запрос к AI"),
     ]
 
-    user = models.ForeignKey(
+    user: models.ForeignKey = models.ForeignKey(
         User, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
-    action = models.CharField(
+    action: models.CharField = models.CharField(
         max_length=50, choices=ACTION_TYPES, verbose_name="Действие"
     )
-    description = models.TextField(blank=True, verbose_name="Описание")
-    ip_address = models.GenericIPAddressField(
+    description: models.TextField = models.TextField(blank=True, verbose_name="Описание")
+    ip_address: models.GenericIPAddressField = models.GenericIPAddressField(
         null=True, blank=True, verbose_name="IP адрес"
     )
-    user_agent = models.TextField(blank=True, verbose_name="User Agent")
+    user_agent: models.TextField = models.TextField(blank=True, verbose_name="User Agent")
 
     # Дополнительные данные в JSON формате
-    metadata = models.JSONField(default=dict, blank=True, verbose_name="Метаданные")
+    metadata: models.JSONField = models.JSONField(default=dict, blank=True, verbose_name="Метаданные")
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Время")
+    created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True, verbose_name="Время")
 
     class Meta:
         verbose_name = "Активность пользователя"
@@ -157,5 +160,5 @@ class UserActivity(models.Model):
             models.Index(fields=["action", "-created_at"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user.username} - {self.get_action_display()} ({self.created_at})"
