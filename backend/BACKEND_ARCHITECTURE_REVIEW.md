@@ -1,435 +1,103 @@
-# Обзор архитектуры бэкенда: Hydraulic Diagnostic SaaS с RAG
+# Backend Architecture Review
 
-## Введение
-
-Документ описывает архитектуру Django-бэкенда для системы гидравлической диагностики с интегрированным RAG (Retrieval-Augmented Generation) ассистентом. Проект поддерживает мультиязычные документы различных форматов, обеспечивает автоматическую диагностику и предоставляет RESTful API для фронтенда.
+Документ описывает актуальную архитектуру backend-части Hydraulic Diagnostic SaaS.
 
 ---
 
-## Структура проекта
+## 1. Обзор
+- Django 5.2 (DRF для API)
+- TimescaleDB (PostgreSQL) для временных рядов
+- Celery + Redis для фоновых задач
+- RAG Assistant: FAISS + LangChain, локальные LLM через Ollama (Qwen3), Embeddings (nomic-embed-text)
+- Кэширование: Redis
 
+Структура:
 ```
 backend/
-├── manage.py                    # Django CLI
-├── requirements.txt             # Зависимости для продакшна
-├── requirements-dev.txt         # Зависимости для разработки
-├── pytest.ini                   # Конфигурация pytest
-├── conftest.py                  # Общие фикстуры для тестов
-├── .env.example                 # Шаблон переменных окружения
-├── .github/
-│   └── workflows/
-│       └── ci.yml               # GitHub Actions CI/CD
-├── core/                        # Конфигурация проекта
-│   ├── __init__.py
-│   ├── settings.py              # Настройки Django
-│   ├── urls.py                  # Корневая маршрутизация
-│   ├── asgi.py                  # ASGI точка входа
-│   └── wsgi.py                  # WSGI точка входа
-├── apps/                        # Django-приложения
-│   ├── users/                   # Управление пользователями
-│   │   ├── models.py
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   └── urls.py
-│   ├── diagnostics/             # Диагностика гидросистем
-│   │   ├── models.py            # HydraulicSystem, Component, Report
-│   │   ├── serializers.py
-│   │   ├── views.py
-│   │   ├── urls.py
-│   │   ├── admin.py
-│   │   └── diagnostic_engine.py # Логика автодиагностики
-│   └── rag_assistant/           # RAG-ассистент
-│       ├── models.py            # Document, RagSystem, RagQueryLog
-│       ├── serializers.py
-│       ├── views.py
-│       ├── urls.py
-│       ├── admin.py
-│       ├── signals.py           # Автоиндексация при сохранении
-│       ├── rag_service.py       # RAG-пайплайн (Langchain+FAISS)
-│       ├── management/
-│       │   └── commands/
-│       │       ├── init_rag_system.py
-│       │       └── reindex_documents.py
-│       └── tests/
-│           └── test_rag_assistant.py
-└── tests/                       # Интеграционные тесты
-    ├── __init__.py
-    ├── test_viewsets.py
-    ├── test_serializers.py
-    ├── test_models.py
-    └── test_diagnostic_engine.py
+├── core/                  # настройки, celery, urls
+├── apps/
+│   ├── diagnostics/       # домен диагностики и сенсоров
+│   ├── rag_assistant/     # RAG ассистент и индексация
+│   └── users/             # пользователи/аутентификация
+└── tests/                 # тесты
 ```
 
 ---
 
-## Модули и приложения
+## 2. Данные и TimescaleDB
+- SensorData хранится в TimescaleDB (hypertable)
+- Автоматическое управление партициями и политиками:
+  - ensure_partitions_for_range — создание чанков в диапазоне
+  - cleanup_old_partitions — удаление старых чанков (retention)
+  - compress_old_chunks — сжатие старых чанков
+  - get_hypertable_stats — сводная статистика
+  - timescale_health_check — проверка состояния расширения и фоновых задач
 
-### 1. `users/` — Управление пользователями
-
-**Модели:**
-- `User` (кастомная модель на базе AbstractUser или расширение стандартной)
-
-**Функциональность:**
-- JWT-аутентификация через `rest_framework_simplejwt`
-- Регистрация, вход, выход
-- Управление профилями пользователей
-- RBAC: разграничение прав доступа
-
-**Оценка:**
-- ✅ Стандартные Django Auth паттерны
-- ✅ JWT для stateless аутентификации
-- ⚠️ Потенциально требуется ролевая система (RBAC)
-- ❌ Отсутствует логирование активности пользователей
-- ❌ Нет rate limiting для auth endpoints
+Ключевые принципы:
+- Только параметризованные SQL-запросы (без f-strings)
+- Чёткие интервалы chunk’ов (например, 7 дней)
+- Регулярные задачи по сжатию/ретенции данных
 
 ---
 
-### 2. `diagnostics/` — Диагностика гидравлических систем
+## 3. RAG Assistant
+Компоненты:
+- EmbeddingsProvider (SentenceTransformer или внешние эмбеддинги)
+- VectorIndex (FAISS, IP/L2)
+- LocalStorageBackend (хранение байт индекса + metadata.json — версии v_*)
+- RAGOrchestrator (сборка/сохранение/загрузка индексов)
 
-**Модели:**
-- `HydraulicSystem`: базовая информация о системе (название, тип, статус)
-- `Component`: компоненты системы (насосы, клапаны, фильтры)
-- `SensorData`: показания датчиков
-- `DiagnosticReport`: отчёты по диагностике
-- `MaintenanceSchedule`: графики обслуживания
+Пайплайн:
+1) encode(docs) → build FAISS index → serialize → save_index(version, bytes, meta)
+2) load_index(version) → deserialize → search(k)
 
-**Views:**
-- CRUD для систем, компонентов, отчётов
-- Экспорт данных (CSV/JSON)
-- Загрузка файлов (логи, показания датчиков)
-
-**Сервисы:**
-- `diagnostic_engine.py`: автоматическая диагностика на основе правил и порогов
-
-**Оценка:**
-- ✅ Хорошее разделение ответственности
-- ✅ RESTful API дизайн
-- ⚠️ Тяжёлые операции обработки данных могут блокировать запросы
-- ❌ Нет пагинации для больших датасетов
-- ❌ Отсутствует кеширование дорогостоящих операций
+Особенности:
+- Нормализация эмбеддингов (L2)
+- IP метрика соответствует косинусному сходству при нормализации
+- Версионирование путей: v_<version>/index.faiss и metadata.json
 
 ---
 
-### 3. `rag_assistant/` — RAG AI-ассистент
+## 4. Celery
+- Конфигурация в `backend/core/celery.py`
+- Worker + Beat; сигналы task_prerun/task_postrun/task_failure
+- Маршрутизация очередей: `ai_tasks`, `diagnostics`, `users`
+- Таймауты/ограничения по памяти из env через decouple
 
-**Модели:**
-- `Document`: мультиязычные документы (txt, pdf, docx, md) с языковой маркировкой
-- `RagSystem`: конфигурация RAG-пайплайна (модель LLM, тип индекса, настройки)
-- `RagQueryLog`: логи запросов и ответов ассистента
-
-**Ключевые файлы:**
-- `rag_service.py`: логика RAG (загрузка документов, индексация в FAISS, генерация ответов через Langchain)
-- `signals.py`: автоматическая переиндексация при изменении документов
-- `management/commands/`: команды `init_rag_system` и `reindex_documents`
-
-**Функции:**
-- Поддержка форматов: txt, pdf, docx, markdown
-- Языковые метки: en, ru, de и другие
-- Векторный индекс: FAISS (по умолчанию), расширяемо до Elasticsearch/Pinecone
-- Модель: OpenAI GPT-3.5-turbo (настраиваемо)
-
-**Оценка:**
-- ✅ Модульная AI-функциональность
-- ✅ Поддержка различных форматов и языков
-- ⚠️ Ресурсоёмкие операции (индексация, генерация)
-- ❌ Нет очереди запросов для дорогих AI-операций (нужен Celery)
-- ❌ Отсутствует кеширование похожих запросов
-
----
-
-## Конфигурация и инфраструктура
-
-### core/settings.py
-
-**Ключевые настройки:**
-- **Приложения:** `users`, `diagnostics`, `rag_assistant`, DRF, JWT, CORS, django_filters
-- **База данных:** PostgreSQL (через `dj-database-url`)
-- **Кеширование:** Redis (рекомендовано, в настройках есть заглушка)
-- **Логирование:** разделённое на AI-логи, диагностику и общие логи
-- **AI-параметры:** OpenAI API-ключ, RAG-конфигурация, ограничения на размер файлов
-- **REST Framework:** JWT, пагинация, фильтры, CORS для фронтенда
-
----
-
-### CI/CD
-
-**Файл:** `.github/workflows/ci.yml`
-
-**Шаги:**
-1. **Lint:** black, isort, flake8, mypy (Python 3.10, 3.11)
-2. **Test:** pytest с покрытием (`--cov=apps`)
-3. **Artifacts:** отчёт покрытия (coverage.xml)
-
-**Системные зависимости** (устанавливаются в CI):
-- `build-essential`, `gfortran`, `python3-dev`
-- `libopenblas-dev`, `liblapack-dev`, `libatlas-base-dev` (для scikit-learn)
-- `libjpeg-dev`, `zlib1g-dev`, `libtiff-dev`, `libfreetype6-dev` (для Pillow)
-
----
-
-### Зависимости
-
-**requirements.txt:**
-- Django>=4.2,<4.3
-- djangorestframework, djangorestframework-simplejwt
-- django-cors-headers, django-filter
-- psycopg2 (PostgreSQL)
-- langchain, faiss-cpu, openai (RAG)
-- python-decouple, dj-database-url
-
-**requirements-dev.txt:**
-- black, isort, flake8, mypy
-- pytest, pytest-django, pytest-cov
-- django-extensions
-- pre-commit (рекомендовано)
-
----
-
-## Тестирование
-
-### Структура тестов
-
-**Модульные тесты:**
-- `tests/test_models.py`: проверка методов моделей
-- `tests/test_serializers.py`: валидация сериализаторов
-- `tests/test_viewsets.py`: CRUD-эндпоинты
-- `tests/test_diagnostic_engine.py`: логика автодиагностики
-
-**Интеграционные тесты RAG:**
-- `apps/rag_assistant/tests/test_rag_assistant.py`:
-  - CRUD документов (мультиязычность, форматы)
-  - Индексация документов
-  - Запросы к ассистенту
-  - Логирование запросов/ответов
-
-**Конфигурация:**
-- `pytest.ini`: маркеры `slow`, `integration`, `--strict-markers`
-- `conftest.py`: общие фикстуры (`api_client`, отключение кеша)
-
----
-
-## Проблемы масштабируемости и узкие места
-
-### 1. База данных
-
-**Критические проблемы:**
-- ❌ Отсутствие connection pooling
-- ❌ Нет read replicas (все запросы на primary)
-- ❌ Отсутствие индексов для частых запросов
-
-**Рекомендации:**
-- Настроить connection pooling в PostgreSQL
-- Добавить read replicas для разделения нагрузки
-- Добавить индексы на часто фильтруемые поля (`created_at`, `system_id`, `language`, `format`)
-
----
-
-### 2. Обработка файлов и хранение
-
-**Критические проблемы:**
-- ❌ Синхронная обработка блокирует запросы
-- ❌ Локальное хранение файлов (не масштабируется)
-- ❌ Нет ограничений размера файлов (DoS-атака)
-- ❌ Отсутствует проверка на вирусы
-
-**Рекомендации:**
-- Celery/RQ для асинхронной обработки
-- AWS S3 / Google Cloud Storage для хранения
-- Валидация размера и типов файлов
-- Антивирусный скан входящих файлов
-
----
-
-### 3. API и производительность
-
-**Критические проблемы:**
-- ❌ Нет кеширования (повторяются дорогие запросы)
-- ❌ Нет rate limiting (уязвимость к злоупотреблениям)
-- ❌ Отсутствует пагинация для больших датасетов
-- ❌ Нет сжатия запросов/ответов
-
-**Рекомендации:**
-```python
-# settings.py
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
-    }
-}
-
-MIDDLEWARE += [
-    'django.middleware.cache.UpdateCacheMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
-    'django.middleware.cache.FetchFromCacheMiddleware',
-]
+Запуск:
+```
+celery -A core worker --loglevel=info
+celery -A core beat --loglevel=info
 ```
 
 ---
 
-### 4. Безопасность
-
-**Критические проблемы:**
-- ❌ DEBUG=True в продакшне (утечка информации)
-- ❌ Слабые CORS-настройки
-- ❌ Отсутствует санитизация входных данных
-- ❌ Нет защитных HTTP-заголовков (XSS, clickjacking)
-
-**Рекомендации:**
-```python
-DEBUG = False
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-SECURE_SSL_REDIRECT = True
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-```
+## 5. Кэширование
+- Redis для кэша RAG (поисковые результаты, FAQ) и метрик
+- Ключи строятся детерминированно, TTL на часто меняемые сущности
+- Инвалидация кэша при изменении документов
 
 ---
 
-### 5. Мониторинг и логирование
-
-**Критические проблемы:**
-- ❌ Нет APM (мониторинга производительности)
-- ❌ Базовый уровень логирования (недостаточно для продакшна)
-- ❌ Отсутствуют health checks
-- ❌ Нет сбора метрик
-
-**Рекомендации:**
-- Sentry или New Relic для APM
-- ELK Stack (Elasticsearch, Logstash, Kibana) для централизованных логов
-- Prometheus + Grafana для метрик
-- Health check endpoints
+## 6. Безопасность и качество
+- Bandit: запрет f-string в SQL; параметризация `cursor.execute(sql, [params])`
+- Pre-commit: trailing whitespace/eof, isort, black, flake8, mypy
+- E402: разрешенный паттерн импортов после `django.setup()` с `# noqa: E402`
 
 ---
 
-## План улучшений
-
-### Фаза 1: Стабилизация (1-2 недели)
-
-1. Миграция на PostgreSQL
-2. Исправление критических проблем безопасности
-3. Добавление базового мониторинга
-4. Индексы БД для часто запрашиваемых полей
+## 7. Тестирование
+- pytest + pytest-django; smoke_diagnostics.py для быстрой проверки моделей
+- test_rag.py — интеграционный тест RAG пайплайна (FAISS + Ollama)
+- TimescaleDB: проверка hypertables через timescaledb_information
 
 ---
 
-### Фаза 2: Производительность (3-6 недели)
-
-1. Redis для кеширования
-2. Celery для асинхронной обработки
-3. Оптимизация запросов БД
-4. Rate limiting для API
-5. Пагинация и сжатие ответов
+## 8. Развёртывание и окружение
+- Docker Compose (dev/prod YAML) + .env(.production)
+- Makefile цели: dev, migrate, superuser, init-data, test, lint, format
+- Настройки LLM (OLLAMA_BASE_URL, DEFAULT_LLM_MODEL, DEFAULT_EMBEDDING_MODEL)
 
 ---
 
-### Фаза 3: Масштабирование (2-3 месяца)
-
-1. Микросервисная архитектура (выделение RAG в отдельный сервис)
-2. Расширенный мониторинг (APM, метрики, алерты)
-3. Read replicas для БД
-4. Auto-scaling (Docker + Kubernetes)
-
----
-
-## Рекомендуемый технологический стек
-
-### Текущие проблемы стека
-
-- Ограниченная масштабируемость с SQLite (заменено на PostgreSQL)
-- Отсутствует асинхронная обработка
-- Базовый мониторинг
-
----
-
-### Рекомендуемый стек
-
-**База данных:**
-- PostgreSQL с connection pooling
-- Redis для кеша и сессий
-- Elasticsearch для полнотекстового поиска (опционально)
-
-**Обработка:**
-- Celery с Redis-брокером для фоновых задач
-- AWS S3 / Google Cloud Storage для файлов
-- CloudFlare / AWS CloudFront для CDN
-
-**Мониторинг и DevOps:**
-- APM: Sentry или New Relic
-- Логирование: ELK Stack
-- Метрики: Prometheus + Grafana
-- Контейнеризация: Docker + Kubernetes
-
----
-
-## Оценка стоимости
-
-### Инфраструктура (месячные затраты)
-
-- PostgreSQL: $50-200
-- Redis: $30-100
-- Хранилище файлов: $20-100
-- Мониторинг: $100-500
-- CDN: $20-200
-
-**Итого:** $220-1100/месяц (зависит от нагрузки)
-
----
-
-### Время разработки
-
-- Фаза 1 (стабилизация): 2-3 недели (1 разработчик)
-- Фаза 2 (производительность): 4-6 недель (1-2 разработчика)
-- Фаза 3 (масштабирование): 8-12 недель (2-3 разработчика)
-
----
-
-## Оценка рисков
-
-### Высокий приоритет
-
-1. **Потеря данных** — требуется бэкап-стратегия PostgreSQL
-2. **Брешь безопасности** — слабая конфигурация
-3. **Деградация производительности** — отсутствие масштабирования
-
-### Средний приоритет
-
-1. **Исчерпание ресурсов** — отсутствие rate limiting
-2. **Проблемы с хранилищем** — локальные файлы
-3. **Проблемы интеграции** — тесная связь между сервисами
-
----
-
-## Заключение
-
-Архитектура бэкенда подходит для прототипа, но требует доработок для продакшна:
-
-1. **Масштабируемость БД** — миграция критична
-2. **Безопасность** — множественные уязвимости
-3. **Производительность** — нужны кеширование и асинхронная обработка
-4. **Мониторинг** — обязателен для продакшна
-
-Поэтапное внедрение рекомендаций превратит прототип в готовый к продакшну масштабируемый SaaS, способный выдерживать enterprise-нагрузки.
-
----
-
-## Следующие шаги
-
-**Немедленно (эта неделя):**
-- Настроить PostgreSQL development окружение
-- Базовая защита безопасности
-- Структурированное логирование
-
-**Краткосрочно (следующий месяц):**
-- Внедрить кеширование
-- Реализовать асинхронную обработку задач
-- Добавить комплексный мониторинг
-
-**Среднесрочно (следующий квартал):**
-- Спроектировать микросервисную архитектуру
-- Реализовать расширенные функции масштабирования
-- Оптимизировать для высокой доступности
-
-Этот документ — дорожная карта трансформации системы в устойчивый, масштабируемый SaaS-продукт для enterprise-развертывания.
+Документ синхронизирован с текущей веткой и кодовой базой.
