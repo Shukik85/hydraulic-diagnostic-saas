@@ -3,12 +3,11 @@ from decimal import Decimal
 
 from django.contrib.postgres.indexes import BrinIndex, BTreeIndex, GinIndex
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.db.models.functions import TruncDay
 from django.utils import timezone
-
 
 # ------------------------ QuerySets & Managers ------------------------ #
 
@@ -178,9 +177,7 @@ class HydraulicSystem(models.Model):
             models.UniqueConstraint(
                 fields=["owner", "name"], name="uq_hydraulicsystem_owner_name"
             ),
-            models.CheckConstraint(
-                check=~Q(name=""), name="chk_hs_name_not_empty"
-            ),
+            models.CheckConstraint(condition=~Q(name=""), name="chk_hs_name_not_empty"),
         ]
 
     def clean(self):
@@ -221,7 +218,9 @@ class SystemComponent(models.Model):
         ]
         indexes = [
             BTreeIndex(fields=["system", "name"], name="idx_comp_system_name"),
-            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_comp_created"),
+            BrinIndex(
+                fields=["created_at"], autosummarize=True, name="brin_comp_created"
+            ),
         ]
 
     def clean(self):
@@ -310,7 +309,7 @@ class SensorData(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=Q(value__isnull=False) | Q(value_decimal__isnull=False),
+                condition=Q(value__isnull=False) | Q(value_decimal__isnull=False),
                 name="chk_sd_value_present",
             ),
         ]
@@ -319,7 +318,9 @@ class SensorData(models.Model):
         if self.timestamp and self.timestamp > timezone.now() + timezone.timedelta(
             minutes=5
         ):
-            raise ValidationError("Timestamp cannot be more than 5 minutes in the future")
+            raise ValidationError(
+                "Timestamp cannot be more than 5 minutes in the future"
+            )
         if self.value is None and self.value_decimal is None:
             raise ValidationError("Either value or value_decimal must be provided")
         if self.unit and len(self.unit) > 32:
@@ -387,7 +388,9 @@ class DiagnosticReport(models.Model):
         ordering = ["-created_at"]
         indexes = [
             BTreeIndex(fields=["system", "created_at"], name="idx_dr_system_created"),
-            BTreeIndex(fields=["severity", "created_at"], name="idx_dr_severity_created"),
+            BTreeIndex(
+                fields=["severity", "created_at"], name="idx_dr_severity_created"
+            ),
             BTreeIndex(fields=["status", "severity"], name="idx_dr_status_severity"),
             BrinIndex(
                 fields=["created_at"], autosummarize=True, name="brin_dr_created"
@@ -395,7 +398,7 @@ class DiagnosticReport(models.Model):
         ]
         constraints = [
             models.CheckConstraint(
-                check=Q(ai_confidence__gte=0.0) & Q(ai_confidence__lte=1.0),
+                condition=Q(ai_confidence__gte=0.0) & Q(ai_confidence__lte=1.0),
                 name="chk_dr_ai_confidence_range",
             ),
         ]

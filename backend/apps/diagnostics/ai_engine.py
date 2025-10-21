@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """AI engine for hydraulic system diagnostics with strict typing.
 
 This module provides a typed implementation that satisfies mypy checks
@@ -58,9 +59,7 @@ class HydraulicSystemAIEngine:
         optim = self._suggest_optimizations(rows)
         costs = self._analyze_costs(rows)
         reliab = self._assess_reliability(rows)
-        return self._generate_summary_report(
-            health, perf, maint, optim, costs, reliab
-        )
+        return self._generate_summary_report(health, perf, maint, optim, costs, reliab)
 
     # ------------------ Private helpers (typed) ------------------ #
 
@@ -102,7 +101,9 @@ class HydraulicSystemAIEngine:
         v = float(row["value"])
         return float(min(1.0, max(0.0, abs(v) / (200.0 * max(w, 0.1)))))
 
-    def _generate_anomaly_description(self, row: Dict[str, Any], severity: float) -> str:
+    def _generate_anomaly_description(
+        self, row: Dict[str, Any], severity: float
+    ) -> str:
         return (
             f"Аномалия {row['sensor_type']} со значением {row['value']:.2f}. "
             f"Серьёзность: {severity:.2f}"
@@ -140,9 +141,13 @@ class HydraulicSystemAIEngine:
 
     def _identify_risk_factors(self, rows: List[Dict[str, Any]]) -> List[str]:
         factors: List[str] = []
-        if any(r["sensor_type"] == "pressure" and float(r["value"]) > 180 for r in rows):
+        if any(
+            r["sensor_type"] == "pressure" and float(r["value"]) > 180 for r in rows
+        ):
             factors.append("overpressure")
-        if any(r["sensor_type"] == "temperature" and float(r["value"]) > 90 for r in rows):
+        if any(
+            r["sensor_type"] == "temperature" and float(r["value"]) > 90 for r in rows
+        ):
             factors.append("overheat")
         return factors
 
@@ -156,13 +161,17 @@ class HydraulicSystemAIEngine:
 
     def _calculate_health_score(self, rows: List[Dict[str, Any]]) -> float:
         trends = self._analyze_trends(rows)
-        base = 1.0 - sum(abs(v) for v in trends.values()) / (1000.0 * max(1, len(trends)))
+        base = 1.0 - sum(abs(v) for v in trends.values()) / (
+            1000.0 * max(1, len(trends))
+        )
         return float(max(0.0, min(1.0, base)))
 
     def _analyze_performance(self, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
         return {"trend": self._analyze_trends(rows)}
 
-    def _generate_maintenance_recommendations(self, rows: List[Dict[str, Any]]) -> List[str]:
+    def _generate_maintenance_recommendations(
+        self, rows: List[Dict[str, Any]]
+    ) -> List[str]:
         return self._generate_recommendations(rows)
 
     def _suggest_optimizations(self, rows: List[Dict[str, Any]]) -> List[str]:

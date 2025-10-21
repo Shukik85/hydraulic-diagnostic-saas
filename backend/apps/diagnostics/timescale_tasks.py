@@ -6,6 +6,7 @@ TimescaleDB задачи для манаджмента гипертаблиц и
 - Compression age: 30 дней
 - Retention period: 365 дней
 """
+
 from __future__ import annotations
 
 import logging
@@ -38,7 +39,9 @@ def ensure_partitions_for_range(
     """
     try:
         start_dt: datetime = (
-            timezone.now() if start_time is None else datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+            timezone.now()
+            if start_time is None
+            else datetime.fromisoformat(start_time.replace("Z", "+00:00"))
         )
         end_dt: datetime = (
             start_dt + timedelta(days=30)
@@ -87,7 +90,9 @@ def ensure_partitions_for_range(
             "start_time": start_dt.isoformat(),
             "end_time": end_dt.isoformat(),
             "existing_chunks": len(existing_chunks),
-            "current_chunk_interval": str(interval_row[0]) if interval_row else "unknown",
+            "current_chunk_interval": (
+                str(interval_row[0]) if interval_row else "unknown"
+            ),
             "expected_chunk_interval": f"{DEFAULT_CHUNK_INTERVAL_DAYS} days",
             "task_id": getattr(self.request, "id", None),
         }
@@ -127,7 +132,9 @@ def cleanup_old_partitions(
             )
             for full_name, chunk_name, start_time, end_time, size in cursor.fetchall():
                 try:
-                    cursor.execute("SELECT drop_chunk(%s, if_exists => true)", [full_name])
+                    cursor.execute(
+                        "SELECT drop_chunk(%s, if_exists => true)", [full_name]
+                    )
                     dropped_chunks.append(
                         {
                             "name": chunk_name,
@@ -204,7 +211,11 @@ def compress_old_chunks(
 
     except Exception as exc:  # noqa: BLE001
         logger.error("Compression failed: %s", exc)
-        return {"status": "failed", "error": str(exc), "task_id": getattr(self.request, "id", None)}
+        return {
+            "status": "failed",
+            "error": str(exc),
+            "task_id": getattr(self.request, "id", None),
+        }
 
 
 @shared_task
@@ -221,7 +232,9 @@ def get_hypertable_stats(table_name: str = "diagnostics_sensordata") -> Dict[str
                 """,
                 [table_name, table_name, table_name, table_name],
             )
-            total_size, total_size_pretty, total_chunks, compressed_chunks = cursor.fetchone()
+            total_size, total_size_pretty, total_chunks, compressed_chunks = (
+                cursor.fetchone()
+            )
 
             cursor.execute(
                 """
@@ -272,7 +285,9 @@ def timescale_health_check() -> Dict[str, Any]:
     """Проверяет состояние TimescaleDB расширения и фоновых задач."""
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'")
+            cursor.execute(
+                "SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'"
+            )
             version_row = cursor.fetchone()
             if not version_row:
                 return {
@@ -318,4 +333,8 @@ def timescale_health_check() -> Dict[str, Any]:
 
     except Exception as exc:  # noqa: BLE001
         logger.error("Health check failed: %s", exc)
-        return {"status": "failed", "error": str(exc), "checked_at": timezone.now().isoformat()}
+        return {
+            "status": "failed",
+            "error": str(exc),
+            "checked_at": timezone.now().isoformat(),
+        }

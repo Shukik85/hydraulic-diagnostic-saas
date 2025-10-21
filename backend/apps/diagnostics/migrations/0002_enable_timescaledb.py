@@ -1,8 +1,8 @@
 # Generated manually for TimescaleDB integration
 # CI-compatible: gracefully handles missing TimescaleDB extension
 
-from django.db import migrations, connection
 from django.conf import settings
+from django.db import connection, migrations
 
 
 def check_timescaledb_available():
@@ -59,7 +59,6 @@ class Migration(migrations.Migration):
             reverse_sql="-- DROP EXTENSION timescaledb CASCADE; -- Осторожно!",
             state_operations=[],  # Не изменяет модели
         ),
-
         # 2. Преобразуем sensor_data в hypertable (если TimescaleDB доступен)
         migrations.RunSQL(
             sql="""
@@ -104,7 +103,6 @@ class Migration(migrations.Migration):
             """,
             state_operations=[],
         ),
-
         # 3. Настройка сжатия данных (если hypertable создан)
         migrations.RunSQL(
             sql="""
@@ -136,7 +134,6 @@ class Migration(migrations.Migration):
             """,
             state_operations=[],
         ),
-
         # 4. Включаем автоматическое сжатие для старых chunk'ов
         migrations.RunSQL(
             sql="""
@@ -171,7 +168,6 @@ class Migration(migrations.Migration):
             """,
             state_operations=[],
         ),
-
         # 5. Настройка политики очистки данных
         migrations.RunSQL(
             sql="""

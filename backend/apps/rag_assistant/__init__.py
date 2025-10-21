@@ -11,7 +11,5 @@ RAG Assistant - Система поиска по документации с И�
 Версия: 1.0.0
 """
 
-default_app_config = "apps.rag_assistant.apps.RagAssistantConfig"
-
 __version__ = "1.0.0"
 __author__ = "AI Assistant"

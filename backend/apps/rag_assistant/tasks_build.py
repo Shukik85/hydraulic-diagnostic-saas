@@ -11,8 +11,19 @@ from .rag_core import default_local_orchestrator
 logger = logging.getLogger("apps.rag_assistant")
 
 
-@shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=5, retry_jitter=True, max_retries=3)
-def rag_build_index_task(self, documents: List[str], version: str | None = None, metadata: Dict[str, Any] | None = None) -> str:
+@shared_task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_backoff=5,
+    retry_jitter=True,
+    max_retries=3,
+)
+def rag_build_index_task(
+    self,
+    documents: List[str],
+    version: str | None = None,
+    metadata: Dict[str, Any] | None = None,
+) -> str:
     """
     Celery task to build and persist local FAISS index for provided documents.
     """
@@ -20,7 +31,9 @@ def rag_build_index_task(self, documents: List[str], version: str | None = None,
     metadata = metadata or {}
 
     orch = default_local_orchestrator()
-    logger.info("RAG: building index", extra={"version": version, "docs": len(documents)})
+    logger.info(
+        "RAG: building index", extra={"version": version, "docs": len(documents)}
+    )
     path = orch.build_and_save(documents, version=version, metadata=metadata)
     logger.info("RAG: index saved", extra={"version": version, "path": path})
     return path
