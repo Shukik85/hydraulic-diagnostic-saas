@@ -17,7 +17,7 @@
 📈 **Мониторинг в реальном времени** - сбор и анализ данных датчиков  
 🤖 **AI-диагностика** - автоматическое выявление аномалий  
 💬 **RAG Assistant** - интеллектуальный помощник на базе LLM  
-📀 **TimescaleDB** - высокопроизводительное хранение временных рядов  
+📊 **TimescaleDB** - высокопроизводительное хранение временных рядов  
 ⚡ **Celery** - асинхронная обработка данных  
 📱 **Современный UI** - Nuxt 3 + Vue 3 + Chart.js
 
@@ -84,7 +84,7 @@ make init-data
 
 ```
 hydraulic-diagnostic-saas/
-├── backend/           # Django бэкэнд
+├── backend/           # Django бэкенд
 │   ├── apps/
 │   │   ├── diagnostics/    # Система диагностики
 │   │   ├── rag_assistant/  # RAG-ассистент
@@ -260,6 +260,64 @@ response = requests.post('http://localhost:8000/api/rag/query/', {
 
 ---
 
+## 📚 Производительность тестов
+
+### Оптимизация скорости
+
+```bash
+# Параллельные тесты (pytest-xdist)
+pytest -n auto
+
+# Только быстрые тесты
+pytest -m "not slow"
+
+# Повторный запуск последних неудачных тестов
+pytest --lf  # last failed
+```
+
+### Профилирование тестов
+
+```bash
+# Время выполнения тестов
+pytest --durations=10
+
+# Профилирование с cProfile
+pytest --profile
+```
+
+---
+
+## 🚢 Развертывание
+
+### Production
+```bash
+# Сборка и запуск
+docker-compose -f docker-compose.prod.yml up -d
+
+# Инициализация БД
+docker-compose -f docker-compose.prod.yml exec backend python manage.py migrate
+docker-compose -f docker-compose.prod.yml exec backend python manage.py collectstatic
+```
+
+### Environment Variables
+```env
+# Database
+DATABASE_URL=timescale://user:pass@localhost:5432/dbname
+REDIS_URL=redis://localhost:6379/0
+
+# AI Settings
+OLLAMA_BASE_URL=http://localhost:11434
+DEFAULT_LLM_MODEL=qwen3:8b
+DEFAULT_EMBEDDING_MODEL=nomic-embed-text
+
+# Security
+SECRET_KEY=your-secret-key
+DEBUG=False
+ALLOWED_HOSTS=yourdomain.com
+```
+
+---
+
 ## 📝 Документация
 
 - [TESTING.md](TESTING.md) - Инструкции по тестированию
@@ -269,24 +327,54 @@ response = requests.post('http://localhost:8000/api/rag/query/', {
 
 ---
 
-## 🤝 Contributing
+## 📋 TODO - Текущие задачи
 
-1. Fork репозитория
-2. Создайте feature branch: `git checkout -b feature/new-feature`
-3. Коммитьте изменения: `git commit -m 'Add new feature'`
-4. Push в branch: `git push origin feature/new-feature`
-5. Открывайте Pull Request
+### 🏗️ Оптимизация моделей Django
+- [ ] **models.py**: Добавить составные индексы (BTree/BRIN) для SensorData
+- [ ] **models.py**: UniqueConstraint для (owner,name) и (system,name)
+- [ ] **models.py**: QuerySet-методы (for_system, with_system_component, time_range, recent)
+- [ ] **models.py**: Валидация timestamp и обновление last_reading_at
 
-### Требования:
+### ⏱️ TimescaleDB оптимизация
+- [ ] **migrations**: create_hypertable для diagnostics_sensordata
+- [ ] **migrations**: chunk_time_interval = 7 days
+- [ ] **migrations**: add_compression_policy = 30 days
+- [ ] **migrations**: add_retention_policy = 365 days
+
+### 🔧 Celery Tasks
+- [ ] **timescale_tasks.py**: Дефолты retention/compression под новые политики
+- [ ] **timescale_tasks.py**: Комментарии и примеры под 7-дневные чанки
+
+### 🧪 Тесты
+- [ ] **test_models.py**: Тесты валидации моделей и индексов
+- [ ] **test_models.py**: Проверки QuerySet-методов
+- [ ] **test_models.py**: Тест обновления last_reading_at
+
+### 🎛️ Admin панель
+- [ ] **admin.py**: Фильтры по sensor_type и is_critical
+- [ ] **admin.py**: Удобные list_display для SensorData
+
+---
+
+## 🤝 Участие в разработке
+
+1. **Fork** репозитория
+2. Создайте **feature branch**: `git checkout -b feature/amazing-feature`
+3. **Commit** изменения: `git commit -m 'Add amazing feature'`
+4. **Push** в branch: `git push origin feature/amazing-feature`
+5. Создайте **Pull Request**
+
+### Стандарты кода
+- Следуйте PEP 8 для Python
+- Используйте pre-commit хуки
 - Покрытие тестами > 80%
-- Прохождение pre-commit хуков
-- Обновление документации
+- Документируйте API изменения
 
 ---
 
 ## 📄 Лицензия
 
-Проект распространяется под лицензией MIT.
+Этот проект распространяется под лицензией MIT. Подробности в файле [LICENSE](LICENSE).
 
 ---
 
@@ -295,6 +383,16 @@ response = requests.post('http://localhost:8000/api/rag/query/', {
 **Плотников Александр**  
 📧 shukik85@ya.ru  
 🐙 [@Shukik85](https://github.com/Shukik85)
+
+---
+
+## 🙏 Благодарности
+
+- [Django](https://djangoproject.com/) - Web framework
+- [TimescaleDB](https://www.timescale.com/) - Time-series database  
+- [Ollama](https://ollama.com/) - Local LLM runtime
+- [LangChain](https://langchain.com/) - LLM framework
+- [Vue.js](https://vuejs.org/) - Frontend framework
 
 ---
 
