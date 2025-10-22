@@ -29,7 +29,7 @@ classifiers = [
 [tool.black]
 line-length = 88
 target-version = ["py310", "py311", "py312", "py313"]
-include = '\.pyi?$'
+include = '\\.pyi?$'
 exclude = '''
 (
   \.eggs
@@ -137,3 +137,30 @@ format_css = true
 format_js = true
 ignore = "H006,H030,H031"
 include = "H017,H035"
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main"]
+ignore_missing_imports = true
+check_untyped_defs = true
+warn_unused_ignores = false
+warn_redundant_casts = true
+warn_unused_configs = true
+no_implicit_optional = true
+show_error_codes = true
+strict_optional = true
+
+exclude = [
+    "backend/assistant.py",
+    "backend/assistant_documents.py",
+    "backend/ragassistant.py",
+    "backend/systems.py",
+    "backend/timescale.py",
+    "backend/aiengine.py",
+    "backend/testdata.py",
+    "backend.py",
+]
+
+[mypy.plugins.django-stubs]
+# Django settings module
+django_settings_module = "core.settings.base"
