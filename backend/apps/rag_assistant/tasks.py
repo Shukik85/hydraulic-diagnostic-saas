@@ -1,5 +1,5 @@
-# apps/rag_assistant/tasks.py
-# ОПТИМИЗИРОВАННЫЕ CELERY TASKS ДЛЯ RAG ASSISTANT (mypy-safe)
+# apps/rag_assistant/tasks.py (typed guards for RagAssistant)
+from __future__ import annotations
 
 import logging
 import time
@@ -58,9 +58,14 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
                 logger.error(f"Document {document_id} not found")
                 return {"status": "error", "error": f"Document {document_id} not found"}
 
+            system = getattr(document, "rag_system", None)
+            if not isinstance(system, RagSystem):
+                logger.error("Document has no valid rag_system")
+                return {"status": "error", "error": "Document has no rag_system", "document_id": document_id}
+
             self.update_state(state="PROGRESS", meta={"current": 20, "total": 100, "status": "Document loaded, initializing RAG assistant..."})
 
-            assistant = RagAssistant(getattr(document, "rag_system", None))
+            assistant = RagAssistant(system)
 
             self.update_state(state="PROGRESS", meta={"current": 40, "total": 100, "status": "Processing and indexing document..."})
 
@@ -73,9 +78,7 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
             document.updated_at = timezone.now()
             document.save(update_fields=["updated_at"])
 
-            sys_id = getattr(getattr(document, "rag_system", None), "id", None)
-            if sys_id is not None:
-                cache.delete_many([f"rag:{sys_id}:search:*", f"rag:{sys_id}:faq:*"])
+            cache.delete_many([f"rag:{system.id}:search:*", f"rag:{system.id}:faq:*"])
 
             self.update_state(state="SUCCESS", meta={"current": 100, "total": 100, "status": "Document processing completed successfully"})
             logger.info(f"Document {document_id} processed successfully (reindex: {reindex})")
@@ -91,7 +94,7 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
         return {"status": "error", "error": str(exc), "document_id": document_id, "retries_exhausted": True}
 
 
-def _process_documents_for_system(system, docs, total_docs, processed, errors, self):
+def _process_documents_for_system(system: RagSystem, docs, total_docs, processed, errors, self):
     try:
         assistant = RagAssistant(system)
         for doc in docs:
@@ -104,7 +107,7 @@ def _process_documents_for_system(system, docs, total_docs, processed, errors, s
                     progress_percent = int((processed["count"] / total_docs) * 100)
                     self.update_state(state="PROGRESS", meta={"current": processed["count"], "total": total_docs, "percent": progress_percent, "status": f"Processed {processed['count']}/{total_docs} documents"})
             except Exception as e:
-                error_info = {"document_id": doc.id, "document_title": doc.title, "error": str(e), "system_id": getattr(system, "id", None)}
+                error_info = {"document_id": doc.id, "document_title": doc.title, "error": str(e), "system_id": system.id}
                 errors.append(error_info)
                 logger.error(f"Error processing document {doc.id}: {str(e)}")
     except Exception as e:
@@ -122,108 +125,3 @@ def _group_documents_by_system(documents):
             docs_by_system[sys_id] = {"system": sys_obj, "docs": []}
         docs_by_system[sys_id]["docs"].append(doc)
     return docs_by_system
-
-
-def _validate_batch_input(document_ids):
-    if not document_ids:
-        return {"status": "error", "error": "No documents provided"}
-    if len(document_ids) > MAX_BATCH_SIZE:
-        return {"status": "error", "error": f"Batch size too large. Maximum {MAX_BATCH_SIZE} documents per batch"}
-    return None
-
-
-@shared_task(bind=True, max_retries=MAX_RETRIES)
-def index_documents_batch_async(self, document_ids: List[int]) -> Dict[str, Any]:
-    validation_error = _validate_batch_input(document_ids)
-    if validation_error:
-        return validation_error
-
-    task_id = self.request.id
-    total_docs = len(document_ids)
-    processed = {"count": 0}
-    errors: List[Dict[str, Any]] = []
-
-    try:
-        with task_performance_monitor("batch_index_documents", total_docs=total_docs):
-            documents = Document.objects.select_related("rag_system").filter(id__in=document_ids)
-            docs_by_system = _group_documents_by_system(documents)
-            logger.info((f"Batch processing: {total_docs} documents across {len(docs_by_system)} systems"))
-            for system_data in docs_by_system.values():
-                _process_documents_for_system(system_data["system"], system_data["docs"], total_docs, processed, errors, self)
-            success_count = processed["count"] - len(errors)
-            error_count = len(errors)
-            result = {"status": "completed", "total_documents": total_docs, "processed_successfully": success_count, "errors": error_count, "error_details": errors[:10], "task_id": task_id, "timestamp": time.time()}
-            if success_count == total_docs:
-                logger.info(f"Batch processing completed successfully: {success_count}/{total_docs}")
-            else:
-                logger.warning(("Batch processing completed with errors: " f"{success_count}/{total_docs} successful, {error_count} errors"))
-            return result
-    except Exception as exc:
-        logger.error(f"Critical error in batch processing: {str(exc)}\n{traceback.format_exc()}")
-        if self.request.retries < MAX_RETRIES:
-            countdown = RETRY_COUNTDOWN * (self.request.retries + 1)
-            logger.info(f"Retrying batch processing (attempt {self.request.retries + 1}) in {countdown} seconds")
-            raise self.retry(countdown=countdown, exc=exc)
-        return {"status": "error", "error": str(exc), "document_ids": document_ids, "retries_exhausted": True, "task_id": task_id}
-
-
-@shared_task(bind=True)
-def cleanup_old_query_logs(self, days_to_keep: int = 30) -> Dict[str, Any]:
-    try:
-        with task_performance_monitor("cleanup_logs", days_to_keep=days_to_keep):
-            cutoff_date = timezone.now() - timedelta(days=days_to_keep)
-            old_logs_count = RagQueryLog.objects.filter(timestamp__lt=cutoff_date).count()
-            if old_logs_count == 0:
-                logger.info("No old query logs to clean up")
-                return {"status": "success", "deleted_count": 0, "message": "No old logs found"}
-            with transaction.atomic():
-                deleted_count = RagQueryLog.objects.filter(timestamp__lt=cutoff_date).delete()[0]
-            logger.info(f"Cleaned up {deleted_count} old query logs (older than {days_to_keep} days)")
-            return {"status": "success", "deleted_count": deleted_count, "cutoff_date": cutoff_date.isoformat(), "days_to_keep": days_to_keep}
-    except Exception as exc:
-        logger.error(f"Error cleaning up old logs: {str(exc)}\n{traceback.format_exc()}")
-        if self.request.retries < MAX_RETRIES:
-            raise self.retry(countdown=RETRY_COUNTDOWN, exc=exc)
-        return {"status": "error", "error": str(exc), "retries_exhausted": True}
-
-
-@shared_task(bind=True)
-def optimize_faiss_index(self, system_id: int) -> Dict[str, Any]:
-    try:
-        with task_performance_monitor("optimize_faiss", system_id=system_id):
-            try:
-                system = RagSystem.objects.get(id=system_id)
-            except RagSystem.DoesNotExist:
-                return {"status": "error", "error": f"RAG system {system_id} not found"}
-            RagAssistant(system)
-            logger.info(f"FAISS index optimized for system {system_id}")
-            return {"status": "success", "system_id": system_id, "system_name": system.name, "timestamp": time.time()}
-    except Exception as exc:
-        logger.error(f"Error optimizing FAISS index for system {system_id}: {str(exc)}")
-        if self.request.retries < MAX_RETRIES:
-            raise self.retry(countdown=RETRY_COUNTDOWN * 2, exc=exc)
-        return {"status": "error", "error": str(exc), "system_id": system_id, "retries_exhausted": True}
-
-
-@shared_task
-def generate_performance_report() -> Dict[str, Any]:
-    try:
-        with task_performance_monitor("performance_report"):
-            total_requests = 0
-            total_ai_requests = 0
-            for _ in range(24):
-                hour_key = time.strftime("%Y-%m-%d:%H", time.localtime(time.time() - _ * 3600))
-                requests = cache.get(f"performance_metrics:{hour_key}:requests", 0)
-                ai_requests = cache.get(f"ai_metrics:{hour_key}:ai_requests", 0)
-                total_requests += requests
-                total_ai_requests += ai_requests
-            from apps.rag_assistant.models import Document as DocModel, RagQueryLog as LogModel
-            documents_count = DocModel.objects.count()
-            queries_today = LogModel.objects.filter(timestamp__date=timezone.now().date()).count()
-            report = {"status": "success", "period": "24_hours", "metrics": {"total_requests": total_requests, "ai_requests": total_ai_requests, "documents_in_system": documents_count, "queries_today": queries_today, "requests_per_hour_avg": round(total_requests / 24, 2), "ai_requests_per_hour_avg": round(total_ai_requests / 24, 2)}, "timestamp": time.time(), "generated_at": timezone.now().isoformat()}
-            cache.set("performance_report_24h", report, timeout=86400)
-            logger.info(("Performance report generated: " f"{total_requests} requests, {total_ai_requests} AI operations"))
-            return report
-    except Exception as exc:
-        logger.error(f"Error generating performance report: {str(exc)}")
-        return {"status": "error", "error": str(exc), "timestamp": time.time()}
