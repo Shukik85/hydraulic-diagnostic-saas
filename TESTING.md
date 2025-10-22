@@ -12,7 +12,7 @@ We follow the **Testing Pyramid** strategy:
 
 ### Quality Gates
 - Backend coverage ≥ 80%
-- Frontend coverage ≥ 70% 
+- Frontend coverage ≥ 70%
 - All tests must pass in CI before deployment
 - E2E tests for core user journeys
 
@@ -67,18 +67,18 @@ class TestDiagnosticReport:
             temperature_anomalies=2,
             contamination_level=0.8
         )
-        
+
         # Test business logic - risk calculation
         expected_risk = "HIGH"
         assert report.calculate_risk_level() == expected_risk
-    
+
     def test_report_status_flow(self):
         report = DiagnosticReportFactory(status="RUNNING")
-        
+
         # Test valid status transition
         report.mark_completed()
         assert report.status == "COMPLETED"
-        
+
         # Test invalid transition
         with pytest.raises(ValidationError):
             report.mark_failed()  # Cannot fail after completion
@@ -97,27 +97,27 @@ class TestDiagnosticViewSet:
             "severity": "HIGH",
             "recommendations": ["Check pump seals", "Monitor pressure"]
         }
-        
+
         equipment = EquipmentFactory()
         payload = {
             "equipment_id": equipment.id,
             "test_parameters": {"pressure": 350, "duration": 30}
         }
-        
+
         response = authenticated_client.post('/api/diagnostics/run/', payload, format='json')
-        
+
         assert response.status_code == 201
         assert response.data['severity'] == "HIGH"
         mock_analysis.assert_called_once()
-    
+
     def test_diagnostic_performance_benchmark(self, benchmark, authenticated_client):
         # Performance test for diagnostic generation
         equipment = EquipmentFactory()
-        
+
         def run_diagnostic():
-            return authenticated_client.post('/api/diagnostics/quick-scan/', 
+            return authenticated_client.post('/api/diagnostics/quick-scan/',
                                            {"equipment_id": equipment.id})
-        
+
         result = benchmark(run_diagnostic)
         assert result.status_code == 201
         assert benchmark.stats['mean'] < 1.0  # Must complete under 1 second
@@ -159,25 +159,25 @@ import api from '@/services/api'
 
 describe('EquipmentDashboard.vue', () => {
   let mockEquipmentData
-  
+
   beforeEach(() => {
     mockEquipmentData = [
       { id: 1, name: 'Hydraulic Pump A', status: 'online', pressure: 350 },
       { id: 2, name: 'Control Valve B', status: 'offline', pressure: 0 }
     ]
-    
+
     vi.clearAllMocks()
     api.getEquipment.mockResolvedValue({ data: mockEquipmentData })
   })
 
   it('loads and displays equipment list with real-time data', async () => {
     const wrapper = mount(EquipmentDashboard)
-    
+
     // Initial loading state
     expect(wrapper.find('[data-testid="loading"]').exists()).toBe(true)
-    
+
     await flushPromises()
-    
+
     // Verify data is displayed
     expect(wrapper.text()).toContain('Hydraulic Pump A')
     expect(wrapper.text()).toContain('350 psi')
@@ -187,10 +187,10 @@ describe('EquipmentDashboard.vue', () => {
   it('filters equipment by status', async () => {
     const wrapper = mount(EquipmentDashboard)
     await flushPromises()
-    
+
     // Test filter functionality
     await wrapper.find('[data-testid="filter-online"]').setValue(true)
-    
+
     expect(wrapper.findAll('[data-testid="equipment-card"]')).toHaveLength(1)
     expect(wrapper.text()).not.toContain('Control Valve B')
   })
@@ -198,20 +198,20 @@ describe('EquipmentDashboard.vue', () => {
   it('handles real-time data updates via WebSocket', async () => {
     const wrapper = mount(EquipmentDashboard)
     await flushPromises()
-    
+
     // Simulate WebSocket message
     const mockWebSocketMessage = {
       equipment_id: 1,
       pressure: 375,
       status: 'warning'
     }
-    
+
     window.dispatchEvent(new MessageEvent('message', {
       data: JSON.stringify(mockWebSocketMessage)
     }))
-    
+
     await flushPromises()
-    
+
     // Verify UI updates
     expect(wrapper.text()).toContain('375 psi')
     expect(wrapper.find('[data-testid="status-warning"]').exists()).toBe(true)
@@ -219,10 +219,10 @@ describe('EquipmentDashboard.vue', () => {
 
   it('shows error state when API fails', async () => {
     api.getEquipment.mockRejectedValue(new Error('Network error'))
-    
+
     const wrapper = mount(EquipmentDashboard)
     await flushPromises()
-    
+
     expect(wrapper.find('[data-testid="error-message"]').exists()).toBe(true)
     expect(wrapper.text()).toContain('Failed to load equipment')
   })
@@ -267,7 +267,7 @@ test.describe('Diagnostic Workflow', () => {
     await page.fill('[data-testid="email"]', 'engineer@company.com')
     await page.fill('[data-testid="password"]', 'test123')
     await page.click('[data-testid="login-btn"]')
-    
+
     await expect(page).toHaveURL(/\/dashboard/)
 
     // 2. Navigate to equipment
@@ -277,7 +277,7 @@ test.describe('Diagnostic Workflow', () => {
     // 3. Select equipment and run diagnostic
     await page.click('[data-testid="equipment-card"]:first-child')
     await page.click('[data-testid="run-diagnostic"]')
-    
+
     // 4. Configure parameters
     await page.fill('[data-testid="pressure-input"]', '350')
     await page.selectOption('[data-testid="test-type"]', 'comprehensive')
@@ -286,7 +286,7 @@ test.describe('Diagnostic Workflow', () => {
     // 5. Wait for results and verify
     await expect(page.locator('[data-testid="results-section"]')).toBeVisible({ timeout: 30000 })
     await expect(page.locator('text=Analysis Complete')).toBeVisible()
-    
+
     // 6. Generate report
     await page.click('[data-testid="generate-report"]')
     await expect(page).toHaveURL(/\/report\/.*/)
@@ -311,31 +311,31 @@ from apps.diagnostics.services import ComplexDiagnosticEngine
 
 @pytest.mark.performance
 class TestDiagnosticPerformance:
-    
+
     def test_complex_diagnostic_performance(self, benchmark, large_equipment_dataset):
         engine = ComplexDiagnosticEngine()
-        
+
         def run_complex_analysis():
             return engine.analyze_system(large_equipment_dataset, depth="deep")
-        
+
         result = benchmark(run_complex_analysis)
-        
+
         # Performance assertions
         assert result is not None
         assert benchmark.stats['mean'] < 2.5  # Must complete under 2.5 seconds
         assert benchmark.stats['max'] < 5.0   # Never exceed 5 seconds
-    
+
     def test_memory_usage_during_batch_processing(self):
         import tracemalloc
-        
+
         tracemalloc.start()
-        
+
         # Process large batch of diagnostics
         process_large_batch()
-        
+
         current, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
-        
+
         assert peak < 100 * 1024 * 1024  # Peak memory < 100MB
 ```
 
@@ -469,9 +469,9 @@ await waitFor(() => {
 await page.click('data-testid=submit-button')
 
 // Add intelligent waiting
-await page.waitForSelector('[data-testid="results"]', { 
-  state: 'visible', 
-  timeout: 15000 
+await page.waitForSelector('[data-testid="results"]', {
+  state: 'visible',
+  timeout: 15000
 })
 ```
 
