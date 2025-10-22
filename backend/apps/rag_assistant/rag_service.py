@@ -123,7 +123,8 @@ class RagAssistant:
         self.embedder = LLMFactory.create_embedder()
 
     def _get_cache_key(self, key_type: str, identifier: str, version: str = CACHE_VERSION) -> str:
-        return f"rag:{self.system.id}:{key_type}:{identifier}:{version}"
+        sys_id = getattr(self.system, "pk", None)
+        return f"rag:{sys_id}:{key_type}:{identifier}:{version}"
 
     def _cache_faq_answer(self, question: str, answer: str) -> None:
         cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
