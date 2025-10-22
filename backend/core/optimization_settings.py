@@ -1,7 +1,7 @@
 # core/optimization_settings.py (typed)
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from decouple import config
 
@@ -139,8 +139,21 @@ FILE_UPLOAD_HANDLERS: List[str] = [
 TEMPLATES = base.TEMPLATES.copy() if hasattr(base, "TEMPLATES") else []
 if TEMPLATES:
     TEMPLATES[0] = TEMPLATES[0].copy()
-    options: Dict[str, Any] = TEMPLATES[0].get("OPTIONS", {})
-    options = options.copy()
+    options_obj = TEMPLATES[0].get("OPTIONS", {})
+    options: Dict[str, Any] = dict(options_obj) if isinstance(options_obj, dict) else {}
+
+    loaders_cached: Tuple[str, List[str]] = (
+        "django.template.loaders.cached.Loader",
+        [
+            "django.template.loaders.filesystem.Loader",
+            "django.template.loaders.app_directories.Loader",
+        ],
+    )
+    loaders_uncached: List[str] = [
+        "django.template.loaders.filesystem.Loader",
+        "django.template.loaders.app_directories.Loader",
+    ]
+
     options.update(
         {
             "context_processors": [
@@ -149,22 +162,7 @@ if TEMPLATES:
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
-            "loaders": (
-                [
-                    (
-                        "django.template.loaders.cached.Loader",
-                        [
-                            "django.template.loaders.filesystem.Loader",
-                            "django.template.loaders.app_directories.Loader",
-                        ],
-                    ),
-                ]
-                if not getattr(base, "DEBUG", False)
-                else [
-                    "django.template.loaders.filesystem.Loader",
-                    "django.template.loaders.app_directories.Loader",
-                ]
-            ),
+            "loaders": ([loaders_cached] if not getattr(base, "DEBUG", False) else loaders_uncached),
         }
     )
     TEMPLATES[0]["OPTIONS"] = options
