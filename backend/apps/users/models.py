@@ -87,6 +87,6 @@ class UserActivity(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
-        uname = str(getattr(self.user, "username", ""))
-        action = str(self.get_action_display())
-        return f"{uname} - {action} ({self.created_at})"
+        user_str = str(getattr(self.user, "username", ""))
+        action_display = getattr(self, "get_action_display", lambda: str(self.action))()
+        return f"{user_str} - {action_display} ({self.created_at})"
