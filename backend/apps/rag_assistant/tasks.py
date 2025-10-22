@@ -78,7 +78,7 @@ def process_document_async(self, document_id: int, reindex: bool = False) -> Dic
             document.updated_at = timezone.now()
             document.save(update_fields=["updated_at"])
 
-            cache.delete_many([f"rag:{system.id}:search:*", f"rag:{system.id}:faq:*"])
+            cache.delete_many([f"rag:{system.pk}:search:*", f"rag:{system.pk}:faq:*"])
 
             self.update_state(state="SUCCESS", meta={"current": 100, "total": 100, "status": "Document processing completed successfully"})
             logger.info(f"Document {document_id} processed successfully (reindex: {reindex})")
@@ -107,21 +107,32 @@ def _process_documents_for_system(system: RagSystem, docs, total_docs, processed
                     progress_percent = int((processed["count"] / total_docs) * 100)
                     self.update_state(state="PROGRESS", meta={"current": processed["count"], "total": total_docs, "percent": progress_percent, "status": f"Processed {processed['count']}/{total_docs} documents"})
             except Exception as e:
-                error_info = {"document_id": doc.id, "document_title": doc.title, "error": str(e), "system_id": system.id}
+                error_info = {"document_id": doc.id, "document_title": doc.title, "error": str(e), "system_id": system.pk}
                 errors.append(error_info)
                 logger.error(f"Error processing document {doc.id}: {str(e)}")
     except Exception as e:
-        logger.error(f"Error initializing RAG assistant for system {getattr(system, 'id', None)}: {str(e)}")
+        logger.error(f"Error initializing RAG assistant for system {getattr(system, 'pk', None)}: {str(e)}")
         for doc in docs:
-            errors.append({"document_id": doc.id, "document_title": doc.title, "error": f"System error: {str(e)}", "system_id": getattr(system, "id", None)})
+            errors.append({"document_id": doc.id, "document_title": doc.title, "error": f"System error: {str(e)}", "system_id": getattr(system, "pk", None)})
 
 
-def _group_documents_by_system(documents):
+def _group_documents_by_system(documents: List[Document]) -> Dict[int, Dict[str, Any]]:
     docs_by_system: Dict[int, Dict[str, Any]] = {}
     for doc in documents:
         sys_obj = getattr(doc, "rag_system", None)
-        sys_id = getattr(sys_obj, "id", None)
+        sys_id = getattr(sys_obj, "pk", None)
         if sys_id not in docs_by_system:
             docs_by_system[sys_id] = {"system": sys_obj, "docs": []}
         docs_by_system[sys_id]["docs"].append(doc)
     return docs_by_system
+
+
+@shared_task
+def index_documents_batch_async(document_ids: List[int]) -> Dict[str, Any]:
+    """Асинхронная индексация пакета документов: запускает process_document_async для каждого документа."""
+    results: List[str] = []
+    docs = Document.objects.filter(id__in=document_ids)
+    for d in docs:
+        async_result = process_document_async.delay(d.id)
+        results.append(async_result.id)
+    return {"status": "started", "task_ids": results, "count": len(results)}
