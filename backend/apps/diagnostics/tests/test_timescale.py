@@ -3,20 +3,15 @@ Smoke тест для TimescaleDB функциональности.
 Запуск: python manage.py test apps.diagnostics.tests.test_timescale
 """
 
-import os
-import sys
-from datetime import datetime, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
-from django.conf import settings
-from django.db import connection, transaction
-from django.test import TestCase, TransactionTestCase
+from django.db import connection
+from django.test import TransactionTestCase
 from django.utils import timezone
 
 from apps.diagnostics.models import HydraulicSystem, SensorData, SystemComponent
 from apps.diagnostics.timescale_tasks import (
-    cleanup_old_partitions,
-    compress_old_chunks,
     ensure_partitions_for_range,
     get_hypertable_stats,
     timescale_health_check,

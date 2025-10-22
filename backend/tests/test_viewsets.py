@@ -8,7 +8,6 @@ import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from apps.diagnostics.models import DiagnosticReport, HydraulicSystem, SystemComponent
 
 
 @pytest.fixture

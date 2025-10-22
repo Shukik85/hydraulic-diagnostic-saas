@@ -1,7 +1,6 @@
 # Generated manually for TimescaleDB integration
 # CI-compatible: gracefully handles missing TimescaleDB extension
 
-from django.conf import settings
 from django.db import connection, migrations
 
 

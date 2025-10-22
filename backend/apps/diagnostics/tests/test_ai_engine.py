@@ -6,7 +6,6 @@ from django.test import TestCase
 
 import pandas as pd
 
-from apps.diagnostics.ai_engine import engine as ai_engine
 from apps.diagnostics.models import HydraulicSystem, SensorData
 
 User = get_user_model()

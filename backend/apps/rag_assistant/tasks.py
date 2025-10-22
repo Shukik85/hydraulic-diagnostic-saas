@@ -6,7 +6,6 @@ import time
 import traceback
 from collections import defaultdict
 from contextlib import contextmanager
-from datetime import timedelta
 from typing import Any, Dict, List
 
 from django.core.cache import cache
@@ -18,7 +17,7 @@ from celery import shared_task
 from celery.utils.log import get_task_logger
 
 from .models import Document as RagDocument
-from .models import RagQueryLog, RagSystem
+from .models import RagSystem
 from .rag_service import RagAssistant
 
 logger = get_task_logger(__name__)

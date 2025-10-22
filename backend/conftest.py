@@ -1,10 +1,9 @@
 import os
 import sys
-from typing import Any, Generator
+from typing import Generator
 
 from django.conf import settings
 from django.test import Client
-from django.urls import reverse
 
 import pytest
 
