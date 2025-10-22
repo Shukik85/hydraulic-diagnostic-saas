@@ -28,7 +28,6 @@ class UserStatsSerializer(serializers.Serializer):
     last_activity = serializers.DateTimeField(read_only=True)
 
     def to_representation(self, instance: Any) -> Dict[str, Any]:
-        # Ожидается, что поля денормализованы на модели пользователя
         return {
             "systems_count": getattr(instance, "systems_count", 0),
             "reports_generated": getattr(instance, "reports_generated", 0),
