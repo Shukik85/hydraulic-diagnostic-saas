@@ -1,3 +1,4 @@
+from typing import Any
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
@@ -28,7 +29,8 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ["username", "email", "first_name", "last_name", "company"]
     ordering = ["-created_at"]
 
-    fieldsets = BaseUserAdmin.fieldsets + (
+    # Правильная типизация и объединение fieldsets
+    additional_fieldsets = (
         (
             "Дополнительная информация",
             {
@@ -57,10 +59,12 @@ class UserAdmin(BaseUserAdmin):
         ),
     )
 
+    fieldsets = (BaseUserAdmin.fieldsets or ()) + additional_fieldsets
+
     readonly_fields = ["last_activity", "created_at", "systems_count"]
 
     @admin.display(description="Полное имя")
-    def get_full_name(self, obj):
+    def get_full_name(self, obj: User) -> str:
         return obj.get_full_name() or obj.username
 
 
@@ -97,10 +101,10 @@ class UserActivityAdmin(admin.ModelAdmin):
         ("Время", {"fields": ("created_at",)}),
     )
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: Any) -> bool:
         return False
 
-    def has_change_permission(self, request, obj=None):
+    def has_change_permission(self, request: Any, obj: Any | None = None) -> bool:
         return False
 
 
