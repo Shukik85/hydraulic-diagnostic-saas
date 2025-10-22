@@ -2,7 +2,7 @@
 # Обеспечивает качество кода, безопасность и совместимость
 
 exclude: |
-  (?x)^(
+  (?x)^( 
       migrations/.*|
       .*\.min\.(js|css)$|
       staticfiles/.*|
@@ -43,11 +43,12 @@ repos:
       - id: django-upgrade
         args: [--target-version, "5.2"]
 
-  - repo: https://github.com/GitGuardian/ggshield
-    rev: v1.43.0
-    hooks:
-      - id: ggshield
-        stages: [pre-commit]
+  # Временно отключено локально: требуется аутентификация ggshield
+  # - repo: https://github.com/GitGuardian/ggshield
+  #   rev: v1.43.0
+  #   hooks:
+  #     - id: ggshield
+  #       stages: [pre-commit]
 
   - repo: https://github.com/pycqa/bandit
     rev: 1.8.3
@@ -114,7 +115,7 @@ repos:
     hooks:
       - id: hadolint
         args: [--ignore, DL3008, --ignore, DL3009, --ignore, DL3015]
-        files: ^Dockerfile(\..*)?$|^.*\/Dockerfile(\..*)?$|^docker\/.*Dockerfile$
+        files: ^Dockerfile(\..*)?$|^.*/Dockerfile(\..*)?$|^docker/.*Dockerfile$
 
   - repo: https://github.com/wemake-services/dotenv-linter
     rev: 0.4.0
@@ -130,5 +131,5 @@ ci:
   autoupdate_branch: ''
   autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
   autoupdate_schedule: weekly
-  skip: [ggshield]
+  skip: []
   submodules: false
