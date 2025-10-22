@@ -1,26 +1,25 @@
-# core/optimization_settings.py
-# ОПТИМИЗАЦИЯ ПРОИЗВОДИТЕЛЬНОСТИ
+# core/optimization_settings.py (typed)
+from __future__ import annotations
+
+from typing import Any, Dict, List
 
 from decouple import config
 
 from . import settings as base
 
 # Database Connection Pooling - КРИТИЧНО для production
-DATABASES = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
+DATABASES: Dict[str, Any] = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
 if "default" in DATABASES:
-    DATABASES["default"].update(
+    default_db: Dict[str, Any] = DATABASES["default"]
+    default_db.update(
         {
-            "CONN_MAX_AGE": config(
-                "DATABASE_CONN_MAX_AGE", default=600, cast=int
-            ),  # 10 минут
-            "CONN_HEALTH_CHECKS": config(
-                "DATABASE_CONN_HEALTH_CHECKS", default=True, cast=bool
-            ),
+            "CONN_MAX_AGE": config("DATABASE_CONN_MAX_AGE", default=600, cast=int),
+            "CONN_HEALTH_CHECKS": config("DATABASE_CONN_HEALTH_CHECKS", default=True, cast=bool),
         }
     )
 
 # Мониторинг медленных запросов - ОЧЕНЬ ВАЖНО
-LOGGING = base.LOGGING.copy() if hasattr(base, "LOGGING") else {}
+LOGGING: Dict[str, Any] = base.LOGGING.copy() if hasattr(base, "LOGGING") else {}
 LOGGING.setdefault("loggers", {})
 LOGGING.setdefault("handlers", {})
 LOGGING["loggers"]["django.db.backends"] = {
@@ -30,7 +29,7 @@ LOGGING["loggers"]["django.db.backends"] = {
 }
 
 # Улучшенное кеширование - КЛЮЧЕВАЯ оптимизация
-CACHES = {
+CACHES: Dict[str, Any] = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": config("REDIS_URL", default="redis://localhost:6379/0"),
@@ -47,35 +46,29 @@ CACHES = {
         "VERSION": 1,
         "TIMEOUT": config("CACHE_TIMEOUT", default=3600, cast=int),
     },
-    # Отдельный кеш для AI операций
     "ai_cache": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": config(
-            "AI_REDIS_URL",
-            default=config("REDIS_URL", default="redis://localhost:6379/0"),
-        ),
+        "LOCATION": config("AI_REDIS_URL", default=config("REDIS_URL", default="redis://localhost:6379/0")),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "CONNECTION_POOL_KWARGS": {"max_connections": 20},
             "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
         },
         "KEY_PREFIX": "ai_operations",
-        "TIMEOUT": config(
-            "AI_CACHE_TIMEOUT", default=86400, cast=int
-        ),  # 24 часа для AI
+        "TIMEOUT": config("AI_CACHE_TIMEOUT", default=86400, cast=int),
     },
 }
 
 # Session кеширование - повышает производительность
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
-SESSION_COOKIE_AGE = 86400  # 24 часа
-SESSION_SAVE_EVERY_REQUEST = False
+SESSION_COOKIE_AGE: int = 86400
+SESSION_SAVE_EVERY_REQUEST: bool = False
 
 # Middleware оптимизация - порядок важен!
-MIDDLEWARE = [
-    "django.middleware.cache.UpdateCacheMiddleware",  # Первым!
-    "django.middleware.gzip.GZipMiddleware",  # Сжатие
+MIDDLEWARE: List[str] = [
+    "django.middleware.cache.UpdateCacheMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -86,16 +79,16 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.rag_assistant.middleware.PerformanceMonitoringMiddleware",
-    "django.middleware.cache.FetchFromCacheMiddleware",  # Последним!
+    "django.middleware.cache.FetchFromCacheMiddleware",
 ]
 
 # Кеширование страниц
 CACHE_MIDDLEWARE_ALIAS = "default"
-CACHE_MIDDLEWARE_SECONDS = 300  # 5 минут
+CACHE_MIDDLEWARE_SECONDS: int = 300
 CACHE_MIDDLEWARE_KEY_PREFIX = "hydraulic"
 
 # Static Files оптимизация
-STORAGES = {
+STORAGES: Dict[str, Any] = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
@@ -105,7 +98,7 @@ STORAGES = {
 }
 
 # Улучшенные настройки REST Framework
-REST_FRAMEWORK = base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
+REST_FRAMEWORK: Dict[str, Any] = base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
 REST_FRAMEWORK.update(
     {
         "DEFAULT_RENDERER_CLASSES": [
@@ -123,7 +116,7 @@ REST_FRAMEWORK.update(
 )
 
 # Оптимизация AI настроек
-AI_SETTINGS = base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
+AI_SETTINGS: Dict[str, Any] = base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
 AI_SETTINGS.update(
     {
         "ENABLE_CACHING": True,
@@ -137,7 +130,7 @@ AI_SETTINGS.update(
 )
 
 # File Upload оптимизация
-FILE_UPLOAD_HANDLERS = [
+FILE_UPLOAD_HANDLERS: List[str] = [
     "django.core.files.uploadhandler.MemoryFileUploadHandler",
     "django.core.files.uploadhandler.TemporaryFileUploadHandler",
 ]
@@ -146,7 +139,7 @@ FILE_UPLOAD_HANDLERS = [
 TEMPLATES = base.TEMPLATES.copy() if hasattr(base, "TEMPLATES") else []
 if TEMPLATES:
     TEMPLATES[0] = TEMPLATES[0].copy()
-    options = TEMPLATES[0].get("OPTIONS", {})
+    options: Dict[str, Any] = TEMPLATES[0].get("OPTIONS", {})
     options = options.copy()
     options.update(
         {
@@ -183,11 +176,12 @@ if LOGS_DIR is not None:
     LOGGING["handlers"]["performance"] = {
         "class": "logging.handlers.RotatingFileHandler",
         "filename": str(LOGS_DIR / "performance.log"),
-        "maxBytes": 1024 * 1024 * 20,  # 20MB
+        "maxBytes": 1024 * 1024 * 20,
         "backupCount": 5,
         "formatter": "verbose",
         "level": "INFO",
     }
+    LOGGING.setdefault("loggers", {})
     LOGGING["loggers"]["performance"] = {
         "handlers": ["performance"],
         "level": "INFO",
