@@ -3,6 +3,7 @@
 This module provides a typed implementation that satisfies mypy checks
 and avoids attr-defined errors by defining all referenced helpers.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
