@@ -119,7 +119,7 @@ exclude_lines = [
 directory = "htmlcov"
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "core.settings.test"
+DJANGO_SETTINGS_MODULE = "backend.core.settings.test"
 addopts = "-v --tb=short --strict-markers"
 markers = [
     "slow: медленные тесты",
@@ -131,7 +131,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 
 [tool.django-stubs]
-django_settings_module = "core.settings.base"
+django_settings_module = "backend.core.settings.base"
 
 [tool.djlint]
 profile = "django"
@@ -166,4 +166,4 @@ exclude = [
 
 [mypy.plugins.django-stubs]
 # Django settings module
-django_settings_module = "core.settings.base"
+django_settings_module = "backend.core.settings.base"
