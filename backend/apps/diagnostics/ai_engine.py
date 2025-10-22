@@ -1,10 +1,9 @@
-from __future__ import annotations
-
 """AI engine for hydraulic system diagnostics with strict typing.
 
 This module provides a typed implementation that satisfies mypy checks
 and avoids attr-defined errors by defining all referenced helpers.
 """
+from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
