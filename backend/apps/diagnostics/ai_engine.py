@@ -66,9 +66,7 @@ class HydraulicSystemAIEngine:
     def _prepare_features(self, since: Optional[datetime]) -> List[Dict[str, Any]]:
         if self.system is None:
             return []
-        qs = SensorData.objects.for_system(self.system.id).only(
-            "timestamp", "sensor_type", "value"
-        )
+        qs = SensorData.qs.for_system(self.system.id).only("timestamp", "sensor_type", "value")
         if since is not None:
             qs = qs.filter(timestamp__gte=since)
         return [
