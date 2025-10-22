@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -24,19 +24,19 @@ if TYPE_CHECKING:
 class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
     """Optimized QuerySet for HydraulicSystem with N+1 prevention."""
 
-    def with_owner(self) -> HydraulicSystemQuerySet:
+    def with_owner(self) -> "HydraulicSystemQuerySet":
         return self.select_related("owner")
 
-    def with_components(self) -> HydraulicSystemQuerySet:
+    def with_components(self) -> "HydraulicSystemQuerySet":
         return self.prefetch_related("components")
 
-    def active(self) -> HydraulicSystemQuerySet:
+    def active(self) -> "HydraulicSystemQuerySet":
         return self.filter(status="active")
 
-    def for_owner(self, owner_id: str | uuid.UUID) -> HydraulicSystemQuerySet:
+    def for_owner(self, owner_id: str | uuid.UUID) -> "HydraulicSystemQuerySet":
         return self.filter(owner_id=owner_id)
 
-    def with_prefetch(self) -> HydraulicSystemQuerySet:
+    def with_prefetch(self) -> "HydraulicSystemQuerySet":
         return self.prefetch_related(
             models.Prefetch(
                 "components",
@@ -46,40 +46,38 @@ class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
 
 
 class SystemComponentQuerySet(models.QuerySet["SystemComponent"]):
-    """QuerySet for SystemComponent optimization."""
-
-    def with_system(self) -> SystemComponentQuerySet:
+    def with_system(self) -> "SystemComponentQuerySet":
         return self.select_related("system")
 
-    def for_system(self, system_id: str | uuid.UUID) -> SystemComponentQuerySet:
+    def for_system(self, system_id: str | uuid.UUID) -> "SystemComponentQuerySet":
         return self.filter(system_id=system_id)
 
 
 class SensorDataQuerySet(models.QuerySet["SensorData"]):
     """High-performance QuerySet for IoT sensor data."""
 
-    def for_system(self, system_id: str | uuid.UUID) -> SensorDataQuerySet:
+    def for_system(self, system_id: str | uuid.UUID) -> "SensorDataQuerySet":
         return self.filter(system_id=system_id).select_related("component")
 
-    def for_component(self, component_id: str | uuid.UUID) -> SensorDataQuerySet:
+    def for_component(self, component_id: str | uuid.UUID) -> "SensorDataQuerySet":
         return self.filter(component_id=component_id)
 
-    def time_range(self, start: timezone.datetime, end: timezone.datetime) -> SensorDataQuerySet:
+    def time_range(self, start: datetime, end: datetime) -> "SensorDataQuerySet":
         return self.filter(timestamp__gte=start, timestamp__lt=end)
 
-    def recent(self, hours: int = 24) -> SensorDataQuerySet:
+    def recent(self, hours: int = 24) -> "SensorDataQuerySet":
         return self.filter(timestamp__gte=timezone.now() - timedelta(hours=hours))
 
-    def with_system_component(self) -> SensorDataQuerySet:
+    def with_system_component(self) -> "SensorDataQuerySet":
         return self.select_related("system", "component")
 
-    def critical(self) -> SensorDataQuerySet:
+    def critical(self) -> "SensorDataQuerySet":
         return self.filter(is_critical=True)
 
-    def by_sensor_type(self, sensor_type: str) -> SensorDataQuerySet:
+    def by_sensor_type(self, sensor_type: str) -> "SensorDataQuerySet":
         return self.filter(sensor_type=sensor_type)
 
-    def recent_for_system(self, system_id: str | uuid.UUID, limit: int = 1000) -> SensorDataQuerySet:
+    def recent_for_system(self, system_id: str | uuid.UUID, limit: int = 1000) -> "SensorDataQuerySet":
         return (
             self.filter(system_id=system_id)
             .select_related("component")
@@ -90,9 +88,9 @@ class SensorDataQuerySet(models.QuerySet["SensorData"]):
     def for_component_range(
         self,
         component_id: str | uuid.UUID,
-        ts_from: timezone.datetime,
-        ts_to: timezone.datetime,
-    ) -> SensorDataQuerySet:
+        ts_from: datetime,
+        ts_to: datetime,
+    ) -> "SensorDataQuerySet":
         return (
             self.filter(component_id=component_id, timestamp__range=(ts_from, ts_to))
             .only("timestamp", "value", "unit", "sensor_type")
@@ -103,16 +101,16 @@ class SensorDataQuerySet(models.QuerySet["SensorData"]):
 class DiagnosticReportQuerySet(models.QuerySet["DiagnosticReport"]):
     """QuerySet for diagnostic reports optimization."""
 
-    def with_system(self) -> DiagnosticReportQuerySet:
+    def with_system(self) -> "DiagnosticReportQuerySet":
         return self.select_related("system")
 
-    def critical(self) -> DiagnosticReportQuerySet:
+    def critical(self) -> "DiagnosticReportQuerySet":
         return self.filter(severity__in=["error", "critical"])
 
-    def open_critical(self) -> DiagnosticReportQuerySet:
+    def open_critical(self) -> "DiagnosticReportQuerySet":
         return self.filter(status="open", severity="critical")
 
-    def recent_for_system(self, system_id: str | uuid.UUID, limit: int = 100) -> DiagnosticReportQuerySet:
+    def recent_for_system(self, system_id: str | uuid.UUID, limit: int = 100) -> "DiagnosticReportQuerySet":
         return (
             self.filter(system_id=system_id)
             .only("id", "title", "severity", "status", "created_at", "ai_confidence")
@@ -151,7 +149,6 @@ class HydraulicSystem(models.Model):
         max_length=20, choices=STATUS_CHOICES, default="active", db_index=True
     )
 
-    # Связь с пользователем
     owner: models.ForeignKey = models.ForeignKey(
         "users.User",
         on_delete=models.PROTECT,
@@ -163,14 +160,14 @@ class HydraulicSystem(models.Model):
     location: models.CharField = models.CharField(max_length=200, blank=True, default="")
     installation_date: models.DateField = models.DateField(null=True, blank=True)
 
-    # Денормализация для быстрых ответов API
     components_count: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
     last_reading_at: models.DateTimeField = models.DateTimeField(null=True, blank=True, db_index=True)
 
     created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True, db_index=True)
 
-    objects: HydraulicSystemQuerySet = HydraulicSystemQuerySet.as_manager()
+    objects = models.Manager()
+    qs: HydraulicSystemQuerySet = HydraulicSystemQuerySet.as_manager()  # type: ignore[assignment]
 
     if TYPE_CHECKING:
         components: RelatedManager[SystemComponent]
@@ -181,27 +178,15 @@ class HydraulicSystem(models.Model):
         db_table = "diagnostics_hydraulicsystem"
         ordering = ["-updated_at"]
         indexes = [
-            # Составные индексы для частых запросов
             BTreeIndex(fields=["owner", "status"], name="idx_hs_owner_status"),
             BTreeIndex(fields=["system_type", "status"], name="idx_hs_type_status"),
             BTreeIndex(fields=["owner", "system_type"], name="idx_hs_owner_type"),
-            # BRIN индексы для временных полей (эффективны для больших объёмов)
-            BrinIndex(
-                fields=["created_at"], autosummarize=True, name="brin_hs_created"
-            ),
-            BrinIndex(
-                fields=["updated_at"], autosummarize=True, name="brin_hs_updated"
-            ),
-            BrinIndex(
-                fields=["last_reading_at"],
-                autosummarize=True,
-                name="brin_hs_last_reading",
-            ),
+            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_hs_created"),
+            BrinIndex(fields=["updated_at"], autosummarize=True, name="brin_hs_updated"),
+            BrinIndex(fields=["last_reading_at"], autosummarize=True, name="brin_hs_last_reading"),
         ]
         constraints = [
-            models.UniqueConstraint(
-                fields=["owner", "name"], name="uq_hydraulicsystem_owner_name"
-            ),
+            models.UniqueConstraint(fields=["owner", "name"], name="uq_hydraulicsystem_owner_name"),
             models.CheckConstraint(condition=~Q(name=""), name="chk_hs_name_not_empty"),
         ]
 
@@ -216,8 +201,6 @@ class HydraulicSystem(models.Model):
 
 
 class SystemComponent(models.Model):
-    """Компонент гидравлической системы."""
-
     id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     system: models.ForeignKey = models.ForeignKey(
         HydraulicSystem,
@@ -231,7 +214,8 @@ class SystemComponent(models.Model):
     created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
-    objects: SystemComponentQuerySet = SystemComponentQuerySet.as_manager()
+    objects = models.Manager()
+    qs: SystemComponentQuerySet = SystemComponentQuerySet.as_manager()  # type: ignore[assignment]
 
     if TYPE_CHECKING:
         sensor_data: RelatedManager[SensorData]
@@ -240,15 +224,11 @@ class SystemComponent(models.Model):
         db_table = "diagnostics_systemcomponent"
         ordering = ["name"]
         constraints = [
-            models.UniqueConstraint(
-                fields=["system", "name"], name="uq_systemcomponent_system_name"
-            ),
+            models.UniqueConstraint(fields=["system", "name"], name="uq_systemcomponent_system_name"),
         ]
         indexes = [
             BTreeIndex(fields=["system", "name"], name="idx_comp_system_name"),
-            BrinIndex(
-                fields=["created_at"], autosummarize=True, name="brin_comp_created"
-            ),
+            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_comp_created"),
         ]
 
     def clean(self) -> None:
@@ -260,8 +240,6 @@ class SystemComponent(models.Model):
 
 
 class SensorData(models.Model):
-    """Высокочастотные IoT данные датчиков (TimescaleDB hypertable)."""
-
     SENSOR_TYPES = [
         ("pressure", "Давление"),
         ("temperature", "Температура"),
@@ -282,7 +260,7 @@ class SensorData(models.Model):
     )
     component: models.ForeignKey = models.ForeignKey(
         SystemComponent,
-        on_delete=models.SET_NULL,  # сохраняем исторические данные при удалении компонента
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="sensor_data",
@@ -294,16 +272,11 @@ class SensorData(models.Model):
     value: models.FloatField = models.FloatField(validators=[MinValueValidator(float("-inf"))])
     unit: models.CharField = models.CharField(max_length=32, default="", blank=True)
 
-    # Критичность показания
     is_critical: models.BooleanField = models.BooleanField(default=False, db_index=True)
     warning_message: models.CharField = models.CharField(max_length=240, default="", blank=True)
 
-    # Для точных агрегаций (опционально)
-    value_decimal: models.DecimalField = models.DecimalField(
-        max_digits=18, decimal_places=6, null=True, blank=True
-    )
+    value_decimal: models.DecimalField = models.DecimalField(max_digits=18, decimal_places=6, null=True, blank=True)
 
-    # Сгенерированное поле для агрегатов по дням
     day_bucket: models.GeneratedField = models.GeneratedField(
         expression=TruncDay("timestamp"),
         output_field=models.DateField(),
@@ -313,26 +286,20 @@ class SensorData(models.Model):
 
     created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
 
-    objects: SensorDataQuerySet = SensorDataQuerySet.as_manager()
+    objects = models.Manager()
+    qs: SensorDataQuerySet = SensorDataQuerySet.as_manager()  # type: ignore[assignment]
 
     class Meta:
         db_table = "diagnostics_sensordata"
         ordering = ["-timestamp"]
         indexes = [
-            # Основные составные индексы для частых запросов
             BTreeIndex(fields=["system", "timestamp"], name="idx_sd_system_ts"),
             BTreeIndex(fields=["component", "timestamp"], name="idx_sd_component_ts"),
             BTreeIndex(fields=["sensor_type", "timestamp"], name="idx_sd_type_ts"),
-            BTreeIndex(
-                fields=["system", "sensor_type", "timestamp"], name="idx_sd_sys_type_ts"
-            ),
+            BTreeIndex(fields=["system", "sensor_type", "timestamp"], name="idx_sd_sys_type_ts"),
             BTreeIndex(fields=["is_critical", "timestamp"], name="idx_sd_critical_ts"),
-            # BRIN индексы для временных полей (оптимальны для TimescaleDB)
             BrinIndex(fields=["timestamp"], autosummarize=True, name="brin_sd_ts"),
-            BrinIndex(
-                fields=["created_at"], autosummarize=True, name="brin_sd_created"
-            ),
-            # Индекс для day_bucket агрегатов
+            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_sd_created"),
             BTreeIndex(fields=["day_bucket"], name="idx_sd_day_bucket"),
         ]
         constraints = [
@@ -344,24 +311,17 @@ class SensorData(models.Model):
 
     def clean(self) -> None:
         if self.timestamp and self.timestamp > timezone.now() + timedelta(minutes=5):
-            raise ValidationError(
-                "Timestamp cannot be more than 5 minutes in the future"
-            )
+            raise ValidationError("Timestamp cannot be more than 5 minutes in the future")
         if self.value is None and self.value_decimal is None:
             raise ValidationError("Either value or value_decimal must be provided")
         if self.unit and len(self.unit) > 32:
             raise ValidationError("Unit is too long (max 32 characters)")
 
     def save(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
-        # Валидация перед сохранением
         self.full_clean()
         super().save(*args, **kwargs)
-
-        # Обновляем last_reading_at у системы (без дополнительных запросов)
         if self.system_id and self.timestamp:
-            HydraulicSystem.objects.filter(id=self.system_id).update(
-                last_reading_at=self.timestamp
-            )
+            HydraulicSystem.objects.filter(id=self.system_id).update(last_reading_at=self.timestamp)
 
     def __str__(self) -> str:
         component_name = self.component.name if self.component else "N/A"
@@ -369,8 +329,6 @@ class SensorData(models.Model):
 
 
 class DiagnosticReport(models.Model):
-    """Диагностический отчёт с AI-анализом."""
-
     SEVERITY_CHOICES = [
         ("info", "Информация"),
         ("warning", "Предупреждение"),
@@ -392,36 +350,27 @@ class DiagnosticReport(models.Model):
     )
     title: models.CharField = models.CharField(max_length=255, db_index=True)
     severity: models.CharField = models.CharField(max_length=16, choices=SEVERITY_CHOICES, db_index=True)
-    status: models.CharField = models.CharField(
-        max_length=16, choices=STATUS_CHOICES, default="open", db_index=True
-    )
+    status: models.CharField = models.CharField(max_length=16, choices=STATUS_CHOICES, default="open", db_index=True)
 
-    # AI уверенность в диапазоне 0.0-1.0
-    ai_confidence: models.FloatField = models.FloatField(
-        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)], default=0.0
-    )
+    ai_confidence: models.FloatField = models.FloatField(validators=[MinValueValidator(0.0), MaxValueValidator(1.0)], default=0.0)
 
-    # Дополнительные метрики
     impacted_components_count: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
     description: models.TextField = models.TextField(blank=True, default="")
 
     created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
-    objects: DiagnosticReportQuerySet = DiagnosticReportQuerySet.as_manager()
+    objects = models.Manager()
+    qs: DiagnosticReportQuerySet = DiagnosticReportQuerySet.as_manager()  # type: ignore[assignment]
 
     class Meta:
         db_table = "diagnostics_diagnosticreport"
         ordering = ["-created_at"]
         indexes = [
             BTreeIndex(fields=["system", "created_at"], name="idx_dr_system_created"),
-            BTreeIndex(
-                fields=["severity", "created_at"], name="idx_dr_severity_created"
-            ),
+            BTreeIndex(fields=["severity", "created_at"], name="idx_dr_severity_created"),
             BTreeIndex(fields=["status", "severity"], name="idx_dr_status_severity"),
-            BrinIndex(
-                fields=["created_at"], autosummarize=True, name="brin_dr_created"
-            ),
+            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_dr_created"),
         ]
         constraints = [
             models.CheckConstraint(
