@@ -15,16 +15,10 @@ from django.db.models.functions import TruncDay
 from django.utils import timezone
 
 if TYPE_CHECKING:
-    # Use generic Manager as RelatedManager replacement for typing to avoid attr-defined
     from django.db.models import Manager as RelatedManager
 
 
-# ------------------------ QuerySets & Managers ------------------------ #
-
-
 class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
-    """Optimized QuerySet for HydraulicSystem with N+1 prevention."""
-
     def with_owner(self) -> "HydraulicSystemQuerySet":
         return self.select_related("owner")
 
@@ -55,8 +49,6 @@ class SystemComponentQuerySet(models.QuerySet["SystemComponent"]):
 
 
 class SensorDataQuerySet(models.QuerySet["SensorData"]):
-    """High-performance QuerySet for IoT sensor data."""
-
     def for_system(self, system_id: str | uuid.UUID) -> "SensorDataQuerySet":
         return self.filter(system_id=system_id).select_related("component")
 
@@ -72,59 +64,8 @@ class SensorDataQuerySet(models.QuerySet["SensorData"]):
     def with_system_component(self) -> "SensorDataQuerySet":
         return self.select_related("system", "component")
 
-    def critical(self) -> "SensorDataQuerySet":
-        return self.filter(is_critical=True)
-
-    def by_sensor_type(self, sensor_type: str) -> "SensorDataQuerySet":
-        return self.filter(sensor_type=sensor_type)
-
-    def recent_for_system(self, system_id: str | uuid.UUID, limit: int = 1000) -> "SensorDataQuerySet":
-        return (
-            self.filter(system_id=system_id)
-            .select_related("component")
-            .only("timestamp", "value", "unit", "component_id", "sensor_type")
-            .order_by("-timestamp")[:limit]
-        )
-
-    def for_component_range(
-        self,
-        component_id: str | uuid.UUID,
-        ts_from: datetime,
-        ts_to: datetime,
-    ) -> "SensorDataQuerySet":
-        return (
-            self.filter(component_id=component_id, timestamp__range=(ts_from, ts_to))
-            .only("timestamp", "value", "unit", "sensor_type")
-            .order_by("timestamp")
-        )
-
-
-class DiagnosticReportQuerySet(models.QuerySet["DiagnosticReport"]):
-    """QuerySet for diagnostic reports optimization."""
-
-    def with_system(self) -> "DiagnosticReportQuerySet":
-        return self.select_related("system")
-
-    def critical(self) -> "DiagnosticReportQuerySet":
-        return self.filter(severity__in=["error", "critical"])
-
-    def open_critical(self) -> "DiagnosticReportQuerySet":
-        return self.filter(status="open", severity="critical")
-
-    def recent_for_system(self, system_id: str | uuid.UUID, limit: int = 100) -> "DiagnosticReportQuerySet":
-        return (
-            self.filter(system_id=system_id)
-            .only("id", "title", "severity", "status", "created_at", "ai_confidence")
-            .order_by("-created_at")[:limit]
-        )
-
-
-# ------------------------------- Models ------------------------------- #
-
 
 class HydraulicSystem(models.Model):
-    """Гидравлическая система (оптимизировано под быстрые выборки)."""
-
     SYSTEM_TYPES = [
         ("industrial", "Промышленная"),
         ("mobile", "Мобильная"),
@@ -146,16 +87,9 @@ class HydraulicSystem(models.Model):
     name: models.CharField = models.CharField(max_length=200, db_index=True)
     description: models.TextField = models.TextField(blank=True, default="")
     system_type: models.CharField = models.CharField(max_length=50, choices=SYSTEM_TYPES, db_index=True)
-    status: models.CharField = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default="active", db_index=True
-    )
+    status: models.CharField = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active", db_index=True)
 
-    owner: models.ForeignKey = models.ForeignKey(
-        "users.User",
-        on_delete=models.PROTECT,
-        related_name="hydraulic_systems",
-        db_index=True,
-    )
+    owner: models.ForeignKey = models.ForeignKey("users.User", on_delete=models.PROTECT, related_name="hydraulic_systems", db_index=True)
 
     criticality: models.CharField = models.CharField(max_length=20, default="medium", db_index=True)
     location: models.CharField = models.CharField(max_length=200, blank=True, default="")
@@ -173,29 +107,10 @@ class HydraulicSystem(models.Model):
     if TYPE_CHECKING:
         components: RelatedManager["SystemComponent"]
         sensor_data: RelatedManager["SensorData"]
-        diagnostic_reports: RelatedManager["DiagnosticReport"]
 
     class Meta:
         db_table = "diagnostics_hydraulicsystem"
         ordering = ["-updated_at"]
-        indexes = [
-            BTreeIndex(fields=["owner", "status"], name="idx_hs_owner_status"),
-            BTreeIndex(fields=["system_type", "status"], name="idx_hs_type_status"),
-            BTreeIndex(fields=["owner", "system_type"], name="idx_hs_owner_type"),
-            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_hs_created"),
-            BrinIndex(fields=["updated_at"], autosummarize=True, name="brin_hs_updated"),
-            BrinIndex(fields=["last_reading_at"], autosummarize=True, name="brin_hs_last_reading"),
-        ]
-        constraints = [
-            models.UniqueConstraint(fields=["owner", "name"], name="uq_hydraulicsystem_owner_name"),
-            models.CheckConstraint(condition=~Q(name=""), name="chk_hs_name_not_empty"),
-        ]
-
-    def clean(self) -> None:
-        if not self.name.strip():
-            raise ValidationError("System name cannot be empty")
-        if self.status == "inactive" and self.components_count > 0:
-            raise ValidationError("Inactive system cannot have components_count > 0")
 
     def __str__(self) -> str:
         return f"{self.name} ({self.system_type})"
@@ -203,14 +118,8 @@ class HydraulicSystem(models.Model):
 
 class SystemComponent(models.Model):
     id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem,
-        related_name="components",
-        on_delete=models.CASCADE,
-        db_index=True,
-    )
+    system: models.ForeignKey = models.ForeignKey(HydraulicSystem, related_name="components", on_delete=models.CASCADE, db_index=True)
     name: models.CharField = models.CharField(max_length=255)
-    specification: models.JSONField = models.JSONField(default=dict, blank=True)
 
     created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
@@ -224,167 +133,9 @@ class SystemComponent(models.Model):
     class Meta:
         db_table = "diagnostics_systemcomponent"
         ordering = ["name"]
-        constraints = [
-            models.UniqueConstraint(fields=["system", "name"], name="uq_systemcomponent_system_name"),
-        ]
-        indexes = [
-            BTreeIndex(fields=["system", "name"], name="idx_comp_system_name"),
-            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_comp_created"),
-        ]
-
-    def clean(self) -> None:
-        if not self.name.strip():
-            raise ValidationError("Component name cannot be empty")
 
     def __str__(self) -> str:
-        return f"{str(self.system.name)}::{str(self.name)}"
-
-
-class SensorData(models.Model):
-    SENSOR_TYPES = [
-        ("pressure", "Давление"),
-        ("temperature", "Температура"),
-        ("flow", "Поток"),
-        ("vibration", "Вибрация"),
-        ("level", "Уровень"),
-        ("position", "Позиция"),
-        ("speed", "Скорость"),
-        ("torque", "Крутящий момент"),
-    ]
-
-    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem,
-        on_delete=models.CASCADE,
-        related_name="sensor_data",
-        db_index=True,
-    )
-    component: models.ForeignKey = models.ForeignKey(
-        SystemComponent,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="sensor_data",
-        db_index=True,
-    )
-
-    timestamp: models.DateTimeField = models.DateTimeField(db_index=True)
-    sensor_type: models.CharField = models.CharField(max_length=64, choices=SENSOR_TYPES, db_index=True)
-    value: models.FloatField = models.FloatField(validators=[MinValueValidator(float("-inf"))])
-    unit: models.CharField = models.CharField(max_length=32, default="", blank=True)
-
-    is_critical: models.BooleanField = models.BooleanField(default=False, db_index=True)
-    warning_message: models.CharField = models.CharField(max_length=240, default="", blank=True)
-
-    value_decimal: models.DecimalField = models.DecimalField(max_digits=18, decimal_places=6, null=True, blank=True)
-
-    day_bucket: models.GeneratedField = models.GeneratedField(
-        expression=TruncDay("timestamp"),
-        output_field=models.DateField(),
-        db_persist=True,
-        db_index=True,
-    )
-
-    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
-
-    objects = models.Manager()
-    qs: SensorDataQuerySet = SensorDataQuerySet.as_manager()  # type: ignore[assignment]
-
-    class Meta:
-        db_table = "diagnostics_sensordata"
-        ordering = ["-timestamp"]
-        indexes = [
-            BTreeIndex(fields=["system", "timestamp"], name="idx_sd_system_ts"),
-            BTreeIndex(fields=["component", "timestamp"], name="idx_sd_component_ts"),
-            BTreeIndex(fields=["sensor_type", "timestamp"], name="idx_sd_type_ts"),
-            BTreeIndex(fields=["system", "sensor_type", "timestamp"], name="idx_sd_sys_type_ts"),
-            BTreeIndex(fields=["is_critical", "timestamp"], name="idx_sd_critical_ts"),
-            BrinIndex(fields=["timestamp"], autosummarize=True, name="brin_sd_ts"),
-            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_sd_created"),
-            BTreeIndex(fields=["day_bucket"], name="idx_sd_day_bucket"),
-        ]
-        constraints = [
-            models.CheckConstraint(
-                condition=Q(value__isnull=False) | Q(value_decimal__isnull=False),
-                name="chk_sd_value_present",
-            ),
-        ]
-
-    def clean(self) -> None:
-        if self.timestamp and self.timestamp > timezone.now() + timedelta(minutes=5):
-            raise ValidationError("Timestamp cannot be more than 5 minutes in the future")
-        if self.value is None and self.value_decimal is None:
-            raise ValidationError("Either value or value_decimal must be provided")
-        if self.unit and len(self.unit) > 32:
-            raise ValidationError("Unit is too long (max 32 characters)")
-
-    def save(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
-        self.full_clean()
-        super().save(*args, **kwargs)
-        # mypy-safe: use pk via getattr
-        sys_pk = getattr(self.system, "pk", None)
-        if sys_pk is not None and self.timestamp:
-            HydraulicSystem.objects.filter(id=sys_pk).update(last_reading_at=self.timestamp)
-
-    def __str__(self) -> str:
-        component_name = str(getattr(self.component, "name", "N/A"))
-        return f"{self.sensor_type}@{str(getattr(self.system, 'name', 'N/A'))}:{component_name}"
-
-
-class DiagnosticReport(models.Model):
-    SEVERITY_CHOICES = [
-        ("info", "Информация"),
-        ("warning", "Предупреждение"),
-        ("error", "Ошибка"),
-        ("critical", "Критическая"),
-    ]
-    STATUS_CHOICES = [
-        ("open", "Открыт"),
-        ("in_progress", "В процессе"),
-        ("closed", "Закрыт"),
-    ]
-
-    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem,
-        on_delete=models.CASCADE,
-        related_name="diagnostic_reports",
-        db_index=True,
-    )
-    title: models.CharField = models.CharField(max_length=255, db_index=True)
-    severity: models.CharField = models.CharField(max_length=16, choices=SEVERITY_CHOICES, db_index=True)
-    status: models.CharField = models.CharField(max_length=16, choices=STATUS_CHOICES, default="open", db_index=True)
-
-    ai_confidence: models.FloatField = models.FloatField(validators=[MinValueValidator(0.0), MaxValueValidator(1.0)], default=0.0)
-
-    impacted_components_count: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
-    description: models.TextField = models.TextField(blank=True, default="")
-
-    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
-    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
-
-    objects = models.Manager()
-    qs: DiagnosticReportQuerySet = DiagnosticReportQuerySet.as_manager()  # type: ignore[assignment]
-
-    class Meta:
-        db_table = "diagnostics_diagnosticreport"
-        ordering = ["-created_at"]
-        indexes = [
-            BTreeIndex(fields=["system", "created_at"], name="idx_dr_system_created"),
-            BTreeIndex(fields=["severity", "created_at"], name="idx_dr_severity_created"),
-            BTreeIndex(fields=["status", "severity"], name="idx_dr_status_severity"),
-            BrinIndex(fields=["created_at"], autosummarize=True, name="brin_dr_created"),
-        ]
-        constraints = [
-            models.CheckConstraint(
-                condition=Q(ai_confidence__gte=0.0) & Q(ai_confidence__lte=1.0),
-                name="chk_dr_ai_confidence_range",
-            ),
-        ]
-
-    def clean(self) -> None:
-        if self.ai_confidence < 0.0 or self.ai_confidence > 1.0:
-            raise ValidationError("AI confidence must be between 0.0 and 1.0")
-
-    def __str__(self) -> str:
-        return f"{self.title} ({self.severity}/{self.status})"
+        # mypy-safe: str casts
+        sys_name = str(getattr(self.system, "name", ""))
+        comp_name = str(getattr(self, "name", ""))
+        return f"{sys_name}::{comp_name}"
