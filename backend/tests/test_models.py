@@ -1,4 +1,5 @@
 """Adjust test_models imports to current diagnostics models for mypy."""
+
 from __future__ import annotations
 
 import pytest

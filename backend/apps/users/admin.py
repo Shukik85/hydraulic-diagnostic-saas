@@ -1,6 +1,7 @@
+from typing import Any, Tuple
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from typing import Any, Tuple
 
 from .models import User, UserActivity, UserProfile
 

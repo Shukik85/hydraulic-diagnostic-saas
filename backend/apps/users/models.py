@@ -8,16 +8,25 @@ from django.utils import timezone
 
 if TYPE_CHECKING:
     from django.db.models import Manager as RelatedManager
+
     from apps.diagnostics.models import HydraulicSystem
 
 
 class User(AbstractUser):
     email: models.EmailField = models.EmailField(unique=True, verbose_name="Email")
-    company: models.CharField = models.CharField(max_length=200, blank=True, verbose_name="Компания")
-    position: models.CharField = models.CharField(max_length=100, blank=True, verbose_name="Должность")
-    phone: models.CharField = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
+    company: models.CharField = models.CharField(
+        max_length=200, blank=True, verbose_name="Компания"
+    )
+    position: models.CharField = models.CharField(
+        max_length=100, blank=True, verbose_name="Должность"
+    )
+    phone: models.CharField = models.CharField(
+        max_length=20, blank=True, verbose_name="Телефон"
+    )
 
-    experience_years: models.PositiveIntegerField = models.PositiveIntegerField(null=True, blank=True)
+    experience_years: models.PositiveIntegerField = models.PositiveIntegerField(
+        null=True, blank=True
+    )
     specialization: models.CharField = models.CharField(max_length=100, blank=True)
 
     email_notifications: models.BooleanField = models.BooleanField(default=True)
@@ -29,7 +38,9 @@ class User(AbstractUser):
     last_activity: models.DateTimeField = models.DateTimeField(default=timezone.now)
 
     systems_count: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
-    reports_generated: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
+    reports_generated: models.PositiveIntegerField = models.PositiveIntegerField(
+        default=0
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
@@ -46,14 +57,24 @@ class User(AbstractUser):
 
 class UserProfile(models.Model):
     user: models.OneToOneField = models.OneToOneField(User, on_delete=models.CASCADE)
-    avatar: models.ImageField = models.ImageField(upload_to="avatars/", blank=True, null=True)
+    avatar: models.ImageField = models.ImageField(
+        upload_to="avatars/", blank=True, null=True
+    )
     bio: models.TextField = models.TextField(blank=True, max_length=500)
     location: models.CharField = models.CharField(max_length=100, blank=True)
     website: models.URLField = models.URLField(blank=True)
 
-    theme: models.CharField = models.CharField(max_length=20, choices=[("light", "Светлая"), ("dark", "Темная"), ("auto", "Автоматически")], default="light")
-    language: models.CharField = models.CharField(max_length=10, choices=[("ru", "Русский"), ("en", "English")], default="ru")
-    timezone: models.CharField = models.CharField(max_length=50, default="Europe/Moscow")
+    theme: models.CharField = models.CharField(
+        max_length=20,
+        choices=[("light", "Светлая"), ("dark", "Темная"), ("auto", "Автоматически")],
+        default="light",
+    )
+    language: models.CharField = models.CharField(
+        max_length=10, choices=[("ru", "Русский"), ("en", "English")], default="ru"
+    )
+    timezone: models.CharField = models.CharField(
+        max_length=50, default="Europe/Moscow"
+    )
 
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
@@ -78,7 +99,9 @@ class UserActivity(models.Model):
     user: models.ForeignKey = models.ForeignKey(User, on_delete=models.CASCADE)
     action: models.CharField = models.CharField(max_length=50, choices=ACTION_TYPES)
     description: models.TextField = models.TextField(blank=True)
-    ip_address: models.GenericIPAddressField = models.GenericIPAddressField(null=True, blank=True)
+    ip_address: models.GenericIPAddressField = models.GenericIPAddressField(
+        null=True, blank=True
+    )
     user_agent: models.TextField = models.TextField(blank=True)
     metadata: models.JSONField = models.JSONField(default=dict, blank=True)
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)

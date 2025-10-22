@@ -14,7 +14,9 @@ if "default" in DATABASES:
     default_db.update(
         {
             "CONN_MAX_AGE": config("DATABASE_CONN_MAX_AGE", default=600, cast=int),
-            "CONN_HEALTH_CHECKS": config("DATABASE_CONN_HEALTH_CHECKS", default=True, cast=bool),
+            "CONN_HEALTH_CHECKS": config(
+                "DATABASE_CONN_HEALTH_CHECKS", default=True, cast=bool
+            ),
         }
     )
 
@@ -48,7 +50,10 @@ CACHES: Dict[str, Any] = {
     },
     "ai_cache": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": config("AI_REDIS_URL", default=config("REDIS_URL", default="redis://localhost:6379/0")),
+        "LOCATION": config(
+            "AI_REDIS_URL",
+            default=config("REDIS_URL", default="redis://localhost:6379/0"),
+        ),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
             "CONNECTION_POOL_KWARGS": {"max_connections": 20},
@@ -98,7 +103,9 @@ STORAGES: Dict[str, Any] = {
 }
 
 # Улучшенные настройки REST Framework
-REST_FRAMEWORK: Dict[str, Any] = base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
+REST_FRAMEWORK: Dict[str, Any] = (
+    base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
+)
 REST_FRAMEWORK.update(
     {
         "DEFAULT_RENDERER_CLASSES": [
@@ -116,7 +123,9 @@ REST_FRAMEWORK.update(
 )
 
 # Оптимизация AI настроек
-AI_SETTINGS: Dict[str, Any] = base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
+AI_SETTINGS: Dict[str, Any] = (
+    base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
+)
 AI_SETTINGS.update(
     {
         "ENABLE_CACHING": True,
@@ -162,7 +171,11 @@ if TEMPLATES:
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
             ],
-            "loaders": ([loaders_cached] if not getattr(base, "DEBUG", False) else loaders_uncached),
+            "loaders": (
+                [loaders_cached]
+                if not getattr(base, "DEBUG", False)
+                else loaders_uncached
+            ),
         }
     )
     TEMPLATES[0]["OPTIONS"] = options

@@ -20,7 +20,9 @@ class DiagnosticEngine:
         "oil_level": {"min": 20, "max": 100},  # %
     }
 
-    def analyze_system(self, system_id: str, sensor_data: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze_system(
+        self, system_id: str, sensor_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Основной метод анализа системы.
 
@@ -79,7 +81,9 @@ class DiagnosticEngine:
                         "threshold": self.ANOMALY_THRESHOLDS.get(parameter, {}),
                         "severity": severity,
                         "timestamp": timezone.now(),
-                        "message": self._get_anomaly_message(parameter, float(value), severity),
+                        "message": self._get_anomaly_message(
+                            parameter, float(value), severity
+                        ),
                     }
                 )
 
@@ -90,7 +94,9 @@ class DiagnosticEngine:
         if parameter not in self.ANOMALY_THRESHOLDS:
             return False
         thresholds = self.ANOMALY_THRESHOLDS[parameter]
-        return value < thresholds.get("min", float("-inf")) or value > thresholds.get("max", float("inf"))
+        return value < thresholds.get("min", float("-inf")) or value > thresholds.get(
+            "max", float("inf")
+        )
 
     def create_report(
         self,
@@ -138,7 +144,9 @@ class DiagnosticEngine:
         thresholds = self.ANOMALY_THRESHOLDS.get(parameter, {})
         min_threshold = thresholds.get("min", float("-inf"))
         max_threshold = thresholds.get("max", float("inf"))
-        if parameter == "pressure" and (value < min_threshold * 0.5 or value > max_threshold * 1.5):
+        if parameter == "pressure" and (
+            value < min_threshold * 0.5 or value > max_threshold * 1.5
+        ):
             return "critical"
         if parameter == "temperature" and value > max_threshold * 1.2:
             return "critical"

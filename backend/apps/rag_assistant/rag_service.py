@@ -122,16 +122,22 @@ class RagAssistant:
         self.llm = LLMFactory.create_chat_model()
         self.embedder = LLMFactory.create_embedder()
 
-    def _get_cache_key(self, key_type: str, identifier: str, version: str = CACHE_VERSION) -> str:
+    def _get_cache_key(
+        self, key_type: str, identifier: str, version: str = CACHE_VERSION
+    ) -> str:
         sys_id = getattr(self.system, "pk", None)
         return f"rag:{sys_id}:{key_type}:{identifier}:{version}"
 
     def _cache_faq_answer(self, question: str, answer: str) -> None:
-        cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
+        cache_key = self._get_cache_key(
+            "faq", hashlib.md5(question.encode()).hexdigest()
+        )
         cache.set(cache_key, answer, timeout=FAQ_ANSWER_TTL)
 
     def _get_cached_faq_answer(self, question: str) -> Optional[str]:
-        cache_key = self._get_cache_key("faq", hashlib.md5(question.encode()).hexdigest())
+        cache_key = self._get_cache_key(
+            "faq", hashlib.md5(question.encode()).hexdigest()
+        )
         cached = cache.get(cache_key)
         if cached is not None:
             CacheStats.increment_hit()
@@ -143,7 +149,9 @@ class RagAssistant:
         from .rag_core import default_local_orchestrator
 
         orchestrator = default_local_orchestrator()
-        vindex = orchestrator.load_index(getattr(self.system, "index_version", None) or "test_v1")
+        vindex = orchestrator.load_index(
+            getattr(self.system, "index_version", None) or "test_v1"
+        )
         docs_list: List[str] = (getattr(vindex, "metadata", None) or {}).get("docs", [])
 
         def _retrieve(question: str) -> List[Dict[str, Any]]:
@@ -192,7 +200,9 @@ class RagAssistant:
         chain = (
             {"question": RunnablePassthrough()}
             | {"docs": RunnableLambda(lambda x: retriever_fn(x["question"]))}
-            | RunnableLambda(lambda x: {"question": x["question"], "context": format_docs(x["docs"])})
+            | RunnableLambda(
+                lambda x: {"question": x["question"], "context": format_docs(x["docs"])}
+            )
             | prompt
             | self.llm
             | parser
@@ -218,7 +228,9 @@ class RagAssistant:
         return result
 
     @transaction.atomic
-    def _log_query(self, query: str, response: str, user_id: Optional[int] = None) -> None:
+    def _log_query(
+        self, query: str, response: str, user_id: Optional[int] = None
+    ) -> None:
         RagQueryLog.objects.create(
             system=self.system,
             query_text=query,
@@ -261,7 +273,9 @@ def tmp_file_for(doc: Document) -> str:
 
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
-            sanitized_content = bleach.clean(doc.content, tags=[], attributes={}, strip=True)
+            sanitized_content = bleach.clean(
+                doc.content, tags=[], attributes={}, strip=True
+            )
             f.write(sanitized_content)
     except Exception:
         if os.path.exists(path):

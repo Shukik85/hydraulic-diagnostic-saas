@@ -1,4 +1,5 @@
 """Diagnostics models (ordered, typed, explicit export)."""
+
 from __future__ import annotations
 
 import uuid
@@ -46,21 +47,38 @@ class HydraulicSystem(models.Model):
         ("decommissioned", "Списана"),
     ]
 
-    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id: models.UUIDField = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
     name: models.CharField = models.CharField(max_length=200, db_index=True)
     description: models.TextField = models.TextField(blank=True, default="")
-    system_type: models.CharField = models.CharField(max_length=50, choices=SYSTEM_TYPES, db_index=True)
-    status: models.CharField = models.CharField(max_length=20, choices=STATUS_CHOICES, default="active", db_index=True)
-
-    owner: models.ForeignKey = models.ForeignKey(
-        "users.User", on_delete=models.PROTECT, related_name="hydraulic_systems", db_index=True
+    system_type: models.CharField = models.CharField(
+        max_length=50, choices=SYSTEM_TYPES, db_index=True
+    )
+    status: models.CharField = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default="active", db_index=True
     )
 
-    components_count: models.PositiveIntegerField = models.PositiveIntegerField(default=0)
-    last_reading_at: models.DateTimeField = models.DateTimeField(null=True, blank=True, db_index=True)
+    owner: models.ForeignKey = models.ForeignKey(
+        "users.User",
+        on_delete=models.PROTECT,
+        related_name="hydraulic_systems",
+        db_index=True,
+    )
 
-    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
-    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True, db_index=True)
+    components_count: models.PositiveIntegerField = models.PositiveIntegerField(
+        default=0
+    )
+    last_reading_at: models.DateTimeField = models.DateTimeField(
+        null=True, blank=True, db_index=True
+    )
+
+    created_at: models.DateTimeField = models.DateTimeField(
+        default=timezone.now, db_index=True
+    )
+    updated_at: models.DateTimeField = models.DateTimeField(
+        auto_now=True, db_index=True
+    )
 
     objects = models.Manager()
     qs: HydraulicSystemQuerySet = HydraulicSystemQuerySet.as_manager()  # type: ignore[assignment]
@@ -75,8 +93,14 @@ class HydraulicSystem(models.Model):
         ordering = ["-updated_at"]
         indexes = [
             BTreeIndex(fields=["owner", "status"], name="idx_hs_owner_status"),
-            BrinIndex(fields=["updated_at"], autosummarize=True, name="brin_hs_updated"),
-            BrinIndex(fields=["last_reading_at"], autosummarize=True, name="brin_hs_last_reading"),
+            BrinIndex(
+                fields=["updated_at"], autosummarize=True, name="brin_hs_updated"
+            ),
+            BrinIndex(
+                fields=["last_reading_at"],
+                autosummarize=True,
+                name="brin_hs_last_reading",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -92,13 +116,20 @@ class SystemComponentQuerySet(models.QuerySet["SystemComponent"]):
 
 
 class SystemComponent(models.Model):
-    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id: models.UUIDField = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
     system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem, related_name="components", on_delete=models.CASCADE, db_index=True
+        HydraulicSystem,
+        related_name="components",
+        on_delete=models.CASCADE,
+        db_index=True,
     )
     name: models.CharField = models.CharField(max_length=255)
 
-    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
+    created_at: models.DateTimeField = models.DateTimeField(
+        default=timezone.now, db_index=True
+    )
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     objects = models.Manager()
@@ -137,27 +168,48 @@ class SensorData(models.Model):
         ("vibration", "Вибрация"),
     ]
 
-    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id: models.UUIDField = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
     system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem, on_delete=models.CASCADE, related_name="sensor_data", db_index=True
+        HydraulicSystem,
+        on_delete=models.CASCADE,
+        related_name="sensor_data",
+        db_index=True,
     )
     component: models.ForeignKey = models.ForeignKey(
-        SystemComponent, on_delete=models.SET_NULL, null=True, blank=True, related_name="sensor_data", db_index=True
+        SystemComponent,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sensor_data",
+        db_index=True,
     )
 
     timestamp: models.DateTimeField = models.DateTimeField(db_index=True)
-    sensor_type: models.CharField = models.CharField(max_length=64, choices=SENSOR_TYPES, db_index=True)
-    value: models.FloatField = models.FloatField(validators=[MinValueValidator(float("-inf"))])
+    sensor_type: models.CharField = models.CharField(
+        max_length=64, choices=SENSOR_TYPES, db_index=True
+    )
+    value: models.FloatField = models.FloatField(
+        validators=[MinValueValidator(float("-inf"))]
+    )
     unit: models.CharField = models.CharField(max_length=32, default="", blank=True)
 
     is_critical: models.BooleanField = models.BooleanField(default=False, db_index=True)
-    warning_message: models.CharField = models.CharField(max_length=240, default="", blank=True)
-
-    day_bucket: models.GeneratedField = models.GeneratedField(
-        expression=TruncDay("timestamp"), output_field=models.DateField(), db_persist=True, db_index=True
+    warning_message: models.CharField = models.CharField(
+        max_length=240, default="", blank=True
     )
 
-    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
+    day_bucket: models.GeneratedField = models.GeneratedField(
+        expression=TruncDay("timestamp"),
+        output_field=models.DateField(),
+        db_persist=True,
+        db_index=True,
+    )
+
+    created_at: models.DateTimeField = models.DateTimeField(
+        default=timezone.now, db_index=True
+    )
 
     objects = models.Manager()
     qs: SensorDataQuerySet = SensorDataQuerySet.as_manager()  # type: ignore[assignment]
@@ -173,14 +225,18 @@ class SensorData(models.Model):
 
     def clean(self) -> None:
         if self.timestamp and self.timestamp > timezone.now() + timedelta(minutes=5):
-            raise ValidationError("Timestamp cannot be more than 5 minutes in the future")
+            raise ValidationError(
+                "Timestamp cannot be more than 5 minutes in the future"
+            )
 
     def save(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
         self.full_clean()
         super().save(*args, **kwargs)
         sys_pk = getattr(self.system, "pk", None)
         if sys_pk is not None and self.timestamp:
-            HydraulicSystem.objects.filter(id=sys_pk).update(last_reading_at=self.timestamp)
+            HydraulicSystem.objects.filter(id=sys_pk).update(
+                last_reading_at=self.timestamp
+            )
 
     def __str__(self) -> str:
         comp_name = str(getattr(self.component, "name", "N/A"))
@@ -192,27 +248,55 @@ class SensorData(models.Model):
 
 
 class DiagnosticReportQuerySet(models.QuerySet["DiagnosticReport"]):
-    def recent_for_system(self, system_id: uuid.UUID, limit: int = 100) -> "DiagnosticReportQuerySet":
-        return self.filter(system_id=system_id).only("id", "title", "severity", "status", "created_at").order_by("-created_at")[:limit]
+    def recent_for_system(
+        self, system_id: uuid.UUID, limit: int = 100
+    ) -> "DiagnosticReportQuerySet":
+        return (
+            self.filter(system_id=system_id)
+            .only("id", "title", "severity", "status", "created_at")
+            .order_by("-created_at")[:limit]
+        )
 
 
 class DiagnosticReport(models.Model):
-    SEVERITY_CHOICES = [("info", "Информация"), ("warning", "Предупреждение"), ("error", "Ошибка"), ("critical", "Критическая")]
-    STATUS_CHOICES = [("open", "Открыт"), ("in_progress", "В процессе"), ("closed", "Закрыт")]
+    SEVERITY_CHOICES = [
+        ("info", "Информация"),
+        ("warning", "Предупреждение"),
+        ("error", "Ошибка"),
+        ("critical", "Критическая"),
+    ]
+    STATUS_CHOICES = [
+        ("open", "Открыт"),
+        ("in_progress", "В процессе"),
+        ("closed", "Закрыт"),
+    ]
 
-    id: models.UUIDField = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id: models.UUIDField = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )
     system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem, on_delete=models.CASCADE, related_name="diagnostic_reports", db_index=True
+        HydraulicSystem,
+        on_delete=models.CASCADE,
+        related_name="diagnostic_reports",
+        db_index=True,
     )
     title: models.CharField = models.CharField(max_length=255, db_index=True)
-    severity: models.CharField = models.CharField(max_length=16, choices=SEVERITY_CHOICES, db_index=True)
-    status: models.CharField = models.CharField(max_length=16, choices=STATUS_CHOICES, default="open", db_index=True)
+    severity: models.CharField = models.CharField(
+        max_length=16, choices=SEVERITY_CHOICES, db_index=True
+    )
+    status: models.CharField = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default="open", db_index=True
+    )
 
-    ai_confidence: models.FloatField = models.FloatField(validators=[MinValueValidator(0.0), MaxValueValidator(1.0)], default=0.0)
+    ai_confidence: models.FloatField = models.FloatField(
+        validators=[MinValueValidator(0.0), MaxValueValidator(1.0)], default=0.0
+    )
 
     description: models.TextField = models.TextField(blank=True, default="")
 
-    created_at: models.DateTimeField = models.DateTimeField(default=timezone.now, db_index=True)
+    created_at: models.DateTimeField = models.DateTimeField(
+        default=timezone.now, db_index=True
+    )
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     objects = models.Manager()
@@ -223,7 +307,9 @@ class DiagnosticReport(models.Model):
         ordering = ["-created_at"]
         indexes = [
             BTreeIndex(fields=["system", "created_at"], name="idx_dr_system_created"),
-            BTreeIndex(fields=["severity", "created_at"], name="idx_dr_severity_created"),
+            BTreeIndex(
+                fields=["severity", "created_at"], name="idx_dr_severity_created"
+            ),
         ]
 
     def clean(self) -> None:

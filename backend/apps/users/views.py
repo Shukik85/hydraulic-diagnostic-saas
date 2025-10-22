@@ -1,4 +1,5 @@
 from typing import Tuple, Type
+
 from django.contrib.auth import get_user_model
 
 from rest_framework import filters, generics, mixins, permissions, status, viewsets
@@ -63,7 +64,9 @@ class UserViewSet(
 
     queryset = User.objects.all()
     serializer_class = UserDetailSerializer
-    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.IsAuthenticated,)
+    permission_classes: Tuple[Type[BasePermission], ...] = (
+        permissions.IsAuthenticated,
+    )
     lookup_field = "pk"
 
     @action(
@@ -92,7 +95,9 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
     queryset = UserProfile.objects.select_related("user").all()
     serializer_class = UserProfileSerializer
-    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.IsAuthenticated,)
+    permission_classes: Tuple[Type[BasePermission], ...] = (
+        permissions.IsAuthenticated,
+    )
     filter_backends = [filters.SearchFilter]
     search_fields = ["user__username", "location"]
 
@@ -102,7 +107,9 @@ class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = UserActivity.objects.select_related("user").all().order_by("-created_at")
     serializer_class = UserActivitySerializer
-    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.IsAuthenticated,)
+    permission_classes: Tuple[Type[BasePermission], ...] = (
+        permissions.IsAuthenticated,
+    )
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ["created_at"]
     ordering = ["-created_at"]

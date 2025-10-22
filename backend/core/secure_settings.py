@@ -32,7 +32,9 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE: bool = True
 SESSION_COOKIE_AGE: int = 3600
 
 # Rate Limiting для API - КРИТИЧНО для защиты от атак
-REST_FRAMEWORK: Dict[str, Any] = base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
+REST_FRAMEWORK: Dict[str, Any] = (
+    base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
+)
 REST_FRAMEWORK.update(
     {
         "DEFAULT_THROTTLE_CLASSES": [
@@ -79,7 +81,9 @@ LOGGING["loggers"]["security"] = {
 }
 
 # AI Settings Security
-AI_SETTINGS: Dict[str, Any] = base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
+AI_SETTINGS: Dict[str, Any] = (
+    base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
+)
 AI_SETTINGS.update(
     {
         "MAX_QUERY_LENGTH": 500,

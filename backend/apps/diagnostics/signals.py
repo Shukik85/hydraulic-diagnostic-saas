@@ -1,4 +1,5 @@
 """Django signals for diagnostics models (typed, mypy-safe)."""
+
 from __future__ import annotations
 
 from typing import Any, Type
@@ -12,7 +13,10 @@ from .models import HydraulicSystem, SensorData, SystemComponent
 
 @receiver(post_save, sender=SystemComponent)
 def update_components_count_on_create(
-    sender: Type[SystemComponent], instance: SystemComponent, created: bool, **kwargs: Any
+    sender: Type[SystemComponent],
+    instance: SystemComponent,
+    created: bool,
+    **kwargs: Any,
 ) -> None:
     if created:
         sys_pk = getattr(instance.system, "pk", None)
