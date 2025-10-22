@@ -1,7 +1,9 @@
+from typing import Tuple, Type
 from django.contrib.auth import get_user_model
 
 from rest_framework import filters, generics, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -26,7 +28,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """Выдача JWT токенов."""
 
     serializer_class = CustomTokenObtainPairSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.AllowAny,)
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -34,7 +36,7 @@ class UserRegistrationView(generics.CreateAPIView):
 
     queryset = User.objects.all()
     serializer_class = UserCreateSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.AllowAny,)
 
     def perform_create(self, serializer):
         user = serializer.save()
@@ -60,11 +62,11 @@ class UserViewSet(
 
     queryset = User.objects.all()
     serializer_class = UserDetailSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.IsAuthenticated,)
     lookup_field = "pk"
 
     @action(
-        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+        detail=True, methods=["post"], permission_classes=(permissions.IsAuthenticated,)
     )
     def change_password(self, request, pk=None):
         """Сменить пароль."""
@@ -75,7 +77,7 @@ class UserViewSet(
         return Response({"detail": "Пароль изменён"}, status=status.HTTP_200_OK)
 
     @action(
-        detail=True, methods=["get"], permission_classes=[permissions.IsAuthenticated]
+        detail=True, methods=["get"], permission_classes=(permissions.IsAuthenticated,)
     )
     def stats(self, request, pk=None):
         """Статистика пользователя."""
@@ -89,7 +91,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
     queryset = UserProfile.objects.select_related("user").all()
     serializer_class = UserProfileSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.IsAuthenticated,)
     filter_backends = [filters.SearchFilter]
     search_fields = ["user__username", "location"]
 
@@ -99,7 +101,7 @@ class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = UserActivity.objects.select_related("user").all().order_by("-created_at")
     serializer_class = UserActivitySerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.IsAuthenticated,)
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ["created_at"]
     ordering = ["-created_at"]
