@@ -28,7 +28,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     """Выдача JWT токенов."""
 
     serializer_class = CustomTokenObtainPairSerializer
-    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.AllowAny,)
+    # Совместимость с типом базового класса: оставляем пусто, доступ настраивается через DRF/urls
+    permission_classes: tuple[()] = ()
 
 
 class UserRegistrationView(generics.CreateAPIView):
