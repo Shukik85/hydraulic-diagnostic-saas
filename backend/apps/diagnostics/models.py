@@ -1,4 +1,4 @@
-"""Optimized diagnostics models with full typing support."""
+"""Optimized diagnostics models with full typing support (mypy-safe)."""
 from __future__ import annotations
 
 import uuid
@@ -15,7 +15,8 @@ from django.db.models.functions import TruncDay
 from django.utils import timezone
 
 if TYPE_CHECKING:
-    from django.db.models.manager import RelatedManager
+    # Use generic Manager as RelatedManager replacement for typing to avoid attr-defined
+    from django.db.models import Manager as RelatedManager
 
 
 # ------------------------ QuerySets & Managers ------------------------ #
@@ -170,9 +171,9 @@ class HydraulicSystem(models.Model):
     qs: HydraulicSystemQuerySet = HydraulicSystemQuerySet.as_manager()  # type: ignore[assignment]
 
     if TYPE_CHECKING:
-        components: RelatedManager[SystemComponent]
-        sensor_data: RelatedManager[SensorData]
-        diagnostic_reports: RelatedManager[DiagnosticReport]
+        components: RelatedManager["SystemComponent"]
+        sensor_data: RelatedManager["SensorData"]
+        diagnostic_reports: RelatedManager["DiagnosticReport"]
 
     class Meta:
         db_table = "diagnostics_hydraulicsystem"
@@ -218,7 +219,7 @@ class SystemComponent(models.Model):
     qs: SystemComponentQuerySet = SystemComponentQuerySet.as_manager()  # type: ignore[assignment]
 
     if TYPE_CHECKING:
-        sensor_data: RelatedManager[SensorData]
+        sensor_data: RelatedManager["SensorData"]
 
     class Meta:
         db_table = "diagnostics_systemcomponent"
@@ -236,7 +237,7 @@ class SystemComponent(models.Model):
             raise ValidationError("Component name cannot be empty")
 
     def __str__(self) -> str:
-        return f"{self.system.name}::{self.name}"
+        return f"{str(self.system.name)}::{str(self.name)}"
 
 
 class SensorData(models.Model):
@@ -320,12 +321,14 @@ class SensorData(models.Model):
     def save(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
         self.full_clean()
         super().save(*args, **kwargs)
-        if self.system_id and self.timestamp:
-            HydraulicSystem.objects.filter(id=self.system_id).update(last_reading_at=self.timestamp)
+        # mypy-safe: use pk via getattr
+        sys_pk = getattr(self.system, "pk", None)
+        if sys_pk is not None and self.timestamp:
+            HydraulicSystem.objects.filter(id=sys_pk).update(last_reading_at=self.timestamp)
 
     def __str__(self) -> str:
-        component_name = self.component.name if self.component else "N/A"
-        return f"{self.sensor_type}@{self.system.name}:{component_name}"
+        component_name = str(getattr(self.component, "name", "N/A"))
+        return f"{self.sensor_type}@{str(getattr(self.system, 'name', 'N/A'))}:{component_name}"
 
 
 class DiagnosticReport(models.Model):
