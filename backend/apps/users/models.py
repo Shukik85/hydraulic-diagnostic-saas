@@ -1,9 +1,15 @@
 """User models with complete type annotations for mypy compliance."""
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
+
+if TYPE_CHECKING:
+    from django.db.models.manager import RelatedManager
+    from apps.diagnostics.models import HydraulicSystem
 
 
 class User(AbstractUser):
@@ -50,6 +56,9 @@ class User(AbstractUser):
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
+
+    if TYPE_CHECKING:
+        hydraulic_systems: RelatedManager[HydraulicSystem]
 
     class Meta:
         verbose_name = "Пользователь"
