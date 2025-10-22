@@ -130,13 +130,13 @@ class RagAssistant:
 
     def _cache_faq_answer(self, question: str, answer: str) -> None:
         cache_key = self._get_cache_key(
-            "faq", hashlib.md5(question.encode()).hexdigest()
+            "faq", hashlib.sha256(question.encode()).hexdigest()
         )
         cache.set(cache_key, answer, timeout=FAQ_ANSWER_TTL)
 
     def _get_cached_faq_answer(self, question: str) -> Optional[str]:
         cache_key = self._get_cache_key(
-            "faq", hashlib.md5(question.encode()).hexdigest()
+            "faq", hashlib.sha256(question.encode()).hexdigest()
         )
         cached = cache.get(cache_key)
         if cached is not None:
