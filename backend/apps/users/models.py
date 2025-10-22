@@ -1,4 +1,3 @@
-"""User models with complete type annotations for mypy compliance."""
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -8,7 +7,8 @@ from django.db import models
 from django.utils import timezone
 
 if TYPE_CHECKING:
-    from django.db.models.manager import RelatedManager
+    # mypy-safe: use generic Manager alias for related managers
+    from django.db.models import Manager as RelatedManager
     from apps.diagnostics.models import HydraulicSystem
 
 
@@ -20,7 +20,6 @@ class User(AbstractUser):
     position: models.CharField = models.CharField(max_length=100, blank=True, verbose_name="Должность")
     phone: models.CharField = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
 
-    # Профессиональная информация
     experience_years: models.PositiveIntegerField = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Стаж работы (лет)"
     )
@@ -28,7 +27,6 @@ class User(AbstractUser):
         max_length=100, blank=True, verbose_name="Специализация"
     )
 
-    # Настройки уведомлений
     email_notifications: models.BooleanField = models.BooleanField(
         default=True, verbose_name="Email уведомления"
     )
@@ -39,14 +37,12 @@ class User(AbstractUser):
         default=False, verbose_name="Только критичные уведомления"
     )
 
-    # Метаданные
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True, verbose_name="Обновлен")
     last_activity: models.DateTimeField = models.DateTimeField(
         default=timezone.now, verbose_name="Последняя активность"
     )
 
-    # Статистика
     systems_count: models.PositiveIntegerField = models.PositiveIntegerField(
         default=0, verbose_name="Количество систем"
     )
@@ -69,18 +65,14 @@ class User(AbstractUser):
         return f"{self.get_full_name() or self.username} ({self.email})"
 
     def get_systems_count(self) -> int:
-        """Получить количество систем пользователя."""
         return self.hydraulic_systems.count()
 
     def update_last_activity(self) -> None:
-        """Обновить время последней активности."""
         self.last_activity = timezone.now()
         self.save(update_fields=["last_activity"])
 
 
 class UserProfile(models.Model):
-    """Дополнительный профиль пользователя с типизацией."""
-
     user: models.OneToOneField = models.OneToOneField(
         User, on_delete=models.CASCADE, verbose_name="Пользователь"
     )
@@ -93,23 +85,15 @@ class UserProfile(models.Model):
     )
     website: models.URLField = models.URLField(blank=True, verbose_name="Веб-сайт")
 
-    # Настройки интерфейса
     theme: models.CharField = models.CharField(
         max_length=20,
-        choices=[
-            ("light", "Светлая"),
-            ("dark", "Темная"),
-            ("auto", "Автоматически"),
-        ],
+        choices=[("light", "Светлая"), ("dark", "Темная"), ("auto", "Автоматически")],
         default="light",
         verbose_name="Тема",
     )
     language: models.CharField = models.CharField(
         max_length=10,
-        choices=[
-            ("ru", "Русский"),
-            ("en", "English"),
-        ],
+        choices=[("ru", "Русский"), ("en", "English")],
         default="ru",
         verbose_name="Язык",
     )
@@ -129,8 +113,6 @@ class UserProfile(models.Model):
 
 
 class UserActivity(models.Model):
-    """Лог активности пользователей с типизацией."""
-
     ACTION_TYPES = [
         ("login", "Вход в систему"),
         ("logout", "Выход из системы"),
@@ -143,19 +125,12 @@ class UserActivity(models.Model):
         ("ai_query", "Запрос к AI"),
     ]
 
-    user: models.ForeignKey = models.ForeignKey(
-        User, on_delete=models.CASCADE, verbose_name="Пользователь"
-    )
-    action: models.CharField = models.CharField(
-        max_length=50, choices=ACTION_TYPES, verbose_name="Действие"
-    )
+    user: models.ForeignKey = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
+    action: models.CharField = models.CharField(max_length=50, choices=ACTION_TYPES, verbose_name="Действие")
     description: models.TextField = models.TextField(blank=True, verbose_name="Описание")
-    ip_address: models.GenericIPAddressField = models.GenericIPAddressField(
-        null=True, blank=True, verbose_name="IP адрес"
-    )
+    ip_address: models.GenericIPAddressField = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP адрес")
     user_agent: models.TextField = models.TextField(blank=True, verbose_name="User Agent")
 
-    # Дополнительные данные в JSON формате
     metadata: models.JSONField = models.JSONField(default=dict, blank=True, verbose_name="Метаданные")
 
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True, verbose_name="Время")
@@ -170,4 +145,5 @@ class UserActivity(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.user.username} - {self.get_action_display()} ({self.created_at})"
+        # mypy-safe string conversion
+        return f"{str(getattr(self.user, 'username', ''))} - {str(self.get_action_display())} ({self.created_at})"
