@@ -1,6 +1,6 @@
-from typing import Any
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from typing import Any, Tuple
 
 from .models import User, UserActivity, UserProfile
 
@@ -29,8 +29,9 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ["username", "email", "first_name", "last_name", "company"]
     ordering = ["-created_at"]
 
-    # Правильная типизация и объединение fieldsets
-    additional_fieldsets = (
+    # Приводим BaseUserAdmin.fieldsets к tuple и объединяем с нашими
+    base_fieldsets: Tuple = tuple(BaseUserAdmin.fieldsets or ())
+    extra_fieldsets: Tuple = (
         (
             "Дополнительная информация",
             {
@@ -59,7 +60,7 @@ class UserAdmin(BaseUserAdmin):
         ),
     )
 
-    fieldsets = (BaseUserAdmin.fieldsets or ()) + additional_fieldsets
+    fieldsets = base_fieldsets + extra_fieldsets
 
     readonly_fields = ["last_activity", "created_at", "systems_count"]
 
@@ -108,7 +109,6 @@ class UserActivityAdmin(admin.ModelAdmin):
         return False
 
 
-# Настройка админ панели
 admin.site.site_header = "Гидравлическая диагностика - Админ панель"
 admin.site.site_title = "Админ панель"
 admin.site.index_title = "Управление системой диагностики"
