@@ -18,9 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install dependencies
 COPY backend/requirements.txt ./backend/requirements.txt
+# hadolint ignore=SC1091
 RUN python -m venv /opt/venv && \
     . /opt/venv/bin/activate && \
-    pip install --upgrade pip && \
+    pip install --upgrade pip==24.2 && \
     pip install -r backend/requirements.txt
 
 # ===== Final runtime image =====
