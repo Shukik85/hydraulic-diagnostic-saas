@@ -1,4 +1,4 @@
-"""Модуль проекта с автогенерированным докстрингом."""
+"""RAG Assistant service module with updated Pydantic V2 validators."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 import bleach  # type: ignore[import-untyped]
-import pydantic
+from pydantic import BaseModel, field_validator
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
@@ -33,12 +33,16 @@ CACHE_STATS_KEY = "cache_stats"
 LOADER_MAP: dict[str, Callable[[str], Any]] = {}
 
 
-class QueryInput(pydantic.BaseModel):
+class QueryInput(BaseModel):
+    """Input model for RAG queries with validation."""
+    
     query: str
     user_id: int | None = None
 
-    @pydantic.validator("query")
+    @field_validator("query")
+    @classmethod
     def validate_query(cls, v: Any) -> str:
+        """Validate and sanitize query input."""
         if not isinstance(v, str):
             raise ValueError("Query must be a string")
         if len(v) > MAX_QUERY_LENGTH:
@@ -48,20 +52,26 @@ class QueryInput(pydantic.BaseModel):
         sanitized = bleach.clean(v, tags=[], attributes={}, strip=True)
         return sanitized.strip()
 
-    @pydantic.validator("user_id")
+    @field_validator("user_id")
+    @classmethod
     def validate_user_id(cls, v: Any) -> int | None:
+        """Validate user ID input."""
         if v is not None and not isinstance(v, int):
             raise ValueError("User ID must be an integer")
         return v
 
 
-class DocumentInput(pydantic.BaseModel):
+class DocumentInput(BaseModel):
+    """Input model for documents with validation."""
+    
     content: str
     format: str
     metadata: dict[str, Any]
 
-    @pydantic.validator("content")
+    @field_validator("content")
+    @classmethod
     def validate_content(cls, v: Any) -> str:
+        """Validate and sanitize document content."""
         if not isinstance(v, str):
             raise ValueError("Content must be a string")
         if len(v.encode("utf-8")) > MAX_CONTENT_SIZE:
@@ -70,14 +80,18 @@ class DocumentInput(pydantic.BaseModel):
             )
         return bleach.clean(v, tags=[], attributes={}, strip=True)
 
-    @pydantic.validator("format")
+    @field_validator("format")
+    @classmethod
     def validate_format(cls, v: Any) -> str:
+        """Validate document format."""
         if not isinstance(v, str):
             raise ValueError("Format must be a string")
         return v.strip().lower()
 
-    @pydantic.validator("metadata")
+    @field_validator("metadata")
+    @classmethod
     def validate_metadata(cls, v: Any) -> dict[str, Any]:
+        """Validate and sanitize metadata."""
         if not isinstance(v, dict):
             raise ValueError("Metadata must be a dictionary")
         sanitized_metadata: dict[str, Any] = {}
@@ -92,32 +106,41 @@ class DocumentInput(pydantic.BaseModel):
 
 
 class CacheStats:
+    """Cache statistics management."""
+    
     @staticmethod
     def increment_hit() -> None:
+        """Increment cache hit counter."""
         stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         stats["hits"] = stats.get("hits", 0) + 1
         cache.set(CACHE_STATS_KEY, stats)
 
     @staticmethod
     def increment_miss() -> None:
+        """Increment cache miss counter."""
         stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         stats["misses"] = stats.get("misses", 0) + 1
         cache.set(CACHE_STATS_KEY, stats)
 
     @staticmethod
     def get_stats() -> dict[str, int]:
+        """Get cache statistics."""
         stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         return stats
 
     @staticmethod
     def get_hit_rate() -> float:
+        """Calculate cache hit rate."""
         stats = CacheStats.get_stats()
         total = stats.get("hits", 0) + stats.get("misses", 0)
         return (stats.get("hits", 0) / total) if total > 0 else 0.0
 
 
 class RagAssistant:
+    """RAG (Retrieval-Augmented Generation) Assistant."""
+    
     def __init__(self, system: RagSystem):
+        """Initialize RAG Assistant with system configuration."""
         if not isinstance(system, RagSystem):
             raise TypeError("system must be an instance of RagSystem")
 
@@ -128,16 +151,19 @@ class RagAssistant:
     def _get_cache_key(
         self, key_type: str, identifier: str, version: str = CACHE_VERSION
     ) -> str:
+        """Generate cache key for storing/retrieving data."""
         sys_id = getattr(self.system, "pk", None)
         return f"rag:{sys_id}:{key_type}:{identifier}:{version}"
 
     def _cache_faq_answer(self, question: str, answer: str) -> None:
+        """Cache FAQ answer for future retrieval."""
         cache_key = self._get_cache_key(
             "faq", hashlib.sha256(question.encode()).hexdigest()
         )
         cache.set(cache_key, answer, timeout=FAQ_ANSWER_TTL)
 
     def _get_cached_faq_answer(self, question: str) -> str | None:
+        """Retrieve cached FAQ answer if exists."""
         cache_key = self._get_cache_key(
             "faq", hashlib.sha256(question.encode()).hexdigest()
         )
@@ -149,6 +175,7 @@ class RagAssistant:
         return None
 
     def _build_retriever(self) -> Callable[[str], list[dict[str, Any]]]:
+        """Build document retriever function."""
         from .rag_core import default_local_orchestrator
 
         orchestrator = default_local_orchestrator()
@@ -158,6 +185,7 @@ class RagAssistant:
         docs_list: list[str] = (getattr(vindex, "metadata", None) or {}).get("docs", [])
 
         def _retrieve(question: str) -> list[dict[str, Any]]:
+            """Retrieve relevant documents for question."""
             q_emb = self._encode([question])
             _, indices = vindex.search(q_emb, k=4)
             results: list[dict[str, Any]] = []
@@ -170,6 +198,7 @@ class RagAssistant:
         return _retrieve
 
     def _encode(self, texts: list[str]):
+        """Encode texts to embeddings."""
         emb = self.embedder.embed_documents(texts)
         import numpy as np
 
@@ -178,6 +207,7 @@ class RagAssistant:
         return (arr / norms).astype("float32")
 
     def _build_chain(self):
+        """Build RAG processing chain."""
         prompt = ChatPromptTemplate.from_template(
             """
             You are a helpful assistant for hydraulic diagnostics.
@@ -198,6 +228,7 @@ class RagAssistant:
         retriever_fn = self._build_retriever()
 
         def format_docs(docs: list[dict[str, Any]]) -> str:
+            """Format retrieved documents for context."""
             return "\n\n".join(str(d["content"]) for d in docs if d.get("content"))
 
         chain = (
@@ -213,6 +244,7 @@ class RagAssistant:
         return chain
 
     def answer(self, query: str, user_id: int | None = None) -> str:
+        """Generate answer for user query using RAG."""
         cached_answer = self._get_cached_faq_answer(query)
         if cached_answer is not None:
             self._log_query(query, cached_answer, user_id)
@@ -220,7 +252,7 @@ class RagAssistant:
 
         try:
             validated_input = QueryInput(query=query, user_id=user_id)
-        except pydantic.ValidationError as e:
+        except Exception as e:
             raise ValidationError(f"Query validation failed: {e}")
 
         chain = self._build_chain()
@@ -232,6 +264,7 @@ class RagAssistant:
 
     @transaction.atomic
     def _log_query(self, query: str, response: str, user_id: int | None = None) -> None:
+        """Log query and response to database."""
         RagQueryLog.objects.create(
             system=self.system,
             query_text=query,
@@ -240,6 +273,7 @@ class RagAssistant:
         )
 
     def get_cache_stats(self) -> dict[str, Any]:
+        """Get cache performance statistics."""
         stats = CacheStats.get_stats()
         hit_rate = CacheStats.get_hit_rate()
         return {
@@ -250,18 +284,22 @@ class RagAssistant:
         }
 
     def clear_cache_stats(self) -> None:
+        """Clear cache statistics."""
         cache.delete(CACHE_STATS_KEY)
 
 
 def tmp_file_for(doc: Document) -> str:
-    """Краткое описание функции.
+    """Create temporary file for document processing.
 
     Args:
-        doc (TYPE): описание.
+        doc: Document instance to create file for.
 
     Returns:
-        TYPE: описание.
+        str: Path to created temporary file.
 
+    Raises:
+        TypeError: If doc is not a Document instance.
+        ValueError: If document format or content is missing/invalid.
     """
     if not isinstance(doc, Document):
         raise TypeError("doc must be an instance of Document")
