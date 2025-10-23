@@ -301,24 +301,17 @@ max-returns = 8
 max-statements = 60
 
 [format]
-# Use single quotes for strings
+# Use double quotes for strings
 quote-style = "double"
-
-# Use spaces around operators
-operator-spacing = true
 
 # Respect magic trailing commas
 skip-magic-trailing-comma = false
 
-# Normalize string quotes
-normalize-quotes = true
-
-# Use tabs or spaces for indentation
+# Use spaces for indentation
 indent-style = "space"
-indent-width = 4
 
 # Line ending style
-line-ending = "lf"
+line-ending = "auto"
 
 # Docstring formatting
 docstring-code-format = true
