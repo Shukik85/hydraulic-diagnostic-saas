@@ -1,12 +1,9 @@
 # Ruff configuration for hydraulic-diagnostic-saas
-# Optimized for Ruff 0.14.x
+# Compatible with Ruff 0.14.x across platforms (Even Better TOML strict)
 
-# Formatting
+# Core
 line-length = 88
-# Target Python version
 target-version = "py311"
-
-# Discovery
 include = ["*.py", "*.pyi", "**/pyproject.toml"]
 exclude = [
   ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite", ".hg",
@@ -17,55 +14,24 @@ exclude = [
   "nuxt_frontend", ".nuxt", ".output"
 ]
 
-# Output & behavior (supported in 0.14.x)
-show-fixes = true
-show-source = true
-respect-gitignore = true
-preview = true
+# NOTE: Some installers/vendors validate config against a strict schema ("Even Better TOML").
+# They can reject extra top-level keys not known to Ruff. To keep broad compatibility,
+# we avoid optional top-level flags like `show-source`, `respect-gitignore`, `preview` here.
+# Use CLI flags if needed: `ruff --preview --show-source`.
 
 [lint]
-# Rule sets
 select = [
-  "F", "E", "W",    # Pyflakes + pycodestyle
-  "I",               # isort
-  "N",               # pep8-naming
-  "D",               # pydocstyle
-  "UP",              # pyupgrade
-  "B",               # flake8-bugbear
-  "A",               # flake8-builtins
-  "C4",              # flake8-comprehensions
-  "DTZ",             # flake8-datetimez
-  "T20",             # flake8-print
-  "PT",              # flake8-pytest-style
-  "Q",               # flake8-quotes
-  "RET",             # flake8-return
-  "SLF",             # flake8-self
-  "SIM",             # flake8-simplify
-  "TID",             # flake8-tidy-imports
-  "ARG",             # flake8-unused-arguments
-  "PTH",             # flake8-use-pathlib
-  "ERA",             # eradicate
-  "PD",              # pandas-vet
-  "PGH",             # pygrep-hooks
-  "PL",              # pylint (subset)
-  "RUF"              # Ruff-specific
+  "F", "E", "W", "I", "N", "D", "UP", "B", "A", "C4", "DTZ", "T20",
+  "PT", "Q", "RET", "SLF", "SIM", "TID", "ARG", "PTH", "ERA", "PD",
+  "PGH", "PL", "RUF"
 ]
 ignore = [
-  # Length handled by formatter
-  "E501",
-  # Complexity & branches
-  "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004",
-  # Dev/test-friendly allowances
+  "E501", "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004",
   "T201", "T203", "S101",
-  # Docstrings relaxed
   "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
-  # Django patterns
-  "F403", "F405",
-  # Misc
-  "ARG002", "ISC001", "ERA001"
+  "F403", "F405", "ARG002", "ISC001", "ERA001"
 ]
 
-# Per-file tuning
 [lint.per-file-ignores]
 "**/tests/**" = ["D", "S101", "S105", "S106", "S107", "S108", "PLR0913", "PLR0915", "PLR2004", "ARG001", "ARG002"]
 "test_*.py" = ["D", "S101", "S105", "S106", "S107", "S108", "PLR0913", "PLR0915", "PLR2004", "ARG001", "ARG002"]
@@ -75,7 +41,6 @@ ignore = [
 "**/management/commands/**" = ["T201", "T203", "ARG001", "ARG002"]
 "scripts/**" = ["T201", "T203", "INP001"]
 
-# Import sorting (isort compat)
 [lint.isort]
 combine-as-imports = true
 force-sort-within-sections = true
@@ -83,16 +48,13 @@ known-first-party = ["apps", "core"]
 sections = {"django" = ["django"]}
 split-on-trailing-comma = true
 
-# Complexity
 [lint.mccabe]
 max-complexity = 10
 
-# Naming
 [lint.pep8-naming]
 classmethod-decorators = ["classmethod", "django.utils.decorators.classproperty"]
 staticmethod-decorators = ["staticmethod"]
 
-# Formatter
 [format]
 quote-style = "double"
 skip-magic-trailing-comma = false
