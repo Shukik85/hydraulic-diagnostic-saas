@@ -1,39 +1,23 @@
+// Создайте этот файл вручную
 import { defineConfig } from 'vitest/config'
+import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
-import path from 'path'
-import { vi } from 'vitest'
-
-vi.mock('#app', () => ({
-  useRuntimeConfig: () => ({
-    public: {
-      apiBaseUrl: 'http://localhost:8000/api'
-    }
-  })
-}))
 
 export default defineConfig({
   plugins: [vue()],
   test: {
     globals: true,
-    environment: 'jsdom',
+    environment: 'happy-dom',
+    include: ['./tests/**/*.{test,spec}.{js,ts}'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/**',
-        'tests/**',
-        '*.config.js',
-        '.nuxt/**',
-        'dist/**'
-      ]
-    },
-    include: ['tests/**/*.test.js'],
-    setupFiles: [],
+      reporter: ['text', 'json', 'html']
+    }
   },
   resolve: {
     alias: {
-      '~': path.resolve(__dirname, './'),
-      '@': path.resolve(__dirname, './')
+      '@': fileURLToPath(new URL('./', import.meta.url)),
+      '~': fileURLToPath(new URL('./', import.meta.url))
     }
   }
 })
