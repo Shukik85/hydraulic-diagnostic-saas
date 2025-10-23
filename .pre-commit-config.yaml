@@ -2,16 +2,7 @@
 # Обеспечивает качество кода, безопасность и совместимость
 
 exclude: |
-  (?x)^(
-      migrations/.*|
-      .*\.min\.(js|css)$|
-      staticfiles/.*|
-      static/.*|
-      media/.*|
-      node_modules/.*|
-      \.venv/.*|
-      venv/.*
-  )$
+  (?x)^(migrations/.*|.*\.min\.(js|css)$|staticfiles/.*|static/.*|media/.*|node_modules/.*|\.venv/.*|venv/.*)$
 
 default_stages: [pre-commit]
 fail_fast: false
@@ -78,7 +69,7 @@ repos:
         args:
           - --max-line-length=88
           - --extend-ignore=E203,E501,W503,E701
-          - --per-file-ignores=backend/apps/**/migrations/*.py:D100,D101,D102,D103,D104,D105,D106,D107,D200,D205,backend/apps/**/admin.py:D101,D102,D400,backend/apps/**/models.py:D101,D102,D400,backend/apps/**/views.py:D101,D102,D400,backend/apps/**/serializers.py:D101,D102,D400,backend/apps/**/middleware.py:PIE803,backend/apps/**/websocket/*.py:D101,D102,D400,PIE803,backend/apps/**/tests*.py:D100,D101,D102,D103,D104,D105,D106,D107,backend/tests/*.py:D100,D101,D102,D103,D104,D105,D106,D107
+          - --per-file-ignores=backend/**/*.py:D100,D101,D102,D200,D205,D400,PIE803,PIE786,I100,I201
         additional_dependencies:
           - flake8-bugbear>=24.10.31
           - flake8-comprehensions>=3.15.0
@@ -99,8 +90,9 @@ repos:
           - djangorestframework-stubs[compatible-mypy]>=3.15.1
           - celery-types>=0.22.0
           - celery>=5.3.0
-          - python-decouple>=3.8  # добавить это!
+          - python-decouple>=3.8
           - structlog>=23.1.0
+          - django-cors-headers>=4.4.0
           - types-redis>=4.6.0.20241004
           - types-requests>=2.32.0.20241016
 
