@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 import logging
 import os
 import sqlite3

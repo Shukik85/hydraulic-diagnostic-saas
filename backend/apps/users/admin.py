@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 from typing import Any, Tuple
 
 from django.contrib import admin

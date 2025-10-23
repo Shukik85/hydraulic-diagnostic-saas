@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # Generated migration for TimescaleDB optimization
 from django.db import migrations
 

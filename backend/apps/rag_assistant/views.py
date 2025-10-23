@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # apps/rag_assistant/views.py
 import logging
 import time

@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # apps/rag_assistant/middleware.py
 # PERFORMANCE MONITORING MIDDLEWARE
 

@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # RAG core abstractions and local storage implementation
 from __future__ import annotations
 

@@ -22,5 +22,7 @@ def walk_and_docstring(root_dir):
 
 
 if __name__ == "__main__":
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend"))
+    project_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "backend")
+    )
     walk_and_docstring(project_root)

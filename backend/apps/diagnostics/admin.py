@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 import json
 from datetime import datetime, timedelta
 

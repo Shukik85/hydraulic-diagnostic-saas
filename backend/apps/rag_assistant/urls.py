@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 from django.urls import include, path
 
 from rest_framework.decorators import api_view

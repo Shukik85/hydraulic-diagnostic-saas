@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # apps/rag_assistant/serializers.py
 from rest_framework import serializers
 

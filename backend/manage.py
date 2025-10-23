@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 #!/usr/bin/env python
 import os
 import sys

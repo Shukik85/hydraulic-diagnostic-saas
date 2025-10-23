@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # apps/rag_assistant/optimized_views.py
 # ОПТИМИЗИРОВАННЫЕ VIEWSETS ДЛЯ RAG ASSISTANT
 

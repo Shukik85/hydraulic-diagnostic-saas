@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # core/optimization_settings.py (typed)
 from __future__ import annotations
 

@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 import os
 
 from django.core.asgi import get_asgi_application

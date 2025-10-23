@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # core/health_checks.py
 # COMPREHENSIVE HEALTH CHECKS ДЛЯ PRODUCTION MONITORING
 

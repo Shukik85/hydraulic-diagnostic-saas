@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # Generated migration for adding concurrent indexes to optimize queries
 from django.db import migrations
 

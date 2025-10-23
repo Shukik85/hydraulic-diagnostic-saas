@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # Generated manually for TimescaleDB integration
 # CI-compatible: gracefully handles missing TimescaleDB extension
 

@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 from typing import Any, Dict, List
 
 from django.utils import timezone

@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 import unittest
 from datetime import datetime, timedelta
 

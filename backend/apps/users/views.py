@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 from typing import Tuple, Type
 
 from django.contrib.auth import get_user_model

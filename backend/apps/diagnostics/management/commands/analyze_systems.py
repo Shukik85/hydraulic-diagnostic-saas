@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 import logging
 
 from django.core.management.base import BaseCommand

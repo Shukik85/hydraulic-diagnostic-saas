@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # apps/rag_assistant/tasks.py (final mypy fixes: typed keys and correct model)
 from __future__ import annotations
 
