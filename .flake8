@@ -1,11 +1,24 @@
-# Flake8 configuration
 [flake8]
-max-line-length = 120
-exclude = .venv,.mypy_cache,__pycache__,migrations
-extend-ignore = E203, E701, E704
+max-line-length = 88
+extend-ignore = E203, E501, W503, E701
 per-file-ignores =
-    # allow module-level imports after other statements in these modules if needed (temporary)
-    backend/apps/diagnostics/websocket_consumers.py:E402,
-    backend/apps/rag_assistant/views.py:E402,
-    backend/core/asgi.py:E402,
-    backend/core/celery.py:E402
+    **/migrations/*.py:D100,D101,D102,D103,D104,D105,D106,D107,D200,D205,E501
+    **/tests/*.py:D100,D101,D102,D103,D104,D105,D106,D107
+    backend/manage.py:D100,E265
+    backend/core/wsgi.py:D100
+    backend/core/asgi.py:D100
+    scripts/*.py:D100,D400
+
+max-complexity = 10
+docstring-convention = google
+import-order-style = google
+
+exclude =
+    __pycache__,
+    .git,
+    .venv,
+    .mypy_cache,
+    .pytest_cache,
+    migrations,
+    node_modules,
+    frontend
