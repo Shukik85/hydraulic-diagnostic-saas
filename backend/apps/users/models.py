@@ -9,9 +9,8 @@ from django.db import models
 from django.utils import timezone
 
 if TYPE_CHECKING:
-    from django.db.models import Manager as RelatedManager
-
     from apps.diagnostics.models import HydraulicSystem
+    from django.db.models import Manager as RelatedManager
 
 
 class User(AbstractUser):

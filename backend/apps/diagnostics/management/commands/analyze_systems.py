@@ -2,11 +2,10 @@
 
 import logging
 
-from django.core.management.base import BaseCommand
-from django.utils import timezone
-
 from apps.diagnostics.services import DiagnosticEngine
 from apps.equipment.models import HydraulicSystem
+from django.core.management.base import BaseCommand
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +14,12 @@ class Command(BaseCommand):
     help = "Analyze all active hydraulic systems and create diagnostics"
 
     def add_arguments(self, parser):
+        """Выполняет add arguments
+
+        Args:
+            parser (Any): Параметр parser
+
+        """
         parser.add_argument(
             "--system-id",
             type=int,
@@ -27,6 +32,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Основной метод выполнения команды"""
         system_id = options.get("system_id")
         force = options.get("force", False)
 

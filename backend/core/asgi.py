@@ -8,10 +8,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 # Если Channels и diagnostics.routing доступны — используем их, иначе чистый ASGI
 try:
+    from apps.diagnostics import routing  # type: ignore
     from channels.auth import AuthMiddlewareStack  # type: ignore
     from channels.routing import ProtocolTypeRouter, URLRouter  # type: ignore
-
-    from apps.diagnostics import routing  # type: ignore
 
     application = ProtocolTypeRouter(
         {

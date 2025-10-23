@@ -2,15 +2,9 @@
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-
 from rest_framework import serializers
 
-from .models import (
-    DiagnosticReport,
-    HydraulicSystem,
-    SensorData,
-    SystemComponent,
-)
+from .models import DiagnosticReport, HydraulicSystem, SensorData, SystemComponent
 
 User = get_user_model()
 
@@ -19,6 +13,13 @@ class ChoiceDisplayMixin:
     """Миксин для получения человекочитаемых значений полей выбора."""
 
     def get_choice_display(self, obj, field_name):
+        """Получает choice display
+
+        Args:
+            obj (Any): Параметр obj
+            field_name (Any): Параметр field_name
+
+        """
         method_name = f"get_{field_name}_display"
         if hasattr(obj, method_name):
             method = getattr(obj, method_name)
@@ -100,15 +101,39 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         ]
 
     def get_system_type_display(self, obj):
+        """Получает system type display
+
+        Args:
+            obj (Any): Параметр obj
+
+        """
         return self.get_choice_display(obj, "system_type")
 
     def get_status_display(self, obj):
+        """Получает status display
+
+        Args:
+            obj (Any): Параметр obj
+
+        """
         return self.get_choice_display(obj, "status")
 
     def get_criticality_display(self, obj):
+        """Получает criticality display
+
+        Args:
+            obj (Any): Параметр obj
+
+        """
         return self.get_choice_display(obj, "criticality")
 
     def get_latest_activity(self, obj):
+        """Получает latest activity
+
+        Args:
+            obj (Any): Параметр obj
+
+        """
         last = obj.sensor_data.order_by("-timestamp").first()
         return last.timestamp if last else None
 
@@ -147,9 +172,21 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
         ]
 
     def get_severity_display(self, obj):
+        """Получает severity display
+
+        Args:
+            obj (Any): Параметр obj
+
+        """
         return self.get_choice_display(obj, "severity")
 
     def get_status_display(self, obj):
+        """Получает status display
+
+        Args:
+            obj (Any): Параметр obj
+
+        """
         return self.get_choice_display(obj, "status")
 
 

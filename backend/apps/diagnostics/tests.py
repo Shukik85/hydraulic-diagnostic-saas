@@ -1,29 +1,44 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
+import pytest
+from apps.diagnostics.models import HydraulicSystem, SystemComponent
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-
-import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
-
-from apps.diagnostics.models import HydraulicSystem, SystemComponent
 
 User = get_user_model()
 
 
 @pytest.fixture
 def api_client():
+    """Выполняет api client"""
+    pass
     return APIClient()
 
 
 @pytest.fixture
 def user(db):
+    """Выполняет user
+
+    pass
+    Args:
+        db (Any): Параметр db
+
+    """
     return User.objects.create_user(email="u@e.com", username="u", password="Pwd12345")
 
 
 @pytest.fixture
 def auth_client(api_client, user):
+    """Выполняет auth client
+
+    pass
+    Args:
+        api_client (Any): Параметр api_client
+        user (Any): Параметр user
+
+    """
     resp = api_client.post(
         reverse("token_obtain_pair"), {"email": user.email, "password": "Pwd12345"}
     )
@@ -34,6 +49,13 @@ def auth_client(api_client, user):
 
 @pytest.mark.django_db
 def test_hydraulic_system_crud(auth_client):
+    """Выполняет test hydraulic system crud
+
+    pass
+    Args:
+        auth_client (Any): Параметр auth_client
+
+    """
     # Create
     data = {
         "name": "HS1",
@@ -63,6 +85,13 @@ def test_hydraulic_system_crud(auth_client):
 
 @pytest.mark.django_db
 def test_system_component_flow(auth_client):
+    """Выполняет test system component flow
+
+    pass
+    Args:
+        auth_client (Any): Параметр auth_client
+
+    """
     hs = HydraulicSystem.objects.create(
         name="HS2", system_type="mobile", status="active", criticality="low"
     )
@@ -80,6 +109,13 @@ def test_system_component_flow(auth_client):
 
 @pytest.mark.django_db
 def test_sensor_data_and_diagnostic(auth_client):
+    """Выполняет test sensor data and diagnostic
+
+    pass
+    Args:
+        auth_client (Any): Параметр auth_client
+
+    """
     hs = HydraulicSystem.objects.create(
         name="HS3", system_type="marine", status="active", criticality="high"
     )
@@ -99,6 +135,13 @@ def test_sensor_data_and_diagnostic(auth_client):
 
 @pytest.mark.django_db
 def test_reports_and_actions(auth_client):
+    """Выполняет test reports and actions
+
+    pass
+    Args:
+        auth_client (Any): Параметр auth_client
+
+    """
     hs = HydraulicSystem.objects.create(
         name="HS4", system_type="construction", status="active", criticality="medium"
     )
@@ -113,6 +156,13 @@ def test_reports_and_actions(auth_client):
 
 @pytest.mark.django_db
 def test_maintenance_schedule(auth_client):
+    """Выполняет test maintenance schedule
+
+    pass
+    Args:
+        auth_client (Any): Параметр auth_client
+
+    """
     hs = HydraulicSystem.objects.create(
         name="HS5", system_type="aviation", status="active", criticality="critical"
     )

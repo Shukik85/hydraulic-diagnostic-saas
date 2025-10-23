@@ -10,13 +10,12 @@ from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Dict, List
 
+from celery import shared_task
+from celery.utils.log import get_task_logger
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
-
-from celery import shared_task
-from celery.utils.log import get_task_logger
 
 from .models import Document as RagDocument
 from .models import RagSystem

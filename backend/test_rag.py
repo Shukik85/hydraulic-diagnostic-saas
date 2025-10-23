@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import django
-
 import numpy as np
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -31,11 +30,34 @@ from apps.rag_assistant.rag_core import (  # noqa: E402
 
 
 def format_docs(docs: List[Dict[str, Any]]) -> str:
+    """Выполняет format docs
+
+    pass
+    Args:
+        docs (Any): Параметр docs
+
+    """
     return "\n\n".join(d["content"] for d in docs if d.get("content"))
 
 
 def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
+    """Выполняет build rag chain
+
+    pass
+    Args:
+        vindex (Any): Параметр vindex
+        ollama_embedder (Any): Параметр ollama_embedder
+        llm (Any): Параметр llm
+
+    """
+
     def _encode(texts: List[str]) -> np.ndarray:
+        """Выполняет  encode
+
+        Args:
+            texts (Any): Параметр texts
+
+        """
         embs = ollama_embedder.embed_documents(texts)
         arr = np.array(embs, dtype="float32")
         norms = np.linalg.norm(arr, axis=1, keepdims=True) + 1e-12
@@ -44,6 +66,12 @@ def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
     docs_list = (vindex.metadata or {}).get("docs", [])
 
     def retrieve(question: str):
+        """Выполняет retrieve
+
+        Args:
+            question (Any): Параметр question
+
+        """
         q_emb = _encode([question])
         _, indices = vindex.search(q_emb, k=4)
         results = []
@@ -83,6 +111,7 @@ def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
 
 
 def main():
+    """Выполняет main"""
     print("✅ AI Engine и RAG система инициализированы")
 
     # 1) Исходные документы

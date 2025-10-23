@@ -2,11 +2,7 @@
 
 from django.contrib import admin
 
-from .models import (
-    Document,
-    RagQueryLog,
-    RagSystem,
-)
+from .models import Document, RagQueryLog, RagSystem
 
 
 @admin.register(Document)

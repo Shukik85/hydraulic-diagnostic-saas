@@ -23,6 +23,7 @@ from apps.diagnostics.models import (  # noqa: E402
 
 
 def main():
+    """Выполняет main"""
     print("=== Smoke Test: diagnostics models ===")
 
     # 1) Создание системы и компонента

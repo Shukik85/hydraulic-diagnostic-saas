@@ -22,9 +22,21 @@ if TYPE_CHECKING:
 
 class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
     def with_owner(self) -> "HydraulicSystemQuerySet":
+        """Выполняет with owner
+
+        Returns:
+            None: None
+
+        """
         return self.select_related("owner")
 
     def active(self) -> "HydraulicSystemQuerySet":
+        """Выполняет active
+
+        Returns:
+            None: None
+
+        """
         return self.filter(status="active")
 
 
@@ -103,6 +115,12 @@ class HydraulicSystem(models.Model):
         ]
 
     def __str__(self) -> str:
+        """Возвращает строковое представление объекта
+
+        Returns:
+            None: None
+
+        """
         return f"{self.name} ({self.system_type})"
 
 
@@ -111,6 +129,15 @@ class HydraulicSystem(models.Model):
 
 class SystemComponentQuerySet(models.QuerySet["SystemComponent"]):
     def for_system(self, system_id: uuid.UUID) -> "SystemComponentQuerySet":
+        """Выполняет for system
+
+        Args:
+            system_id (int): Идентификатор system
+
+        Returns:
+            None: None
+
+        """
         return self.filter(system_id=system_id)
 
 
@@ -143,6 +170,12 @@ class SystemComponent(models.Model):
         indexes = [BTreeIndex(fields=["system", "name"], name="idx_comp_system_name")]
 
     def __str__(self) -> str:
+        """Возвращает строковое представление объекта
+
+        Returns:
+            None: None
+
+        """
         sys_name = str(getattr(self.system, "name", ""))
         comp_name = str(getattr(self, "name", ""))
         return f"{sys_name}::{comp_name}"
@@ -153,9 +186,28 @@ class SystemComponent(models.Model):
 
 class SensorDataQuerySet(models.QuerySet["SensorData"]):
     def for_system(self, system_id: uuid.UUID) -> "SensorDataQuerySet":
+        """Выполняет for system
+
+        Args:
+            system_id (int): Идентификатор system
+
+        Returns:
+            None: None
+
+        """
         return self.filter(system_id=system_id).select_related("component")
 
     def time_range(self, start: datetime, end: datetime) -> "SensorDataQuerySet":
+        """Выполняет time range
+
+        Args:
+            start (Any): Параметр start
+            end (Any): Параметр end
+
+        Returns:
+            None: None
+
+        """
         return self.filter(timestamp__gte=start, timestamp__lt=end)
 
 
@@ -223,12 +275,24 @@ class SensorData(models.Model):
         ]
 
     def clean(self) -> None:
+        """Выполняет clean
+
+        Returns:
+            None: None
+
+        """
         if self.timestamp and self.timestamp > timezone.now() + timedelta(minutes=5):
             raise ValidationError(
                 "Timestamp cannot be more than 5 minutes in the future"
             )
 
     def save(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        """Сохраняет объект модели в базу данных
+
+        Returns:
+            None: None
+
+        """
         self.full_clean()
         super().save(*args, **kwargs)
         sys_pk = getattr(self.system, "pk", None)
@@ -238,6 +302,12 @@ class SensorData(models.Model):
             )
 
     def __str__(self) -> str:
+        """Возвращает строковое представление объекта
+
+        Returns:
+            None: None
+
+        """
         comp_name = str(getattr(self.component, "name", "N/A"))
         sys_name = str(getattr(self.system, "name", "N/A"))
         return f"{self.sensor_type}@{sys_name}:{comp_name}"
@@ -250,6 +320,16 @@ class DiagnosticReportQuerySet(models.QuerySet["DiagnosticReport"]):
     def recent_for_system(
         self, system_id: uuid.UUID, limit: int = 100
     ) -> "DiagnosticReportQuerySet":
+        """Выполняет recent for system
+
+        Args:
+            system_id (int): Идентификатор system
+            limit (Any): Параметр limit
+
+        Returns:
+            None: None
+
+        """
         return (
             self.filter(system_id=system_id)
             .only("id", "title", "severity", "status", "created_at")
@@ -312,10 +392,22 @@ class DiagnosticReport(models.Model):
         ]
 
     def clean(self) -> None:
+        """Выполняет clean
+
+        Returns:
+            None: None
+
+        """
         if not (0.0 <= float(self.ai_confidence) <= 1.0):
             raise ValidationError("AI confidence must be between 0.0 and 1.0")
 
     def __str__(self) -> str:
+        """Возвращает строковое представление объекта
+
+        Returns:
+            None: None
+
+        """
         return f"{self.title} ({self.severity}/{self.status})"
 
 

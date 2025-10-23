@@ -13,10 +13,9 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+from celery import shared_task
 from django.db import connection
 from django.utils import timezone
-
-from celery import shared_task
 
 logger = logging.getLogger(__name__)
 

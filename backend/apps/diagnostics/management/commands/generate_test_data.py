@@ -5,10 +5,9 @@ import logging
 import random
 from datetime import datetime, timedelta
 
+from apps.diagnostics.models import DiagnosticReport, HydraulicSystem, SensorData
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-
-from apps.diagnostics.models import DiagnosticReport, HydraulicSystem, SensorData
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

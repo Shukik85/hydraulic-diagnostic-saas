@@ -18,6 +18,13 @@ def update_components_count_on_create(
     created: bool,
     **kwargs: Any,
 ) -> None:
+    """Выполняет update components count on create
+    Args:
+        sender (Any): Параметр sender
+        instance (Any): Параметр instance
+        created (Any): Параметр created
+
+    """
     if created:
         sys_pk = getattr(instance.system, "pk", None)
         if sys_pk is not None:
@@ -30,6 +37,14 @@ def update_components_count_on_create(
 def update_components_count_on_delete(
     sender: Type[SystemComponent], instance: SystemComponent, **kwargs: Any
 ) -> None:
+    """Выполняет update components count on delete
+
+    pass
+    Args:
+        sender (Any): Параметр sender
+        instance (Any): Параметр instance
+
+    """
     sys_pk = getattr(instance.system, "pk", None)
     if sys_pk is not None:
         HydraulicSystem.objects.filter(id=sys_pk).update(
@@ -41,6 +56,15 @@ def update_components_count_on_delete(
 def update_last_reading_at(
     sender: Type[SensorData], instance: SensorData, created: bool, **kwargs: Any
 ) -> None:
+    """Выполняет update last reading at
+
+    pass
+    Args:
+        sender (Any): Параметр sender
+        instance (Any): Параметр instance
+        created (Any): Параметр created
+
+    """
     if created:
         sys_pk = getattr(instance.system, "pk", None)
         if sys_pk is not None:
