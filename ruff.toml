@@ -6,12 +6,37 @@ line-length = 88
 target-version = "py311"
 include = ["*.py", "*.pyi", "**/pyproject.toml"]
 exclude = [
-  ".bzr", ".direnv", ".eggs", ".git", ".git-rewrite", ".hg",
-  ".ipynb_checkpoints", ".mypy_cache", ".nox", ".pants.d", ".pyenv",
-  ".pytest_cache", ".pytype", ".ruff_cache", ".svn", ".tox", ".venv",
-  ".vscode", "__pypackages__", "_build", "buck-out", "build", "dist",
-  "node_modules", "site-packages", "venv", "migrations", "frontend",
-  "nuxt_frontend", ".nuxt", ".output"
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".git-rewrite",
+  ".hg",
+  ".ipynb_checkpoints",
+  ".mypy_cache",
+  ".nox",
+  ".pants.d",
+  ".pyenv",
+  ".pytest_cache",
+  ".pytype",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "buck-out",
+  "build",
+  "dist",
+  "node_modules",
+  "site-packages",
+  "venv",
+  "migrations",
+  "frontend",
+  "nuxt_frontend",
+  ".nuxt",
+  ".output",
 ]
 
 # NOTE: Some installers/vendors validate config against a strict schema ("Even Better TOML").
@@ -21,20 +46,85 @@ exclude = [
 
 [lint]
 select = [
-  "F", "E", "W", "I", "N", "D", "UP", "B", "A", "C4", "DTZ", "T20",
-  "PT", "Q", "RET", "SLF", "SIM", "TID", "ARG", "PTH", "ERA", "PD",
-  "PGH", "PL", "RUF"
+  "F",
+  "E",
+  "W",
+  "I",
+  "N",
+  "D",
+  "UP",
+  "B",
+  "A",
+  "C4",
+  "DTZ",
+  "T20",
+  "PT",
+  "Q",
+  "RET",
+  "SLF",
+  "SIM",
+  "TID",
+  "ARG",
+  "PTH",
+  "ERA",
+  "PD",
+  "PGH",
+  "PL",
+  "RUF",
 ]
 ignore = [
-  "E501", "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004",
-  "T201", "T203", "S101",
-  "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
-  "F403", "F405", "ARG002", "ISC001", "ERA001"
+  "E501",
+  "C901",
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR2004",
+  "T201",
+  "T203",
+  "S101",
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D106",
+  "D107",
+  "F403",
+  "F405",
+  "ARG002",
+  "ISC001",
+  "ERA001",
 ]
 
 [lint.per-file-ignores]
-"**/tests/**" = ["D", "S101", "S105", "S106", "S107", "S108", "PLR0913", "PLR0915", "PLR2004", "ARG001", "ARG002"]
-"test_*.py" = ["D", "S101", "S105", "S106", "S107", "S108", "PLR0913", "PLR0915", "PLR2004", "ARG001", "ARG002"]
+"**/tests/**" = [
+  "D",
+  "S101",
+  "S105",
+  "S106",
+  "S107",
+  "S108",
+  "PLR0913",
+  "PLR0915",
+  "PLR2004",
+  "ARG001",
+  "ARG002",
+]
+"test_*.py" = [
+  "D",
+  "S101",
+  "S105",
+  "S106",
+  "S107",
+  "S108",
+  "PLR0913",
+  "PLR0915",
+  "PLR2004",
+  "ARG001",
+  "ARG002",
+]
 "**/conftest.py" = ["D", "ARG001", "ARG002"]
 "**/migrations/**" = ["D", "E501", "N806", "RUF012", "ERA001"]
 "**/settings/**" = ["F403", "F405", "S105", "S106", "ERA001"]
@@ -45,14 +135,17 @@ ignore = [
 combine-as-imports = true
 force-sort-within-sections = true
 known-first-party = ["apps", "core"]
-sections = {"django" = ["django"]}
+sections = { "django" = ["django"] }
 split-on-trailing-comma = true
 
 [lint.mccabe]
 max-complexity = 10
 
 [lint.pep8-naming]
-classmethod-decorators = ["classmethod", "django.utils.decorators.classproperty"]
+classmethod-decorators = [
+  "classmethod",
+  "django.utils.decorators.classproperty",
+]
 staticmethod-decorators = ["staticmethod"]
 
 [format]
