@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
         exclude: '.*\.(md|rst)$'
@@ -8,41 +8,95 @@ repos:
         exclude: '.*\.(md|rst)$'
       - id: check-yaml
       - id: check-added-large-files
+        args: [--maxkb=1000]
       - id: check-merge-conflict
       - id: debug-statements
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      - id: mixed-line-ending
+        args: [--fix=lf]
 
   - repo: https://github.com/psf/black
-    rev: 25.9.0
+    rev: 24.10.0
     hooks:
       - id: black
         language_version: python3.11
-        exclude: '^(frontend/|.*migrations/)'
+        exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
+        args: [--line-length=88]
 
   - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
+    rev: 5.13.2
     hooks:
       - id: isort
-        args: ["--profile=black"]
-        exclude: '^(frontend/|.*migrations/)'
+        args: ["--profile=black", "--line-length=88"]
+        exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
 
   - repo: https://github.com/pycqa/flake8
-    rev: 7.3.0
+    rev: 7.1.1
     hooks:
       - id: flake8
-        exclude: '^(frontend/|.*migrations/)'
+        exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
+        args: [--max-line-length=88, --extend-ignore=E203,W503]
         additional_dependencies:
-          - flake8-bugbear
-          - flake8-comprehensions
-          - flake8-docstrings
-          - flake8-import-order
-          - flake8-pie
+          - flake8-bugbear>=24.8.19
+          - flake8-comprehensions>=3.15.0
+          - flake8-docstrings>=1.7.0
+          - flake8-import-order>=0.18.2
+          - flake8-pie>=0.16.0
+          - flake8-simplify>=0.21.0
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+    rev: v1.11.2
     hooks:
       - id: mypy
-        exclude: '^(frontend/|.*migrations/|.*tests/)'
+        exclude: '^(frontend/|nuxt_frontend/|.*migrations/|.*tests/)'
+        args: [--ignore-missing-imports, --check-untyped-defs]
         additional_dependencies:
-          - django-stubs[compatible-mypy]
-          - types-requests
-          - types-PyYAML
+          - django-stubs[compatible-mypy]>=5.1.0
+          - types-requests>=2.32.0
+          - types-PyYAML>=6.0.12
+          - types-redis>=4.6.0
+
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: [-c, .bandit]
+        exclude: '^(frontend/|nuxt_frontend/|.*tests/)'
+
+  # Security and dependency checks
+  - repo: https://github.com/PyCQA/safety
+    rev: 3.2.7
+    hooks:
+      - id: safety
+        args: [--ignore=70612]
+        exclude: '^(frontend/|nuxt_frontend/)'
+
+  # Docker and infrastructure
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint
+        args: [--ignore, DL3008, --ignore, DL3009]
+
+  # Frontend linting (ESLint & Prettier)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.14.0
+    hooks:
+      - id: eslint
+        files: '\.(js|ts|vue)$'
+        exclude: '^backend/'
+        additional_dependencies:
+          - eslint@^9.14.0
+          - '@nuxt/eslint-config@^0.7.0'
+          - 'vue-eslint-parser@^9.4.0'
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: '\.(js|ts|vue|json|css|scss|md)$'
+        exclude: '^backend/'
+        additional_dependencies:
+          - prettier@^3.3.0
