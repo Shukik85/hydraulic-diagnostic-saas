@@ -69,7 +69,8 @@ skip = ["migrations", "node_modules", "frontend", "nuxt_frontend"]
 skip_glob = ["**/migrations/*.py", "**/node_modules/**", "**/frontend/**", "**/nuxt_frontend/**"]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "backend.core.settings.base"
+# Fixed Django settings path
+DJANGO_SETTINGS_MODULE = "core.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 python_paths = ["."]
 testpaths = ["backend/tests", "backend/apps"]
@@ -84,6 +85,8 @@ addopts = """
   --cov-report=xml
   --cov-fail-under=80
   --maxfail=5
+  --reuse-db
+  --nomigrations
   -ra
 """
 markers = [
@@ -94,6 +97,8 @@ markers = [
     "rag: marks tests related to RAG assistant",
     "timescale: marks tests related to TimescaleDB",
 ]
+# Django project detection
+django_find_project = true
 testmon_datafile = ".testmondata"
 
 [tool.coverage.run]
@@ -129,7 +134,8 @@ show_missing = true
 fail_under = 80
 
 [tool.django-stubs]
-django_settings_module = "backend.core.settings.base"
+# Fixed Django settings path
+django_settings_module = "core.settings"
 strict_settings = false
 
 [tool.ruff]
