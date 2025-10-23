@@ -11,7 +11,6 @@ from django.conf import settings
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
-
 import structlog
 
 # Логгеры для мониторинга
@@ -23,9 +22,8 @@ local_data = threading.local()
 
 
 class PerformanceMonitoringMiddleware(MiddlewareMixin):
-    """
-    Middleware для мониторинга производительности API
-    Отслеживает время ответа, меморию, медленные запросы
+    """Middleware для мониторинга производительности API
+    Отслеживает время ответа, меморию, медленные запросы.
     """
 
     def __init__(self, get_response):
@@ -66,9 +64,7 @@ class PerformanceMonitoringMiddleware(MiddlewareMixin):
         return response
 
     def _process_performance_metrics(self, request, response, duration):
-        """
-        Обработка и логирование метрик производительности
-        """
+        """Обработка и логирование метрик производительности."""
         path = request.path
         method = request.method
         status_code = response.status_code
@@ -99,10 +95,9 @@ class PerformanceMonitoringMiddleware(MiddlewareMixin):
                 **metrics,
                 threshold_ms=self.slow_request_threshold * 1000,
             )
-        else:
-            # Обычные запросы логируем только на DEBUG
-            if settings.DEBUG:
-                struct_logger.info("HTTP request processed", **metrics)
+        # Обычные запросы логируем только на DEBUG
+        elif settings.DEBUG:
+            struct_logger.info("HTTP request processed", **metrics)
 
         # Сохраняем метрики в кеш
         self._store_metrics_in_cache(metrics)
@@ -112,9 +107,7 @@ class PerformanceMonitoringMiddleware(MiddlewareMixin):
             self._track_ai_metrics(metrics)
 
     def _store_metrics_in_cache(self, metrics):
-        """
-        Сохранение метрик в Redis для мониторинга
-        """
+        """Сохранение метрик в Redis для мониторинга."""
         try:
             # Общие метрики производительности
             daily_key = f"performance_metrics:{time.strftime('%Y-%m-%d')}"
@@ -147,9 +140,7 @@ class PerformanceMonitoringMiddleware(MiddlewareMixin):
             struct_logger.error("Failed to store metrics", error=str(e))
 
     def _is_ai_request(self, path):
-        """
-        Проверка, является ли запрос AI операцией
-        """
+        """Проверка, является ли запрос AI операцией."""
         ai_paths = [
             "/api/rag_assistant/query/",
             "/api/rag_assistant/documents/",
@@ -160,9 +151,7 @@ class PerformanceMonitoringMiddleware(MiddlewareMixin):
         return any(path.startswith(ai_path) for ai_path in ai_paths)
 
     def _track_ai_metrics(self, metrics):
-        """
-        Отдельное отслеживание AI операций
-        """
+        """Отдельное отслеживание AI операций."""
         try:
             ai_key = f"ai_metrics:{time.strftime('%Y-%m-%d:%H')}"
 
@@ -190,9 +179,7 @@ class PerformanceMonitoringMiddleware(MiddlewareMixin):
 
 
 class HealthCheckMiddleware(MiddlewareMixin):
-    """
-    Middleware для health checks - быстрые ответы без логирования
-    """
+    """Middleware для health checks - быстрые ответы без логирования."""
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -218,9 +205,8 @@ class HealthCheckMiddleware(MiddlewareMixin):
 
 
 class TimingMiddleware(MiddlewareMixin):
-    """
-    Упрощенный middleware для отслеживания времени ответа
-    Легковесный и быстрый
+    """Упрощенный middleware для отслеживания времени ответа
+    Легковесный и быстрый.
     """
 
     def __init__(self, get_response):

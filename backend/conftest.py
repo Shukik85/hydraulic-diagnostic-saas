@@ -1,16 +1,13 @@
 """Pytest configuration and fixtures for Django tests."""
 
 import os
-import sys
 from pathlib import Path
-from typing import Generator
+import sys
 
 import django
 from django.conf import settings
 from django.core.management import execute_from_command_line
-from django.test import Client, TestCase
-from django.test.utils import get_runner
-
+from django.test import Client
 import pytest
 
 # Add backend directory to Python path
@@ -31,9 +28,7 @@ def django_db_setup(django_db_setup, django_db_blocker):
     """Setup test database with migrations."""
     with django_db_blocker.unblock():
         # Run migrations
-        execute_from_command_line([
-            "manage.py", "migrate", "--verbosity=1"
-        ])
+        execute_from_command_line(["manage.py", "migrate", "--verbosity=1"])
 
 
 @pytest.fixture
@@ -47,8 +42,8 @@ def api_client() -> Client:
     """API test client with JSON content type."""
     client = Client()
     client.defaults = {
-        'HTTP_CONTENT_TYPE': 'application/json',
-        'HTTP_ACCEPT': 'application/json'
+        "HTTP_CONTENT_TYPE": "application/json",
+        "HTTP_ACCEPT": "application/json",
     }
     return client
 
@@ -63,22 +58,25 @@ def enable_db_access_for_all_tests(db):
 def django_db_modify_db_settings():
     """Modify database settings for tests."""
     from django.conf import settings
-    settings.DATABASES["default"]["NAME"] = ":memory:"
-    
 
-@pytest.fixture(autouse=True) 
+    settings.DATABASES["default"]["NAME"] = ":memory:"
+
+
+@pytest.fixture(autouse=True)
 def setup_test_environment():
     """Setup test environment variables and configurations."""
     # Set test-specific environment variables
-    os.environ.update({
-        "TESTING": "True",
-        "DEBUG": "False",
-        "CELERY_TASK_ALWAYS_EAGER": "True",
-        "CELERY_TASK_EAGER_PROPAGATES": "True",
-    })
-    
+    os.environ.update(
+        {
+            "TESTING": "True",
+            "DEBUG": "False",
+            "CELERY_TASK_ALWAYS_EAGER": "True",
+            "CELERY_TASK_EAGER_PROPAGATES": "True",
+        }
+    )
+
     yield
-    
+
     # Cleanup after tests
     test_vars = ["TESTING", "CELERY_TASK_ALWAYS_EAGER", "CELERY_TASK_EAGER_PROPAGATES"]
     for var in test_vars:
@@ -101,11 +99,11 @@ def pytest_collection_modifyitems(config, items):
         # Mark TimescaleDB tests as slow
         if "timescale" in item.nodeid.lower():
             item.add_marker(pytest.mark.slow)
-        
+
         # Mark integration tests
         if "integration" in item.nodeid.lower() or "test_integration" in item.name:
             item.add_marker(pytest.mark.integration)
-        
+
         # Mark RAG assistant tests
         if "rag" in item.nodeid.lower():
             item.add_marker(pytest.mark.rag)

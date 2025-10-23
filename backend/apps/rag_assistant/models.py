@@ -95,4 +95,4 @@ class RagQueryLog(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{str(self.system)} @ {self.timestamp}"
+        return f"{self.system!s} @ {self.timestamp}"

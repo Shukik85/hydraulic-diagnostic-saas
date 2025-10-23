@@ -2,7 +2,6 @@
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -60,7 +59,8 @@ def test_login_and_token_refresh(api_client, user_data):
         login_url, {"email": user_data["email"], "password": user_data["password"]}
     )
     assert resp.status_code == status.HTTP_200_OK
-    assert "access" in resp.data and "refresh" in resp.data
+    assert "access" in resp.data
+    assert "refresh" in resp.data
     refresh = resp.data["refresh"]
     # Refresh
     refresh_url = reverse("token_refresh")

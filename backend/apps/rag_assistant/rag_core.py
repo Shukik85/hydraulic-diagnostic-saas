@@ -3,9 +3,9 @@
 # RAG core abstractions and local storage implementation
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import os
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -120,7 +120,8 @@ class VectorIndex:
     metadata: dict[str, Any] | None = None
 
     def build(self, vectors: np.ndarray) -> None:
-        assert vectors.ndim == 2 and vectors.shape[1] == self.dim
+        assert vectors.ndim == 2
+        assert vectors.shape[1] == self.dim
         if self.metric == "ip":
             index = faiss.IndexFlatIP(self.dim)
         elif self.metric == "l2":
@@ -181,8 +182,7 @@ class RAGOrchestrator:
             "docs": docs,
             **metadata,
         }
-        path = self.storage.save_index(version, index_bytes, meta)
-        return path
+        return self.storage.save_index(version, index_bytes, meta)
 
     def load_index(self, version: str) -> VectorIndex:
         idx_bytes, meta = self.storage.load_index(version)

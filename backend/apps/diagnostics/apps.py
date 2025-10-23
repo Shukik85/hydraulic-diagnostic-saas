@@ -9,7 +9,7 @@ class DiagnosticsConfig(AppConfig):
     verbose_name = "Диагностические Системы"
 
     def ready(self):
-        """Инициализация при запуске приложения"""
+        """Инициализация при запуске приложения."""
         try:
             # Импорт AI системы для инициализации
             # from .ai_engine import ai_engine

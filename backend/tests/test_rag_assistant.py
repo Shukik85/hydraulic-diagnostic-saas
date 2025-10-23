@@ -2,12 +2,12 @@
 
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-
 import pytest
-from apps.rag_assistant.models import Document, RagQueryLog, RagSystem
-from apps.rag_assistant.rag_service import RagAssistant
 from rest_framework import status
 from rest_framework.test import APIClient
+
+from apps.rag_assistant.models import Document, RagQueryLog, RagSystem
+from apps.rag_assistant.rag_service import RagAssistant
 
 User = get_user_model()
 
@@ -26,8 +26,7 @@ def user(db):
         db (TYPE): описание.
 
     """
-    user = User.objects.create_user(email="u@e.com", username="u", password="Pwd12345")
-    return user
+    return User.objects.create_user(email="u@e.com", username="u", password="Pwd12345")
 
 
 @pytest.fixture

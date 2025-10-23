@@ -2,17 +2,16 @@
 
 import json
 import os
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 from typing import Any
 
 import django
-
-import numpy as np
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+import numpy as np
 
 # Инициализация Django окружения (для доступа к settings, если нужно)
 BASE_DIR = os.path.dirname(__file__)
@@ -98,7 +97,7 @@ def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
     )
     parser = StrOutputParser()
 
-    chain = (
+    return (
         {"question": RunnablePassthrough()}
         | {"docs": RunnableLambda(lambda x: retrieve(x["question"]))}
         | RunnableLambda(
@@ -108,7 +107,6 @@ def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
         | llm
         | parser
     )
-    return chain
 
 
 def main():

@@ -10,10 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class APILoggingMiddleware(MiddlewareMixin):
-    """Middleware для логирования API запросов"""
+    """Middleware для логирования API запросов."""
 
     def process_request(self, request):
-        """Обработка входящего запроса"""
+        """Обработка входящего запроса."""
         request.start_time = time.time()
 
         # Логирование API запросов к диагностическим системам
@@ -25,7 +25,7 @@ class APILoggingMiddleware(MiddlewareMixin):
             )
 
     def process_response(self, request, response):
-        """Обработка исходящего ответа"""
+        """Обработка исходящего ответа."""
         if hasattr(request, "start_time") and request.path.startswith("/api/"):
             duration = time.time() - request.start_time
 
@@ -45,10 +45,10 @@ class APILoggingMiddleware(MiddlewareMixin):
 
 
 class DiagnosticSystemMonitoringMiddleware(MiddlewareMixin):
-    """Middleware для мониторинга диагностических операций"""
+    """Middleware для мониторинга диагностических операций."""
 
     def process_request(self, request):
-        """Мониторинг специфических операций"""
+        """Мониторинг специфических операций."""
         # Мониторинг критических операций
         critical_endpoints = [
             "/diagnose/",
@@ -63,26 +63,24 @@ class DiagnosticSystemMonitoringMiddleware(MiddlewareMixin):
             )
 
     def process_exception(self, request, exception):
-        """Обработка исключений в диагностических операциях"""
+        """Обработка исключений в диагностических операциях."""
         if request.path.startswith("/api/"):
             logger.error(
                 f" API Exception: {request.method} {request.path} "
-                f"Error: {str(exception)} "
+                f"Error: {exception!s} "
                 f"User: {request.user.username if request.user.is_authenticated else 'Anonymous'}"
             )
 
-        return None
-
 
 class RateLimitingMiddleware(MiddlewareMixin):
-    """Middleware для ограничения частоты запросов к AI операциям"""
+    """Middleware для ограничения частоты запросов к AI операциям."""
 
     def __init__(self, get_response):
         super().__init__(get_response)
         self.rate_limits = {}  # {user_id: [(timestamp, endpoint), ...]}
 
     def process_request(self, request):
-        """Проверка ограничений частоты"""
+        """Проверка ограничений частоты."""
         # Ограничения для AI операций
         ai_endpoints = ["/diagnose/", "/ask_question/", "/search_knowledge/"]
 
@@ -133,10 +131,10 @@ class RateLimitingMiddleware(MiddlewareMixin):
 
 
 class SystemHealthMiddleware(MiddlewareMixin):
-    """Middleware для мониторинга здоровья системы"""
+    """Middleware для мониторинга здоровья системы."""
 
     def process_request(self, request):
-        """Мониторинг системных ресурсов"""
+        """Мониторинг системных ресурсов."""
         # Простая проверка доступности базы данных
         if request.path == "/api/health/":
             try:

@@ -6,7 +6,6 @@ import sqlite3
 from typing import Any
 
 from django.conf import settings
-
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class HydraulicKnowledgeBase:
-    """RAG система для технических знаний по гидравлике"""
+    """RAG система для технических знаний по гидравлике."""
 
     def __init__(self) -> None:
         self.vectorizer = TfidfVectorizer(
@@ -28,7 +27,7 @@ class HydraulicKnowledgeBase:
         self._initialize_knowledge_base()
 
     def _initialize_knowledge_base(self) -> None:
-        """Инициализация базы знаний"""
+        """Инициализация базы знаний."""
         try:
             self._create_database()
             self._load_base_knowledge()
@@ -41,7 +40,7 @@ class HydraulicKnowledgeBase:
             logger.error(f"Ошибка инициализации базы знаний: {e}")
 
     def _create_database(self) -> None:
-        """Создание базы данных для хранения знаний"""
+        """Создание базы данных для хранения знаний."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
@@ -78,7 +77,7 @@ class HydraulicKnowledgeBase:
         conn.close()
 
     def _load_base_knowledge(self) -> None:
-        """Загрузка базовых знаний о гидравлических системах"""
+        """Загрузка базовых знаний о гидравлических системах."""
         base_knowledge = [
             {
                 "title": "ГОСТ 17752-81 Гидропривод объемный. Термины и определения",
@@ -133,7 +132,7 @@ class HydraulicKnowledgeBase:
         self.knowledge_metadata = base_knowledge
 
     def _build_vectors(self) -> None:
-        """Построение векторных представлений документов"""
+        """Построение векторных представлений документов."""
         try:
             self.knowledge_vectors = self.vectorizer.fit_transform(self.knowledge_texts)
             logger.info("Векторы знаний построены успешно")
@@ -141,7 +140,7 @@ class HydraulicKnowledgeBase:
             logger.error(f"Ошибка построения векторов: {e}")
 
     def search_knowledge(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
-        """Поиск релевантных знаний по запросу"""
+        """Поиск релевантных знаний по запросу."""
         try:
             if self.knowledge_vectors is None or not query.strip():
                 return []

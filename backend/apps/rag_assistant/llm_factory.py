@@ -7,8 +7,10 @@ from dataclasses import dataclass
 from django.conf import settings
 
 # LangChain Ollama provider (modern imports)
-from langchain_ollama import ChatOllama  # type: ignore
-from langchain_ollama import OllamaEmbeddings  # type: ignore
+from langchain_ollama import (
+    ChatOllama,  # type: ignore
+    OllamaEmbeddings,  # type: ignore
+)
 
 
 @dataclass

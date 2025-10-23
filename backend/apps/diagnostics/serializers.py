@@ -2,7 +2,6 @@
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-
 from rest_framework import serializers
 
 from .models import DiagnosticReport, HydraulicSystem, SensorData, SystemComponent
@@ -14,7 +13,7 @@ class ChoiceDisplayMixin:
     """Миксин для получения человекочитаемых значений полей выбора."""
 
     def get_choice_display(self, obj, field_name):
-        """Получает choice display
+        """Получает choice display.
 
         Args:
             obj (Any): Параметр obj
@@ -39,8 +38,7 @@ class UserBasicSerializer(serializers.ModelSerializer):
 
 
 class EquipmentSerializer(serializers.Serializer):
-    """
-    Зависит от реальной модели Equipment.
+    """Зависит от реальной модели Equipment.
     Здесь приведён шаблон, подставьте реальную модель и поля.
     """
 
@@ -102,7 +100,7 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         ]
 
     def get_system_type_display(self, obj):
-        """Получает system type display
+        """Получает system type display.
 
         Args:
             obj (Any): Параметр obj
@@ -111,7 +109,7 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         return self.get_choice_display(obj, "system_type")
 
     def get_status_display(self, obj):
-        """Получает status display
+        """Получает status display.
 
         Args:
             obj (Any): Параметр obj
@@ -120,7 +118,7 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         return self.get_choice_display(obj, "status")
 
     def get_criticality_display(self, obj):
-        """Получает criticality display
+        """Получает criticality display.
 
         Args:
             obj (Any): Параметр obj
@@ -129,7 +127,7 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         return self.get_choice_display(obj, "criticality")
 
     def get_latest_activity(self, obj):
-        """Получает latest activity
+        """Получает latest activity.
 
         Args:
             obj (Any): Параметр obj
@@ -173,7 +171,7 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
         ]
 
     def get_severity_display(self, obj):
-        """Получает severity display
+        """Получает severity display.
 
         Args:
             obj (Any): Параметр obj
@@ -182,7 +180,7 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
         return self.get_choice_display(obj, "severity")
 
     def get_status_display(self, obj):
-        """Получает status display
+        """Получает status display.
 
         Args:
             obj (Any): Параметр obj
@@ -192,8 +190,7 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
 
 
 class DiagnosticEngineSettingsSerializer(serializers.Serializer):
-    """
-    Пример сериализатора настроек для DiagnosticEngine.
+    """Пример сериализатора настроек для DiagnosticEngine.
     Замените на реальные поля настроек при необходимости.
     """
 

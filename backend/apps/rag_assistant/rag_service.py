@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import hashlib
 import os
 import tempfile
-from collections.abc import Callable
 from typing import Any
 
+import bleach  # type: ignore[import-untyped]
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
-
-import bleach  # type: ignore[import-untyped]
-from pydantic import BaseModel, field_validator
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from pydantic import BaseModel, field_validator
 
 from .llm_factory import LLMFactory
 from .models import Document, RagQueryLog, RagSystem
@@ -35,7 +34,7 @@ LOADER_MAP: dict[str, Callable[[str], Any]] = {}
 
 class QueryInput(BaseModel):
     """Input model for RAG queries with validation."""
-    
+
     query: str
     user_id: int | None = None
 
@@ -63,7 +62,7 @@ class QueryInput(BaseModel):
 
 class DocumentInput(BaseModel):
     """Input model for documents with validation."""
-    
+
     content: str
     format: str
     metadata: dict[str, Any]
@@ -107,7 +106,7 @@ class DocumentInput(BaseModel):
 
 class CacheStats:
     """Cache statistics management."""
-    
+
     @staticmethod
     def increment_hit() -> None:
         """Increment cache hit counter."""
@@ -138,7 +137,7 @@ class CacheStats:
 
 class RagAssistant:
     """RAG (Retrieval-Augmented Generation) Assistant."""
-    
+
     def __init__(self, system: RagSystem):
         """Initialize RAG Assistant with system configuration."""
         if not isinstance(system, RagSystem):
@@ -231,7 +230,7 @@ class RagAssistant:
             """Format retrieved documents for context."""
             return "\n\n".join(str(d["content"]) for d in docs if d.get("content"))
 
-        chain = (
+        return (
             {"question": RunnablePassthrough()}
             | {"docs": RunnableLambda(lambda x: retriever_fn(x["question"]))}
             | RunnableLambda(
@@ -241,7 +240,6 @@ class RagAssistant:
             | self.llm
             | parser
         )
-        return chain
 
     def answer(self, query: str, user_id: int | None = None) -> str:
         """Generate answer for user query using RAG."""
@@ -300,6 +298,7 @@ def tmp_file_for(doc: Document) -> str:
     Raises:
         TypeError: If doc is not a Document instance.
         ValueError: If document format or content is missing/invalid.
+
     """
     if not isinstance(doc, Document):
         raise TypeError("doc must be an instance of Document")

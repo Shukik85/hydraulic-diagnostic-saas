@@ -3,23 +3,21 @@
 # apps/rag_assistant/tasks.py (final mypy fixes: typed keys and correct model)
 from __future__ import annotations
 
+from collections import defaultdict
+from contextlib import contextmanager
 import logging
 import time
 import traceback
-from collections import defaultdict
-from contextlib import contextmanager
 from typing import Any
 
+from celery import shared_task
+from celery.utils.log import get_task_logger
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from celery import shared_task
-from celery.utils.log import get_task_logger
-
-from .models import Document as RagDocument
-from .models import RagSystem
+from .models import Document as RagDocument, RagSystem
 from .rag_service import RagAssistant
 
 logger = get_task_logger(__name__)
@@ -157,15 +155,15 @@ def process_document_async(
                 "timestamp": time.time(),
             }
     except ValidationError as e:
-        logger.error(f"Validation error processing document {document_id}: {str(e)}")
+        logger.error(f"Validation error processing document {document_id}: {e!s}")
         return {
             "status": "error",
-            "error": f"Validation error: {str(e)}",
+            "error": f"Validation error: {e!s}",
             "document_id": document_id,
         }
     except Exception as exc:
         logger.error(
-            f"Error processing document {document_id}: {str(exc)}\n{traceback.format_exc()}"
+            f"Error processing document {document_id}: {exc!s}\n{traceback.format_exc()}"
         )
         if self.request.retries < MAX_RETRIES:
             logger.info(
@@ -231,17 +229,17 @@ def _process_documents_for_system(
                     "system_id": int(system.pk),
                 }
                 errors.append(error_info)
-                logger.error(f"Error processing document {doc.pk}: {str(e)}")
+                logger.error(f"Error processing document {doc.pk}: {e!s}")
     except Exception as e:
         logger.error(
-            f"Error initializing RAG assistant for system {getattr(system, 'pk', None)}: {str(e)}"
+            f"Error initializing RAG assistant for system {getattr(system, 'pk', None)}: {e!s}"
         )
         for doc in docs:
             errors.append(
                 {
                     "document_id": int(doc.pk),
                     "document_title": doc.title,
-                    "error": f"System error: {str(e)}",
+                    "error": f"System error: {e!s}",
                     "system_id": int(getattr(system, "pk", 0)),
                 }
             )

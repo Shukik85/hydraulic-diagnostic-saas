@@ -13,7 +13,7 @@ class RagAssistantConfig(AppConfig):
     verbose_name = "RAG Ассистент"
 
     def ready(self):
-        """Инициализация приложения"""
+        """Инициализация приложения."""
         try:
             # Импорт сигналов
             pass
@@ -28,7 +28,7 @@ class RagAssistantConfig(AppConfig):
             print(f"❌ Ошибка инициализации RAG Ассистента: {e}")
 
     def _check_dependencies(self):
-        """Проверка необходимых зависимостей"""
+        """Проверка необходимых зависимостей."""
         required_packages = ["sentence_transformers", "sklearn", "numpy", "pandas"]
 
         missing_packages = []

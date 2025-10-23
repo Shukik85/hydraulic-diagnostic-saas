@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
+import uuid
 
 from django.contrib.postgres.indexes import BrinIndex, BTreeIndex
 from django.core.exceptions import ValidationError
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
     def with_owner(self) -> HydraulicSystemQuerySet:
-        """Выполняет with owner
+        """Выполняет with owner.
 
         Returns:
             None: None
@@ -31,7 +31,7 @@ class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
         return self.select_related("owner")
 
     def active(self) -> HydraulicSystemQuerySet:
-        """Выполняет active
+        """Выполняет active.
 
         Returns:
             None: None
@@ -115,7 +115,7 @@ class HydraulicSystem(models.Model):
         ]
 
     def __str__(self) -> str:
-        """Возвращает строковое представление объекта
+        """Возвращает строковое представление объекта.
 
         Returns:
             None: None
@@ -129,7 +129,7 @@ class HydraulicSystem(models.Model):
 
 class SystemComponentQuerySet(models.QuerySet["SystemComponent"]):
     def for_system(self, system_id: uuid.UUID) -> SystemComponentQuerySet:
-        """Выполняет for system
+        """Выполняет for system.
 
         Args:
             system_id (int): Идентификатор system
@@ -170,7 +170,7 @@ class SystemComponent(models.Model):
         indexes = [BTreeIndex(fields=["system", "name"], name="idx_comp_system_name")]
 
     def __str__(self) -> str:
-        """Возвращает строковое представление объекта
+        """Возвращает строковое представление объекта.
 
         Returns:
             None: None
@@ -186,7 +186,7 @@ class SystemComponent(models.Model):
 
 class SensorDataQuerySet(models.QuerySet["SensorData"]):
     def for_system(self, system_id: uuid.UUID) -> SensorDataQuerySet:
-        """Выполняет for system
+        """Выполняет for system.
 
         Args:
             system_id (int): Идентификатор system
@@ -198,7 +198,7 @@ class SensorDataQuerySet(models.QuerySet["SensorData"]):
         return self.filter(system_id=system_id).select_related("component")
 
     def time_range(self, start: datetime, end: datetime) -> SensorDataQuerySet:
-        """Выполняет time range
+        """Выполняет time range.
 
         Args:
             start (Any): Параметр start
@@ -275,7 +275,7 @@ class SensorData(models.Model):
         ]
 
     def clean(self) -> None:
-        """Выполняет clean
+        """Выполняет clean.
 
         Returns:
             None: None
@@ -287,7 +287,7 @@ class SensorData(models.Model):
             )
 
     def save(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
-        """Сохраняет объект модели в базу данных
+        """Сохраняет объект модели в базу данных.
 
         Returns:
             None: None
@@ -302,7 +302,7 @@ class SensorData(models.Model):
             )
 
     def __str__(self) -> str:
-        """Возвращает строковое представление объекта
+        """Возвращает строковое представление объекта.
 
         Returns:
             None: None
@@ -320,7 +320,7 @@ class DiagnosticReportQuerySet(models.QuerySet["DiagnosticReport"]):
     def recent_for_system(
         self, system_id: uuid.UUID, limit: int = 100
     ) -> DiagnosticReportQuerySet:
-        """Выполняет recent for system
+        """Выполняет recent for system.
 
         Args:
             system_id (int): Идентификатор system
@@ -392,7 +392,7 @@ class DiagnosticReport(models.Model):
         ]
 
     def clean(self) -> None:
-        """Выполняет clean
+        """Выполняет clean.
 
         Returns:
             None: None
@@ -402,7 +402,7 @@ class DiagnosticReport(models.Model):
             raise ValidationError("AI confidence must be between 0.0 and 1.0")
 
     def __str__(self) -> str:
-        """Возвращает строковое представление объекта
+        """Возвращает строковое представление объекта.
 
         Returns:
             None: None
@@ -412,8 +412,8 @@ class DiagnosticReport(models.Model):
 
 
 __all__ = [
-    "HydraulicSystem",
-    "SystemComponent",
-    "SensorData",
     "DiagnosticReport",
+    "HydraulicSystem",
+    "SensorData",
+    "SystemComponent",
 ]

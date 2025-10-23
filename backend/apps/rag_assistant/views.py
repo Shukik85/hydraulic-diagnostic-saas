@@ -4,10 +4,9 @@
 import logging
 import time
 
+from celery.result import AsyncResult
 from django.db.models import Avg, Count, Prefetch
 from django.db.models.functions import Length
-
-from celery.result import AsyncResult
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 class TimingMiddleware:
-    """Middleware для логирования медленных запросов"""
+    """Middleware для логирования медленных запросов."""
 
     def __init__(self, get_response):
         self.get_response = get_response
@@ -48,7 +47,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        """Оптимизированный queryset с eager loading"""
+        """Оптимизированный queryset с eager loading."""
         queryset = (
             Document.objects.select_related(
                 "user"
@@ -72,7 +71,7 @@ class RagSystemViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Оптимизированный queryset с агрегациями"""
+        """Оптимизированный queryset с агрегациями."""
         return RagSystem.objects.annotate(
             document_count=Count("documents", distinct=True),
             query_count=Count("query_logs", distinct=True),
@@ -87,15 +86,13 @@ class RagSystemViewSet(viewsets.ModelViewSet):
                 "query_logs",
                 queryset=RagQueryLog.objects.select_related("document").only(
                     "id", "query_text", "timestamp"
-                )[
-                    :10
-                ],  # Ограничиваем количество для оптимизации
+                )[:10],  # Ограничиваем количество для оптимизации
             ),
         )
 
     @action(detail=True, methods=["post"])
     def index(self, request, pk=None):
-        """Асинхронная индексация документов"""
+        """Асинхронная индексация документов."""
         system = self.get_object()
 
         # Получение списка документов для индексации
@@ -121,7 +118,7 @@ class RagSystemViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def query(self, request, pk=None):
-        """Синхронный запрос к RAG системе"""
+        """Синхронный запрос к RAG системе."""
         system = self.get_object()
         text = request.data.get("query")
 
@@ -148,14 +145,14 @@ class RagSystemViewSet(viewsets.ModelViewSet):
             )
             return Response({"answer": answer}, status=status.HTTP_200_OK)
         except Exception as e:
-            logger.error(f"Error in RAG query: {str(e)}")
+            logger.error(f"Error in RAG query: {e!s}")
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
     @action(detail=True, methods=["get"])
     def stats(self, request, pk=None):
-        """Получение статистики по системе"""
+        """Получение статистики по системе."""
         system = self.get_object()
 
         # Batch loading для агрегаций
@@ -189,7 +186,7 @@ class RagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["query_text", "response_text"]
 
     def get_queryset(self):
-        """Оптимизированный queryset с eager loading"""
+        """Оптимизированный queryset с eager loading."""
         return (
             RagQueryLog.objects.select_related("system", "document")
             .annotate(
@@ -206,7 +203,7 @@ class TaskStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, task_id):
-        """Получение статуса задачи по ID"""
+        """Получение статуса задачи по ID."""
         task_result = AsyncResult(str(task_id))
 
         response_data = {

@@ -7,13 +7,12 @@ import logging
 import time
 from typing import Any
 
+from decouple import config
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
 from django.http import JsonResponse
-
 import redis
-from decouple import config
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -22,6 +21,7 @@ from rest_framework.response import Response
 # Celery imports
 try:
     from celery.app.control import Inspect
+
     from core.celery import app as celery_app
 
     CELERY_AVAILABLE = True
@@ -37,9 +37,7 @@ HEALTH_CHECK_TOKEN = config("HEALTH_CHECK_ACCESS_TOKEN", default="")
 
 
 def check_database() -> dict[str, Any]:
-    """
-    Проверка состояния базы данных
-    """
+    """Проверка состояния базы данных."""
     start_time = time.time()
     try:
         with connection.cursor() as cursor:
@@ -60,14 +58,12 @@ def check_database() -> dict[str, Any]:
 
     except Exception as e:
         duration_ms = round((time.time() - start_time) * 1000, 2)
-        health_logger.error(f"Database health check failed: {str(e)}")
+        health_logger.error(f"Database health check failed: {e!s}")
         return {"status": "unhealthy", "error": str(e), "response_time_ms": duration_ms}
 
 
 def check_redis() -> dict[str, Any]:
-    """
-    Проверка состояния Redis
-    """
+    """Проверка состояния Redis."""
     start_time = time.time()
     try:
         # Основной кеш
@@ -105,14 +101,12 @@ def check_redis() -> dict[str, Any]:
 
     except Exception as e:
         duration_ms = round((time.time() - start_time) * 1000, 2)
-        health_logger.error(f"Redis health check failed: {str(e)}")
+        health_logger.error(f"Redis health check failed: {e!s}")
         return {"status": "unhealthy", "error": str(e), "response_time_ms": duration_ms}
 
 
 def check_celery() -> dict[str, Any]:
-    """
-    Проверка состояния Celery рабочих процессов
-    """
+    """Проверка состояния Celery рабочих процессов."""
     start_time = time.time()
 
     if not CELERY_AVAILABLE:
@@ -153,14 +147,12 @@ def check_celery() -> dict[str, Any]:
 
     except Exception as e:
         duration_ms = round((time.time() - start_time) * 1000, 2)
-        health_logger.error(f"Celery health check failed: {str(e)}")
+        health_logger.error(f"Celery health check failed: {e!s}")
         return {"status": "unhealthy", "error": str(e), "response_time_ms": duration_ms}
 
 
 def check_ai_services() -> dict[str, Any]:
-    """
-    Проверка доступности AI сервисов (например, OpenAI)
-    """
+    """Проверка доступности AI сервисов (например, OpenAI)."""
     start_time = time.time()
 
     try:
@@ -187,9 +179,7 @@ def check_ai_services() -> dict[str, Any]:
 
 
 def get_system_metrics() -> dict[str, Any]:
-    """
-    Получение базовых системных метрик
-    """
+    """Получение базовых системных метрик."""
     try:
         import psutil
 
@@ -204,15 +194,14 @@ def get_system_metrics() -> dict[str, Any]:
     except ImportError:
         return {"note": "psutil not installed - system metrics unavailable"}
     except Exception as e:
-        return {"error": f"Failed to get system metrics: {str(e)}"}
+        return {"error": f"Failed to get system metrics: {e!s}"}
 
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def health_check(request):
-    """
-    Комплексный health check endpoint
-    Используется load balancer'ami и мониторингом
+    """Комплексный health check endpoint
+    Используется load balancer'ami и мониторингом.
     """
     overall_start_time = time.time()
 
@@ -299,33 +288,29 @@ def health_check(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def readiness_check(request):
-    """
-    Kubernetes readiness probe - быстрая проверка
-    Проверяет только критические сервисы
+    """Kubernetes readiness probe - быстрая проверка
+    Проверяет только критические сервисы.
     """
     db_check = check_database()
     redis_check = check_redis()
 
     if db_check["status"] == "healthy" and redis_check["status"] == "healthy":
         return JsonResponse({"status": "ready", "timestamp": time.time()})
-    else:
-        return JsonResponse(
-            {
-                "status": "not_ready",
-                "timestamp": time.time(),
-                "database": db_check["status"],
-                "redis": redis_check["status"],
-            },
-            status=503,
-        )
+    return JsonResponse(
+        {
+            "status": "not_ready",
+            "timestamp": time.time(),
+            "database": db_check["status"],
+            "redis": redis_check["status"],
+        },
+        status=503,
+    )
 
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def liveness_check(request):
-    """
-    Kubernetes liveness probe - просто подтверждает, что Django работает
-    """
+    """Kubernetes liveness probe - просто подтверждает, что Django работает."""
     return JsonResponse(
         {
             "status": "alive",

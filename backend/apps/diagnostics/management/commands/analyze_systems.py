@@ -15,7 +15,7 @@ class Command(BaseCommand):
     help = "Analyze all active hydraulic systems and create diagnostics"
 
     def add_arguments(self, parser):
-        """Выполняет add arguments
+        """Выполняет add arguments.
 
         Args:
             parser (Any): Параметр parser
@@ -33,7 +33,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        """Основной метод выполнения команды"""
+        """Основной метод выполнения команды."""
         system_id = options.get("system_id")
         force = options.get("force", False)
 
@@ -105,9 +105,9 @@ class Command(BaseCommand):
 
             except Exception as e:
                 logger.error(
-                    f"Error analyzing system {system.id}: {str(e)}", exc_info=True
+                    f"Error analyzing system {system.id}: {e!s}", exc_info=True
                 )
-                self.stdout.write(self.style.ERROR(f"  ✗ Error: {str(e)}"))
+                self.stdout.write(self.style.ERROR(f"  ✗ Error: {e!s}"))
                 error_count += 1
 
         # Summary

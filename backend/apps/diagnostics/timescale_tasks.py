@@ -1,5 +1,4 @@
-"""
-TimescaleDB задачи для манаджмента гипертаблиц и политик.
+"""TimescaleDB задачи для манаджмента гипертаблиц и политик.
 
 Оптимизировано под политики:
 - Chunk interval: 7 дней
@@ -9,14 +8,13 @@ TimescaleDB задачи для манаджмента гипертаблиц и
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timedelta
+import logging
 from typing import Any
 
+from celery import shared_task
 from django.db import connection
 from django.utils import timezone
-
-from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +32,7 @@ def ensure_partitions_for_range(
     end_time: str | None = None,
     chunk_interval: str = "7 days",
 ) -> dict[str, Any]:
-    """
-    Обеспечивает создание chunk'ов TimescaleDB для указанного временного диапазона.
-    """
+    """Обеспечивает создание chunk'ов TimescaleDB для указанного временного диапазона."""
     try:
         start_dt: datetime = (
             timezone.now()
@@ -98,7 +94,7 @@ def ensure_partitions_for_range(
         }
         return result
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("Partition creation failed: %s", exc)
         # В Celery .retry возвращает None; добавляем явный возврат для mypy
         try:
@@ -143,7 +139,7 @@ def cleanup_old_partitions(
                             "size": size,
                         }
                     )
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     logger.warning("Failed to drop chunk %s: %s", chunk_name, e)
 
         return {
@@ -156,7 +152,7 @@ def cleanup_old_partitions(
             "task_id": getattr(self.request, "id", None),
         }
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("Cleanup failed: %s", exc)
         try:
             self.retry(countdown=300, exc=exc)  # type: ignore[call-arg]
@@ -196,7 +192,7 @@ def compress_old_chunks(
                             "range_end": end_time.isoformat(),
                         }
                     )
-                except Exception as e:  # noqa: BLE001
+                except Exception as e:
                     logger.warning("Failed to compress chunk %s: %s", chunk_name, e)
 
         return {
@@ -209,7 +205,7 @@ def compress_old_chunks(
             "task_id": getattr(self.request, "id", None),
         }
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("Compression failed: %s", exc)
         return {
             "status": "failed",
@@ -275,7 +271,7 @@ def get_hypertable_stats(table_name: str = "diagnostics_sensordata") -> dict[str
             "collected_at": timezone.now().isoformat(),
         }
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("Stats collection failed: %s", exc)
         return {"status": "failed", "error": str(exc), "table": table_name}
 
@@ -331,7 +327,7 @@ def timescale_health_check() -> dict[str, Any]:
             "checked_at": timezone.now().isoformat(),
         }
 
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("Health check failed: %s", exc)
         return {
             "status": "failed",

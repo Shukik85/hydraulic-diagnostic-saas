@@ -3,7 +3,6 @@
 import logging
 
 from django.db.models import Prefetch
-
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -46,7 +45,7 @@ class HydraulicSystemViewSet(BaseModelViewSet):
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        """Получает queryset"""
+        """Получает queryset."""
         return (
             HydraulicSystem.objects.select_related()
             .prefetch_related(
@@ -60,7 +59,7 @@ class HydraulicSystemViewSet(BaseModelViewSet):
 
     @action(detail=True, methods=["get"])
     def sensor_data(self, request, pk=None):
-        """Выполняет sensor data
+        """Выполняет sensor data.
 
         Args:
             request (HttpRequest): HTTP запрос
@@ -76,7 +75,7 @@ class HydraulicSystemViewSet(BaseModelViewSet):
 
     @action(detail=True, methods=["get"])
     def reports(self, request, pk=None):
-        """Выполняет reports
+        """Выполняет reports.
 
         Args:
             request (HttpRequest): HTTP запрос
@@ -92,7 +91,7 @@ class HydraulicSystemViewSet(BaseModelViewSet):
 
     @action(detail=True, methods=["post"], parser_classes=[MultiPartParser, FormParser])
     def upload_sensor_data(self, request, pk=None):
-        """Выполняет upload sensor data
+        """Выполняет upload sensor data.
 
         Args:
             request (HttpRequest): HTTP запрос
@@ -125,7 +124,7 @@ class SystemComponentViewSet(BaseModelViewSet):
     ordering = ["name"]
 
     def get_queryset(self):
-        """Получает queryset"""
+        """Получает queryset."""
         return SystemComponent.objects.select_related("system").all()
 
 
@@ -139,7 +138,7 @@ class SensorDataViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ["-timestamp"]
 
     def get_queryset(self):
-        """Получает queryset"""
+        """Получает queryset."""
         return SensorData.objects.select_related("system", "component").all()
 
 
@@ -151,12 +150,12 @@ class DiagnosticReportViewSet(BaseModelViewSet):
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        """Получает queryset"""
+        """Получает queryset."""
         return DiagnosticReport.objects.select_related("system", "created_by").all()
 
     @action(detail=True, methods=["post"])
     def complete(self, request, pk=None):
-        """Выполняет complete
+        """Выполняет complete.
 
         Args:
             request (HttpRequest): HTTP запрос

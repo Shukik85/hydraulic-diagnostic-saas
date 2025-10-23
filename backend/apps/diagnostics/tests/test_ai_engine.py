@@ -1,12 +1,12 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
-import unittest
 from datetime import datetime, timedelta
+import unittest
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-
 import pandas as pd
+
 from apps.diagnostics.models import HydraulicSystem, SensorData
 
 User = get_user_model()
@@ -84,7 +84,7 @@ class AIEngineTestCase(TestCase):
             ]
         )
         # заглушка: движок может отличаться от старых тестов; важна импортная совместимость
-        self.assertIsInstance(df, pd.DataFrame)
+        assert isinstance(df, pd.DataFrame)
 
 
 if __name__ == "__main__":

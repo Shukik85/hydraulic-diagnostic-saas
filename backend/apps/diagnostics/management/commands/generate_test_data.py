@@ -1,9 +1,9 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
+from datetime import datetime, timedelta
 import json
 import logging
 import random
-from datetime import datetime, timedelta
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -33,13 +33,13 @@ class Command(BaseCommand):
         )
 
     def _get_user(self, user_id):
-        """Получение пользователя по ID или первого доступного"""
+        """Получение пользователя по ID или первого доступного."""
         if user_id:
             return User.objects.get(id=user_id)
         return User.objects.first()
 
     def _get_system_templates(self):
-        """Шаблоны систем с реалистичными параметрами"""
+        """Шаблоны систем с реалистичными параметрами."""
         return [
             {
                 "name_pattern": "Промышленный пресс №{}",
@@ -80,7 +80,7 @@ class Command(BaseCommand):
         ]
 
     def _create_hydraulic_system(self, template, system_num, user):
-        """Создание одной гидравлической системы"""
+        """Создание одной гидравлической системы."""
         statuses = ["active", "maintenance", "inactive"]
         status_weights = [0.7, 0.2, 0.1]
 
@@ -101,7 +101,7 @@ class Command(BaseCommand):
         )
 
     def _calculate_sensor_values(self, base_values, daily_offsets, drifts, noises):
-        """Расчет значений датчиков с учетом всех факторов"""
+        """Расчет значений датчиков с учетом всех факторов."""
         current_pressure = (
             base_values["pressure"]
             + daily_offsets["pressure"]
@@ -128,7 +128,7 @@ class Command(BaseCommand):
         }
 
     def _determine_critical_conditions(self, values, system, base_flow):
-        """Определение критических условий для датчиков"""
+        """Определение критических условий для датчиков."""
         return {
             "pressure": values["pressure"] > system.max_pressure * 0.95
             or values["pressure"] < 80,
@@ -140,7 +140,7 @@ class Command(BaseCommand):
     def _create_sensor_data_objects(
         self, system, timestamp, values, critical_conditions
     ):
-        """Создание объектов данных датчиков"""
+        """Создание объектов данных датчиков."""
         sensor_types_data = [
             {
                 "sensor_type": "pressure",
@@ -188,7 +188,7 @@ class Command(BaseCommand):
     def _generate_sensor_data_for_system(
         self, system, template, sensors_count, days_back
     ):
-        """Генерация данных датчиков для одной системы"""
+        """Генерация данных датчиков для одной системы."""
         sensors_for_system = []
         start_time = datetime.now() - timedelta(days=days_back)
 
@@ -256,11 +256,13 @@ class Command(BaseCommand):
         return sensors_for_system
 
     def _create_diagnostic_report(self, system, day, events):
-        """Создание диагностического отчета для дня с критическими событиями"""
+        """Создание диагностического отчета для дня с критическими событиями."""
         severity = (
             "critical"
             if len(events) >= 10
-            else "error" if len(events) >= 6 else "warning"
+            else "error"
+            if len(events) >= 6
+            else "warning"
         )
 
         # Анализ типов проблем
@@ -311,7 +313,7 @@ class Command(BaseCommand):
         )
 
     def _generate_diagnostic_reports(self, system):
-        """Генерация диагностических отчетов на основе критических событий"""
+        """Генерация диагностических отчетов на основе критических событий."""
         critical_events = SensorData.objects.filter(
             system=system, is_critical=True
         ).order_by("timestamp")
@@ -333,7 +335,7 @@ class Command(BaseCommand):
                 self._create_diagnostic_report(system, day, events)
 
     def _display_summary(self, user, systems_count, total_sensors_created, days_back):
-        """Отображение итоговой статистики"""
+        """Отображение итоговой статистики."""
         total_reports = DiagnosticReport.objects.filter(system__owner=user).count()
 
         self.stdout.write(
@@ -396,4 +398,4 @@ class Command(BaseCommand):
 
         except Exception as e:
             logger.error(f"Ошибка генерации тестовых данных: {e}")
-            self.stdout.write(self.style.ERROR(f"❌ Ошибка генерации: {str(e)}"))
+            self.stdout.write(self.style.ERROR(f"❌ Ошибка генерации: {e!s}"))

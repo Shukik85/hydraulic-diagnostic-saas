@@ -3,14 +3,14 @@
 CI-compatible with TimescaleDB and Celery Beat integration.
 """
 
-import os
 from datetime import timedelta
+import os
 from pathlib import Path
 
-import structlog
 from celery.schedules import crontab
 from corsheaders.defaults import default_headers
 from decouple import Csv, config
+import structlog
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -174,7 +174,7 @@ CSP_FRAME_ANCESTORS = ("'none'",)
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv()) or []
 CORS_URLS_REGEX = config("CORS_URLS_REGEX", default=r"^/api/.*$")
-CORS_ALLOW_HEADERS = list(default_headers) + ["Authorization", "X-Requested-With"]
+CORS_ALLOW_HEADERS = [*list(default_headers), "Authorization", "X-Requested-With"]
 
 # ----------------------------------------------------------------------------
 # DRF / JWT

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime
+import logging
 from typing import Any
 
 from celery import shared_task
@@ -26,9 +26,7 @@ def rag_build_index_task(
     version: str | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> str:
-    """
-    Celery task to build and persist local FAISS index for provided documents.
-    """
+    """Celery task to build and persist local FAISS index for provided documents."""
     version = version or datetime.utcnow().strftime("%Y%m%d%H%M%S")
     metadata = metadata or {}
 

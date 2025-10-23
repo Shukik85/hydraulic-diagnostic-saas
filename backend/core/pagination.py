@@ -6,7 +6,6 @@
 from collections import OrderedDict
 
 from django.core.paginator import InvalidPage
-
 from rest_framework.exceptions import NotFound
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -14,9 +13,8 @@ from rest_framework.utils.urls import remove_query_param, replace_query_param
 
 
 class StandardResultsSetPagination(PageNumberPagination):
-    """
-    Стандартная пагинация для большинства API endpoints
-    Оптимизирована для производительности
+    """Стандартная пагинация для большинства API endpoints
+    Оптимизирована для производительности.
     """
 
     page_size = 20
@@ -25,9 +23,7 @@ class StandardResultsSetPagination(PageNumberPagination):
     page_query_param = "page"
 
     def get_paginated_response(self, data):
-        """
-        Возвращает оптимизированный ответ с метаданными пагинации
-        """
+        """Возвращает оптимизированный ответ с метаданными пагинации."""
         return Response(
             OrderedDict(
                 [
@@ -50,9 +46,7 @@ class StandardResultsSetPagination(PageNumberPagination):
         )
 
     def paginate_queryset(self, queryset, request, view=None):
-        """
-        Оптимизированная пагинация с проверкой ошибок
-        """
+        """Оптимизированная пагинация с проверкой ошибок."""
         page_size = self.get_page_size(request)
         if not page_size:
             return None
@@ -76,9 +70,7 @@ class StandardResultsSetPagination(PageNumberPagination):
 
 
 class LargeResultsSetPagination(PageNumberPagination):
-    """
-    Пагинация для больших наборов данных (логи, отчеты)
-    """
+    """Пагинация для больших наборов данных (логи, отчеты)."""
 
     page_size = 50
     page_size_query_param = "page_size"
@@ -133,9 +125,7 @@ class LargeResultsSetPagination(PageNumberPagination):
 
 
 class SmallResultsSetPagination(PageNumberPagination):
-    """
-    Маленькая пагинация для малых наборов данных
-    """
+    """Маленькая пагинация для малых наборов данных."""
 
     page_size = 10
     page_size_query_param = "page_size"
@@ -155,8 +145,7 @@ class SmallResultsSetPagination(PageNumberPagination):
 
 
 class NoPagination(PageNumberPagination):
-    """
-    Отключение пагинации для малых списков
+    """Отключение пагинации для малых списков
     ОСТОРОЖНО: используйте только для гарантированно малых результатов!
     """
 
@@ -164,9 +153,8 @@ class NoPagination(PageNumberPagination):
 
 
 class CursorPaginationOptimized(PageNumberPagination):
-    """
-    Оптимизированная cursor-based пагинация для больших данных
-    Лучшая производительность для очень больших таблиц
+    """Оптимизированная cursor-based пагинация для больших данных
+    Лучшая производительность для очень больших таблиц.
     """
 
     page_size = 25

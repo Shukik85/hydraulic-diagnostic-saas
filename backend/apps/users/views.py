@@ -1,7 +1,6 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
 from django.contrib.auth import get_user_model
-
 from rest_framework import filters, generics, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission

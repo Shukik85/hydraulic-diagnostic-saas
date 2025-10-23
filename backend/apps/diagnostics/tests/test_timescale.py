@@ -68,9 +68,7 @@ class TimescaleDBSmokeTest(TimescaleDBTestCase):
 
     def test_timescale_extension_installed(self):
         """Тест: расширение TimescaleDB установлено."""
-        self.assertTrue(
-            self.check_timescale_extension(), "TimescaleDB extension is not installed"
-        )
+        assert self.check_timescale_extension(), "TimescaleDB extension is not installed"
 
     def test_sensor_data_is_hypertable(self):
         """Тест: таблица sensor_data является hypertable."""
@@ -78,10 +76,7 @@ class TimescaleDBSmokeTest(TimescaleDBTestCase):
         if not self.check_timescale_extension():
             self.skipTest("TimescaleDB extension not available")
 
-        self.assertTrue(
-            self.check_hypertable_exists("sensor_data"),
-            "sensor_data table is not a hypertable",
-        )
+        assert self.check_hypertable_exists("sensor_data"), "sensor_data table is not a hypertable"
 
     def test_insert_sensor_data(self):
         """Тест: вставка данных в hypertable работает корректно."""
@@ -105,15 +100,15 @@ class TimescaleDBSmokeTest(TimescaleDBTestCase):
             test_data.append(sensor_data)
 
         # Проверяем, что данные корректно вставлены
-        self.assertEqual(SensorData.objects.count(), 10)
+        assert SensorData.objects.count() == 10
 
         # Проверяем работу optimized QuerySet'а
         recent_data = SensorData.objects.recent_for_system(self.system.id, limit=5)
-        self.assertEqual(len(recent_data), 5)
+        assert len(recent_data) == 5
 
         # Проверяем сортировку по убыванию времени
         timestamps = [item.timestamp for item in recent_data]
-        self.assertEqual(timestamps, sorted(timestamps, reverse=True))
+        assert timestamps == sorted(timestamps, reverse=True)
 
     def test_time_based_queries(self):
         """Тест: временные запросы работают эффективно."""
@@ -139,8 +134,8 @@ class TimescaleDBSmokeTest(TimescaleDBTestCase):
             system=self.system, timestamp__gte=week_ago
         )
 
-        self.assertGreater(len(recent_week_data), 0)
-        self.assertLessEqual(len(recent_week_data), 30)  # 7 дней * 4 записи в день
+        assert len(recent_week_data) > 0
+        assert len(recent_week_data) <= 30  # 7 дней * 4 записи в день
 
     def test_timescale_specific_queries(self):
         """Тест: TimescaleDB специфичные функции."""
@@ -164,7 +159,7 @@ class TimescaleDBSmokeTest(TimescaleDBTestCase):
 
             results = cursor.fetchall()
             # Результаты могут быть пустыми, но запрос должен выполняться без ошибок
-            self.assertIsInstance(results, list)
+            assert isinstance(results, list)
 
 
 class TimescaleCeleryTasksTest(TimescaleDBTestCase):
@@ -178,10 +173,10 @@ class TimescaleCeleryTasksTest(TimescaleDBTestCase):
         # Вызываем задачу проверки здоровья
         result = timescale_health_check()
 
-        self.assertEqual(result["status"], "success")
-        self.assertIn("timescale_version", result)
-        self.assertIn("hypertables_count", result)
-        self.assertIn("checked_at", result)
+        assert result["status"] == "success"
+        assert "timescale_version" in result
+        assert "hypertables_count" in result
+        assert "checked_at" in result
 
     def test_get_hypertable_stats(self):
         """Тест: получение статистики по hypertable."""
@@ -202,11 +197,11 @@ class TimescaleCeleryTasksTest(TimescaleDBTestCase):
         # Вызываем задачу получения статистики
         result = get_hypertable_stats("sensor_data")
 
-        self.assertEqual(result["status"], "success")
-        self.assertEqual(result["table"], "sensor_data")
-        self.assertIn("total_size", result)
-        self.assertIn("total_chunks", result)
-        self.assertIn("compression_ratio", result)
+        assert result["status"] == "success"
+        assert result["table"] == "sensor_data"
+        assert "total_size" in result
+        assert "total_chunks" in result
+        assert "compression_ratio" in result
 
     def test_ensure_partitions_task(self):
         """Тест: задача обеспечения партиций."""
@@ -228,13 +223,13 @@ class TimescaleCeleryTasksTest(TimescaleDBTestCase):
                 task, table_name="sensor_data", start_time=start_time, end_time=end_time
             )
 
-            self.assertEqual(result["status"], "success")
-            self.assertEqual(result["table"], "sensor_data")
-            self.assertIn("existing_chunks", result)
+            assert result["status"] == "success"
+            assert result["table"] == "sensor_data"
+            assert "existing_chunks" in result
         except Exception as e:
             # В тестовой среде задача может не выполниться полностью
             # но должна обрабатывать ошибки корректно
-            self.assertIsInstance(e, Exception)
+            assert isinstance(e, Exception)
 
 
 class TimescaleDBPerformanceTest(TimescaleDBTestCase):
@@ -272,13 +267,13 @@ class TimescaleDBPerformanceTest(TimescaleDBTestCase):
 
         # Проверяем что данные вставились
         total_count = SensorData.objects.filter(system=self.system).count()
-        self.assertEqual(total_count, 1000)
+        assert total_count == 1000
 
         # Логируем время выполнения (в реальном проекте можно использовать metrics)
         print(f"Bulk insert of 1000 records took: {insert_time:.2f} seconds")
 
         # Базовая проверка производительности (должно быть быстро)
-        self.assertLess(insert_time, 10.0, "Bulk insert took too long")
+        assert insert_time < 10.0, "Bulk insert took too long"
 
     def test_time_range_query_performance(self):
         """Тест: производительность запросов по временному диапазону."""
@@ -313,10 +308,10 @@ class TimescaleDBPerformanceTest(TimescaleDBTestCase):
         end_time = time.time()
         query_time = end_time - start_time
 
-        self.assertGreater(len(recent_data), 0)
+        assert len(recent_data) > 0
         print(
             f"Query for last week returned {len(recent_data)} records in {query_time:.3f} seconds"
         )
 
         # Запрос должен выполняться быстро благодаря индексам TimescaleDB
-        self.assertLess(query_time, 1.0, "Time range query took too long")
+        assert query_time < 1.0, "Time range query took too long"

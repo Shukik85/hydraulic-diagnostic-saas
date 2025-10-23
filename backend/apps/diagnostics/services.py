@@ -8,8 +8,7 @@ from .models import DiagnosticReport, HydraulicSystem
 
 
 class DiagnosticEngine:
-    """
-    Основной движок диагностики гидравлических систем.
+    """Основной движок диагностики гидравлических систем.
     Анализирует данные датчиков, выявляет аномалии и создает диагностические отчёты.
     """
 
@@ -25,8 +24,7 @@ class DiagnosticEngine:
     def analyze_system(
         self, system_id: str, sensor_data: dict[str, Any]
     ) -> dict[str, Any]:
-        """
-        Основной метод анализа системы.
+        """Основной метод анализа системы.
 
         Args:
             system_id: ID гидравлической системы
@@ -34,6 +32,7 @@ class DiagnosticEngine:
 
         Returns:
             Dict с результатами анализа включая аномалии и диагностический отчёт
+
         """
         try:
             system = HydraulicSystem.objects.get(id=system_id)
@@ -66,7 +65,7 @@ class DiagnosticEngine:
 
         except HydraulicSystem.DoesNotExist as exc:
             raise ValueError(f"Система с ID {system_id} не найдена") from exc
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise RuntimeError(f"Ошибка при анализе системы: {exc}") from exc
 
     def detect_anomalies(self, sensor_data: dict[str, Any]) -> list[dict[str, Any]]:
@@ -113,7 +112,7 @@ class DiagnosticEngine:
         title = "Критические аномалии" if has_critical else "Предупреждения"
         description = self.format_anomalies_description(anomalies)
 
-        report = DiagnosticReport.objects.create(
+        return DiagnosticReport.objects.create(
             system=system,
             title=title,
             severity=severity,
@@ -123,7 +122,6 @@ class DiagnosticEngine:
             description=description,
             created_at=timezone.now(),
         )
-        return report
 
     def format_anomalies_description(self, anomalies: list[dict[str, Any]]) -> str:
         """Форматирует описание аномалий в читаемый текст."""
