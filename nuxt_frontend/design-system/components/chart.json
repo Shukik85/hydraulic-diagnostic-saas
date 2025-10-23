@@ -1,0 +1,38 @@
+{
+  "name": "Chart Component",
+  "type": "COMPONENT",
+  "properties": {
+    "background": "#F8F9FA",
+    "borderRadius": "8px",
+    "padding": "16px",
+    "gridColor": "#E9ECEF",
+    "axisColor": "#6C757D"
+  },
+  "variants": [
+    {
+      "name": "Line Chart",
+      "properties": {
+        "lineColors": ["#0066CC", "#FF9900", "#388E3C"],
+        "lineWidth": "3px",
+        "pointRadius": "4px"
+      }
+    },
+    {
+      "name": "Bar Chart",
+      "properties": {
+        "barColors": ["#0066CC", "#FF9900", "#388E3C"],
+        "barWidth": "32px",
+        "barSpacing": "8px"
+      }
+    },
+    {
+      "name": "Gauge Chart",
+      "properties": {
+        "backgroundColor": "#F8F9FA",
+        "fillColor": "#0066CC",
+        "strokeColor": "#E9ECEF",
+        "strokeWidth": "8px"
+      }
+    }
+  ]
+}

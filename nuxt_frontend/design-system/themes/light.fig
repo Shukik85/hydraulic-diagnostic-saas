@@ -1,0 +1,45 @@
+{
+  "name": "Light Theme",
+  "type": "THEME",
+  "colors": {
+    "primary": "#0066CC",
+    "secondary": "#FF9900",
+    "success": "#388E3C",
+    "warning": "#FF9900",
+    "error": "#D32F2F",
+    "background": "#FFFFFF",
+    "surface": "#F8F9FA",
+    "text": "#212121",
+    "textSecondary": "#6C757D",
+    "border": "#E9ECEF",
+    "divider": "#E9ECEF"
+  },
+  "typography": {
+    "fontFamily": "Inter, sans-serif",
+    "h1": { "fontSize": "32px", "fontWeight": "bold", "lineHeight": "1.2" },
+    "h2": { "fontSize": "24px", "fontWeight": "bold", "lineHeight": "1.3" },
+    "h3": { "fontSize": "20px", "fontWeight": "600", "lineHeight": "1.4" },
+    "body": { "fontSize": "16px", "fontWeight": "400", "lineHeight": "1.5" },
+    "caption": { "fontSize": "14px", "fontWeight": "400", "lineHeight": "1.4" }
+  },
+  "spacing": {
+    "xs": "4px",
+    "sm": "8px",
+    "md": "16px",
+    "lg": "24px",
+    "xl": "32px",
+    "xxl": "48px"
+  },
+  "borderRadius": {
+    "sm": "4px",
+    "md": "8px",
+    "lg": "12px",
+    "xl": "16px"
+  },
+  "shadows": {
+    "sm": "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+    "md": "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+    "lg": "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+    "xl": "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
+  }
+}

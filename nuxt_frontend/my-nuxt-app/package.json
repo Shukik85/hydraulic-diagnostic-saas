@@ -1,0 +1,19 @@
+{
+  "name": "my-nuxt-app",
+  "version": "1.0.0",
+  "description": "A Nuxt.js application",
+  "author": "Your Name",
+  "license": "MIT",
+  "scripts": {
+    "dev": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start"
+  },
+  "dependencies": {
+    "nuxt": "^latest"
+  },
+  "devDependencies": {
+    "@nuxt/types": "^latest",
+    "typescript": "^latest"
+  }
+}

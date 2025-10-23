@@ -1,13 +1,7 @@
 <template>
-  <div>
-    <NuxtPage />
-  </div>
+  <NuxtPage />
 </template>
 
-<script setup>
-// Основной файл приложения Nuxt 3
+<script setup lang="ts">
+// Global app entry for Nuxt
 </script>
-
-<style>
-/* Глобальные стили */
-</style>

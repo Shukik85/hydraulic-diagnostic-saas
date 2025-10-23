@@ -1,0 +1,21 @@
+my-nuxt-app
+├── assets
+├── components
+│   └── common
+├── composables
+├── layouts
+│   └── default.vue
+├── pages
+│   └── index.vue
+├── plugins
+├── public
+├── server
+│   └── api
+├── utils
+│   └── index.ts
+├── .env
+├── .gitignore
+├── .nuxt.config.ts
+├── package.json
+├── tsconfig.json
+└── README.md

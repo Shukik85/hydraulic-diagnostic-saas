@@ -1,0 +1,40 @@
+{
+  "name": "Button Component",
+  "type": "COMPONENT",
+  "variants": [
+    {
+      "name": "Primary",
+      "properties": {
+        "background": "#0066CC",
+        "textColor": "#FFFFFF",
+        "borderRadius": "8px",
+        "padding": "12px 24px",
+        "fontSize": "14px",
+        "fontWeight": "600"
+      }
+    },
+    {
+      "name": "Secondary",
+      "properties": {
+        "background": "#FFFFFF",
+        "textColor": "#0066CC",
+        "border": "2px solid #0066CC",
+        "borderRadius": "8px",
+        "padding": "12px 24px",
+        "fontSize": "14px",
+        "fontWeight": "600"
+      }
+    },
+    {
+      "name": "Warning",
+      "properties": {
+        "background": "#FF9900",
+        "textColor": "#FFFFFF",
+        "borderRadius": "8px",
+        "padding": "12px 24px",
+        "fontSize": "14px",
+        "fontWeight": "600"
+      }
+    }
+  ]
+}

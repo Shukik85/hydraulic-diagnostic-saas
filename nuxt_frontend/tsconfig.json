@@ -1,46 +1,24 @@
 {
-  "extends": "./.nuxt/tsconfig.json",
   "compilerOptions": {
-    "strict": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "noUncheckedIndexedAccess": true,
-    "allowUnreachableCode": false,
-    "allowUnusedLabels": false,
-    "verbatimModuleSyntax": true,
-    "forceConsistentCasingInFileNames": true,
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "lib": ["ESNext", "DOM"],
+    "jsx": "preserve",
+    "esModuleInterop": true,
     "skipLibCheck": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "removeComments": false,
-    "importHelpers": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "resolveJsonModule": true
+    "strict": true,
+    "types": ["node", "@nuxt/schema"]
   },
+  "exclude": ["node_modules", ".nuxt", "dist"],
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.vue",
-    "**/*.js",
-    "**/*.jsx",
-    "**/*.mjs",
-    "**/*.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ".nuxt",
-    ".output",
-    "dist",
-    "coverage",
-    "**/*.spec.ts",
-    "**/*.test.ts"
+    "nuxt.config.ts",
+    "app.vue",
+    "pages/**/*.vue",
+    "layouts/**/*.vue",
+    "components/**/*.vue",
+    "composables/**/*.ts",
+    "plugins/**/*.ts",
+    "assets/**/*.css"
   ]
 }

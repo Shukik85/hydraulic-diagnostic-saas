@@ -1,0 +1,30 @@
+{
+  "name": "Card Component",
+  "type": "COMPONENT",
+  "properties": {
+    "background": "#FFFFFF",
+    "borderRadius": "12px",
+    "boxShadow": "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+    "padding": "24px",
+    "border": "1px solid #E9ECEF"
+  },
+  "variants": [
+    {
+      "name": "Default",
+      "properties": {}
+    },
+    {
+      "name": "Elevated",
+      "properties": {
+        "boxShadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1)"
+      }
+    },
+    {
+      "name": "Outlined",
+      "properties": {
+        "background": "transparent",
+        "border": "2px solid #E9ECEF"
+      }
+    }
+  ]
+}

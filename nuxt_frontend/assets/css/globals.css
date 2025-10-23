@@ -1,0 +1,400 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+    --font-size: 16px;
+
+    /* Hydraulic Diagnostic Color System */
+    --primary-500: #1E88E5;
+    --primary-400: #42A5F5;
+    --primary-600: #1976D2;
+    --secondary-500: #00ACC1;
+    --secondary-400: #26C6DA;
+    --success: #4CAF50;
+    --warning: #FF9800;
+    --error: #F44336;
+    --info: #2196F3;
+
+    /* Light Theme */
+    --background: #FAFAFA;
+    --foreground: rgba(0, 0, 0, 0.87);
+    --card: #FFFFFF;
+    --card-foreground: rgba(0, 0, 0, 0.87);
+    --popover: #FFFFFF;
+    --popover-foreground: rgba(0, 0, 0, 0.87);
+    --primary: #1E88E5;
+    --primary-foreground: #FFFFFF;
+    --secondary: #00ACC1;
+    --secondary-foreground: #FFFFFF;
+    --muted: rgba(0, 0, 0, 0.04);
+    --muted-foreground: rgba(0, 0, 0, 0.6);
+    --accent: rgba(30, 136, 229, 0.08);
+    --accent-foreground: #1E88E5;
+    --destructive: #F44336;
+    --destructive-foreground: #FFFFFF;
+    --border: rgba(0, 0, 0, 0.12);
+    --input: rgba(0, 0, 0, 0.12);
+    --input-background: #FFFFFF;
+    --switch-background: rgba(0, 0, 0, 0.38);
+    --ring: #1E88E5;
+
+    /* Status Colors */
+    --status-success: #4CAF50;
+    --status-warning: #FF9800;
+    --status-error: #F44336;
+    --status-info: #2196F3;
+
+    /* Chart Colors */
+    --chart-1: #1E88E5;
+    --chart-2: #00ACC1;
+    --chart-3: #4CAF50;
+    --chart-4: #FF9800;
+    --chart-5: #9C27B0;
+
+    /* Spacing (8px base unit) */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-2xl: 48px;
+
+    /* Border Radius */
+    --radius: 12px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+
+    /* Elevation Shadows */
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --elevation-2: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+    --elevation-4: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+    --elevation-8: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-medium: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Sidebar */
+    --sidebar: #FFFFFF;
+    --sidebar-foreground: rgba(0, 0, 0, 0.87);
+    --sidebar-primary: #1E88E5;
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: rgba(30, 136, 229, 0.08);
+    --sidebar-accent-foreground: #1E88E5;
+    --sidebar-border: rgba(0, 0, 0, 0.12);
+    --sidebar-ring: #1E88E5;
+
+    --font-weight-medium: 500;
+    --font-weight-normal: 400;
+}
+
+.dark {
+    /* Dark Theme */
+    --background: #121212;
+    --foreground: rgba(255, 255, 255, 0.87);
+    --card: #1E1E1E;
+    --card-foreground: rgba(255, 255, 255, 0.87);
+    --popover: #1E1E1E;
+    --popover-foreground: rgba(255, 255, 255, 0.87);
+    --primary: #42A5F5;
+    --primary-foreground: rgba(0, 0, 0, 0.87);
+    --secondary: #26C6DA;
+    --secondary-foreground: rgba(0, 0, 0, 0.87);
+    --muted: rgba(255, 255, 255, 0.08);
+    --muted-foreground: rgba(255, 255, 255, 0.6);
+    --accent: rgba(66, 165, 245, 0.12);
+    --accent-foreground: #42A5F5;
+    --destructive: #EF5350;
+    --destructive-foreground: rgba(0, 0, 0, 0.87);
+    --border: rgba(255, 255, 255, 0.12);
+    --input: rgba(255, 255, 255, 0.12);
+    --input-background: #1E1E1E;
+    --switch-background: rgba(255, 255, 255, 0.3);
+    --ring: #42A5F5;
+
+    /* Chart Colors (Dark) */
+    --chart-1: #42A5F5;
+    --chart-2: #26C6DA;
+    --chart-3: #66BB6A;
+    --chart-4: #FFA726;
+    --chart-5: #AB47BC;
+
+    /* Elevation Shadows (Dark) */
+    --elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --elevation-2: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --elevation-4: 0 4px 6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+    --elevation-8: 0 10px 15px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.3);
+
+    /* Sidebar (Dark) */
+    --sidebar: #1E1E1E;
+    --sidebar-foreground: rgba(255, 255, 255, 0.87);
+    --sidebar-primary: #42A5F5;
+    --sidebar-primary-foreground: rgba(0, 0, 0, 0.87);
+    --sidebar-accent: rgba(66, 165, 245, 0.12);
+    --sidebar-accent-foreground: #42A5F5;
+    --sidebar-border: rgba(255, 255, 255, 0.12);
+    --sidebar-ring: #42A5F5;
+}
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-input-background: var(--input-background);
+    --color-switch-background: var(--switch-background);
+    --color-ring: var(--ring);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+}
+
+* {
+    border-color: var(--border);
+    outline-color: color-mix(in srgb, var(--ring) 50%, transparent);
+}
+
+body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro', 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/**
+ * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
+ */
+:where(:not([class*="text-"])) {
+    h1 {
+        font-size: 32px;
+        font-weight: var(--font-weight-medium);
+        line-height: 1.3;
+    }
+
+    h2 {
+        font-size: 24px;
+        font-weight: var(--font-weight-medium);
+        line-height: 1.35;
+    }
+
+    h3 {
+        font-size: 20px;
+        font-weight: var(--font-weight-medium);
+        line-height: 1.4;
+    }
+
+    h4 {
+        font-size: 16px;
+        font-weight: var(--font-weight-medium);
+        line-height: 1.5;
+    }
+
+    p {
+        font-size: 16px;
+        font-weight: var(--font-weight-normal);
+        line-height: 1.5;
+    }
+
+    label {
+        font-size: 14px;
+        font-weight: var(--font-weight-medium);
+        line-height: 1.5;
+    }
+
+    button {
+        font-size: 14px;
+        font-weight: var(--font-weight-medium);
+        line-height: 1.5;
+    }
+
+    input {
+        font-size: 16px;
+        font-weight: var(--font-weight-normal);
+        line-height: 1.5;
+    }
+}
+
+html {
+    font-size: var(--font-size);
+}
+
+/* Smooth Scrolling */
+* {
+    scroll-behavior: smooth;
+}
+
+/* Animation Utilities */
+.animate-fade-in {
+    animation: fadeIn var(--transition-medium) ease-in-out;
+}
+
+.animate-slide-up {
+    animation: slideUp var(--transition-medium) ease-out;
+}
+
+.animate-slide-down {
+    animation: slideDown var(--transition-medium) ease-out;
+}
+
+.animate-scale-in {
+    animation: scaleIn var(--transition-base) ease-out;
+}
+
+.transition-smooth {
+    transition: all var(--transition-base);
+}
+
+.transition-colors-smooth {
+    transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
+}
+
+.gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Skeleton Loading */
+@keyframes shimmer {
+    0% {
+        background-position: -1000px 0;
+    }
+
+    100% {
+        background-position: 1000px 0;
+    }
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(90deg,
+            var(--muted) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            var(--muted) 100%);
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite linear;
+}
+
+/* Ripple Effect */
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+.ripple {
+    position: relative;
+    overflow: hidden;
+}
+
+.ripple::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    transform: translate(-50%, -50%);
+    animation: ripple 0.6s ease-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--foreground);
+}
