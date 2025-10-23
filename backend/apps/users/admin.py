@@ -1,6 +1,6 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
-from typing import Any, Tuple
+from typing import Any
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -33,8 +33,8 @@ class UserAdmin(BaseUserAdmin):
     ordering = ["-created_at"]
 
     # Приводим BaseUserAdmin.fieldsets к tuple и объединяем с нашими
-    base_fieldsets: Tuple = tuple(BaseUserAdmin.fieldsets or ())
-    extra_fieldsets: Tuple = (
+    base_fieldsets: tuple = tuple(BaseUserAdmin.fieldsets or ())
+    extra_fieldsets: tuple = (
         (
             "Дополнительная информация",
             {

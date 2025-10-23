@@ -1,6 +1,6 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
-from typing import Any, Dict, List
+from typing import Any
 
 from django.utils import timezone
 
@@ -14,7 +14,7 @@ class DiagnosticEngine:
     """
 
     # Пороговые значения для различных параметров
-    ANOMALY_THRESHOLDS: Dict[str, Dict[str, float]] = {
+    ANOMALY_THRESHOLDS: dict[str, dict[str, float]] = {
         "pressure": {"min": 10, "max": 300},  # бар
         "temperature": {"min": 20, "max": 80},  # °C
         "flow_rate": {"min": 0.1, "max": 100},  # л/мин
@@ -23,8 +23,8 @@ class DiagnosticEngine:
     }
 
     def analyze_system(
-        self, system_id: str, sensor_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, system_id: str, sensor_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Основной метод анализа системы.
 
@@ -39,7 +39,7 @@ class DiagnosticEngine:
             system = HydraulicSystem.objects.get(id=system_id)
             anomalies = self.detect_anomalies(sensor_data)
 
-            report_dict: Dict[str, Any] | None = None
+            report_dict: dict[str, Any] | None = None
             if anomalies:
                 report = self.create_report(system, anomalies, sensor_data)
                 report_dict = {
@@ -69,9 +69,9 @@ class DiagnosticEngine:
         except Exception as exc:  # noqa: BLE001
             raise RuntimeError(f"Ошибка при анализе системы: {exc}") from exc
 
-    def detect_anomalies(self, sensor_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def detect_anomalies(self, sensor_data: dict[str, Any]) -> list[dict[str, Any]]:
         """Выявляет аномалии в данных датчиков."""
-        anomalies: List[Dict[str, Any]] = []
+        anomalies: list[dict[str, Any]] = []
 
         for parameter, value in sensor_data.items():
             if self.is_anomaly(parameter, float(value)):
@@ -103,8 +103,8 @@ class DiagnosticEngine:
     def create_report(
         self,
         system: HydraulicSystem,
-        anomalies: List[Dict[str, Any]],
-        sensor_data: Dict[str, Any],
+        anomalies: list[dict[str, Any]],
+        sensor_data: dict[str, Any],
     ) -> DiagnosticReport:
         """Создаёт диагностический отчёт на основе аномалий."""
         has_critical = any(a.get("severity") == "critical" for a in anomalies)
@@ -125,11 +125,11 @@ class DiagnosticEngine:
         )
         return report
 
-    def format_anomalies_description(self, anomalies: List[Dict[str, Any]]) -> str:
+    def format_anomalies_description(self, anomalies: list[dict[str, Any]]) -> str:
         """Форматирует описание аномалий в читаемый текст."""
         if not anomalies:
             return "Аномалий не обнаружено"
-        lines: List[str] = []
+        lines: list[str] = []
         for anomaly in anomalies:
             parameter = anomaly["parameter"]
             value = anomaly["value"]
@@ -158,7 +158,7 @@ class DiagnosticEngine:
 
     def _get_anomaly_message(self, parameter: str, value: float, severity: str) -> str:
         """Генерирует понятное сообщение об аномалии."""
-        messages: Dict[str, Dict[str, str]] = {
+        messages: dict[str, dict[str, str]] = {
             "pressure": {
                 "low": "Давление ниже нормы, возможна утечка",
                 "high": "Давление выше нормы, риск повреждения системы",

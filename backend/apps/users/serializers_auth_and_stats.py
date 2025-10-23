@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Type
+from typing import Any
 
 from django.contrib.auth import get_user_model
+
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-UserModel: Type = get_user_model()
+UserModel: type = get_user_model()
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -29,7 +30,7 @@ class UserStatsSerializer(serializers.Serializer):
     reports_generated = serializers.IntegerField(read_only=True)
     last_activity = serializers.DateTimeField(read_only=True)
 
-    def to_representation(self, instance: Any) -> Dict[str, Any]:
+    def to_representation(self, instance: Any) -> dict[str, Any]:
         return {
             "systems_count": getattr(instance, "systems_count", 0),
             "reports_generated": getattr(instance, "reports_generated", 0),

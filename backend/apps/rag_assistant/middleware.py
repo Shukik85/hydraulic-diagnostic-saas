@@ -7,11 +7,12 @@ import logging
 import threading
 import time
 
-import structlog
 from django.conf import settings
 from django.core.cache import cache
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
+
+import structlog
 
 # Логгеры для мониторинга
 performance_logger = logging.getLogger("performance")

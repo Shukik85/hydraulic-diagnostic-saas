@@ -6,15 +6,16 @@ Smoke тест для TimescaleDB функциональности.
 from datetime import timedelta
 from decimal import Decimal
 
+from django.db import connection
+from django.test import TransactionTestCase
+from django.utils import timezone
+
 from apps.diagnostics.models import HydraulicSystem, SensorData, SystemComponent
 from apps.diagnostics.timescale_tasks import (
     ensure_partitions_for_range,
     get_hypertable_stats,
     timescale_health_check,
 )
-from django.db import connection
-from django.test import TransactionTestCase
-from django.utils import timezone
 
 
 class TimescaleDBTestCase(TransactionTestCase):

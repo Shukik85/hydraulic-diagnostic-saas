@@ -4,7 +4,7 @@
 # КРИТИЧЕСКИЕ ИСПРАВЛЕНИЯ БЕЗОПАСНОСТИ (typed)
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 from decouple import Csv, config
 
@@ -34,7 +34,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE: bool = True
 SESSION_COOKIE_AGE: int = 3600
 
 # Rate Limiting для API - КРИТИЧНО для защиты от атак
-REST_FRAMEWORK: Dict[str, Any] = (
+REST_FRAMEWORK: dict[str, Any] = (
     base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
 )
 REST_FRAMEWORK.update(
@@ -74,7 +74,7 @@ ALLOWED_FILE_TYPES = ["txt", "pdf", "docx", "md"]
 MAX_FILE_SIZE: int = 10 * 1024 * 1024
 
 # Logging Security Events
-LOGGING: Dict[str, Any] = base.LOGGING.copy() if hasattr(base, "LOGGING") else {}
+LOGGING: dict[str, Any] = base.LOGGING.copy() if hasattr(base, "LOGGING") else {}
 LOGGING.setdefault("loggers", {})
 LOGGING["loggers"]["security"] = {
     "handlers": ["file", "error_file"],
@@ -83,7 +83,7 @@ LOGGING["loggers"]["security"] = {
 }
 
 # AI Settings Security
-AI_SETTINGS: Dict[str, Any] = (
+AI_SETTINGS: dict[str, Any] = (
     base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
 )
 AI_SETTINGS.update(
@@ -96,11 +96,11 @@ AI_SETTINGS.update(
 )
 
 # Database Security
-DATABASES: Dict[str, Any] = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
+DATABASES: dict[str, Any] = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
 if "default" in DATABASES:
-    default_db: Dict[str, Any] = DATABASES["default"]
+    default_db: dict[str, Any] = DATABASES["default"]
     default_db.setdefault("OPTIONS", {})
-    options: Dict[str, Any] = default_db["OPTIONS"]
+    options: dict[str, Any] = default_db["OPTIONS"]
     options.update(
         {
             "sslmode": "require",

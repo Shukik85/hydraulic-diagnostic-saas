@@ -2,18 +2,17 @@
 
 """Скрипт генерации докстрингов для проекта."""
 
-import os
 import ast
+import os
 import subprocess
-from typing import Optional
 
 
 def get_changed_py_files(base_branch: str = "HEAD~1") -> list[str]:
     """Возвращает список изменённых .py файлов относительно base branch.
-    
+
     Args:
         base_branch: Базовая ветка для сравнения.
-        
+
     Returns:
         Список путей к изменённым Python файлам.
     """
@@ -27,22 +26,22 @@ def get_changed_py_files(base_branch: str = "HEAD~1") -> list[str]:
         print("Ошибка при вызове git diff:", result.stderr)
         return []
     files = result.stdout.strip().split("\n")
-    return [f for f in files if f and f.endswith('.py')]
+    return [f for f in files if f and f.endswith(".py")]
 
 
 def generate_google_docstring(func_def: ast.FunctionDef, base_indent: int) -> str:
     """Создаёт Google стиль докстринга с правильным отступом.
-    
+
     Args:
         func_def: AST узел функции.
         base_indent: Базовый отступ для докстринга.
-        
+
     Returns:
         Отформатированный докстринг.
     """
     indent = " " * base_indent
     indent_inner = indent + " " * 4
-    
+
     params = []
     for arg in func_def.args.args:
         params.append(f"{indent_inner}{arg.arg} (TYPE): описание.")
@@ -60,12 +59,12 @@ def generate_google_docstring(func_def: ast.FunctionDef, base_indent: int) -> st
     return "\n".join(docstring_lines)
 
 
-def add_docstrings_to_functions(file_content: str) -> Optional[str]:
+def add_docstrings_to_functions(file_content: str) -> str | None:
     """Парсит файл, добавляет докстринги к функциям без них.
-    
+
     Args:
         file_content: Содержимое Python файла.
-        
+
     Returns:
         Модифицированное содержимое или None если изменений нет.
     """
@@ -74,7 +73,7 @@ def add_docstrings_to_functions(file_content: str) -> Optional[str]:
     except SyntaxError:
         print("Ошибка синтаксиса в файле")
         return None
-        
+
     lines = file_content.split("\n")
     modified = False
 
@@ -84,7 +83,9 @@ def add_docstrings_to_functions(file_content: str) -> Optional[str]:
             if ast.get_docstring(node) is None:
                 insert_line = node.body[0].lineno - 1
                 if insert_line < len(lines):
-                    base_indent = len(lines[insert_line]) - len(lines[insert_line].lstrip())
+                    base_indent = len(lines[insert_line]) - len(
+                        lines[insert_line].lstrip()
+                    )
                     docstring = generate_google_docstring(node, base_indent)
                     lines.insert(insert_line, docstring)
                     modified = True
@@ -96,15 +97,15 @@ def add_docstrings_to_functions(file_content: str) -> Optional[str]:
 
 def process_file(file_path: str) -> None:
     """Обрабатывает отдельный Python файл.
-    
+
     Args:
         file_path: Путь к файлу для обработки.
     """
     print(f"Обрабатываю {file_path}")
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
-        
+
         new_content = add_docstrings_to_functions(content)
         if new_content:
             with open(file_path, "w", encoding="utf-8") as f:

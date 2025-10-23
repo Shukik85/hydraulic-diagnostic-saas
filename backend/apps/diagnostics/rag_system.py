@@ -3,10 +3,11 @@
 import logging
 import os
 import sqlite3
-from typing import Any, Dict, List
+from typing import Any
+
+from django.conf import settings
 
 import numpy as np
-from django.conf import settings
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -21,8 +22,8 @@ class HydraulicKnowledgeBase:
             max_features=1000, stop_words=None, ngram_range=(1, 2)
         )
         self.knowledge_vectors = None
-        self.knowledge_texts: List[str] = []
-        self.knowledge_metadata: List[Dict[str, Any]] = []
+        self.knowledge_texts: list[str] = []
+        self.knowledge_metadata: list[dict[str, Any]] = []
         self.db_path = os.path.join(settings.BASE_DIR, "knowledge_base.db")
         self._initialize_knowledge_base()
 
@@ -139,7 +140,7 @@ class HydraulicKnowledgeBase:
         except Exception as e:
             logger.error(f"Ошибка построения векторов: {e}")
 
-    def search_knowledge(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def search_knowledge(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         """Поиск релевантных знаний по запросу"""
         try:
             if self.knowledge_vectors is None or not query.strip():
@@ -147,7 +148,7 @@ class HydraulicKnowledgeBase:
             query_vector = self.vectorizer.transform([query])
             similarities = cosine_similarity(query_vector, self.knowledge_vectors)[0]
             top_indices = np.argsort(similarities)[-top_k:][::-1]
-            results: List[Dict[str, Any]] = []
+            results: list[dict[str, Any]] = []
             for idx in top_indices:
                 if similarities[idx] > 0.1:
                     results.append(

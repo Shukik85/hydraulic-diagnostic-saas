@@ -1,8 +1,7 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
-from typing import Tuple, Type
-
 from django.contrib.auth import get_user_model
+
 from rest_framework import filters, generics, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
@@ -39,7 +38,7 @@ class UserRegistrationView(generics.CreateAPIView):
 
     queryset = User.objects.all()
     serializer_class = UserCreateSerializer
-    permission_classes: Tuple[Type[BasePermission], ...] = (permissions.AllowAny,)
+    permission_classes: tuple[type[BasePermission], ...] = (permissions.AllowAny,)
 
     def perform_create(self, serializer):
         user = serializer.save()
@@ -65,7 +64,7 @@ class UserViewSet(
 
     queryset = User.objects.all()
     serializer_class = UserDetailSerializer
-    permission_classes: Tuple[Type[BasePermission], ...] = (
+    permission_classes: tuple[type[BasePermission], ...] = (
         permissions.IsAuthenticated,
     )
     lookup_field = "pk"
@@ -96,7 +95,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
     queryset = UserProfile.objects.select_related("user").all()
     serializer_class = UserProfileSerializer
-    permission_classes: Tuple[Type[BasePermission], ...] = (
+    permission_classes: tuple[type[BasePermission], ...] = (
         permissions.IsAuthenticated,
     )
     filter_backends = [filters.SearchFilter]
@@ -108,7 +107,7 @@ class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = UserActivity.objects.select_related("user").all().order_by("-created_at")
     serializer_class = UserActivitySerializer
-    permission_classes: Tuple[Type[BasePermission], ...] = (
+    permission_classes: tuple[type[BasePermission], ...] = (
         permissions.IsAuthenticated,
     )
     filter_backends = [filters.OrderingFilter]

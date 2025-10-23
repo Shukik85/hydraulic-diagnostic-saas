@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
-    def with_owner(self) -> "HydraulicSystemQuerySet":
+    def with_owner(self) -> HydraulicSystemQuerySet:
         """Выполняет with owner
 
         Returns:
@@ -30,7 +30,7 @@ class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
         """
         return self.select_related("owner")
 
-    def active(self) -> "HydraulicSystemQuerySet":
+    def active(self) -> HydraulicSystemQuerySet:
         """Выполняет active
 
         Returns:
@@ -95,9 +95,9 @@ class HydraulicSystem(models.Model):
     qs: HydraulicSystemQuerySet = HydraulicSystemQuerySet.as_manager()  # type: ignore[assignment]
 
     if TYPE_CHECKING:
-        components: RelatedManager["SystemComponent"]
-        sensor_data: RelatedManager["SensorData"]
-        diagnostic_reports: RelatedManager["DiagnosticReport"]
+        components: RelatedManager[SystemComponent]
+        sensor_data: RelatedManager[SensorData]
+        diagnostic_reports: RelatedManager[DiagnosticReport]
 
     class Meta:
         db_table = "diagnostics_hydraulicsystem"
@@ -128,7 +128,7 @@ class HydraulicSystem(models.Model):
 
 
 class SystemComponentQuerySet(models.QuerySet["SystemComponent"]):
-    def for_system(self, system_id: uuid.UUID) -> "SystemComponentQuerySet":
+    def for_system(self, system_id: uuid.UUID) -> SystemComponentQuerySet:
         """Выполняет for system
 
         Args:
@@ -162,7 +162,7 @@ class SystemComponent(models.Model):
     qs: SystemComponentQuerySet = SystemComponentQuerySet.as_manager()  # type: ignore[assignment]
 
     if TYPE_CHECKING:
-        sensor_data: RelatedManager["SensorData"]
+        sensor_data: RelatedManager[SensorData]
 
     class Meta:
         db_table = "diagnostics_systemcomponent"
@@ -185,7 +185,7 @@ class SystemComponent(models.Model):
 
 
 class SensorDataQuerySet(models.QuerySet["SensorData"]):
-    def for_system(self, system_id: uuid.UUID) -> "SensorDataQuerySet":
+    def for_system(self, system_id: uuid.UUID) -> SensorDataQuerySet:
         """Выполняет for system
 
         Args:
@@ -197,7 +197,7 @@ class SensorDataQuerySet(models.QuerySet["SensorData"]):
         """
         return self.filter(system_id=system_id).select_related("component")
 
-    def time_range(self, start: datetime, end: datetime) -> "SensorDataQuerySet":
+    def time_range(self, start: datetime, end: datetime) -> SensorDataQuerySet:
         """Выполняет time range
 
         Args:
@@ -319,7 +319,7 @@ class SensorData(models.Model):
 class DiagnosticReportQuerySet(models.QuerySet["DiagnosticReport"]):
     def recent_for_system(
         self, system_id: uuid.UUID, limit: int = 100
-    ) -> "DiagnosticReportQuerySet":
+    ) -> DiagnosticReportQuerySet:
         """Выполняет recent for system
 
         Args:

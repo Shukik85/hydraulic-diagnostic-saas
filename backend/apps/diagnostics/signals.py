@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Type
+from typing import Any
 
 from django.db import models
 from django.db.models.signals import post_delete, post_save
@@ -13,7 +13,7 @@ from .models import HydraulicSystem, SensorData, SystemComponent
 
 @receiver(post_save, sender=SystemComponent)
 def update_components_count_on_create(
-    sender: Type[SystemComponent],
+    sender: type[SystemComponent],
     instance: SystemComponent,
     created: bool,
     **kwargs: Any,
@@ -35,7 +35,7 @@ def update_components_count_on_create(
 
 @receiver(post_delete, sender=SystemComponent)
 def update_components_count_on_delete(
-    sender: Type[SystemComponent], instance: SystemComponent, **kwargs: Any
+    sender: type[SystemComponent], instance: SystemComponent, **kwargs: Any
 ) -> None:
     """Выполняет update components count on delete
 
@@ -54,7 +54,7 @@ def update_components_count_on_delete(
 
 @receiver(post_save, sender=SensorData)
 def update_last_reading_at(
-    sender: Type[SensorData], instance: SensorData, created: bool, **kwargs: Any
+    sender: type[SensorData], instance: SensorData, created: bool, **kwargs: Any
 ) -> None:
     """Выполняет update last reading at
 

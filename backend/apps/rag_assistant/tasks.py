@@ -8,14 +8,15 @@ import time
 import traceback
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Dict, List
+from typing import Any
 
-from celery import shared_task
-from celery.utils.log import get_task_logger
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
+
+from celery import shared_task
+from celery.utils.log import get_task_logger
 
 from .models import Document as RagDocument
 from .models import RagSystem
@@ -32,6 +33,12 @@ RETRY_COUNTDOWN = 60
 
 @contextmanager
 def task_performance_monitor(task_name: str, **metadata):
+    """Краткое описание функции.
+
+    Args:
+        task_name (TYPE): описание.
+
+    """
     start_time = time.time()
     try:
         yield
@@ -51,7 +58,18 @@ def task_performance_monitor(task_name: str, **metadata):
 @shared_task(bind=True, max_retries=MAX_RETRIES)
 def process_document_async(
     self, document_id: int, reindex: bool = False
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
+    """Краткое описание функции.
+
+    Args:
+        self (TYPE): описание.
+        document_id (TYPE): описание.
+        reindex (TYPE): описание.
+
+    Returns:
+        TYPE: описание.
+
+    """
     _ = self.request.id
     try:
         with task_performance_monitor(
@@ -166,12 +184,26 @@ def process_document_async(
 
 def _process_documents_for_system(
     system: RagSystem,
-    docs: List[RagDocument],
+    docs: list[RagDocument],
     total_docs: int,
-    processed: Dict[str, int],
-    errors: List[Dict[str, Any]],
+    processed: dict[str, int],
+    errors: list[dict[str, Any]],
     self,
 ) -> None:
+    """Краткое описание функции.
+
+    Args:
+        system (TYPE): описание.
+        docs (TYPE): описание.
+        total_docs (TYPE): описание.
+        processed (TYPE): описание.
+        errors (TYPE): описание.
+        self (TYPE): описание.
+
+    Returns:
+        TYPE: описание.
+
+    """
     try:
         assistant = RagAssistant(system)
         for doc in docs:
@@ -216,9 +248,18 @@ def _process_documents_for_system(
 
 
 def _group_documents_by_system(
-    documents: List[RagDocument],
-) -> Dict[int, Dict[str, Any]]:
-    grouped: Dict[int, Dict[str, Any]] = defaultdict(
+    documents: list[RagDocument],
+) -> dict[int, dict[str, Any]]:
+    """Краткое описание функции.
+
+    Args:
+        documents (TYPE): описание.
+
+    Returns:
+        TYPE: описание.
+
+    """
+    grouped: dict[int, dict[str, Any]] = defaultdict(
         lambda: {"system": None, "documents": []}
     )
     for doc in documents:
@@ -236,9 +277,9 @@ def _group_documents_by_system(
 
 
 @shared_task
-def index_documents_batch_async(document_ids: List[int]) -> Dict[str, Any]:
+def index_documents_batch_async(document_ids: list[int]) -> dict[str, Any]:
     """Асинхронная индексация пакета документов: запускает process_document_async для каждого документа."""
-    results: List[str] = []
+    results: list[str] = []
     docs = RagDocument.objects.filter(id__in=document_ids)
     for d in docs:
         async_result = process_document_async.delay(int(d.pk))

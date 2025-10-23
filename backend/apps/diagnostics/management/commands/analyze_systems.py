@@ -2,10 +2,11 @@
 
 import logging
 
-from apps.diagnostics.services import DiagnosticEngine
-from apps.equipment.models import HydraulicSystem
 from django.core.management.base import BaseCommand
 from django.utils import timezone
+
+from apps.diagnostics.services import DiagnosticEngine
+from apps.equipment.models import HydraulicSystem
 
 logger = logging.getLogger(__name__)
 

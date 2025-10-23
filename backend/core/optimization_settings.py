@@ -3,16 +3,16 @@
 # core/optimization_settings.py (typed)
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from decouple import config
 
 from . import settings as base
 
 # Database Connection Pooling - КРИТИЧНО для production
-DATABASES: Dict[str, Any] = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
+DATABASES: dict[str, Any] = base.DATABASES.copy() if hasattr(base, "DATABASES") else {}
 if "default" in DATABASES:
-    default_db: Dict[str, Any] = DATABASES["default"]
+    default_db: dict[str, Any] = DATABASES["default"]
     default_db.update(
         {
             "CONN_MAX_AGE": config("DATABASE_CONN_MAX_AGE", default=600, cast=int),
@@ -23,7 +23,7 @@ if "default" in DATABASES:
     )
 
 # Мониторинг медленных запросов - ОЧЕНЬ ВАЖНО
-LOGGING: Dict[str, Any] = base.LOGGING.copy() if hasattr(base, "LOGGING") else {}
+LOGGING: dict[str, Any] = base.LOGGING.copy() if hasattr(base, "LOGGING") else {}
 LOGGING.setdefault("loggers", {})
 LOGGING.setdefault("handlers", {})
 LOGGING["loggers"]["django.db.backends"] = {
@@ -33,7 +33,7 @@ LOGGING["loggers"]["django.db.backends"] = {
 }
 
 # Улучшенное кеширование - КЛЮЧЕВАЯ оптимизация
-CACHES: Dict[str, Any] = {
+CACHES: dict[str, Any] = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": config("REDIS_URL", default="redis://localhost:6379/0"),
@@ -73,7 +73,7 @@ SESSION_COOKIE_AGE: int = 86400
 SESSION_SAVE_EVERY_REQUEST: bool = False
 
 # Middleware оптимизация - порядок важен!
-MIDDLEWARE: List[str] = [
+MIDDLEWARE: list[str] = [
     "django.middleware.cache.UpdateCacheMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -95,7 +95,7 @@ CACHE_MIDDLEWARE_SECONDS: int = 300
 CACHE_MIDDLEWARE_KEY_PREFIX = "hydraulic"
 
 # Static Files оптимизация
-STORAGES: Dict[str, Any] = {
+STORAGES: dict[str, Any] = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
@@ -105,7 +105,7 @@ STORAGES: Dict[str, Any] = {
 }
 
 # Улучшенные настройки REST Framework
-REST_FRAMEWORK: Dict[str, Any] = (
+REST_FRAMEWORK: dict[str, Any] = (
     base.REST_FRAMEWORK.copy() if hasattr(base, "REST_FRAMEWORK") else {}
 )
 REST_FRAMEWORK.update(
@@ -125,7 +125,7 @@ REST_FRAMEWORK.update(
 )
 
 # Оптимизация AI настроек
-AI_SETTINGS: Dict[str, Any] = (
+AI_SETTINGS: dict[str, Any] = (
     base.AI_SETTINGS.copy() if hasattr(base, "AI_SETTINGS") else {}
 )
 AI_SETTINGS.update(
@@ -141,7 +141,7 @@ AI_SETTINGS.update(
 )
 
 # File Upload оптимизация
-FILE_UPLOAD_HANDLERS: List[str] = [
+FILE_UPLOAD_HANDLERS: list[str] = [
     "django.core.files.uploadhandler.MemoryFileUploadHandler",
     "django.core.files.uploadhandler.TemporaryFileUploadHandler",
 ]
@@ -151,16 +151,16 @@ TEMPLATES = base.TEMPLATES.copy() if hasattr(base, "TEMPLATES") else []
 if TEMPLATES:
     TEMPLATES[0] = TEMPLATES[0].copy()
     options_obj = TEMPLATES[0].get("OPTIONS", {})
-    options: Dict[str, Any] = dict(options_obj) if isinstance(options_obj, dict) else {}
+    options: dict[str, Any] = dict(options_obj) if isinstance(options_obj, dict) else {}
 
-    loaders_cached: Tuple[str, List[str]] = (
+    loaders_cached: tuple[str, list[str]] = (
         "django.template.loaders.cached.Loader",
         [
             "django.template.loaders.filesystem.Loader",
             "django.template.loaders.app_directories.Loader",
         ],
     )
-    loaders_uncached: List[str] = [
+    loaders_uncached: list[str] = [
         "django.template.loaders.filesystem.Loader",
         "django.template.loaders.app_directories.Loader",
     ]

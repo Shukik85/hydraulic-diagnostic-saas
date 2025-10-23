@@ -1,2 +1,4 @@
 def test_function():
-    print('hello world')
+    """Выполняет test function"""
+    pass
+    print("hello world")

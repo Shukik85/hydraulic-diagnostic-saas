@@ -1,8 +1,9 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
-import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+
+import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -11,11 +12,13 @@ User = get_user_model()
 
 @pytest.fixture
 def api_client():
+    """Краткое описание функции."""
     return APIClient()
 
 
 @pytest.fixture
 def user_data():
+    """Краткое описание функции."""
     return {
         "email": "test@example.com",
         "username": "testuser",
@@ -27,6 +30,13 @@ def user_data():
 
 @pytest.mark.django_db
 def test_user_registration(api_client, user_data):
+    """Краткое описание функции.
+
+    Args:
+        api_client (TYPE): описание.
+        user_data (TYPE): описание.
+
+    """
     url = reverse("user-register")
     response = api_client.post(url, data=user_data)
     assert response.status_code == status.HTTP_201_CREATED
@@ -36,6 +46,13 @@ def test_user_registration(api_client, user_data):
 @pytest.mark.django_db
 def test_login_and_token_refresh(api_client, user_data):
     # Register
+    """Краткое описание функции.
+
+    Args:
+        api_client (TYPE): описание.
+        user_data (TYPE): описание.
+
+    """
     api_client.post(reverse("user-register"), data=user_data)
     # Login
     login_url = reverse("token_obtain_pair")
@@ -55,6 +72,13 @@ def test_login_and_token_refresh(api_client, user_data):
 @pytest.mark.django_db
 def test_change_password(api_client, user_data):
     # Register and login
+    """Краткое описание функции.
+
+    Args:
+        api_client (TYPE): описание.
+        user_data (TYPE): описание.
+
+    """
     api_client.post(reverse("user-register"), data=user_data)
     login_resp = api_client.post(
         reverse("token_obtain_pair"),
@@ -81,6 +105,13 @@ def test_change_password(api_client, user_data):
 @pytest.mark.django_db
 def test_profile_crud(api_client, user_data):
     # Register & login
+    """Краткое описание функции.
+
+    Args:
+        api_client (TYPE): описание.
+        user_data (TYPE): описание.
+
+    """
     api_client.post(reverse("user-register"), data=user_data)
     login_resp = api_client.post(
         reverse("token_obtain_pair"),
@@ -107,6 +138,13 @@ def test_profile_crud(api_client, user_data):
 @pytest.mark.django_db
 def test_user_activity_logs(api_client, user_data):
     # Register & login
+    """Краткое описание функции.
+
+    Args:
+        api_client (TYPE): описание.
+        user_data (TYPE): описание.
+
+    """
     api_client.post(reverse("user-register"), data=user_data)
     login_resp = api_client.post(
         reverse("token_obtain_pair"),

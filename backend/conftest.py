@@ -2,11 +2,12 @@
 
 import os
 import sys
-from typing import Generator
+from collections.abc import Generator
 
-import pytest
 from django.conf import settings
 from django.test import Client
+
+import pytest
 
 # Ensure project root is in sys.path
 BASE_DIR = os.path.dirname(__file__)

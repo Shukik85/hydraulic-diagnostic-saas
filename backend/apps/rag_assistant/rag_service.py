@@ -5,13 +5,15 @@ from __future__ import annotations
 import hashlib
 import os
 import tempfile
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from typing import Any
 
-import bleach  # type: ignore[import-untyped]
-import pydantic
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
+
+import bleach  # type: ignore[import-untyped]
+import pydantic
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
@@ -23,17 +25,17 @@ MAX_QUERY_LENGTH = 500
 MAX_CONTENT_SIZE = 50 * 1024 * 1024  # 50MB
 
 CACHE_VERSION = "v1"
-DOC_EMBEDDING_TTL: Optional[int] = None
+DOC_EMBEDDING_TTL: int | None = None
 SEARCH_RESULT_TTL: int = 3600
 FAQ_ANSWER_TTL: int = 86400
 CACHE_STATS_KEY = "cache_stats"
 
-LOADER_MAP: Dict[str, Callable[[str], Any]] = {}
+LOADER_MAP: dict[str, Callable[[str], Any]] = {}
 
 
 class QueryInput(pydantic.BaseModel):
     query: str
-    user_id: Optional[int] = None
+    user_id: int | None = None
 
     @pydantic.validator("query")
     def validate_query(cls, v: Any) -> str:
@@ -47,7 +49,7 @@ class QueryInput(pydantic.BaseModel):
         return sanitized.strip()
 
     @pydantic.validator("user_id")
-    def validate_user_id(cls, v: Any) -> Optional[int]:
+    def validate_user_id(cls, v: Any) -> int | None:
         if v is not None and not isinstance(v, int):
             raise ValueError("User ID must be an integer")
         return v
@@ -56,7 +58,7 @@ class QueryInput(pydantic.BaseModel):
 class DocumentInput(pydantic.BaseModel):
     content: str
     format: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
     @pydantic.validator("content")
     def validate_content(cls, v: Any) -> str:
@@ -75,10 +77,10 @@ class DocumentInput(pydantic.BaseModel):
         return v.strip().lower()
 
     @pydantic.validator("metadata")
-    def validate_metadata(cls, v: Any) -> Dict[str, Any]:
+    def validate_metadata(cls, v: Any) -> dict[str, Any]:
         if not isinstance(v, dict):
             raise ValueError("Metadata must be a dictionary")
-        sanitized_metadata: Dict[str, Any] = {}
+        sanitized_metadata: dict[str, Any] = {}
         for key, value in v.items():
             if isinstance(value, str):
                 sanitized_metadata[key] = bleach.clean(
@@ -92,19 +94,19 @@ class DocumentInput(pydantic.BaseModel):
 class CacheStats:
     @staticmethod
     def increment_hit() -> None:
-        stats: Dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
+        stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         stats["hits"] = stats.get("hits", 0) + 1
         cache.set(CACHE_STATS_KEY, stats)
 
     @staticmethod
     def increment_miss() -> None:
-        stats: Dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
+        stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         stats["misses"] = stats.get("misses", 0) + 1
         cache.set(CACHE_STATS_KEY, stats)
 
     @staticmethod
-    def get_stats() -> Dict[str, int]:
-        stats: Dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
+    def get_stats() -> dict[str, int]:
+        stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         return stats
 
     @staticmethod
@@ -135,7 +137,7 @@ class RagAssistant:
         )
         cache.set(cache_key, answer, timeout=FAQ_ANSWER_TTL)
 
-    def _get_cached_faq_answer(self, question: str) -> Optional[str]:
+    def _get_cached_faq_answer(self, question: str) -> str | None:
         cache_key = self._get_cache_key(
             "faq", hashlib.sha256(question.encode()).hexdigest()
         )
@@ -146,19 +148,19 @@ class RagAssistant:
         CacheStats.increment_miss()
         return None
 
-    def _build_retriever(self) -> Callable[[str], List[Dict[str, Any]]]:
+    def _build_retriever(self) -> Callable[[str], list[dict[str, Any]]]:
         from .rag_core import default_local_orchestrator
 
         orchestrator = default_local_orchestrator()
         vindex = orchestrator.load_index(
             getattr(self.system, "index_version", None) or "test_v1"
         )
-        docs_list: List[str] = (getattr(vindex, "metadata", None) or {}).get("docs", [])
+        docs_list: list[str] = (getattr(vindex, "metadata", None) or {}).get("docs", [])
 
-        def _retrieve(question: str) -> List[Dict[str, Any]]:
+        def _retrieve(question: str) -> list[dict[str, Any]]:
             q_emb = self._encode([question])
             _, indices = vindex.search(q_emb, k=4)
-            results: List[Dict[str, Any]] = []
+            results: list[dict[str, Any]] = []
             for i in indices[0]:
                 idx = int(i)
                 if 0 <= idx < len(docs_list):
@@ -167,7 +169,7 @@ class RagAssistant:
 
         return _retrieve
 
-    def _encode(self, texts: List[str]):
+    def _encode(self, texts: list[str]):
         emb = self.embedder.embed_documents(texts)
         import numpy as np
 
@@ -195,7 +197,7 @@ class RagAssistant:
 
         retriever_fn = self._build_retriever()
 
-        def format_docs(docs: List[Dict[str, Any]]) -> str:
+        def format_docs(docs: list[dict[str, Any]]) -> str:
             return "\n\n".join(str(d["content"]) for d in docs if d.get("content"))
 
         chain = (
@@ -210,7 +212,7 @@ class RagAssistant:
         )
         return chain
 
-    def answer(self, query: str, user_id: Optional[int] = None) -> str:
+    def answer(self, query: str, user_id: int | None = None) -> str:
         cached_answer = self._get_cached_faq_answer(query)
         if cached_answer is not None:
             self._log_query(query, cached_answer, user_id)
@@ -229,9 +231,7 @@ class RagAssistant:
         return result
 
     @transaction.atomic
-    def _log_query(
-        self, query: str, response: str, user_id: Optional[int] = None
-    ) -> None:
+    def _log_query(self, query: str, response: str, user_id: int | None = None) -> None:
         RagQueryLog.objects.create(
             system=self.system,
             query_text=query,
@@ -239,7 +239,7 @@ class RagAssistant:
             user_id=user_id,
         )
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         stats = CacheStats.get_stats()
         hit_rate = CacheStats.get_hit_rate()
         return {
@@ -254,6 +254,15 @@ class RagAssistant:
 
 
 def tmp_file_for(doc: Document) -> str:
+    """Краткое описание функции.
+
+    Args:
+        doc (TYPE): описание.
+
+    Returns:
+        TYPE: описание.
+
+    """
     if not isinstance(doc, Document):
         raise TypeError("doc must be an instance of Document")
 

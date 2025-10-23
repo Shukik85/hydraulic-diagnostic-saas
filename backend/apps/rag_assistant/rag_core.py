@@ -7,7 +7,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional, Protocol, Tuple
+from typing import Any, Protocol
 
 import faiss  # type: ignore
 import numpy as np
@@ -18,10 +18,10 @@ from sentence_transformers import SentenceTransformer
 
 class StorageBackend(Protocol):
     def save_index(
-        self, version: str, index_bytes: bytes, metadata: Dict[str, Any]
+        self, version: str, index_bytes: bytes, metadata: dict[str, Any]
     ) -> str: ...
 
-    def load_index(self, version: str) -> Tuple[bytes, Dict[str, Any]]: ...
+    def load_index(self, version: str) -> tuple[bytes, dict[str, Any]]: ...
 
     def list_versions(self) -> list[str]: ...
 
@@ -39,7 +39,7 @@ class LocalStorageBackend:
         return d
 
     def save_index(
-        self, version: str, index_bytes: bytes, metadata: Dict[str, Any]
+        self, version: str, index_bytes: bytes, metadata: dict[str, Any]
     ) -> str:
         vdir = self._version_dir(version)
         index_path = vdir / "index.faiss"
@@ -57,7 +57,7 @@ class LocalStorageBackend:
         tmp_meta.replace(meta_path)
         return str(vdir)
 
-    def load_index(self, version: str) -> Tuple[bytes, Dict[str, Any]]:
+    def load_index(self, version: str) -> tuple[bytes, dict[str, Any]]:
         vdir = self._version_dir(version)
         index_path = vdir / "index.faiss"
         meta_path = vdir / "metadata.json"
@@ -67,7 +67,7 @@ class LocalStorageBackend:
             )
         with open(index_path, "rb") as f:
             idx_bytes = f.read()
-        with open(meta_path, "r", encoding="utf-8") as f:
+        with open(meta_path, encoding="utf-8") as f:
             metadata = json.load(f)
         return idx_bytes, metadata
 
@@ -86,9 +86,9 @@ class LocalStorageBackend:
 @dataclass
 class EmbeddingsProvider:
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
-    device: Optional[str] = None  # e.g., "cpu" | "cuda"
+    device: str | None = None  # e.g., "cpu" | "cuda"
 
-    _model: Optional[SentenceTransformer] = None
+    _model: SentenceTransformer | None = None
 
     def _ensure_model(self) -> SentenceTransformer:
         if self._model is None:
@@ -116,8 +116,8 @@ class EmbeddingsProvider:
 class VectorIndex:
     dim: int
     metric: str = "ip"  # inner product (cosine when vectors are l2-normalized)
-    _index: Optional[faiss.Index] = None
-    metadata: Dict[str, Any] | None = None
+    _index: faiss.Index | None = None
+    metadata: dict[str, Any] | None = None
 
     def build(self, vectors: np.ndarray) -> None:
         assert vectors.ndim == 2 and vectors.shape[1] == self.dim
@@ -130,7 +130,7 @@ class VectorIndex:
         index.add(vectors)
         self._index = index
 
-    def search(self, queries: np.ndarray, k: int = 5) -> Tuple[np.ndarray, np.ndarray]:
+    def search(self, queries: np.ndarray, k: int = 5) -> tuple[np.ndarray, np.ndarray]:
         assert self._index is not None, "Index not built/loaded"
         distances, indices = self._index.search(queries, k)
         return distances, indices
@@ -143,7 +143,7 @@ class VectorIndex:
         return bytes(arr)
 
     @classmethod
-    def from_bytes(cls, data: bytes) -> "VectorIndex":
+    def from_bytes(cls, data: bytes) -> VectorIndex:
         # faiss expects a numpy array buffer (uint8) for deserialization on some platforms (e.g., Windows)
         arr = np.frombuffer(data, dtype="uint8")
         index = faiss.deserialize_index(arr)
@@ -163,7 +163,7 @@ class RAGOrchestrator:
     index_metric: str = "ip"
 
     def build_and_save(
-        self, docs: list[str], version: str, metadata: Dict[str, Any]
+        self, docs: list[str], version: str, metadata: dict[str, Any]
     ) -> str:
         # Create embeddings
         vectors = self.embedder.encode(docs)
@@ -200,8 +200,18 @@ DEFAULT_LOCAL_STORAGE = os.environ.get(
 
 def default_local_orchestrator(
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-    device: Optional[str] = None,
+    device: str | None = None,
 ) -> RAGOrchestrator:
+    """Краткое описание функции.
+
+    Args:
+        model_name (TYPE): описание.
+        device (TYPE): описание.
+
+    Returns:
+        TYPE: описание.
+
+    """
     storage = LocalStorageBackend(base_path=Path(DEFAULT_LOCAL_STORAGE))
     embedder = EmbeddingsProvider(model_name=model_name, device=device)
     return RAGOrchestrator(storage=storage, embedder=embedder)

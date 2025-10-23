@@ -11,10 +11,8 @@ def main():
         from django.core.management import execute_from_command_line
     except ImportError as exc:
         raise ImportError(
-            (
-                "Не удалось импортировать Django. "
-                "Убедитесь, что зависимости установлены."
-            )
+            "Не удалось импортировать Django. "
+            "Убедитесь, что зависимости установлены."
         ) from exc
     execute_from_command_line(sys.argv)
 

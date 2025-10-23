@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 from celery import shared_task
 
@@ -22,9 +22,9 @@ logger = logging.getLogger("apps.rag_assistant")
 )
 def rag_build_index_task(
     self,
-    documents: List[str],
+    documents: list[str],
     version: str | None = None,
-    metadata: Dict[str, Any] | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> str:
     """
     Celery task to build and persist local FAISS index for provided documents.

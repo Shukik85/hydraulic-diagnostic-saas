@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from celery import shared_task
 from django.db import connection
 from django.utils import timezone
+
+from celery import shared_task
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +30,10 @@ DEFAULT_RETENTION_PERIOD_DAYS: int = 365
 def ensure_partitions_for_range(
     self,  # type: ignore[no-untyped-def]
     table_name: str = "diagnostics_sensordata",
-    start_time: Optional[str] = None,
-    end_time: Optional[str] = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
     chunk_interval: str = "7 days",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Обеспечивает создание chunk'ов TimescaleDB для указанного временного диапазона.
     """
@@ -70,7 +71,7 @@ def ensure_partitions_for_range(
                 """,
                 [table_name, end_dt, start_dt],
             )
-            existing_chunks: List[tuple] = list(cursor.fetchall())
+            existing_chunks: list[tuple] = list(cursor.fetchall())
 
             cursor.execute(
                 """
@@ -83,7 +84,7 @@ def ensure_partitions_for_range(
             )
             interval_row = cursor.fetchone()
 
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "status": "success",
             "table": table_name,
             "start_time": start_dt.isoformat(),
@@ -111,11 +112,11 @@ def cleanup_old_partitions(
     self,  # type: ignore[no-untyped-def]
     table_name: str = "diagnostics_sensordata",
     retention_period_days: int = DEFAULT_RETENTION_PERIOD_DAYS,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Удаляет старые чанки (старше retention_period_days)."""
     try:
         cutoff_time: datetime = timezone.now() - timedelta(days=retention_period_days)
-        dropped_chunks: List[Dict[str, Any]] = []
+        dropped_chunks: list[dict[str, Any]] = []
 
         with connection.cursor() as cursor:
             cursor.execute(
@@ -168,11 +169,11 @@ def compress_old_chunks(
     self,  # type: ignore[no-untyped-def]
     table_name: str = "diagnostics_sensordata",
     compression_age_days: int = DEFAULT_COMPRESSION_AGE_DAYS,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Сжимает чанки старше compression_age_days."""
     try:
         cutoff: datetime = timezone.now() - timedelta(days=compression_age_days)
-        compressed_chunks: List[Dict[str, Any]] = []
+        compressed_chunks: list[dict[str, Any]] = []
 
         with connection.cursor() as cursor:
             cursor.execute(
@@ -218,7 +219,7 @@ def compress_old_chunks(
 
 
 @shared_task
-def get_hypertable_stats(table_name: str = "diagnostics_sensordata") -> Dict[str, Any]:
+def get_hypertable_stats(table_name: str = "diagnostics_sensordata") -> dict[str, Any]:
     """Получает статистику по hypertable."""
     try:
         with connection.cursor() as cursor:
@@ -280,7 +281,7 @@ def get_hypertable_stats(table_name: str = "diagnostics_sensordata") -> Dict[str
 
 
 @shared_task
-def timescale_health_check() -> Dict[str, Any]:
+def timescale_health_check() -> dict[str, Any]:
     """Проверяет состояние TimescaleDB расширения и фоновых задач."""
     try:
         with connection.cursor() as cursor:

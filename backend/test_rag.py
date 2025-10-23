@@ -5,9 +5,10 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import django
+
 import numpy as np
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
@@ -29,7 +30,7 @@ from apps.rag_assistant.rag_core import (  # noqa: E402
 )
 
 
-def format_docs(docs: List[Dict[str, Any]]) -> str:
+def format_docs(docs: list[dict[str, Any]]) -> str:
     """Выполняет format docs
 
     pass
@@ -51,7 +52,7 @@ def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
 
     """
 
-    def _encode(texts: List[str]) -> np.ndarray:
+    def _encode(texts: list[str]) -> np.ndarray:
         """Выполняет  encode
 
         Args:

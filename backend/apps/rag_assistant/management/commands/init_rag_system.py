@@ -1,7 +1,8 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
-from apps.rag_assistant.models import RagSystem
 from django.core.management.base import BaseCommand
+
+from apps.rag_assistant.models import RagSystem
 
 
 class Command(BaseCommand):

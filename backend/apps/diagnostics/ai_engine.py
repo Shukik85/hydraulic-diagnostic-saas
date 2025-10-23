@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from django.utils import timezone
 
@@ -27,12 +27,12 @@ class Anomaly:
 class HydraulicSystemAIEngine:
     """Typed AI engine for anomaly detection and health scoring."""
 
-    def __init__(self, system: Optional[HydraulicSystem] = None) -> None:
-        self.system: Optional[HydraulicSystem] = system
+    def __init__(self, system: HydraulicSystem | None = None) -> None:
+        self.system: HydraulicSystem | None = system
 
     # ------------------ Public API ------------------ #
 
-    def detect_anomalies(self, since: Optional[datetime] = None) -> List[Anomaly]:
+    def detect_anomalies(self, since: datetime | None = None) -> list[Anomaly]:
         """Выполняет detect anomalies
 
         Args:
@@ -41,7 +41,7 @@ class HydraulicSystemAIEngine:
         """
         rows = self._prepare_features(since)
         thresholds = self._get_feature_importance(rows)
-        anomalies: List[Anomaly] = []
+        anomalies: list[Anomaly] = []
         for row in rows:
             if self._threshold_based_anomaly_detection(row, thresholds):
                 sev = self._calculate_anomaly_severity(row, thresholds)
@@ -57,7 +57,7 @@ class HydraulicSystemAIEngine:
                 )
         return anomalies
 
-    def build_summary(self) -> Dict[str, Any]:
+    def build_summary(self) -> dict[str, Any]:
         """Выполняет build summary"""
         rows = self._prepare_features(None)
         health = self._calculate_health_score(rows)
@@ -70,7 +70,7 @@ class HydraulicSystemAIEngine:
 
     # ------------------ Private helpers (typed) ------------------ #
 
-    def _prepare_features(self, since: Optional[datetime]) -> List[Dict[str, Any]]:
+    def _prepare_features(self, since: datetime | None) -> list[dict[str, Any]]:
         """Выполняет  prepare features
 
         Args:
@@ -93,21 +93,21 @@ class HydraulicSystemAIEngine:
             for sd in qs
         ]
 
-    def _get_feature_importance(self, rows: List[Dict[str, Any]]) -> Dict[str, float]:
+    def _get_feature_importance(self, rows: list[dict[str, Any]]) -> dict[str, float]:
         """Выполняет  get feature importance
 
         Args:
             rows (Any): Параметр rows
 
         """
-        weights: Dict[str, float] = {}
+        weights: dict[str, float] = {}
         for r in rows:
             t = r["sensor_type"]
             weights[t] = max(0.1, weights.get(t, 0.0) + 0.05)
         return weights
 
     def _threshold_based_anomaly_detection(
-        self, row: Dict[str, Any], thresholds: Dict[str, float]
+        self, row: dict[str, Any], thresholds: dict[str, float]
     ) -> bool:
         """Выполняет  threshold based anomaly detection
 
@@ -121,7 +121,7 @@ class HydraulicSystemAIEngine:
         return abs(v) > 100.0 * w
 
     def _calculate_anomaly_severity(
-        self, row: Dict[str, Any], thresholds: Dict[str, float]
+        self, row: dict[str, Any], thresholds: dict[str, float]
     ) -> float:
         """Выполняет  calculate anomaly severity
 
@@ -135,7 +135,7 @@ class HydraulicSystemAIEngine:
         return float(min(1.0, max(0.0, abs(v) / (200.0 * max(w, 0.1)))))
 
     def _generate_anomaly_description(
-        self, row: Dict[str, Any], severity: float
+        self, row: dict[str, Any], severity: float
     ) -> str:
         """Выполняет  generate anomaly description
 
@@ -149,19 +149,19 @@ class HydraulicSystemAIEngine:
             f"Серьёзность: {severity:.2f}"
         )
 
-    def _analyze_trends(self, rows: List[Dict[str, Any]]) -> Dict[str, float]:
+    def _analyze_trends(self, rows: list[dict[str, Any]]) -> dict[str, float]:
         """Выполняет  analyze trends
 
         Args:
             rows (Any): Параметр rows
 
         """
-        acc: Dict[str, List[float]] = {}
+        acc: dict[str, list[float]] = {}
         for r in rows:
             acc.setdefault(r["sensor_type"], []).append(float(r["value"]))
         return {k: (sum(v) / len(v) if v else 0.0) for k, v in acc.items()}
 
-    def _assess_component_health(self, rows: List[Dict[str, Any]]) -> Dict[str, float]:
+    def _assess_component_health(self, rows: list[dict[str, Any]]) -> dict[str, float]:
         """Выполняет  assess component health
 
         Args:
@@ -171,7 +171,7 @@ class HydraulicSystemAIEngine:
         trends = self._analyze_trends(rows)
         return {k: max(0.0, 1.0 - abs(v) / 500.0) for k, v in trends.items()}
 
-    def _analyze_operation_mode(self, rows: List[Dict[str, Any]]) -> str:
+    def _analyze_operation_mode(self, rows: list[dict[str, Any]]) -> str:
         """Выполняет  analyze operation mode
 
         Args:
@@ -180,7 +180,7 @@ class HydraulicSystemAIEngine:
         """
         return "nominal" if rows else "unknown"
 
-    def _calculate_failure_probability(self, rows: List[Dict[str, Any]]) -> float:
+    def _calculate_failure_probability(self, rows: list[dict[str, Any]]) -> float:
         """Выполняет  calculate failure probability
 
         Args:
@@ -203,7 +203,7 @@ class HydraulicSystemAIEngine:
             return "medium"
         return "low"
 
-    def _estimate_time_to_failure(self, rows: List[Dict[str, Any]]) -> Optional[int]:
+    def _estimate_time_to_failure(self, rows: list[dict[str, Any]]) -> int | None:
         """Выполняет  estimate time to failure
 
         Args:
@@ -215,14 +215,14 @@ class HydraulicSystemAIEngine:
             return None
         return max(1, int(24 * (1.0 - prob)))
 
-    def _identify_risk_factors(self, rows: List[Dict[str, Any]]) -> List[str]:
+    def _identify_risk_factors(self, rows: list[dict[str, Any]]) -> list[str]:
         """Выполняет  identify risk factors
 
         Args:
             rows (Any): Параметр rows
 
         """
-        factors: List[str] = []
+        factors: list[str] = []
         if any(
             r["sensor_type"] == "pressure" and float(r["value"]) > 180 for r in rows
         ):
@@ -233,21 +233,21 @@ class HydraulicSystemAIEngine:
             factors.append("overheat")
         return factors
 
-    def _generate_recommendations(self, rows: List[Dict[str, Any]]) -> List[str]:
+    def _generate_recommendations(self, rows: list[dict[str, Any]]) -> list[str]:
         """Выполняет  generate recommendations
 
         Args:
             rows (Any): Параметр rows
 
         """
-        recs: List[str] = []
+        recs: list[str] = []
         if any(r["sensor_type"] == "pressure" for r in rows):
             recs.append("Проверить контур давления и клапаны")
         if any(r["sensor_type"] == "temperature" for r in rows):
             recs.append("Проверить систему охлаждения и смазку")
         return recs
 
-    def _calculate_health_score(self, rows: List[Dict[str, Any]]) -> float:
+    def _calculate_health_score(self, rows: list[dict[str, Any]]) -> float:
         """Выполняет  calculate health score
 
         Args:
@@ -260,7 +260,7 @@ class HydraulicSystemAIEngine:
         )
         return float(max(0.0, min(1.0, base)))
 
-    def _analyze_performance(self, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _analyze_performance(self, rows: list[dict[str, Any]]) -> dict[str, Any]:
         """Выполняет  analyze performance
 
         Args:
@@ -270,8 +270,8 @@ class HydraulicSystemAIEngine:
         return {"trend": self._analyze_trends(rows)}
 
     def _generate_maintenance_recommendations(
-        self, rows: List[Dict[str, Any]]
-    ) -> List[str]:
+        self, rows: list[dict[str, Any]]
+    ) -> list[str]:
         """Выполняет  generate maintenance recommendations
 
         Args:
@@ -280,7 +280,7 @@ class HydraulicSystemAIEngine:
         """
         return self._generate_recommendations(rows)
 
-    def _suggest_optimizations(self, rows: List[Dict[str, Any]]) -> List[str]:
+    def _suggest_optimizations(self, rows: list[dict[str, Any]]) -> list[str]:
         """Выполняет  suggest optimizations
 
         Args:
@@ -289,7 +289,7 @@ class HydraulicSystemAIEngine:
         """
         return ["Оптимизировать режимы насоса", "Сбалансировать нагрузку"]
 
-    def _analyze_costs(self, rows: List[Dict[str, Any]]) -> Dict[str, float]:
+    def _analyze_costs(self, rows: list[dict[str, Any]]) -> dict[str, float]:
         """Выполняет  analyze costs
 
         Args:
@@ -298,7 +298,7 @@ class HydraulicSystemAIEngine:
         """
         return {"estimated_saving_per_month": 120.0}
 
-    def _assess_reliability(self, rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _assess_reliability(self, rows: list[dict[str, Any]]) -> dict[str, Any]:
         """Выполняет  assess reliability
 
         Args:
@@ -311,12 +311,12 @@ class HydraulicSystemAIEngine:
     def _generate_summary_report(
         self,
         health: float,
-        perf: Dict[str, Any],
-        maint: List[str],
-        optim: List[str],
-        costs: Dict[str, float],
-        reliab: Dict[str, Any],
-    ) -> Dict[str, Any]:
+        perf: dict[str, Any],
+        maint: list[str],
+        optim: list[str],
+        costs: dict[str, float],
+        reliab: dict[str, Any],
+    ) -> dict[str, Any]:
         """Выполняет  generate summary report
 
         Args:

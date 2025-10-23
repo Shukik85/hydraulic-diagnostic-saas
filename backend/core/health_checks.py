@@ -5,14 +5,15 @@
 
 import logging
 import time
-from typing import Any, Dict
+from typing import Any
 
-import redis
-from decouple import config
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
 from django.http import JsonResponse
+
+import redis
+from decouple import config
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -35,7 +36,7 @@ HEALTH_CHECK_TIMEOUT = 5  # секунд
 HEALTH_CHECK_TOKEN = config("HEALTH_CHECK_ACCESS_TOKEN", default="")
 
 
-def check_database() -> Dict[str, Any]:
+def check_database() -> dict[str, Any]:
     """
     Проверка состояния базы данных
     """
@@ -63,7 +64,7 @@ def check_database() -> Dict[str, Any]:
         return {"status": "unhealthy", "error": str(e), "response_time_ms": duration_ms}
 
 
-def check_redis() -> Dict[str, Any]:
+def check_redis() -> dict[str, Any]:
     """
     Проверка состояния Redis
     """
@@ -108,7 +109,7 @@ def check_redis() -> Dict[str, Any]:
         return {"status": "unhealthy", "error": str(e), "response_time_ms": duration_ms}
 
 
-def check_celery() -> Dict[str, Any]:
+def check_celery() -> dict[str, Any]:
     """
     Проверка состояния Celery рабочих процессов
     """
@@ -156,7 +157,7 @@ def check_celery() -> Dict[str, Any]:
         return {"status": "unhealthy", "error": str(e), "response_time_ms": duration_ms}
 
 
-def check_ai_services() -> Dict[str, Any]:
+def check_ai_services() -> dict[str, Any]:
     """
     Проверка доступности AI сервисов (например, OpenAI)
     """
@@ -185,7 +186,7 @@ def check_ai_services() -> Dict[str, Any]:
         return {"status": "error", "error": str(e), "response_time_ms": duration_ms}
 
 
-def get_system_metrics() -> Dict[str, Any]:
+def get_system_metrics() -> dict[str, Any]:
     """
     Получение базовых системных метрик
     """
