@@ -1,101 +1,330 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ chore/lint-fixes-ci-green ]
+    branches: [ chore/lint-fixes-ci-green, main, develop ]
   pull_request:
-    branches: [ chore/lint-fixes-ci-green ]
+    branches: [ chore/lint-fixes-ci-green, main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  backend-ci:
+  # Backend lint and test job
+  backend-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+        django-version: ['5.0', '5.1']
+    
     services:
       postgres:
-        image: postgres:15
+        image: timescale/timescaledb:latest-pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password123
-          POSTGRES_DB: hydraulic_diagnostic
+          POSTGRES_DB: hydraulic_diagnostic_test
         ports: ['5432:5432']
         options: >-
-          --health-cmd="pg_isready -U postgres" --health-interval=10s --health-timeout=5s --health-retries=5
+          --health-cmd="pg_isready -U postgres" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
+      
       redis:
-        image: redis:7
+        image: redis:7-alpine
         ports: ['6379:6379']
         options: >-
-          --health-cmd="redis-cli ping || exit 1" --health-interval=10s --health-timeout=5s --health-retries=5
+          --health-cmd="redis-cli ping" 
+          --health-interval=10s 
+          --health-timeout=5s 
+          --health-retries=5
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Set up Python
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ matrix.python-version }}
 
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install system deps
+      - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libpq-dev libjpeg-dev zlib1g-dev libtiff-dev libfreetype6-dev
+          sudo apt-get install -y \
+            build-essential \
+            libpq-dev \
+            libjpeg-dev \
+            zlib1g-dev \
+            libtiff-dev \
+            libfreetype6-dev \
+            gettext
 
-      - name: Install Python deps
+      - name: Install Python dependencies with uv
         run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install flake8 black isort mypy pytest pytest-django pytest-cov
+          cd backend
+          uv pip install --system -r requirements.txt
+          uv pip install --system -r requirements-dev.txt
+          uv pip install --system Django==${{ matrix.django-version }}
 
-      - name: Lint (black)
+      - name: Cache pre-commit hooks
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit hooks
         run: |
-          black --check backend || (echo "Run: black backend" && exit 1)
+          pre-commit install
+          pre-commit run --all-files --show-diff-on-failure
 
-      - name: Lint (isort)
+      - name: Run Ruff (lint & format check)
         run: |
-          isort --check-only backend || (echo "Run: isort backend" && exit 1)
+          ruff check backend/ --output-format=github
+          ruff format backend/ --check
 
-      - name: Lint (flake8)
+      - name: Run security checks (Bandit)
         run: |
-          flake8 backend --max-line-length=100 --exclude=.venv,.mypy_cache
+          bandit -r backend/ -f json -o bandit-report.json || true
+          bandit -r backend/ -c .bandit
 
-      - name: Type check (mypy)
+      - name: Run type checking (mypy)
         run: |
-          mypy backend || true
+          mypy backend/apps backend/core --config-file=pyproject.toml
 
-      - name: Prepare env
+      - name: Setup test environment
+        working-directory: backend
         run: |
-          cp backend/.env.example backend/.env
-          echo "DEBUG=True" >> backend/.env
-          echo "SECRET_KEY=ci-secret-key" >> backend/.env
-          echo "ALLOWED_HOSTS=localhost,127.0.0.1" >> backend/.env
-          echo "DATABASE_URL=postgresql://postgres:password123@localhost:5432/hydraulic_diagnostic" >> backend/.env
-          echo "REDIS_URL=redis://localhost:6379/0" >> backend/.env
-          echo "AI_REDIS_URL=redis://localhost:6379/1" >> backend/.env
+          cp .env.example .env
+          echo "DEBUG=True" >> .env
+          echo "SECRET_KEY=ci-test-key-$(date +%s)" >> .env
+          echo "ALLOWED_HOSTS=localhost,127.0.0.1" >> .env
+          echo "DATABASE_URL=postgresql://postgres:password123@localhost:5432/hydraulic_diagnostic_test" >> .env
+          echo "REDIS_URL=redis://localhost:6379/0" >> .env
+          echo "AI_REDIS_URL=redis://localhost:6379/1" >> .env
+          echo "CELERY_BROKER_URL=redis://localhost:6379/2" >> .env
 
-      - name: Run migrations
+      - name: Run Django system checks
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: |
+          python manage.py check --deploy
+
+      - name: Run database migrations
         working-directory: backend
         env:
           DJANGO_SETTINGS_MODULE: core.settings
         run: |
           python manage.py migrate --noinput
 
-      - name: Collect static
+      - name: Collect static files
         working-directory: backend
         env:
           DJANGO_SETTINGS_MODULE: core.settings
         run: |
           python manage.py collectstatic --noinput
 
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: backend
         env:
           DJANGO_SETTINGS_MODULE: core.settings
         run: |
-          pytest -q --disable-warnings --maxfail=1 --cov=apps --cov-report=term-missing
+          pytest \
+            --cov=apps \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-fail-under=80 \
+            --maxfail=5 \
+            --tb=short \
+            -v
+
+      - name: Upload coverage to Codecov
+        if: matrix.python-version == '3.11' && matrix.django-version == '5.1'
+        uses: codecov/codecov-action@v4
+        with:
+          file: backend/coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Run smoke tests
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: core.settings
+        run: |
+          python smoke_diagnostics.py
+
+  # Frontend lint and test job
+  frontend-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['18', '20', '22']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'nuxt_frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: nuxt_frontend
+        run: npm ci
+
+      - name: Run linting
+        working-directory: nuxt_frontend
+        run: |
+          npm run lint
+          npm run format:check
+
+      - name: Run type checking
+        working-directory: nuxt_frontend
+        run: npm run typecheck
+
+      - name: Build application
+        working-directory: nuxt_frontend
+        run: npm run build
+
+      - name: Run tests
+        working-directory: nuxt_frontend
+        run: npm run test:coverage
+
+      - name: Upload frontend coverage
+        if: matrix.node-version == '20'
+        uses: codecov/codecov-action@v4
+        with:
+          directory: nuxt_frontend/coverage
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+  # Security scanning job
+  security-scan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Docker build and test job
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/chore/lint-fixes-ci-green')
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # E2E testing job (if needed)
+  e2e-test:
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Start application with Docker Compose
+        run: |
+          docker-compose -f docker-compose.dev.yml up -d
+          sleep 30  # Wait for services to start
+
+      - name: Run E2E tests
+        working-directory: nuxt_frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          npm run test:e2e || true  # Allow to fail for now
+
+      - name: Stop Docker Compose
+        if: always()
+        run: docker-compose -f docker-compose.dev.yml down
+
+  # Deployment job (if needed)
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, security-scan, docker-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploy step - implement your deployment strategy here"
+          # Add your deployment commands here
