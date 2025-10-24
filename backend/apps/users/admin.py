@@ -1,6 +1,6 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
-from typing import Any
+from typing import Any, ClassVar
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -10,7 +10,7 @@ from .models import User, UserActivity, UserProfile
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = [
+    list_display: ClassVar[list[str]] = [
         "username",
         "email",
         "get_full_name",
@@ -21,7 +21,7 @@ class UserAdmin(BaseUserAdmin):
         "last_activity",
         "created_at",
     ]
-    list_filter = [
+    list_filter: ClassVar[list[str]] = [
         "is_active",
         "is_staff",
         "is_superuser",
@@ -29,8 +29,8 @@ class UserAdmin(BaseUserAdmin):
         "email_notifications",
         "created_at",
     ]
-    search_fields = ["username", "email", "first_name", "last_name", "company"]
-    ordering = ["-created_at"]
+    search_fields: ClassVar[list[str]] = ["username", "email", "first_name", "last_name", "company"]
+    ordering: ClassVar[list[str]] = ["-created_at"]
 
     # Приводим BaseUserAdmin.fieldsets к tuple и объединяем с нашими
     base_fieldsets: tuple = tuple(BaseUserAdmin.fieldsets or ())
@@ -65,7 +65,7 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = base_fieldsets + extra_fieldsets
 
-    readonly_fields = ["last_activity", "created_at", "systems_count"]
+    readonly_fields: ClassVar[list[str]] = ["last_activity", "created_at", "systems_count"]
 
     @admin.display(description="Полное имя")
     def get_full_name(self, obj: User) -> str:
@@ -74,10 +74,10 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ["user", "location", "theme", "language", "timezone", "updated_at"]
-    list_filter = ["theme", "language", "timezone", "created_at"]
-    search_fields = ["user__username", "user__email", "location", "bio"]
-    ordering = ["-updated_at"]
+    list_display: ClassVar[list[str]] = ["user", "location", "theme", "language", "timezone", "updated_at"]
+    list_filter: ClassVar[list[str]] = ["theme", "language", "timezone", "created_at"]
+    search_fields: ClassVar[list[str]] = ["user__username", "user__email", "location", "bio"]
+    ordering: ClassVar[list[str]] = ["-updated_at"]
 
     fieldsets = (
         (
@@ -90,11 +90,11 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(UserActivity)
 class UserActivityAdmin(admin.ModelAdmin):
-    list_display = ["user", "action", "get_action_display", "ip_address", "created_at"]
-    list_filter = ["action", "created_at"]
-    search_fields = ["user__username", "user__email", "description", "ip_address"]
-    ordering = ["-created_at"]
-    readonly_fields = ["created_at"]
+    list_display: ClassVar[list[str]] = ["user", "action", "get_action_display", "ip_address", "created_at"]
+    list_filter: ClassVar[list[str]] = ["action", "created_at"]
+    search_fields: ClassVar[list[str]] = ["user__username", "user__email", "description", "ip_address"]
+    ordering: ClassVar[list[str]] = ["-created_at"]
+    readonly_fields: ClassVar[list[str]] = ["created_at"]
 
     fieldsets = (
         ("Основная информация", {"fields": ("user", "action", "description")}),
