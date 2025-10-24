@@ -1,218 +1,157 @@
 <script setup lang="ts">
-useHead({
-  htmlAttrs: { lang: 'ru' },
-  link: [
-    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }
-  ]
+// Main application root with minimal logic for investor demo
+useSeoMeta({
+  titleTemplate: '%s | Hydraulic Diagnostic SaaS',
+  description: 'AI-powered hydraulic system monitoring and predictive maintenance platform for industrial operations.',
+  ogTitle: 'Hydraulic Diagnostic SaaS - AI-Powered Industrial Monitoring',
+  ogDescription: 'Next-generation predictive maintenance for hydraulic systems. Real-time monitoring, intelligent diagnostics, and proactive maintenance scheduling.',
+  ogImage: '/og-image.jpg',
+  twitterCard: 'summary_large_image'
 })
 
-const handleError = (error: unknown) => {
-  console.error('Application error:', error)
+// Critical icon preloading for investor demo
+if (process.client) {
+  const criticalIcons = [
+    'heroicons:chart-bar-square',
+    'heroicons:shield-check', 
+    'heroicons:users',
+    'heroicons:cog-6-tooth',
+    'heroicons:arrow-right',
+    'heroicons:sparkles'
+  ]
+  
+  // Preload icons for smooth demo experience
+  criticalIcons.forEach(icon => {
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.as = 'image'
+    link.href = `/_nuxt/icons/${icon.replace(':', '-')}.svg`
+    document.head.appendChild(link)
+  })
 }
 
-// Неблокирующее “прогревание” иконок через скрытый контейнер
-const criticalIcons = [
-  'heroicons:chart-bar-square',
-  'heroicons:shield-check',
-  'heroicons:users',
-  'heroicons:cog-6-tooth'
-]
+// Global error handling for demo stability
+const handleError = (error: any, errorInfo?: any) => {
+  console.error('Application error:', error, errorInfo)
+  // Silent error handling for smooth demo experience
+}
+
+// Setup error boundaries
+onErrorCaptured((error: any, instance: any, info: any) => {
+  handleError(error, { instance, info })
+  return false // Prevent error propagation
+})
+
+// Application lifecycle
+onMounted(() => {
+  console.log('🚀 Hydraulic Diagnostic SaaS - Ready for investor demo!')
+})
 </script>
 
 <template>
-  <div id="app" class="min-h-screen text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 transition-colors">
-    <NuxtRouteAnnouncer />
+  <div id="app" class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
+    <!-- Main application content -->
     <NuxtLayout>
-      <NuxtWelcome v-if="$route.path === '/welcome'" />
-      <NuxtPage v-else />
+      <NuxtPage />
     </NuxtLayout>
-    <NuxtErrorBoundary @error="handleError" />
-
-    <!-- Hidden icon pre-render to warm cache -->
-    <div aria-hidden="true" class="sr-only">
-      <Icon v-for="iconName in criticalIcons" :key="iconName" :name="iconName" />
+    
+    <!-- Global loading indicator -->
+    <div v-if="$route.meta.loading" class="fixed inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div class="flex items-center space-x-3">
+        <div class="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Загрузка...</span>
+      </div>
     </div>
   </div>
 </template>
 
-
 <style>
-/* Global styles with premium design system integration */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
-
+/* Global styles for investor demo */
 * {
   box-sizing: border-box;
 }
 
 html {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
   scroll-behavior: smooth;
+  line-height: 1.6;
 }
 
 body {
   margin: 0;
   padding: 0;
-  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* Code font for technical content */
-code,
-pre,
-.font-mono {
-  font-family: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-}
-
-/* Ensure consistent focus styles */
-:focus {
-  outline: 2px solid theme('colors.blue.500');
-  outline-offset: 2px;
-}
-
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* Smooth scrolling for internal links */
-a[href^="#"] {
-  scroll-behavior: smooth;
-}
-
-/* Print styles */
-@media print {
-  .no-print {
-    display: none !important;
-  }
-
-  .print-break {
-    page-break-after: always;
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .premium-card {
-    border-width: 2px;
-  }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* Loading states */
-.loading {
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.loading * {
-  cursor: wait;
-}
-
-/* Selection styles */
-::selection {
-  background-color: theme('colors.blue.100');
-  color: theme('colors.blue.900');
-}
-
-::-moz-selection {
-  background-color: theme('colors.blue.100');
-  color: theme('colors.blue.900');
-}
-
-/* Dark mode selection */
-@media (prefers-color-scheme: dark) {
-  ::selection {
-    background-color: theme('colors.blue.800');
-    color: theme('colors.blue.100');
-  }
-
-  ::-moz-selection {
-    background-color: theme('colors.blue.800');
-    color: theme('colors.blue.100');
-  }
-}
-
-/* Scrollbar styling (webkit) */
+/* Hide scrollbars in demo for cleaner look */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: theme('colors.gray.100');
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: theme('colors.gray.400');
-  border-radius: 4px;
+  background: rgba(156, 163, 175, 0.3);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: theme('colors.gray.500');
+  background: rgba(156, 163, 175, 0.5);
 }
 
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-track {
-    background: theme('colors.gray.800');
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: theme('colors.gray.600');
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: theme('colors.gray.500');
-  }
+/* Focus styles for accessibility */
+.premium-focus:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
 }
 
-/* Custom animations for premium effects */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
-  100% {
-    background-position: 200% 0;
-  }
+/* Animation utilities for smooth demo */
+.premium-fade-in {
+  animation: fadeIn 0.6s ease-out;
 }
 
-.shimmer {
-  background: linear-gradient(90deg,
-      transparent,
-      rgba(255, 255, 255, 0.2),
-      transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+.premium-slide-up {
+  animation: slideUp 0.4s ease-out;
 }
 
-/* Gradient animation for premium text */
-@keyframes gradient {
-
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
+.premium-scale-in {
+  animation: scaleIn 0.3s ease-out;
 }
 
-.animate-gradient {
-  background-size: 200% 200%;
-  animation: gradient 3s ease infinite;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Dark mode transitions */
+.dark * {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Print styles for investor materials */
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    color-adjust: exact;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
 }
 </style>
