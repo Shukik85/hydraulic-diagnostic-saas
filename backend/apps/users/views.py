@@ -1,5 +1,7 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
+from typing import ClassVar
+
 from django.contrib.auth import get_user_model
 from rest_framework import filters, generics, mixins, permissions, status, viewsets
 from rest_framework.decorators import action
@@ -77,7 +79,7 @@ class UserViewSet(
         serializer = ChangePasswordSerializer(data=request.data, context={"user": user})
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"detail": "Пароль изменён"}, status=status.HTTP_200_OK)
+        return Response({"деталь": "Пароль изменён"}, status=status.HTTP_200_OK)
 
     @action(
         detail=True, methods=["get"], permission_classes=(permissions.IsAuthenticated,)
@@ -97,8 +99,8 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     permission_classes: tuple[type[BasePermission], ...] = (
         permissions.IsAuthenticated,
     )
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["user__username", "location"]
+    filter_backends: ClassVar[list] = [filters.SearchFilter]
+    search_fields: ClassVar[list[str]] = ["user__username", "location"]
 
 
 class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
@@ -109,9 +111,9 @@ class UserActivityViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes: tuple[type[BasePermission], ...] = (
         permissions.IsAuthenticated,
     )
-    filter_backends = [filters.OrderingFilter]
-    ordering_fields = ["created_at"]
-    ordering = ["-created_at"]
+    filter_backends: ClassVar[list] = [filters.OrderingFilter]
+    ordering_fields: ClassVar[list[str]] = ["created_at"]
+    ordering: ClassVar[list[str]] = ["-created_at"]
 
     def list(self, request, *args, **kwargs):
         # По умолчанию возвращаем активность текущего пользователя
