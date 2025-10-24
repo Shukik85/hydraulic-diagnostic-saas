@@ -29,7 +29,13 @@ class UserAdmin(BaseUserAdmin):
         "email_notifications",
         "created_at",
     ]
-    search_fields: ClassVar[list[str]] = ["username", "email", "first_name", "last_name", "company"]
+    search_fields: ClassVar[list[str]] = [
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "company",
+    ]
     ordering: ClassVar[list[str]] = ["-created_at"]
 
     # Приводим BaseUserAdmin.fieldsets к tuple и объединяем с нашими
@@ -65,7 +71,11 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = base_fieldsets + extra_fieldsets
 
-    readonly_fields: ClassVar[list[str]] = ["last_activity", "created_at", "systems_count"]
+    readonly_fields: ClassVar[list[str]] = [
+        "last_activity",
+        "created_at",
+        "systems_count",
+    ]
 
     @admin.display(description="Полное имя")
     def get_full_name(self, obj: User) -> str:
@@ -74,9 +84,21 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display: ClassVar[list[str]] = ["user", "location", "theme", "language", "timezone", "updated_at"]
+    list_display: ClassVar[list[str]] = [
+        "user",
+        "location",
+        "theme",
+        "language",
+        "timezone",
+        "updated_at",
+    ]
     list_filter: ClassVar[list[str]] = ["theme", "language", "timezone", "created_at"]
-    search_fields: ClassVar[list[str]] = ["user__username", "user__email", "location", "bio"]
+    search_fields: ClassVar[list[str]] = [
+        "user__username",
+        "user__email",
+        "location",
+        "bio",
+    ]
     ordering: ClassVar[list[str]] = ["-updated_at"]
 
     fieldsets = (
@@ -90,9 +112,20 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(UserActivity)
 class UserActivityAdmin(admin.ModelAdmin):
-    list_display: ClassVar[list[str]] = ["user", "action", "get_action_display", "ip_address", "created_at"]
+    list_display: ClassVar[list[str]] = [
+        "user",
+        "action",
+        "get_action_display",
+        "ip_address",
+        "created_at",
+    ]
     list_filter: ClassVar[list[str]] = ["action", "created_at"]
-    search_fields: ClassVar[list[str]] = ["user__username", "user__email", "description", "ip_address"]
+    search_fields: ClassVar[list[str]] = [
+        "user__username",
+        "user__email",
+        "description",
+        "ip_address",
+    ]
     ordering: ClassVar[list[str]] = ["-created_at"]
     readonly_fields: ClassVar[list[str]] = ["created_at"]
 

@@ -15,7 +15,13 @@ class UserBasicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserModel
-        fields: ClassVar[list[str]] = ["id", "username", "email", "first_name", "last_name"]
+        fields: ClassVar[list[str]] = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+        ]
         read_only_fields: ClassVar[list[str]] = fields
 
 
@@ -48,7 +54,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserModel
-        fields: ClassVar[list[str]] = ["email", "username", "password", "first_name", "last_name"]
+        fields: ClassVar[list[str]] = [
+            "email",
+            "username",
+            "password",
+            "first_name",
+            "last_name",
+        ]
 
     def create(self, validated_data):
         return UserModel.objects.create_user(
