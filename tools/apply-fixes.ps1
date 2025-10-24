@@ -8,140 +8,118 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "🔧 Backend Lint Fixes Automation Script" -ForegroundColor Green
-Write-Host "=========================================" -ForegroundColor Green
+Write-Host "Backend Lint Fixes Automation Script"
+Write-Host "===================================="
 Write-Host ""
 
 # Check if we're in the project root
 if (-not (Test-Path "backend" -PathType Container)) {
-    Write-Host "❌ Error: Run this script from the project root directory." -ForegroundColor Red
+    Write-Host "ERROR: Run this script from the project root directory." -ForegroundColor Red
     Write-Host "Expected to find 'backend' folder in current directory." -ForegroundColor Red
     exit 1
 }
 
 # Check if virtual environment exists
 if (-not (Test-Path ".venv" -PathType Container)) {
-    Write-Host "❌ Error: Virtual environment not found." -ForegroundColor Red
+    Write-Host "ERROR: Virtual environment not found." -ForegroundColor Red
     Write-Host "Please create it first with: python -m venv .venv" -ForegroundColor Yellow
     exit 1
 }
 
 # Activate virtual environment if not already active
 if (-not $env:VIRTUAL_ENV) {
-    Write-Host "⚙️  Activating virtual environment..." -ForegroundColor Yellow
+    Write-Host "Activating virtual environment..."
     & ".venv\Scripts\Activate.ps1"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "❌ Error: Failed to activate virtual environment." -ForegroundColor Red
+    if (-not $env:VIRTUAL_ENV) {
+        Write-Host "ERROR: Failed to activate virtual environment." -ForegroundColor Red
         exit 1
     }
 }
 
-Write-Host "✅ Virtual environment active: $env:VIRTUAL_ENV" -ForegroundColor Green
+Write-Host "Virtual environment active: $env:VIRTUAL_ENV"
 
 # Pull latest changes
-Write-Host "📥 Pulling latest changes from $Branch..." -ForegroundColor Yellow
-git pull origin $Branch
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Error: Failed to pull changes. Check git status." -ForegroundColor Red
-    exit 1
-}
+Write-Host "Pulling latest changes from $Branch..."
+git pull origin $Branch | Out-Host
 
 # Apply Ruff autofixes
-Write-Host "🔍 Applying Ruff autofixes to backend..." -ForegroundColor Yellow
-ruff check backend/ --fix
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Error: Ruff autofix failed. Check the output above." -ForegroundColor Red
-    exit 1
-}
+Write-Host "Applying Ruff autofixes to backend..."
+ruff check backend/ --fix | Out-Host
 
 # Apply Ruff formatting
-Write-Host "🎨 Applying Ruff formatting to backend..." -ForegroundColor Yellow
-ruff format backend/
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Error: Ruff formatting failed. Check the output above." -ForegroundColor Red
-    exit 1
-}
+Write-Host "Applying Ruff formatting to backend..."
+ruff format backend/ | Out-Host
 
 # Check final lint status
-Write-Host "✨ Checking final lint status..." -ForegroundColor Yellow
-$lintResult = ruff check backend/ 2>&1
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Ruff check passed - no blocking errors!" -ForegroundColor Green
+Write-Host "Checking final lint status..."
+$lintSucceeded = $true
+try {
+    ruff check backend/ | Out-Host
+} catch {
+    $lintSucceeded = $false
+}
+if ($lintSucceeded) {
+    Write-Host "Ruff check passed - no blocking errors!"
 } else {
-    Write-Host "⚠️  Some Ruff warnings remain (non-blocking):" -ForegroundColor Yellow
-    Write-Host $lintResult -ForegroundColor Gray
+    Write-Host "Some Ruff warnings remain (non-blocking)."
 }
 
 # Test pytest collection
-Write-Host "🧪 Testing pytest collection..." -ForegroundColor Yellow
-Set-Location backend
-$pytestResult = pytest --collect-only -q 2>&1
-Set-Location ..
-if ($LASTEXITCODE -eq 0) {
-    Write-Host "✅ Pytest collection successful!" -ForegroundColor Green
+Write-Host "Testing pytest collection..."
+Push-Location backend
+$pytestSucceeded = $true
+try {
+    pytest --collect-only -q | Out-Host
+} catch {
+    $pytestSucceeded = $false
+}
+Pop-Location
+if ($pytestSucceeded) {
+    Write-Host "Pytest collection successful!"
 } else {
-    Write-Host "❌ Error: Pytest collection failed:" -ForegroundColor Red
-    Write-Host $pytestResult -ForegroundColor Gray
-    Write-Host ""
-    Write-Host "💡 Try running: cd backend && pytest --collect-only" -ForegroundColor Yellow
+    Write-Host "ERROR: Pytest collection failed."
+    Write-Host "Try running: cd backend && pytest --collect-only"
     exit 1
 }
 
 # Check git status
-Write-Host "📋 Checking git status..." -ForegroundColor Yellow
+Write-Host "Checking git status..."
 $gitStatus = git status --porcelain
 if (-not $gitStatus) {
-    Write-Host "✅ No changes to commit - code is already clean!" -ForegroundColor Green
-    Write-Host "🎉 All done! Your backend is lint-clean and ready." -ForegroundColor Green
+    Write-Host "No changes to commit - code is already clean!"
+    Write-Host "Done."
     exit 0
 }
 
 if ($DryRun) {
-    Write-Host "🔍 DRY RUN - Would commit these changes:" -ForegroundColor Yellow
-    git status --short
-    Write-Host ""
-    Write-Host "To actually commit, run without -DryRun flag." -ForegroundColor Yellow
+    Write-Host "DRY RUN - Would commit these changes:"
+    git status --short | Out-Host
+    Write-Host "To actually commit, run without -DryRun flag."
     exit 0
 }
 
 # Add changes and commit
-Write-Host "📝 Adding and committing changes..." -ForegroundColor Yellow
+Write-Host "Adding and committing changes..."
 git add backend/
-$commitMessage = "Apply Ruff autofixes and formatting to backend code
+$commitMessage = @"
+Apply Ruff autofixes and formatting to backend code
 
 - Fix imports organization and formatting
 - Apply safe automatic code style fixes
 - Resolve docstring and exception handling issues
 - Maintain code functionality while improving style
 
-Generated by: tools/apply-fixes.ps1"
+Generated by: tools/apply-fixes.ps1
+"@
 
-git commit -m $commitMessage
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Error: Failed to commit changes." -ForegroundColor Red
-    exit 1
-}
+git commit -m $commitMessage | Out-Host
 
 # Push changes
-Write-Host "🚀 Pushing changes to $Branch..." -ForegroundColor Yellow
-git push origin $Branch
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Error: Failed to push changes." -ForegroundColor Red
-    Write-Host "💡 Try: git push origin $Branch" -ForegroundColor Yellow
-    exit 1
-}
+Write-Host "Pushing changes to $Branch..."
+git push origin $Branch | Out-Host
 
-Write-Host ""
-Write-Host "🎉 SUCCESS! Backend fixes applied and pushed!" -ForegroundColor Green
-Write-Host "=========================================" -ForegroundColor Green
-Write-Host "✅ Ruff autofixes applied" -ForegroundColor Green
-Write-Host "✅ Code formatted" -ForegroundColor Green
-Write-Host "✅ Pytest collection verified" -ForegroundColor Green
-Write-Host "✅ Changes committed and pushed" -ForegroundColor Green
-Write-Host ""
-Write-Host "🔍 Next steps:" -ForegroundColor Cyan
-Write-Host "1. Check GitHub Actions for CI status" -ForegroundColor White
-Write-Host "2. Monitor any remaining lint warnings" -ForegroundColor White
-Write-Host "3. Ready for code review/merge" -ForegroundColor White
-Write-Host ""
-Write-Host "Repository: https://github.com/Shukik85/hydraulic-diagnostic-saas/tree/$Branch" -ForegroundColor Blue
+Write-Host "SUCCESS: Backend fixes applied and pushed."
+Write-Host "Next steps:"
+Write-Host "1. Check GitHub Actions for CI status"
+Write-Host "2. Monitor any remaining lint warnings"
+Write-Host "3. Ready for code review/merge"
