@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// Professional section header component with type-safe color schemes
 interface Props {
   title: string
   description?: string
@@ -10,13 +11,16 @@ interface Props {
   badgeColor?: 'blue' | 'green' | 'purple' | 'orange' | 'teal' | 'red' | 'indigo'
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
   iconColor: 'blue',
   badgeColor: 'blue'
 })
 
-const getIconColorClass = (color: string) => {
-  const colorMap = {
+// Type-safe color mappings
+type ColorKey = NonNullable<Props['iconColor']>
+
+const getIconColorClass = (color: ColorKey): string => {
+  const colorMap: Record<ColorKey, string> = {
     blue: 'text-blue-600 dark:text-blue-400',
     green: 'text-green-600 dark:text-green-400',
     purple: 'text-purple-600 dark:text-purple-400',
@@ -25,11 +29,11 @@ const getIconColorClass = (color: string) => {
     red: 'text-red-600 dark:text-red-400',
     indigo: 'text-indigo-600 dark:text-indigo-400'
   }
-  return colorMap[color] || colorMap.blue
+  return colorMap[color]
 }
 
-const getBadgeColorClass = (color: string) => {
-  const colorMap = {
+const getBadgeColorClass = (color: ColorKey): string => {
+  const colorMap: Record<ColorKey, string> = {
     blue: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
     green: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
     purple: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
@@ -38,7 +42,7 @@ const getBadgeColorClass = (color: string) => {
     red: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
     indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
   }
-  return colorMap[color] || colorMap.blue
+  return colorMap[color]
 }
 </script>
 
@@ -50,7 +54,7 @@ const getBadgeColorClass = (color: string) => {
         <Icon 
           v-if="icon" 
           :name="icon" 
-          :class="`w-6 h-6 ${getIconColorClass(iconColor)}`" 
+          :class="`w-6 h-6 ${getIconColorClass(iconColor || 'blue')}`" 
         />
         
         <!-- Title -->
@@ -61,7 +65,7 @@ const getBadgeColorClass = (color: string) => {
         <!-- Badge -->
         <span 
           v-if="badge"
-          :class="`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeColorClass(badgeColor)}`"
+          :class="`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeColorClass(badgeColor || 'blue')}`"
         >
           {{ badge }}
         </span>
