@@ -1,8 +1,8 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
 import os
-import sys
 from pathlib import Path
+import sys
 
 import django
 from django.db import IntegrityError
