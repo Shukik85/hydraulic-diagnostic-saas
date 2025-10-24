@@ -2,13 +2,126 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-
+  
+  // CSS and styling
+  css: [
+    '~/styles/premium-tokens.css'
+  ],
+  
+  // App configuration
+  app: {
+    head: {
+      charset: 'utf-8',
+      viewport: 'width=device-width, initial-scale=1',
+      title: 'Hydraulic Diagnostic SaaS - AI-Powered Industrial Monitoring',
+      meta: [
+        {
+          name: 'description',
+          content: 'Revolutionary hydraulic diagnostics platform with predictive maintenance, real-time monitoring, and AI insights. Trusted by 127+ enterprises.'
+        },
+        { name: 'format-detection', content: 'telephone=no' }
+      ]
+    }
+  },
+  
+  // Runtime configuration
+  runtimeConfig: {
+    // Private keys (only available on server-side)
+    apiSecret: '',
+    
+    // Public keys (exposed to client-side)
+    public: {
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    }
+  },
+  
   modules: [
     '@nuxt/content',
     '@nuxt/eslint',
     '@nuxt/image',
-    '@nuxt/scripts',
-    '@nuxt/test-utils',
-    '@nuxt/ui'
-  ]
+    '@nuxt/icon',
+    '@nuxt/fonts',
+    '@nuxtjs/tailwindcss',
+    '@nuxtjs/color-mode',
+    '@pinia/nuxt',
+    '@nuxtjs/seo'
+  ],
+  
+  // Color mode configuration
+  colorMode: {
+    preference: 'system',
+    fallback: 'light',
+    hid: 'nuxt-color-mode-script',
+    globalName: '__NUXT_COLOR_MODE__',
+    componentName: 'ColorScheme',
+    classPrefix: '',
+    classSuffix: '',
+    storageKey: 'nuxt-color-mode'
+  },
+  
+  // Tailwind CSS configuration
+  tailwindcss: {
+    cssPath: false, // We use our custom CSS file
+    configPath: 'tailwind.config.js'
+  },
+  
+  // Fonts configuration
+  fonts: {
+    families: [
+      { name: 'Inter', provider: 'google', weights: [400, 500, 600, 700, 800, 900] },
+      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500, 600] }
+    ]
+  },
+  
+  // Icon configuration
+  icon: {
+    serverBundle: 'auto'
+  },
+  
+  // Image optimization
+  image: {
+    format: ['webp', 'avif'],
+    quality: 80,
+    screens: {
+      xs: 320,
+      sm: 640,
+      md: 768,
+      lg: 1024,
+      xl: 1280,
+      '2xl': 1536
+    }
+  },
+  
+  // SEO configuration
+  site: {
+    url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+    name: 'Hydraulic Diagnostic SaaS',
+    description: 'AI-powered hydraulic diagnostics platform for industrial monitoring and predictive maintenance',
+    defaultLocale: 'ru'
+  },
+  
+  // Build configuration
+  nitro: {
+    compressPublicAssets: true
+  },
+  
+  // Development configuration
+  devtools: {
+    enabled: true,
+    timeline: {
+      enabled: true
+    }
+  },
+  
+  // TypeScript configuration
+  typescript: {
+    strict: true,
+    typeCheck: true
+  },
+  
+  // ESLint configuration
+  eslint: {
+    lintOnStart: false // Avoid slowing down dev startup
+  }
 })
