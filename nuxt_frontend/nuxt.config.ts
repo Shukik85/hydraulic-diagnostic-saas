@@ -1,17 +1,28 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
-  
+  devtools: {
+    enabled: true,
+    timeline: {
+      enabled: true,
+    },
+  },
+
+  // Tailwind CSS configuration
+  tailwindcss: {
+    exposeConfig: true,
+    viewer: true,
+    cssPath: '~/assets/css/tailwind.css',
+    configPath: 'tailwind.config.ts',
+  },
+
   // CSS and styling
-  css: [
-    '~/styles/premium-tokens.css'
-  ],
-  
+  css: ['~/assets/css/tailwind.css', '~/assets/css/global.css', '~/styles/premium-tokens.css'],
+
   // Auto-import components from components and components/ui
   components: [
     { path: '~/components', pathPrefix: false },
-    { path: '~/components/ui', pathPrefix: false }
+    { path: '~/components/ui', pathPrefix: false },
   ],
 
   // App configuration
@@ -23,11 +34,12 @@ export default defineNuxtConfig({
       meta: [
         {
           name: 'description',
-          content: 'Revolutionary hydraulic diagnostics platform with predictive maintenance, real-time monitoring, and AI insights. Trusted by 127+ enterprises.'
+          content:
+            'Revolutionary hydraulic diagnostics platform with predictive maintenance, real-time monitoring, and AI insights. Trusted by 127+ enterprises.',
         },
-        { name: 'format-detection', content: 'telephone=no' }
-      ]
-    }
+        { name: 'format-detection', content: 'telephone=no' },
+      ],
+    },
   },
 
   // Runtime configuration
@@ -38,22 +50,21 @@ export default defineNuxtConfig({
     // Public keys (exposed to client-side)
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000'
-    }
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+    },
   },
 
   modules: [
     '@nuxt/content',
     '@nuxt/eslint',
-    '@nuxt/image', 
+    '@nuxt/image',
     '@nuxt/icon',
     '@nuxt/fonts',
-    '@nuxtjs/tailwindcss',
     '@nuxtjs/color-mode',
     '@pinia/nuxt',
-    '@nuxtjs/seo'
+    '@nuxtjs/seo',
   ],
-  
+
   // Color mode configuration
   colorMode: {
     preference: 'system',
@@ -63,28 +74,22 @@ export default defineNuxtConfig({
     componentName: 'ColorScheme',
     classPrefix: '',
     classSuffix: '',
-    storageKey: 'nuxt-color-mode'
+    storageKey: 'nuxt-color-mode',
   },
-  
-  // Tailwind CSS configuration
-  tailwindcss: {
-    cssPath: false, // We use our custom CSS file
-    configPath: 'tailwind.config.js'
-  },
-  
+
   // Fonts configuration
   fonts: {
     families: [
       { name: 'Inter', provider: 'google', weights: [400, 500, 600, 700, 800, 900] },
-      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500, 600] }
-    ]
+      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500, 600] },
+    ],
   },
-  
+
   // Icon configuration
   icon: {
-    serverBundle: 'auto'
+    serverBundle: 'auto',
   },
-  
+
   // Image optimization
   image: {
     format: ['webp', 'avif'],
@@ -95,39 +100,27 @@ export default defineNuxtConfig({
       md: 768,
       lg: 1024,
       xl: 1280,
-      '2xl': 1536
-    }
+      '2xl': 1536,
+    },
   },
-  
+
   // SEO configuration
   site: {
     url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     name: 'Hydraulic Diagnostic SaaS',
-    description: 'AI-powered hydraulic diagnostics platform for industrial monitoring and predictive maintenance',
-    defaultLocale: 'ru'
+    description:
+      'AI-powered hydraulic diagnostics platform for industrial monitoring and predictive maintenance',
+    defaultLocale: 'ru',
   },
-  
+
   // Build configuration
   nitro: {
-    compressPublicAssets: true
+    compressPublicAssets: true,
   },
-  
-  // Development configuration
-  devtools: {
-    enabled: true,
-    timeline: {
-      enabled: true
-    }
-  },
-  
+
   // TypeScript configuration
   typescript: {
     strict: true,
-    typeCheck: true
+    typeCheck: true,
   },
-  
-  // ESLint configuration
-  eslint: {
-    lintOnStart: false // Avoid slowing down dev startup
-  }
-})
+});
