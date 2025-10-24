@@ -35,5 +35,5 @@ export default defineNuxtConfig({
   modules: ['@nuxt/eslint', '@pinia/nuxt'],
 
   // CSS and styling
-  css: ['~/styles/premium-tokens.css', '~/assets/css/globals.css'],
+  css: ['~/assets/css/globals.css'],
 });
