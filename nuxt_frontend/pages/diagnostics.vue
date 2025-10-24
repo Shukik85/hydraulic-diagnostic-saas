@@ -1,3 +1,4 @@
+<!-- eslint-disable vue/html-self-closing -->
 <template>
   <div class="space-y-6">
     <!-- Header -->
@@ -131,7 +132,7 @@
           <UiButton variant="outline" @click="showRunModal = false">
             Cancel
           </UiButton>
-          <UiButton @click="startDiagnostic" :disabled="!selectedEquipment">
+          <UiButton :disabled="!selectedEquipment" @click="startDiagnostic">
             <Icon name="lucide:play" class="mr-2 h-4 w-4" />
             Start Diagnostic
           </UiButton>
