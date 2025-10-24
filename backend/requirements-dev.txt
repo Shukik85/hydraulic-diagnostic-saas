@@ -56,4 +56,4 @@ sphinx-rtd-theme>=3.0.2
 # Development utilities
 watchdog>=6.0.0  # File watching
 pre-commit>=4.0.1
-safety>=4.0.3  # Security scanning
+safety>=3.2.0,<4.0.0  # Security scanning - use stable 3.x branch
