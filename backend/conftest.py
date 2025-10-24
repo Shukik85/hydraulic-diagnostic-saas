@@ -57,7 +57,6 @@ def enable_db_access_for_all_tests(db):
 @pytest.fixture(scope="session")
 def django_db_modify_db_settings():
     """Modify database settings for tests."""
-    from django.conf import settings
 
     settings.DATABASES["default"]["NAME"] = ":memory:"
 
