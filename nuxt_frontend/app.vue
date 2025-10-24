@@ -1,46 +1,23 @@
-<script setup>
-// Main app component with premium design system integration
+<script setup lang="ts">
 useHead({
-  htmlAttrs: {
-    lang: 'ru'
-  },
+  htmlAttrs: { lang: 'ru' },
   link: [
-    {
-      rel: 'preconnect',
-      href: 'https://fonts.googleapis.com'
-    },
-    {
-      rel: 'preconnect',
-      href: 'https://fonts.gstatic.com',
-      crossorigin: ''
-    }
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }
   ]
 })
 
-// Global error handling
-const handleError = (error: any) => {
+const handleError = (error: unknown) => {
   console.error('Application error:', error)
-  // In production, send to error tracking service
 }
 
-// Initialize color mode
-const colorMode = useColorMode()
-
-// Preload critical resources
-if (process.client) {
-  // Preload important icons
-  const criticalIcons = [
-    'heroicons:chart-bar-square',
-    'heroicons:shield-check',
-    'heroicons:users',
-    'heroicons:cog-6-tooth'
-  ]
-  
-  // This would be handled by the icon module in a real implementation
-  criticalIcons.forEach(icon => {
-    // Preload logic here
-  })
-}
+// Неблокирующее “прогревание” иконок через скрытый контейнер
+const criticalIcons = [
+  'heroicons:chart-bar-square',
+  'heroicons:shield-check',
+  'heroicons:users',
+  'heroicons:cog-6-tooth'
+]
 </script>
 
 <template>
@@ -49,8 +26,14 @@ if (process.client) {
     <NuxtWelcome v-if="$route.path === '/welcome'" />
     <NuxtPage v-else />
     <NuxtErrorBoundary @error="handleError" />
+
+    <!-- Hidden icon pre-render to warm cache (optional) -->
+    <div aria-hidden="true" class="sr-only">
+      <Icon v-for="i in criticalIcons" :key="i" :name="i" />
+    </div>
   </div>
 </template>
+
 
 <style>
 /* Global styles with premium design system integration */
@@ -100,7 +83,7 @@ a[href^="#"] {
   .no-print {
     display: none !important;
   }
-  
+
   .print-break {
     page-break-after: always;
   }
@@ -115,6 +98,7 @@ a[href^="#"] {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -152,7 +136,7 @@ a[href^="#"] {
     background-color: theme('colors.blue.800');
     color: theme('colors.blue.100');
   }
-  
+
   ::-moz-selection {
     background-color: theme('colors.blue.800');
     color: theme('colors.blue.100');
@@ -182,11 +166,11 @@ a[href^="#"] {
   ::-webkit-scrollbar-track {
     background: theme('colors.gray.800');
   }
-  
+
   ::-webkit-scrollbar-thumb {
     background: theme('colors.gray.600');
   }
-  
+
   ::-webkit-scrollbar-thumb:hover {
     background: theme('colors.gray.500');
   }
@@ -197,27 +181,29 @@ a[href^="#"] {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
 }
 
 .shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
 
 /* Gradient animation for premium text */
 @keyframes gradient {
-  0%, 100% {
+
+  0%,
+  100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
