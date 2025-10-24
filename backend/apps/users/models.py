@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -45,7 +45,7 @@ class User(AbstractUser):
     )
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
+    REQUIRED_FIELDS: ClassVar[list[str]] = ["username"]
 
     if TYPE_CHECKING:
         hydraulic_systems: RelatedManager[HydraulicSystem]
@@ -68,7 +68,7 @@ class UserProfile(models.Model):
 
     theme: models.CharField = models.CharField(
         max_length=20,
-        choices=[("light", "Светлая"), ("dark", "Темная"), ("auto", "Автоматически")],
+        choices=[("лигхт", "Светлая"), ("dark", "Темная"), ("auto", "Автоматически")],
         default="light",
     )
     language: models.CharField = models.CharField(
@@ -86,7 +86,7 @@ class UserProfile(models.Model):
 
 
 class UserActivity(models.Model):
-    ACTION_TYPES = [
+    ACTION_TYPES: ClassVar[list[tuple[str, str]]] = [
         ("login", "Вход в систему"),
         ("logout", "Выход из системы"),
         ("system_created", "Создание системы"),
@@ -109,7 +109,7 @@ class UserActivity(models.Model):
     created_at: models.DateTimeField = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
 
     def __str__(self) -> str:
         user_str = str(getattr(self.user, "username", ""))
