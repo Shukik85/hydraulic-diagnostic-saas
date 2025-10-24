@@ -1,3 +1,5 @@
+<!-- eslint-disable vue/html-self-closing -->
+<!-- eslint-disable vue/html-self-closing -->
 <script setup lang="ts">
 // Authentication layout for login/register pages
 // Clean, minimal layout focused on auth forms
@@ -14,26 +16,27 @@ const colorMode = useColorMode()
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
     <!-- Background pattern -->
     <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute -top-40 -right-32 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl"></div>
-      <div class="absolute -bottom-32 -left-40 w-80 h-80 bg-gradient-to-tr from-green-400/20 to-blue-600/20 rounded-full blur-3xl"></div>
+      <div class="absolute -top-40 -right-32 w-80 h-80 bg-linear-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl"></div>
+      // eslint-disable-next-line vue/html-self-closing, vue/html-self-closing
+      <div class="absolute -bottom-32 -left-40 w-80 h-80 bg-linear-to-tr from-green-400/20 to-blue-600/20 rounded-full blur-3xl"></div>
     </div>
-    
+
     <!-- Theme toggle -->
     <div class="absolute top-6 right-6 z-10">
-      <button 
-        @click="colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'"
+      <button
         class="p-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg hover:bg-white/20 transition-all duration-200"
+        @click="colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'"
       >
-        <Icon 
+        <Icon
           :name="colorMode.value === 'dark' ? 'heroicons:sun' : 'heroicons:moon'"
           class="w-5 h-5 text-gray-700 dark:text-gray-200"
         />
       </button>
     </div>
-    
+
     <!-- Back to home link -->
     <div class="absolute top-6 left-6 z-10">
-      <NuxtLink 
+      <NuxtLink
         to="/"
         class="flex items-center space-x-2 px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg hover:bg-white/20 transition-all duration-200 text-gray-700 dark:text-gray-200 font-medium"
       >
@@ -41,12 +44,12 @@ const colorMode = useColorMode()
         <span class="hidden sm:block">Главная</span>
       </NuxtLink>
     </div>
-    
+
     <!-- Main content -->
     <div class="relative z-0">
       <slot />
     </div>
-    
+
     <!-- Footer -->
     <div class="absolute bottom-0 left-0 right-0 z-0">
       <div class="bg-white/5 backdrop-blur-sm border-t border-white/10">
