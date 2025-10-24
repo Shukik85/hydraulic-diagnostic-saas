@@ -1,0 +1,212 @@
+/* Premium Design System Tokens */
+:root {
+  /* Colors - Premium brand palette */
+  --premium-primary: #2563eb;
+  --premium-primary-hover: #1d4ed8;
+  --premium-secondary: #64748b;
+  --premium-accent: #8b5cf6;
+  --premium-success: #10b981;
+  --premium-warning: #f59e0b;
+  --premium-error: #ef4444;
+  
+  /* Gradients */
+  --premium-gradient-primary: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  --premium-gradient-success: linear-gradient(135deg, #10b981, #059669);
+  --premium-gradient-hero: linear-gradient(135deg, #1e293b, #3730a3, #1e293b);
+  
+  /* Spacing System */
+  --premium-spacing-xs: 0.25rem;  /* 4px */
+  --premium-spacing-sm: 0.5rem;   /* 8px */
+  --premium-spacing-md: 1rem;     /* 16px */
+  --premium-spacing-lg: 1.5rem;   /* 24px */
+  --premium-spacing-xl: 2rem;     /* 32px */
+  --premium-spacing-2xl: 3rem;    /* 48px */
+  --premium-spacing-3xl: 4rem;    /* 64px */
+  
+  /* Border Radius */
+  --premium-radius-sm: 0.375rem;  /* 6px */
+  --premium-radius-md: 0.5rem;    /* 8px */
+  --premium-radius-lg: 0.75rem;   /* 12px */
+  --premium-radius-xl: 1rem;      /* 16px */
+  --premium-radius-2xl: 1.5rem;   /* 24px */
+  
+  /* Shadows - Professional depth */
+  --premium-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --premium-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --premium-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --premium-shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --premium-shadow-glow: 0 0 0 1px rgb(59 130 246 / 0.1), 0 4px 6px -1px rgb(59 130 246 / 0.1);
+  
+  /* Typography Scale */
+  --premium-font-xs: 0.75rem;     /* 12px */
+  --premium-font-sm: 0.875rem;    /* 14px */
+  --premium-font-base: 1rem;      /* 16px */
+  --premium-font-lg: 1.125rem;    /* 18px */
+  --premium-font-xl: 1.25rem;     /* 20px */
+  --premium-font-2xl: 1.5rem;     /* 24px */
+  --premium-font-3xl: 1.875rem;   /* 30px */
+  --premium-font-4xl: 2.25rem;    /* 36px */
+  
+  /* Transitions - Consistent timing */
+  --premium-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --premium-transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --premium-transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Z-Index Scale */
+  --premium-z-dropdown: 1000;
+  --premium-z-sticky: 1010;
+  --premium-z-fixed: 1020;
+  --premium-z-modal: 1030;
+  --premium-z-popover: 1040;
+  --premium-z-tooltip: 1050;
+}
+
+/* Dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --premium-primary: #3b82f6;
+    --premium-primary-hover: #2563eb;
+    --premium-secondary: #94a3b8;
+    --premium-accent: #a78bfa;
+  }
+}
+
+/* Premium utility classes */
+.premium-card {
+  @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 transition-all duration-200;
+}
+
+.premium-card-hover {
+  @apply premium-card hover:shadow-xl hover:scale-105;
+}
+
+.premium-hero {
+  @apply bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white rounded-2xl shadow-xl border border-blue-500/20;
+}
+
+.premium-section {
+  @apply space-y-8;
+}
+
+.premium-container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+.premium-gradient-text {
+  @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+}
+
+.premium-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold;
+}
+
+.premium-badge-success {
+  @apply premium-badge bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300;
+}
+
+.premium-badge-warning {
+  @apply premium-badge bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300;
+}
+
+.premium-badge-info {
+  @apply premium-badge bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300;
+}
+
+.premium-input {
+  @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400;
+}
+
+.premium-input-error {
+  @apply premium-input border-red-300 dark:border-red-700 focus:ring-red-500 focus:border-red-500;
+}
+
+.premium-label {
+  @apply block text-sm font-semibold text-gray-900 dark:text-white mb-2;
+}
+
+.premium-error-text {
+  @apply mt-1 text-xs text-red-600 dark:text-red-400;
+}
+
+.premium-help-text {
+  @apply mt-1 text-xs text-gray-500 dark:text-gray-400;
+}
+
+/* Animation utilities */
+.premium-fade-in {
+  animation: premiumFadeIn var(--premium-transition-slow) ease-out;
+}
+
+.premium-slide-up {
+  animation: premiumSlideUp var(--premium-transition-slow) ease-out;
+}
+
+.premium-scale-in {
+  animation: premiumScaleIn var(--premium-transition-normal) ease-out;
+}
+
+@keyframes premiumFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes premiumSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes premiumScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Responsive text utilities */
+.premium-heading-xl {
+  @apply text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight;
+}
+
+.premium-heading-lg {
+  @apply text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight;
+}
+
+.premium-heading-md {
+  @apply text-xl sm:text-2xl font-bold;
+}
+
+.premium-body-lg {
+  @apply text-lg sm:text-xl leading-relaxed;
+}
+
+.premium-body {
+  @apply text-base leading-relaxed;
+}
+
+/* Focus states */
+.premium-focus {
+  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800;
+}
+
+/* Glass morphism effects */
+.premium-glass {
+  @apply bg-white/10 backdrop-blur-sm border border-white/20;
+}
+
+.premium-glass-hover {
+  @apply premium-glass hover:bg-white/20 transition-all duration-200;
+}
