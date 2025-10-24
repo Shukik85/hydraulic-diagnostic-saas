@@ -100,6 +100,15 @@ ignore = [
   "ERA001",
 ]
 
+# Allow common Cyrillic characters that may be confused with Latin
+# to reduce noise in Russian documentation and comments
+allowed-confusables = [
+  "−", "–", "—", "∗", "ρ",
+  "а","е","о","р","с","х","у","т","к",
+  "А","В","Е","К","М","Н","О","Р","С","Т","Х",
+  "'",""","""
+]
+
 [lint.per-file-ignores]
 "**/tests/**" = [
   "D",
