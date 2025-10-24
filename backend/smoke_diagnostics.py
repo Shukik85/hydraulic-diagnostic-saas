@@ -2,14 +2,15 @@
 
 import os
 import sys
+from pathlib import Path
 
 import django
 from django.db import IntegrityError
 from django.utils import timezone
 
 # Настройка Django окружения
-BASE_DIR = os.path.dirname(__file__)
-sys.path.insert(0, BASE_DIR)
+BASE_DIR = Path(__file__).parent
+sys.path.insert(0, str(BASE_DIR))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 django.setup()
