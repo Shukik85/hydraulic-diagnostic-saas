@@ -54,11 +54,11 @@ module.exports = {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
-        
+
         // Premium brand colors
         'premium': {
           50: '#eff6ff',
-          100: '#dbeafe', 
+          100: '#dbeafe',
           200: '#bfdbfe',
           300: '#93c5fd',
           400: '#60a5fa',
@@ -69,7 +69,7 @@ module.exports = {
           900: '#1e3a8a',
           950: '#172554'
         },
-        
+
         // Success/growth colors (enhanced green palette)
         'success': {
           50: '#ecfdf5',
@@ -84,7 +84,7 @@ module.exports = {
           900: '#064e3b',
           950: '#022c22'
         },
-        
+
         // Warning/attention colors
         'warning': {
           50: '#fffbeb',
@@ -100,7 +100,7 @@ module.exports = {
           950: '#451a03'
         }
       },
-      
+
       // Premium typography scale
       fontSize: {
         'xs': ['0.75rem', { lineHeight: '1rem' }],
@@ -117,14 +117,14 @@ module.exports = {
         '8xl': ['6rem', { lineHeight: '1.1' }],
         '9xl': ['8rem', { lineHeight: '1.1' }]
       },
-      
+
       // Enhanced font families
       fontFamily: {
         sans: ['Inter', ...fontFamily.sans],
         mono: ['JetBrains Mono', ...fontFamily.mono],
         display: ['Inter', ...fontFamily.sans]
       },
-      
+
       // Premium spacing scale
       spacing: {
         '18': '4.5rem',
@@ -132,7 +132,7 @@ module.exports = {
         '128': '32rem',
         '144': '36rem'
       },
-      
+
       // Enhanced border radius
       borderRadius: {
         'none': '0px',
@@ -145,7 +145,7 @@ module.exports = {
         '3xl': '1.5rem',
         'full': '9999px'
       },
-      
+
       // Premium shadows with better depth perception
       boxShadow: {
         'xs': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
@@ -157,7 +157,7 @@ module.exports = {
         '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
         'inner': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
         'none': 'none',
-        
+
         // Premium elevation shadows
         'elevation-1': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
         'elevation-2': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px 0 rgb(0 0 0 / 0.06)',
@@ -166,7 +166,7 @@ module.exports = {
         'elevation-12': '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04)',
         'elevation-16': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
         'elevation-24': '0 35px 60px -12px rgb(0 0 0 / 0.35)',
-        
+
         // Colored shadows for premium effects
         'glow-sm': '0 0 6px rgb(59 130 246 / 0.5)',
         'glow': '0 0 20px rgb(59 130 246 / 0.4)',
@@ -174,19 +174,19 @@ module.exports = {
         'glow-success': '0 0 20px rgb(16 185 129 / 0.4)',
         'glow-warning': '0 0 20px rgb(245 158 11 / 0.4)'
       },
-      
+
       // Enhanced animation durations and easings
       transitionDuration: {
         '2000': '2000ms',
         '3000': '3000ms'
       },
-      
+
       transitionTimingFunction: {
         'bounce-in': 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
         'smooth': 'cubic-bezier(0.4, 0, 0.2, 1)',
         'premium': 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
       },
-      
+
       // Animation keyframes for premium effects
       keyframes: {
         'fade-in-up': {
@@ -246,7 +246,7 @@ module.exports = {
           }
         }
       },
-      
+
       // Animation utilities
       animation: {
         'fade-in-up': 'fade-in-up 0.6s ease-out',
@@ -256,7 +256,7 @@ module.exports = {
         'gradient-shift': 'gradient-shift 3s ease infinite',
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite'
       },
-      
+
       // Premium backdrop blur values
       backdropBlur: {
         'xs': '2px',
@@ -268,7 +268,7 @@ module.exports = {
         '2xl': '40px',
         '3xl': '64px'
       },
-      
+
       // Z-index scale for consistent layering
       zIndex: {
         '60': '60',
@@ -277,13 +277,13 @@ module.exports = {
         '90': '90',
         '100': '100'
       },
-      
+
       // Container max-widths with better responsive breakpoints
       maxWidth: {
         '8xl': '88rem',
         '9xl': '96rem'
       },
-      
+
       // Screen breakpoints (enhanced responsive design)
       screens: {
         'xs': '475px',
@@ -298,12 +298,12 @@ module.exports = {
   },
   plugins: [
     // Add any additional plugins here
-    // require('@tailwindcss/forms'),
-    // require('@tailwindcss/typography'),
-    // require('@tailwindcss/aspect-ratio'),
-    
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
+    require('@tailwindcss/aspect-ratio'),
+
     // Custom plugin for premium utilities
-    function({ addUtilities, theme }) {
+    function({ addUtilities}) {
       addUtilities({
         '.glass': {
           'background': 'rgba(255, 255, 255, 0.1)',

@@ -8,21 +8,13 @@ export default defineNuxtConfig({
     },
   },
 
-  // Tailwind CSS configuration
-  tailwindcss: {
-    exposeConfig: true,
-    viewer: true,
-    cssPath: '~/assets/css/tailwind.css',
-    configPath: 'tailwind.config.ts',
-  },
-
   // CSS and styling
-  css: ['~/assets/css/tailwind.css', '~/assets/css/global.css', '~/styles/premium-tokens.css'],
+  css: ['../assets/css/tailwind.css', '../assets/css/globals.css', '../styles/premium-tokens.css'],
 
   // Auto-import components from components and components/ui
   components: [
-    { path: '~/components', pathPrefix: false },
-    { path: '~/components/ui', pathPrefix: false },
+    { path: './components', pathPrefix: false },
+    { path: './components/ui', pathPrefix: false },
   ],
 
   // App configuration

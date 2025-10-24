@@ -23,13 +23,15 @@ const criticalIcons = [
 <template>
   <div id="app" class="min-h-screen text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 transition-colors">
     <NuxtRouteAnnouncer />
-    <NuxtWelcome v-if="$route.path === '/welcome'" />
-    <NuxtPage v-else />
+    <NuxtLayout>
+      <NuxtWelcome v-if="$route.path === '/welcome'" />
+      <NuxtPage v-else />
+    </NuxtLayout>
     <NuxtErrorBoundary @error="handleError" />
 
-    <!-- Hidden icon pre-render to warm cache (optional) -->
+    <!-- Hidden icon pre-render to warm cache -->
     <div aria-hidden="true" class="sr-only">
-      <Icon v-for="i in criticalIcons" :key="i" :name="i" />
+      <Icon v-for="iconName in criticalIcons" :key="iconName" :name="iconName" />
     </div>
   </div>
 </template>

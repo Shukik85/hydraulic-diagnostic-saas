@@ -1,23 +1,31 @@
-// types/api.ts
 export interface User {
   id: number
   email: string
   name: string
+  firstname?: string
+  lastname?: string
+  username?: string
+  role?: string
+  systemscount?: number
+  reportsgenerated?: number
+  lastactivity?: string
 }
 
-export interface ChatSession {
+export interface HydraulicSystem {
   id: number
-  title: string
-  description: string
-  lastMessage: string
-  timestamp: string
-  messages: ChatMessage[]
+  name: string
+  status: string
 }
 
-export interface ChatMessage {
+export interface DiagnosticReport {
   id: number
-  role: string
-  content: string
-  timestamp: string
-  sources?: { id: number; title: string }[]
+  severity: string
 }
+
+export interface SensorData { id: number }
+export interface RagQueryLog { id: number }
+export interface LoginCredentials { email: string; password: string }
+export interface TokenResponse { access: string; refresh: string }
+export interface RegisterData { email: string; password: string; username?: string; firstname?: string; lastname?: string; company?: string }
+export interface PaginatedResponse<T> { results: T[] }
+export interface ApiError { detail: string; status: number }

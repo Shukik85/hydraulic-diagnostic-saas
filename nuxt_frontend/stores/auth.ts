@@ -1,27 +1,28 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Authentication state management with Pinia
 import type { User } from '~/types/api'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
+  const user = ref(null)
   const loading = ref(false)
-  const error = ref<string | null>(null)
-  
+  const error = ref(null)
+
   const api = useApi()
-  
+
   // Getters
   const isLoggedIn = computed(() => !!user.value)
   const userName = computed(() => {
     if (!user.value) return ''
-    return user.value.first_name || user.value.last_name 
+    return user.value.first_name || user.value.last_name
       ? `${user.value.first_name} ${user.value.last_name}`.trim()
       : user.value.username
   })
-  
+
   // Actions
   const login = async (email: string, password: string) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const userData = await api.login({ email, password })
       user.value = userData
@@ -33,11 +34,11 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = false
     }
   }
-  
+
   const register = async (userData: { username: string, email: string, password: string, first_name?: string, last_name?: string }) => {
     loading.value = true
     error.value = null
-    
+
     try {
       const newUser = await api.register(userData)
       user.value = newUser
@@ -49,7 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = false
     }
   }
-  
+
   const logout = async () => {
     loading.value = true
     try {
@@ -60,10 +61,10 @@ export const useAuthStore = defineStore('auth', () => {
       error.value = null
     }
   }
-  
+
   const fetchCurrentUser = async () => {
     if (!api.isAuthenticated.value) return null
-    
+
     loading.value = true
     try {
       const userData = await api.getCurrentUser()
@@ -80,10 +81,10 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = false
     }
   }
-  
+
   const updateProfile = async (profileData: Partial<User>) => {
     if (!user.value) throw new Error('User not logged in')
-    
+
     loading.value = true
     try {
       const updated = await api.updateUser(profileData)
@@ -96,11 +97,11 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = false
     }
   }
-  
+
   // Initialize auth state on app load
   const initialize = async () => {
-    if (process.server) return
-    
+    if (import.meta.server) return
+
     if (api.isAuthenticated.value) {
       try {
         await fetchCurrentUser()
@@ -109,17 +110,17 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
   }
-  
+
   return {
     // State
     user: readonly(user),
     loading: readonly(loading),
     error: readonly(error),
-    
-    // Getters  
+
+    // Getters
     isLoggedIn,
     userName,
-    
+
     // Actions
     login,
     register,
