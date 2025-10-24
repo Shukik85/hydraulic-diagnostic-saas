@@ -9,7 +9,7 @@ export default defineNuxtConfig({
   },
 
   // CSS and styling
-  css: ['../assets/css/tailwind.css', '../assets/css/globals.css', '../styles/premium-tokens.css'],
+  css: ['../assets/css/tailwind.css', '../styles/premium-tokens.css'],
 
   // Auto-import components from components and components/ui
   components: [

@@ -297,11 +297,6 @@ module.exports = {
     },
   },
   plugins: [
-    // Add any additional plugins here
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-    require('@tailwindcss/aspect-ratio'),
-
     // Custom plugin for premium utilities
     function({ addUtilities}) {
       addUtilities({
