@@ -1,9 +1,8 @@
 """Модуль конфигурации инструментов разработки."""
 
-"""Скрипт генерации докстрингов для проекта."""
-
 import ast
 import os
+from pathlib import Path
 import subprocess
 
 
@@ -15,12 +14,13 @@ def get_changed_py_files(base_branch: str = "HEAD~1") -> list[str]:
 
     Returns:
         Список путей к изменённым Python файлам.
+
     """
     result = subprocess.run(
         ["git", "diff", "--name-only", base_branch, "--", "*.py"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         text=True,
+        check=True,
     )
     if result.returncode != 0:
         print("Ошибка при вызове git diff:", result.stderr)
@@ -38,6 +38,7 @@ def generate_google_docstring(func_def: ast.FunctionDef, base_indent: int) -> st
 
     Returns:
         Отформатированный докстринг.
+
     """
     indent = " " * base_indent
     indent_inner = indent + " " * 4
@@ -67,6 +68,7 @@ def add_docstrings_to_functions(file_content: str) -> str | None:
 
     Returns:
         Модифицированное содержимое или None если изменений нет.
+
     """
     try:
         tree = ast.parse(file_content)
@@ -79,16 +81,16 @@ def add_docstrings_to_functions(file_content: str) -> str | None:
 
     # Обратный порядок для корректной вставки по строкам
     for node in reversed(tree.body):
-        if isinstance(node, ast.FunctionDef):
-            if ast.get_docstring(node) is None:
-                insert_line = node.body[0].lineno - 1
-                if insert_line < len(lines):
-                    base_indent = len(lines[insert_line]) - len(
-                        lines[insert_line].lstrip()
-                    )
-                    docstring = generate_google_docstring(node, base_indent)
-                    lines.insert(insert_line, docstring)
-                    modified = True
+        if isinstance(node, ast.FunctionDef) & ast.get_docstring(node) is None:
+            insert_line = node.body[0].lineno - 1
+
+            if insert_line < len(lines):
+                base_indent = len(lines[insert_line]) - len(
+                    lines[insert_line].lstrip()
+                )
+                docstring = generate_google_docstring(node, base_indent)
+                lines.insert(insert_line, docstring)
+                modified = True
 
     if modified:
         return "\n".join(lines)
@@ -100,15 +102,16 @@ def process_file(file_path: str) -> None:
 
     Args:
         file_path: Путь к файлу для обработки.
+
     """
     print(f"Обрабатываю {file_path}")
     try:
-        with open(file_path, encoding="utf-8") as f:
+        with Path(file_path).open(encoding="utf-8") as f:
             content = f.read()
 
         new_content = add_docstrings_to_functions(content)
         if new_content:
-            with open(file_path, "w", encoding="utf-8") as f:
+            with Path(file_path).open("w", encoding="utf-8") as f:
                 f.write(new_content)
             print(f"Докстринги добавлены: {file_path}")
         else:
@@ -127,12 +130,12 @@ def main() -> None:
         for root, _, files in os.walk("backend"):
             for file in files:
                 if file.endswith(".py"):
-                    filepath = os.path.join(root, file)
+                    filepath = Path(root) / file
                     process_file(filepath)
         return
 
     for file_path in changed_files:
-        if os.path.exists(file_path):
+        if Path("file.py").exists(file_path):
             process_file(file_path)
         else:
             print(f"Файл не найден: {file_path}")
