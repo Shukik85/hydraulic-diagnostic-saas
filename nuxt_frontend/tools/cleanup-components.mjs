@@ -12,8 +12,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
 const root = process.cwd()
-const base = path.join(root, 'nuxt_frontend')
-const trash = path.join(base, 'trash')
+const trash = path.join(root, 'trash')
 
 // Targets to move (expandable)
 const targets = [
@@ -42,12 +41,12 @@ async function listDir(dir) {
 
 function maskToRegex(mask) {
   // supports one-level masks like *.tsx
-  return new RegExp('^' + mask.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace('*', '.*') + '$')
+  return new RegExp('^' + mask.replace(/[.+^${}()|[\\]\\\\]/g, '\\$&').replace('*', '.*') + '$')
 }
 
 async function globSimple(pattern) {
   const [dirPart, mask] = pattern.split('/')
-  const dirPath = path.join(base, dirPart)
+  const dirPath = path.join(root, dirPart)
   const entries = await listDir(dirPath)
   const regex = maskToRegex(mask)
   return entries
@@ -56,7 +55,7 @@ async function globSimple(pattern) {
 }
 
 async function moveFile(file) {
-  const rel = path.relative(base, file)
+  const rel = path.relative(root, file)
   const dest = path.join(trash, rel)
   await ensureDir(path.dirname(dest))
   try {
@@ -70,7 +69,7 @@ async function moveFile(file) {
 }
 
 async function moveDir(dir) {
-  const rel = path.relative(base, dir)
+  const rel = path.relative(root, dir)
   const dest = path.join(trash, rel)
   await ensureDir(path.dirname(dest))
   try {
@@ -97,7 +96,7 @@ async function run() {
   await ensureDir(trash)
   for (const pattern of targets) {
     if (pattern.endsWith('/**')) {
-      const folder = path.join(base, pattern.replace('/**', ''))
+      const folder = path.join(root, pattern.replace('/**', ''))
       try {
         const stat = await fs.stat(folder)
         if (stat.isDirectory()) await moveDir(folder)
