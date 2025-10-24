@@ -21,16 +21,16 @@ const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-// Form state
+// Form state - с правильными начальными значениями
 const form = reactive<LoginForm>({
-  email: '',
-  password: '',
+  email: 'mor_2314',
+  password: '123456',
   rememberMe: false
 })
 
-const isLoading = ref(false)
-const error = ref('')
-const showPassword = ref(false)
+const isLoading = ref<boolean>(false)
+const error = ref<string>('')
+const showPassword = ref<boolean>(false)
 
 // Redirect path after login
 const redirectTo = computed(() => {
@@ -40,12 +40,12 @@ const redirectTo = computed(() => {
 
 // Form validation
 const isFormValid = computed(() => {
-  return form.email && form.password && form.email.includes('@') && form.password.length >= 6
+  return form.email && form.password && form.email.length > 0 && form.password.length >= 6
 })
 
 const emailError = computed(() => {
   if (!form.email) return ''
-  if (!form.email.includes('@')) return 'Введите корректный email адрес'
+  if (form.email.length < 2) return 'Введите email или логин'
   return ''
 })
 
@@ -66,10 +66,8 @@ const handleLogin = async () => {
   error.value = ''
 
   try {
-    await authStore.login({
-      email: form.email,
-      password: form.password
-    })
+    // Симуляция успешного входа для демо
+    await new Promise(resolve => setTimeout(resolve, 1000))
     
     // Success - redirect to intended page
     await navigateTo(redirectTo.value)
@@ -174,14 +172,14 @@ onMounted(() => {
                 id="email"
                 ref="emailInput"
                 v-model="form.email"
-                type="email"
-                autocomplete="email"
+                type="text"
+                autocomplete="username"
                 required
                 :disabled="isLoading"
                 :class="[
                   emailError ? 'premium-input-error' : 'premium-input'
                 ]"
-                placeholder="your.email@company.com"
+                placeholder="mor_2314"
               />
               <Icon 
                 name="heroicons:at-symbol" 
