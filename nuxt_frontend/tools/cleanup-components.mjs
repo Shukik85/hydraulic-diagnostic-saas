@@ -16,99 +16,165 @@ const trash = path.join(root, 'trash')
 
 // Targets to move (expandable)
 const targets = [
-  // React/TSX leftovers
-  'components/figma/*.tsx',
-  'components/layout/*.tsx',
-  'components/pages/*.tsx',
-  'components/ui/*.tsx',
-
-  // Optional folders (uncomment if needed later)
-  // 'design-system/**',
-  // 'references/**',
+  'components/figma',
+  'components/layout', 
+  'components/pages',
+  'components/ui',
 ]
 
 async function ensureDir(p) {
   await fs.mkdir(p, { recursive: true }).catch(() => {})
 }
 
-async function listDir(dir) {
+async function fileExists(filePath) {
   try {
-    return await fs.readdir(dir, { withFileTypes: true })
+    await fs.access(filePath)
+    return true
   } catch {
-    return []
+    return false
   }
 }
 
-function maskToRegex(mask) {
-  // supports one-level masks like *.tsx
-  return new RegExp('^' + mask.replace(/[.+^${}()|[\\]\\\\]/g, '\\$&').replace('*', '.*') + '$')
-}
-
-async function globSimple(pattern) {
-  const [dirPart, mask] = pattern.split('/')
-  const dirPath = path.join(root, dirPart)
-  const entries = await listDir(dirPath)
-  const regex = maskToRegex(mask)
-  return entries
-    .filter((e) => e.isFile() && regex.test(e.name))
-    .map((e) => path.join(dirPath, e.name))
+async function findAllTsxFiles() {
+  const results = []
+  
+  async function scanDirectory(dir) {
+    if (!await fileExists(dir)) {
+      console.log(`Directory does not exist: ${dir}`)
+      return
+    }
+    
+    try {
+      const entries = await fs.readdir(dir, { withFileTypes: true })
+      
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name)
+        
+        if (entry.isDirectory()) {
+          // Рекурсивно сканируем поддиректории
+          await scanDirectory(fullPath)
+        } else if (entry.isFile() && entry.name.endsWith('.tsx')) {
+          results.push(fullPath)
+        }
+      }
+    } catch (error) {
+      console.error(`Error scanning directory ${dir}:`, error.message)
+    }
+  }
+  
+  // Сканируем все целевые директории
+  for (const target of targets) {
+    const targetPath = path.join(root, target)
+    console.log(`Scanning for TSX files in: ${targetPath}`)
+    await scanDirectory(targetPath)
+  }
+  
+  // Также сканируем корневую components директорию на всякий случай
+  const componentsRoot = path.join(root, 'components')
+  if (await fileExists(componentsRoot)) {
+    console.log(`Scanning for TSX files in: ${componentsRoot}`)
+    await scanDirectory(componentsRoot)
+  }
+  
+  return results
 }
 
 async function moveFile(file) {
+  if (!await fileExists(file)) {
+    console.log('File does not exist, skipping:', file)
+    return false
+  }
+  
   const rel = path.relative(root, file)
   const dest = path.join(trash, rel)
+  
   await ensureDir(path.dirname(dest))
+  
   try {
     await fs.rename(file, dest)
-  } catch {
-    const data = await fs.readFile(file)
-    await fs.writeFile(dest, data)
-    await fs.unlink(file)
-  }
-  console.log('Moved file:', rel)
-}
-
-async function moveDir(dir) {
-  const rel = path.relative(root, dir)
-  const dest = path.join(trash, rel)
-  await ensureDir(path.dirname(dest))
-  try {
-    await fs.rename(dir, dest)
-  } catch {
-    // Fallback recursive copy then remove
-    async function copyRecursive(src, dst) {
-      await ensureDir(dst)
-      const entries = await fs.readdir(src, { withFileTypes: true })
-      for (const e of entries) {
-        const s = path.join(src, e.name)
-        const d = path.join(dst, e.name)
-        if (e.isDirectory()) await copyRecursive(s, d)
-        else await fs.copyFile(s, d)
-      }
+    console.log('✓ Moved file:', rel)
+    return true
+  } catch (error) {
+    // Fallback: copy + delete
+    try {
+      const data = await fs.readFile(file)
+      await fs.writeFile(dest, data)
+      await fs.unlink(file)
+      console.log('✓ Copied and deleted file:', rel)
+      return true
+    } catch (copyError) {
+      console.error('✗ Failed to move file:', rel, copyError.message)
+      return false
     }
-    await copyRecursive(dir, dest)
-    await fs.rm(dir, { recursive: true, force: true })
   }
-  console.log('Moved dir:', rel)
 }
 
 async function run() {
-  await ensureDir(trash)
-  for (const pattern of targets) {
-    if (pattern.endsWith('/**')) {
-      const folder = path.join(root, pattern.replace('/**', ''))
+  console.log('Starting cleanup of React/TSX components...')
+  console.log('Root directory:', root)
+  console.log('Trash directory:', trash)
+  
+  // Проверяем структуру директорий
+  console.log('\nChecking directory structure:')
+  for (const target of targets) {
+    const targetPath = path.join(root, target)
+    const exists = await fileExists(targetPath)
+    console.log(`- ${target}: ${exists ? 'EXISTS' : 'NOT FOUND'}`)
+    
+    if (exists) {
       try {
-        const stat = await fs.stat(folder)
-        if (stat.isDirectory()) await moveDir(folder)
-      } catch {}
-      continue
-    }
-    const files = await globSimple(pattern)
-    for (const file of files) {
-      await moveFile(file)
+        const entries = await fs.readdir(targetPath)
+        const tsxFiles = entries.filter(name => name.endsWith('.tsx'))
+        const vueFiles = entries.filter(name => name.endsWith('.vue'))
+        console.log(`  Files: ${entries.length} total, ${tsxFiles.length} TSX, ${vueFiles.length} Vue`)
+        if (tsxFiles.length > 0) {
+          console.log(`  TSX files: ${tsxFiles.join(', ')}`)
+        }
+      } catch (error) {
+        console.log(`  Error reading directory: ${error.message}`)
+      }
     }
   }
-  console.log('Cleanup completed successfully.')
+  
+  await ensureDir(trash)
+  
+  // Находим все TSX файлы
+  console.log('\nSearching for TSX files...')
+  const filesToMove = await findAllTsxFiles()
+  
+  if (filesToMove.length === 0) {
+    console.log('No TSX files found to move.')
+    
+    // Проверим, есть ли вообще какие-то файлы в components
+    const componentsDir = path.join(root, 'components')
+    if (await fileExists(componentsDir)) {
+      console.log('\nContents of components directory:')
+      try {
+        const entries = await fs.readdir(componentsDir, { withFileTypes: true })
+        for (const entry of entries) {
+          const type = entry.isDirectory() ? 'DIR' : 'FILE'
+          console.log(`  ${type} ${entry.name}`)
+        }
+      } catch (error) {
+        console.log(`  Error reading components directory: ${error.message}`)
+      }
+    }
+    
+    return
+  }
+  
+  console.log(`\nFound ${filesToMove.length} TSX files to move:`)
+  filesToMove.forEach(file => {
+    console.log(`- ${path.relative(root, file)}`)
+  })
+  
+  let movedCount = 0
+  for (const file of filesToMove) {
+    const success = await moveFile(file)
+    if (success) movedCount++
+  }
+  
+  console.log(`\nCleanup completed. Successfully moved ${movedCount} out of ${filesToMove.length} files.`)
 }
 
 run().catch((err) => {
