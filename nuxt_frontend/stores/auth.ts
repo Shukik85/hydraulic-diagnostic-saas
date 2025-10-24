@@ -1,11 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // Authentication state management with Pinia
 import type { User } from '~/types/api'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null)
-  const loading = ref(false)
-  const error = ref(null)
+  const user = ref<User | null>(null)
+  const loading = ref<boolean>(false)
+  const error = ref<string | null>(null)
 
   const api = useApi()
 
@@ -13,9 +12,10 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => !!user.value)
   const userName = computed(() => {
     if (!user.value) return ''
-    return user.value.first_name || user.value.last_name
-      ? `${user.value.first_name} ${user.value.last_name}`.trim()
-      : user.value.username
+    if (user.value.first_name || user.value.last_name) {
+      return `${user.value.first_name || ''} ${user.value.last_name || ''}`.trim()
+    }
+    return user.value.username || user.value.name || user.value.email
   })
 
   // Actions
@@ -112,10 +112,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    // State
-    user: readonly(user),
-    loading: readonly(loading),
-    error: readonly(error),
+    // State (НЕ readonly для возможности изменения)
+    user,
+    loading,
+    error,
 
     // Getters
     isLoggedIn,
