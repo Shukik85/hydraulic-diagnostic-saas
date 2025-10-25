@@ -1,118 +1,152 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
+import { defineNuxtConfig } from 'nuxt/config'
+
+// Production-ready configuration for investor demo
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
-  devtools: {
-    enabled: true,
-    timeline: {
-      enabled: true,
-    },
+  // Enhanced devtools for development
+  devtools: { enabled: true },
+  
+  // Performance optimizations
+  nitro: {
+    preset: 'node',
+    compressPublicAssets: true,
+    minify: true
   },
-
-  // CSS and styling
-  css: ['../assets/css/tailwind.css', '../styles/premium-tokens.css'],
-
-  // Auto-import components from components and components/ui
-  components: [
-    { path: './components', pathPrefix: false },
-    { path: './components/ui', pathPrefix: false },
+  
+  // Future-ready Nuxt 4 compatibility
+  future: {
+    compatibilityVersion: 4
+  },
+  
+  // Enhanced TypeScript support
+  typescript: {
+    strict: true,
+    typeCheck: true
+  },
+  
+  // Core modules for enterprise SaaS
+  modules: [
+    '@nuxtjs/tailwindcss',
+    '@nuxt/icon',
+    '@pinia/nuxt',
+    '@nuxtjs/color-mode',
+    '@nuxt/content'
   ],
-
-  // App configuration
+  
+  // Premium styling system
+  css: [
+    '~/styles/premium-tokens.css'
+  ],
+  
+  // Optimized app configuration
   app: {
     head: {
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
-      title: 'Hydraulic Diagnostic SaaS - AI-Powered Industrial Monitoring',
+      htmlAttrs: {
+        lang: 'ru'
+      },
       meta: [
-        {
-          name: 'description',
-          content:
-            'Revolutionary hydraulic diagnostics platform with predictive maintenance, real-time monitoring, and AI insights. Trusted by 127+ enterprises.',
-        },
-        { name: 'format-detection', content: 'telephone=no' },
+        { name: 'theme-color', content: '#2563eb' },
+        { name: 'msapplication-TileColor', content: '#2563eb' }
       ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'preload', as: 'style', href: '/_nuxt/styles/premium-tokens.css' }
+      ]
     },
+    pageTransition: { name: 'page', mode: 'out-in' },
+    layoutTransition: { name: 'layout', mode: 'out-in' }
   },
-
+  
+  // Component auto-import for clean code
+  components: [
+    {
+      path: '~/components',
+      pathPrefix: false
+    }
+  ],
+  
+  // Fast icon configuration (local-first)
+  icon: {
+    mode: 'local',
+    provider: 'iconify',
+    collections: ['heroicons'],
+    serverBundle: {
+      collections: ['heroicons']
+    }
+  },
+  
+  // Enhanced Tailwind configuration
+  tailwindcss: {
+    cssPath: '~/styles/premium-tokens.css',
+    configPath: '~/tailwind.config.ts'
+  },
+  
+  // Theme configuration
+  colorMode: {
+    preference: 'light',
+    fallback: 'light',
+    classSuffix: ''
+  },
+  
+  // Content configuration
+  content: {
+    documentDriven: false,
+    experimental: {
+      clientDB: false
+    }
+  },
+  
+  // Production build optimizations
+  build: {
+    transpile: ['@headlessui/vue']
+  },
+  
+  // Development performance
+  vite: {
+    define: {
+      __DEV__: process.env.NODE_ENV !== 'production'
+    },
+    css: {
+      devSourcemap: false // Faster CSS in dev
+    },
+    server: {
+      hmr: {
+        overlay: false // Less intrusive HMR
+      }
+    }
+  },
+  
   // Runtime configuration
   runtimeConfig: {
-    // Private keys (only available on server-side)
-    apiSecret: '',
-
-    // Public keys (exposed to client-side)
+    // Private keys
+    apiSecret: process.env.NUXT_API_SECRET || 'dev-secret',
+    
+    // Public keys
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
-      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-    },
+      appName: 'Hydraulic Diagnostic SaaS',
+      appVersion: '1.0.0',
+      disableFontshare: true // Disable external font provider in dev
+    }
   },
-
-  modules: [
-    '@nuxt/content',
-    '@nuxt/eslint',
-    '@nuxt/image',
-    '@nuxt/icon',
-    '@nuxt/fonts',
-    '@nuxtjs/color-mode',
-    '@pinia/nuxt',
-    '@nuxtjs/seo',
-  ],
-
-  // Color mode configuration
-  colorMode: {
-    preference: 'system',
-    fallback: 'light',
-    hid: 'nuxt-color-mode-script',
-    globalName: '__NUXT_COLOR_MODE__',
-    componentName: 'ColorScheme',
-    classPrefix: '',
-    classSuffix: '',
-    storageKey: 'nuxt-color-mode',
+  
+  // Route rules for performance
+  routeRules: {
+    '/': { prerender: true },
+    '/auth/**': { ssr: false }, // Client-side auth pages for better UX
+    '/dashboard': { ssr: false },
+    '/investors': { prerender: true }, // Static investor page
+    '/api/**': { cors: true }
   },
-
-  // Fonts configuration
-  fonts: {
-    families: [
-      { name: 'Inter', provider: 'google', weights: [400, 500, 600, 700, 800, 900] },
-      { name: 'JetBrains Mono', provider: 'google', weights: [400, 500, 600] },
-    ],
-  },
-
-  // Icon configuration
-  icon: {
-    serverBundle: 'auto',
-  },
-
-  // Image optimization
-  image: {
-    format: ['webp', 'avif'],
-    quality: 80,
-    screens: {
-      xs: 320,
-      sm: 640,
-      md: 768,
-      lg: 1024,
-      xl: 1280,
-      '2xl': 1536,
-    },
-  },
-
-  // SEO configuration
-  site: {
-    url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-    name: 'Hydraulic Diagnostic SaaS',
-    description:
-      'AI-powered hydraulic diagnostics platform for industrial monitoring and predictive maintenance',
-    defaultLocale: 'ru',
-  },
-
-  // Build configuration
-  nitro: {
-    compressPublicAssets: true,
-  },
-
-  // TypeScript configuration
-  typescript: {
-    strict: false,
-    typeCheck: false,
-  },
-});
+  
+  // Enhanced SSR configuration
+  ssr: true,
+  
+  // Experimental features for Nuxt 4
+  experimental: {
+    payloadExtraction: false,
+    inlineSSRStyles: false,
+    viewTransition: true
+  }
+})
