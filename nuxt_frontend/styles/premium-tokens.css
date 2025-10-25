@@ -1,81 +1,56 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+/* Tailwind CSS v4 Base Styles */
+@import "tailwindcss";
 
 /* Premium Design System for Hydraulic Diagnostic SaaS */
 
-/* Color Tokens */
-:root {
-  /* Primary palette */
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
-  --color-primary-light: #dbeafe;
-  
-  /* Semantic colors */
-  --color-success: #059669;
-  --color-warning: #d97706;
-  --color-error: #dc2626;
-  --color-info: #0284c7;
-  
-  /* Neutral palette */
-  --color-gray-50: #f9fafb;
-  --color-gray-100: #f3f4f6;
-  --color-gray-200: #e5e7eb;
-  --color-gray-300: #d1d5db;
-  --color-gray-400: #9ca3af;
-  --color-gray-500: #6b7280;
-  --color-gray-600: #4b5563;
-  --color-gray-700: #374151;
-  --color-gray-800: #1f2937;
-  --color-gray-900: #111827;
-  
-  /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-  
-  /* Spacing scale */
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
-  --space-2xl: 3rem;
-  
-  /* Border radius */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+/* Custom CSS Properties */
+@layer base {
+  :root {
+    /* Primary palette */
+    --color-primary: #2563eb;
+    --color-primary-hover: #1d4ed8;
+    --color-primary-light: #dbeafe;
+    
+    /* Semantic colors */
+    --color-success: #059669;
+    --color-warning: #d97706;
+    --color-error: #dc2626;
+    --color-info: #0284c7;
+    
+    /* Typography */
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
+    
+    /* Spacing scale */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    
+    /* Border radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  }
 }
 
-/* Dark mode tokens */
-.dark {
-  --color-gray-50: #111827;
-  --color-gray-100: #1f2937;
-  --color-gray-200: #374151;
-  --color-gray-300: #4b5563;
-  --color-gray-400: #6b7280;
-  --color-gray-500: #9ca3af;
-  --color-gray-600: #d1d5db;
-  --color-gray-700: #e5e7eb;
-  --color-gray-800: #f3f4f6;
-  --color-gray-900: #f9fafb;
-}
-
-/* Component Base Classes */
+/* Component Layer */
 @layer components {
   .premium-card {
     @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 transition-all duration-200;
   }
   
   .premium-input {
-    @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
+    @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400;
   }
   
   .premium-input-error {
@@ -116,106 +91,77 @@
 }
 
 /* Typography Scale */
-.premium-heading-xs {
-  @apply text-sm font-semibold tracking-wide uppercase;
-}
-
-.premium-heading-sm {
-  @apply text-lg font-semibold;
-}
-
-.premium-heading-md {
-  @apply text-xl font-bold;
-}
-
-.premium-heading-lg {
-  @apply text-2xl font-bold;
-}
-
-.premium-heading-xl {
-  @apply text-3xl font-bold;
-}
-
-.premium-body {
-  @apply text-sm;
-}
-
-.premium-body-lg {
-  @apply text-base;
-}
-
-/* Utility Classes */
-.premium-focus {
-  @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
-}
-
-.premium-transition {
-  @apply transition-all duration-200 ease-out;
-}
-
-/* Animation Classes */
-.premium-fade-in {
-  animation: premium-fade-in 0.4s ease-out;
-}
-
-.premium-slide-up {
-  animation: premium-slide-up 0.3s ease-out;
-}
-
-.premium-scale-in {
-  animation: premium-scale-in 0.2s ease-out;
-}
-
-@keyframes premium-fade-in {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes premium-slide-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes premium-scale-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* Status Colors */
-.text-status-success { @apply text-green-600 dark:text-green-400; }
-.text-status-warning { @apply text-yellow-600 dark:text-yellow-400; }
-.text-status-error { @apply text-red-600 dark:text-red-400; }
-.bg-status-success { @apply bg-green-500; }
-.bg-status-warning { @apply bg-yellow-500; }
-.bg-status-error { @apply bg-red-500; }
-
-/* Loading States */
-.loading-shimmer {
-  @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
-}
-
-.loading-spinner {
-  @apply animate-spin border-2 border-current border-t-transparent rounded-full;
-}
-
-/* Responsive Utilities */
-@media (max-width: 768px) {
-  .premium-heading-lg { @apply text-xl; }
-  .premium-heading-xl { @apply text-2xl; }
-}
-
-/* Print Styles (fixed deprecated properties) */
-@media print {
-  body {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+@layer utilities {
+  .premium-heading-xs {
+    @apply text-sm font-semibold tracking-wide uppercase;
   }
   
-  .no-print {
-    display: none !important;
+  .premium-heading-sm {
+    @apply text-lg font-semibold;
   }
   
-  .premium-card {
-    @apply border border-gray-300;
+  .premium-heading-md {
+    @apply text-xl font-bold;
+  }
+  
+  .premium-heading-lg {
+    @apply text-2xl font-bold;
+  }
+  
+  .premium-heading-xl {
+    @apply text-3xl font-bold;
+  }
+  
+  .premium-body {
+    @apply text-sm leading-relaxed;
+  }
+  
+  .premium-body-lg {
+    @apply text-base leading-relaxed;
+  }
+  
+  /* Utility Classes */
+  .premium-focus {
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+  
+  .premium-transition {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  /* Animation Classes */
+  .premium-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+  
+  .premium-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+  
+  .premium-scale-in {
+    animation: scale-in 0.2s ease-out;
+  }
+  
+  /* Status Colors */
+  .text-status-success { @apply text-green-600 dark:text-green-400; }
+  .text-status-warning { @apply text-yellow-600 dark:text-yellow-400; }
+  .text-status-error { @apply text-red-600 dark:text-red-400; }
+  .bg-status-success { @apply bg-green-500; }
+  .bg-status-warning { @apply bg-yellow-500; }
+  .bg-status-error { @apply bg-red-500; }
+  
+  /* Loading States */
+  .loading-shimmer {
+    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+  }
+  
+  .loading-spinner {
+    @apply animate-spin border-2 border-current border-t-transparent rounded-full;
+  }
+  
+  /* Responsive Utilities */
+  @media (max-width: 768px) {
+    .premium-heading-lg { @apply text-xl; }
+    .premium-heading-xl { @apply text-2xl; }
   }
 }
