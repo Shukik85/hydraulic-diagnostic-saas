@@ -6,6 +6,9 @@ export default defineNuxtConfig({
   nitro: { preset: 'node', compressPublicAssets: true, minify: true },
   typescript: { strict: true, typeCheck: false },
   modules: ['@nuxt/icon', '@pinia/nuxt', '@nuxtjs/color-mode', '@nuxt/content'],
+  experimental: {
+  asyncContext: true
+  },
   css: ['~/styles/premium-tokens.css'],
   postcss: {
     plugins: {
