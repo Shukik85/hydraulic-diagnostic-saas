@@ -10,16 +10,16 @@ useSeoMeta({
 })
 
 // Critical icon preloading for investor demo
-if (process.client) {
+if (import.meta.client) {
   const criticalIcons = [
     'heroicons:chart-bar-square',
-    'heroicons:shield-check', 
+    'heroicons:shield-check',
     'heroicons:users',
     'heroicons:cog-6-tooth',
     'heroicons:arrow-right',
     'heroicons:sparkles'
   ]
-  
+
   // Preload icons for smooth demo experience
   criticalIcons.forEach(icon => {
     const link = document.createElement('link')
@@ -31,13 +31,13 @@ if (process.client) {
 }
 
 // Global error handling for demo stability
-const handleError = (error: any, errorInfo?: any) => {
+const handleError = (error: unknown, errorInfo?: unknown) => {
   console.error('Application error:', error, errorInfo)
   // Silent error handling for smooth demo experience
 }
 
 // Setup error boundaries
-onErrorCaptured((error: any, instance: any, info: any) => {
+onErrorCaptured((error: unknown, instance: unknown, info: unknown) => {
   handleError(error, { instance, info })
   return false // Prevent error propagation
 })
@@ -54,7 +54,7 @@ onMounted(() => {
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
-    
+
     <!-- Global loading indicator -->
     <div v-if="$route.meta.loading" class="fixed inset-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center">
       <div class="flex items-center space-x-3">
@@ -149,7 +149,7 @@ body {
     -webkit-print-color-adjust: exact;
     color-adjust: exact;
   }
-  
+
   .no-print {
     display: none !important;
   }
