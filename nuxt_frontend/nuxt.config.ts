@@ -4,7 +4,6 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-10-25',
   devtools: { enabled: false },
   nitro: { preset: 'node', compressPublicAssets: true, minify: true },
-  // future: { compatibilityVersion: 4 },
   typescript: { strict: true, typeCheck: false },
   modules: ['@nuxt/icon', '@pinia/nuxt', '@nuxtjs/color-mode', '@nuxt/content'],
   css: ['~/styles/premium-tokens.css'],
