@@ -2,7 +2,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-10-25',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   nitro: { preset: 'node', compressPublicAssets: true, minify: true },
   future: { compatibilityVersion: 4 },
   typescript: { strict: true, typeCheck: false },
