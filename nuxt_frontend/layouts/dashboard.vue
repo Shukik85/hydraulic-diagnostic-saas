@@ -47,16 +47,37 @@ const mapName = (path: string) => ({
   '/diagnostics': 'Диагностика',
   '/reports': 'Отчёты',
   '/chat': 'ИИ Чат',
-  '/settings': 'Настройки'
+  '/settings': 'Настройки',
+  '/equipments': 'Оборудование'
 }[path] || 'Страница')
 
 const breadcrumbs = computed(() => {
   const parts = route.path.split('/').filter(Boolean)
   const acc: { name: string; href: string }[] = [{ name: 'Главная', href: '/' }]
   let current = ''
-  for (const p of parts) {
-    current += `/${p}`
-    acc.push({ name: mapName(current), href: current })
+  
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i]
+    current += `/${part}`
+    
+    // Handle dynamic routes
+    if (part === 'systems') {
+      acc.push({ name: 'Системы', href: current })
+    } else if (part === 'equipments') {
+      acc.push({ name: 'Оборудование', href: current })
+    } else if (/^\d+$/.test(part)) {
+      // Numeric ID - show as dynamic name
+      const prevPart = parts[i - 1]
+      if (prevPart === 'systems') {
+        acc.push({ name: `Система #${part}`, href: current })
+      } else if (prevPart === 'equipments') {
+        acc.push({ name: `Оборудование #${part}`, href: current })
+      } else {
+        acc.push({ name: `#${part}`, href: current })
+      }
+    } else {
+      acc.push({ name: mapName(current), href: current })
+    }
   }
   return acc
 })
@@ -102,7 +123,7 @@ const breadcrumbs = computed(() => {
             to="/systems" 
             :class="[
               'px-4 py-2 rounded-lg font-medium transition-colors',
-              route.path === '/systems' 
+              route.path.startsWith('/systems') 
                 ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
                 : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
             ]"
