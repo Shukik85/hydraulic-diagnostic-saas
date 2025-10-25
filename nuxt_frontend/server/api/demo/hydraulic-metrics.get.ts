@@ -1,8 +1,10 @@
-export default defineEventHandler(async (event) => {
+export default defineEventHandler((event) => {
+  // Avoid caching in dev to reduce duplicate/parallel fetch issues
+  setHeader(event, 'Cache-Control', 'no-store')
+
   const query = getQuery(event)
   const source = (query.source || 'btc').toString()
 
-  // BTC-derived (как было) + ETH-derived (новое)
   const btc = {
     key: 'btc',
     name: 'Bitcoin (Нестабильная)',
@@ -38,11 +40,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const sources = { btc, eth }
-  const selected = sources[source] || btc
+  const selected = sources[source] || sources.btc
 
-  // Aggregates for the selected source (min/max/avg for a week)
   const arr = selected.sparklines
-  const avg = (xs) => Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100
+  const avg = (xs: number[]) => Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100
+
   const week_stats = {
     temperature: { min: Math.min(...arr.temperature), max: Math.max(...arr.temperature), avg: avg(arr.temperature) },
     pressure: { min: Math.min(...arr.pressure), max: Math.max(...arr.pressure), avg: avg(arr.pressure) },

@@ -3,7 +3,12 @@ import DashboardCharts from '~/components/dashboard/DashboardCharts.client.vue'
 import Sparklines from '~/components/dashboard/Sparklines.client.vue'
 
 const source = ref<'btc' | 'eth'>('btc')
-const { data, refresh, pending } = await useFetch(() => `/api/demo/hydraulic-metrics?source=${source.value}`)
+const { data, refresh, pending } = await useFetch('/api/demo/hydraulic-metrics', {
+  query: { source },
+  key: () => `demo-hydraulics-${source.value}`,
+  dedupe: 'defer',
+  initialCache: false
+})
 
 const temp = computed(() => data.value?.sparklines?.temperature || [])
 const pressure = computed(() => data.value?.sparklines?.pressure || [])
@@ -16,9 +21,8 @@ watch(source, () => refresh())
 
 const zoneColor = (metric: string, value: number) => {
   const t = thresholds.value?.[metric]
-  if (!t) return 'text-gray-600 dark:text-gray-300'
+  if (!t || value == null) return 'text-gray-600 dark:text-gray-300'
   if (metric === 'pressure') {
-    // Для давления зелёная зона выше green (лучше выше), красная ниже red (хуже)
     return value >= t.green ? 'text-green-600 dark:text-green-400' : (value <= t.red ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400')
   }
   return value <= t.green ? 'text-green-600 dark:text-green-400' : (value >= t.red ? 'text-red-600 dark:text-red-400' : 'text-yellow-600 dark:text-yellow-400')
@@ -26,7 +30,6 @@ const zoneColor = (metric: string, value: number) => {
 </script>
 <template>
   <div class="space-y-6">
-    <!-- Source Switcher -->
     <div class="premium-card p-4 flex items-center justify-between">
       <div class="flex items-center space-x-3">
         <span class="text-sm text-gray-600 dark:text-gray-300">Источник данных:</span>
@@ -44,10 +47,8 @@ const zoneColor = (metric: string, value: number) => {
       <div v-if="pending" class="text-sm text-gray-500 dark:text-gray-400">Загрузка...</div>
     </div>
 
-    <!-- Sparklines + Zones -->
     <Sparklines :temp="temp" :pressure="pressure" :flow="flow" :vibration="vibration" />
 
-    <!-- Aggregates with zone coloring -->
     <div class="premium-card p-4">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div>
@@ -93,7 +94,6 @@ const zoneColor = (metric: string, value: number) => {
       </div>
     </div>
 
-    <!-- Main charts (unchanged) -->
     <DashboardCharts />
   </div>
 </template>
