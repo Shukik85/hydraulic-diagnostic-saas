@@ -9,7 +9,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "prepare": "nuxt prepare",
-    "predev": "nuxt prepare",
+    "predev": "node scripts/prepare-tsconfig.js && nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "vue-tsc --noEmit"
