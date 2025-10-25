@@ -4,39 +4,38 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   // Enhanced devtools for development
   devtools: { enabled: true },
-  
+
   // Performance optimizations
   nitro: {
     preset: 'node',
     compressPublicAssets: true,
     minify: true
   },
-  
+
   // Future-ready Nuxt 4 compatibility
   future: {
     compatibilityVersion: 4
   },
-  
+
   // Enhanced TypeScript support
   typescript: {
     strict: true,
     typeCheck: true
   },
-  
+
   // Core modules for enterprise SaaS
   modules: [
-    '@nuxtjs/tailwindcss',
     '@nuxt/icon',
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
     '@nuxt/content'
   ],
-  
+
   // Premium styling system
   css: [
     '~/styles/premium-tokens.css'
   ],
-  
+
   // Optimized app configuration
   app: {
     head: {
@@ -57,7 +56,7 @@ export default defineNuxtConfig({
     pageTransition: { name: 'page', mode: 'out-in' },
     layoutTransition: { name: 'layout', mode: 'out-in' }
   },
-  
+
   // Component auto-import for clean code
   components: [
     {
@@ -65,7 +64,7 @@ export default defineNuxtConfig({
       pathPrefix: false
     }
   ],
-  
+
   // Fast icon configuration (local-first)
   icon: {
     mode: 'local',
@@ -75,20 +74,20 @@ export default defineNuxtConfig({
       collections: ['heroicons']
     }
   },
-  
+
   // Enhanced Tailwind configuration
   tailwindcss: {
     cssPath: '~/styles/premium-tokens.css',
     configPath: '~/tailwind.config.ts'
   },
-  
+
   // Theme configuration
   colorMode: {
     preference: 'light',
     fallback: 'light',
     classSuffix: ''
   },
-  
+
   // Content configuration
   content: {
     documentDriven: false,
@@ -96,12 +95,12 @@ export default defineNuxtConfig({
       clientDB: false
     }
   },
-  
+
   // Production build optimizations
   build: {
     transpile: ['@headlessui/vue']
   },
-  
+
   // Development performance
   vite: {
     define: {
@@ -116,12 +115,12 @@ export default defineNuxtConfig({
       }
     }
   },
-  
+
   // Runtime configuration
   runtimeConfig: {
     // Private keys
     apiSecret: process.env.NUXT_API_SECRET || 'dev-secret',
-    
+
     // Public keys
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
@@ -130,7 +129,7 @@ export default defineNuxtConfig({
       disableFontshare: true // Disable external font provider in dev
     }
   },
-  
+
   // Route rules for performance
   routeRules: {
     '/': { prerender: true },
@@ -139,10 +138,10 @@ export default defineNuxtConfig({
     '/investors': { prerender: true }, // Static investor page
     '/api/**': { cors: true }
   },
-  
+
   // Enhanced SSR configuration
   ssr: true,
-  
+
   // Experimental features for Nuxt 4
   experimental: {
     payloadExtraction: false,
