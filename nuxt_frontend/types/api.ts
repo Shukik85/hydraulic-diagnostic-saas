@@ -1,4 +1,4 @@
-// Complete API types for hydraulic diagnostic platform
+// Enhanced API types with proper nullable handling
 
 // User and Authentication Types
 export interface User {
@@ -8,7 +8,7 @@ export interface User {
   first_name?: string
   last_name?: string
   username?: string
-  role?: 'admin' | 'operator' | 'viewer'
+  role?: 'admin' | 'operator' | 'viewer' | 'investor'
   is_active?: boolean
   date_joined?: string
   last_login?: string
@@ -17,6 +17,11 @@ export interface User {
   systems_count?: number
   reports_generated?: number
   last_activity?: string
+  
+  // Additional fields for complete coverage
+  company?: string
+  phone?: string
+  job_title?: string
 }
 
 export interface LoginCredentials {
@@ -33,6 +38,8 @@ export interface RegisterData {
   username?: string
   company?: string
   phone?: string
+  job_title?: string
+  subscribe_updates?: boolean
   terms_accepted?: boolean
   newsletter_subscription?: boolean
 }
@@ -40,7 +47,7 @@ export interface RegisterData {
 export interface TokenResponse {
   access: string
   refresh: string
-  user?: User
+  user?: User // Optional because might not be included
 }
 
 export interface PasswordResetRequest {
@@ -68,6 +75,7 @@ export interface HydraulicSystem {
   alerts_count?: number
   uptime_percentage?: number
   efficiency_score?: number
+  last_reading_at?: string // Added field
   
   // Operational data
   temperature?: number
@@ -89,6 +97,7 @@ export interface DiagnosticReport {
   status: 'pending' | 'in_progress' | 'completed' | 'failed'
   title: string
   description?: string
+  summary?: string // Added field
   recommendations?: string[]
   estimated_cost?: number
   priority_score?: number
@@ -144,6 +153,40 @@ export interface RagQueryLog {
   // Relations
   user?: User
 }
+
+// Chat Types
+export interface ChatMessage {
+  id: number
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+  sources?: { title: string; url: string }[]
+}
+
+export interface ChatSession {
+  id: number
+  title: string
+  description: string
+  lastMessage: string
+  timestamp: string
+  messages: ChatMessage[]
+}
+
+// Password Strength
+export interface PasswordStrength {
+  score: number
+  label: string
+  color: 'red' | 'yellow' | 'green' | 'gray'
+}
+
+// UI Types
+export interface TableColumn {
+  key: string
+  label: string
+  sortable?: boolean
+}
+
+export type ButtonColor = 'blue' | 'green' | 'purple' | 'orange' | 'teal' | 'red' | 'indigo'
 
 // API Response Types
 export interface PaginatedResponse<T> {

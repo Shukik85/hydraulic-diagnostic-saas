@@ -1,4 +1,4 @@
-// Authentication state management with Pinia
+// Fixed auth store with proper nullable types
 import type { User } from '~/types/api'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -8,8 +8,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   const api = useApi()
 
-  // Getters
-  const isLoggedIn = computed(() => !!user.value)
+  // Getters with null safety
+  const isAuthenticated = computed(() => !!user.value)
   const userName = computed(() => {
     if (!user.value) return ''
     if (user.value.first_name || user.value.last_name) {
@@ -18,13 +18,13 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value.username || user.value.name || user.value.email
   })
 
-  // Actions
-  const login = async (email: string, password: string) => {
+  // Actions with proper error handling
+  const login = async (credentials: { email: string; password: string }) => {
     loading.value = true
     error.value = null
 
     try {
-      const userData = await api.login({ email, password })
+      const userData = await api.login(credentials)
       user.value = userData
       return userData
     } catch (err: any) {
@@ -35,7 +35,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const register = async (userData: { username: string, email: string, password: string, first_name?: string, last_name?: string }) => {
+  const register = async (userData: any) => {
     loading.value = true
     error.value = null
 
@@ -72,7 +72,6 @@ export const useAuthStore = defineStore('auth', () => {
       return userData
     } catch (err: any) {
       if (err.status === 401) {
-        // Token expired
         user.value = null
         await navigateTo('/auth/login')
       }
@@ -88,7 +87,9 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     try {
       const updated = await api.updateUser(profileData)
-      user.value = { ...user.value, ...updated }
+      if (updated) {
+        user.value = { ...user.value, ...updated }
+      }
       return updated
     } catch (err: any) {
       error.value = err?.data?.detail || 'Ошибка обновления профиля'
@@ -98,9 +99,8 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  // Initialize auth state on app load
   const initialize = async () => {
-    if (import.meta.server) return
+    if (process.server) return
 
     if (api.isAuthenticated.value) {
       try {
@@ -112,13 +112,13 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    // State (НЕ readonly для возможности изменения)
+    // State (not readonly for mutability)
     user,
     loading,
     error,
 
     // Getters
-    isLoggedIn,
+    isAuthenticated,
     userName,
 
     // Actions

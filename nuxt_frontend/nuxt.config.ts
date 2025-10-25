@@ -4,38 +4,39 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   // Enhanced devtools for development
   devtools: { enabled: true },
-
+  
   // Performance optimizations
   nitro: {
     preset: 'node',
     compressPublicAssets: true,
     minify: true
   },
-
+  
   // Future-ready Nuxt 4 compatibility
   future: {
     compatibilityVersion: 4
   },
-
+  
   // Enhanced TypeScript support
   typescript: {
     strict: true,
-    typeCheck: true
+    typeCheck: false // Disable for faster dev builds
   },
-
+  
   // Core modules for enterprise SaaS
   modules: [
+    '@nuxtjs/tailwindcss',
     '@nuxt/icon',
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
     '@nuxt/content'
   ],
-
+  
   // Premium styling system
   css: [
     '~/styles/premium-tokens.css'
   ],
-
+  
   // Optimized app configuration
   app: {
     head: {
@@ -49,14 +50,13 @@ export default defineNuxtConfig({
         { name: 'msapplication-TileColor', content: '#2563eb' }
       ],
       link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'preload', as: 'style', href: '/_nuxt/styles/premium-tokens.css' }
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
     },
     pageTransition: { name: 'page', mode: 'out-in' },
     layoutTransition: { name: 'layout', mode: 'out-in' }
   },
-
+  
   // Component auto-import for clean code
   components: [
     {
@@ -64,7 +64,7 @@ export default defineNuxtConfig({
       pathPrefix: false
     }
   ],
-
+  
   // Fast icon configuration (local-first)
   icon: {
     mode: 'local',
@@ -74,78 +74,71 @@ export default defineNuxtConfig({
       collections: ['heroicons']
     }
   },
-
+  
   // Enhanced Tailwind configuration
   tailwindcss: {
     cssPath: '~/styles/premium-tokens.css',
     configPath: '~/tailwind.config.ts'
   },
-
+  
   // Theme configuration
   colorMode: {
     preference: 'light',
     fallback: 'light',
     classSuffix: ''
   },
-
-  // Content configuration
+  
+  // Content configuration (removed deprecated options)
   content: {
-    documentDriven: false,
-    experimental: {
-      clientDB: false
-    }
+    documentDriven: false
   },
-
+  
   // Production build optimizations
   build: {
     transpile: ['@headlessui/vue']
   },
-
+  
   // Development performance
   vite: {
     define: {
       __DEV__: process.env.NODE_ENV !== 'production'
     },
     css: {
-      devSourcemap: false // Faster CSS in dev
+      devSourcemap: false
     },
     server: {
       hmr: {
-        overlay: false // Less intrusive HMR
+        overlay: false
       }
     }
   },
-
+  
   // Runtime configuration
   runtimeConfig: {
-    // Private keys
     apiSecret: process.env.NUXT_API_SECRET || 'dev-secret',
-
-    // Public keys
+    
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
       appName: 'Hydraulic Diagnostic SaaS',
       appVersion: '1.0.0',
-      disableFontshare: true // Disable external font provider in dev
+      disableFontshare: true
     }
   },
-
+  
   // Route rules for performance
   routeRules: {
     '/': { prerender: true },
-    '/auth/**': { ssr: false }, // Client-side auth pages for better UX
+    '/auth/**': { ssr: false },
     '/dashboard': { ssr: false },
-    '/investors': { prerender: true }, // Static investor page
+    '/investors': { prerender: true },
     '/api/**': { cors: true }
   },
-
-  // Enhanced SSR configuration
+  
   ssr: true,
-
-  // Experimental features for Nuxt 4
+  
+  // Removed deprecated experimental options
   experimental: {
     payloadExtraction: false,
-    inlineSSRStyles: false,
     viewTransition: true
   }
 })

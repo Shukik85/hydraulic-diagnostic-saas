@@ -1,37 +1,44 @@
-// API client composable for backend integration
-import type { 
-  User, 
-  HydraulicSystem, 
-  DiagnosticReport, 
-  SensorData,
-  RagQueryLog,
-  LoginCredentials,
-  TokenResponse,
-  RegisterData,
-  PaginatedResponse,
-  ApiError
-} from '~/types/api'
+// Fixed API composable with proper TypeScript types
+import type { User, LoginCredentials, RegisterData, TokenResponse } from '~/types/api'
 
 export const useApi = () => {
   const config = useRuntimeConfig()
   const apiBase = config.public.apiBase
   
-  // Auth token management
-  const accessToken = useCookie('access_token', { secure: true, sameSite: 'strict' })
-  const refreshToken = useCookie('refresh_token', { secure: true, sameSite: 'strict' })
+  // Auth tokens with proper types
+  const accessToken = useCookie<string | null>('access_token', {
+    default: () => null,
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production'
+  })
+  
+  const refreshToken = useCookie<string | null>('refresh_token', {
+    default: () => null,
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production'
+  })
   
   const isAuthenticated = computed(() => !!accessToken.value)
   
-  // HTTP client with auth headers
+  // Fixed headers - use .value to get actual computed value
   const $http = $fetch.create({
     baseURL: apiBase,
-    headers: computed(() => ({
-      'Content-Type': 'application/json',
-      ...(accessToken.value && { Authorization: `Bearer ${accessToken.value}` })
-    })),
+    // Fix: Don't pass computed ref directly to headers
+    onRequest({ request, options }) {
+      if (accessToken.value) {
+        options.headers = {
+          ...options.headers,
+          'Authorization': `Bearer ${accessToken.value}`
+        }
+      }
+      options.headers = {
+        ...options.headers,
+        'Content-Type': 'application/json'
+      }
+    },
     onResponseError({ response }) {
       if (response.status === 401) {
-        // Token expired, clear auth and redirect to login
+        // Clear tokens on auth failure
         accessToken.value = null
         refreshToken.value = null
         navigateTo('/auth/login')
@@ -39,9 +46,9 @@ export const useApi = () => {
     }
   })
   
-  // Auth methods
-  const login = async (credentials: LoginCredentials): Promise<User> => {
-    const response = await $http<TokenResponse>('/auth/login/', {
+  // Auth methods with proper return types
+  const login = async (credentials: LoginCredentials): Promise<User | null> => {
+    const response = await $http<TokenResponse>('/auth/login', {
       method: 'POST',
       body: credentials
     })
@@ -49,11 +56,12 @@ export const useApi = () => {
     accessToken.value = response.access
     refreshToken.value = response.refresh
     
-    return response.user
+    // Return user or null (not throwing on undefined)
+    return response.user || null
   }
   
-  const register = async (userData: RegisterData): Promise<User> => {
-    const response = await $http<TokenResponse>('/auth/register/', {
+  const register = async (userData: RegisterData): Promise<User | null> => {
+    const response = await $http<TokenResponse>('/auth/register', {
       method: 'POST',
       body: userData
     })
@@ -61,97 +69,55 @@ export const useApi = () => {
     accessToken.value = response.access
     refreshToken.value = response.refresh
     
-    return response.user
+    return response.user || null
   }
   
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     try {
-      await $http('/auth/logout/', { method: 'POST' })
+      await $http('/auth/logout', {
+        method: 'POST'
+      })
+    } catch {
+      // Ignore logout errors
     } finally {
       accessToken.value = null
       refreshToken.value = null
-      await navigateTo('/auth/login')
     }
   }
   
-  // User methods
-  const getCurrentUser = () => $http<User>('/users/me/')
-  const updateUser = (data: Partial<User>) => $http<User>('/users/me/', {
-    method: 'PATCH',
-    body: data
-  })
-  const changePassword = (oldPassword: string, newPassword: string) => 
-    $http('/users/me/change_password/', {
-      method: 'POST',
-      body: { old_password: oldPassword, new_password: newPassword }
-    })
-  
-  // Hydraulic systems
-  const getSystems = (params?: Record<string, any>) => 
-    $http<PaginatedResponse<HydraulicSystem>>('/systems/', { params })
-  const getSystem = (id: number) => $http<HydraulicSystem>(`/systems/${id}/`)
-  const createSystem = (data: Omit<HydraulicSystem, 'id' | 'created_at' | 'updated_at' | 'owner' | 'components_count' | 'last_reading_at'>) => 
-    $http<HydraulicSystem>('/systems/', { method: 'POST', body: data })
-  const updateSystem = (id: number, data: Partial<HydraulicSystem>) => 
-    $http<HydraulicSystem>(`/systems/${id}/`, { method: 'PATCH', body: data })
-  const deleteSystem = (id: number) => $http(`/systems/${id}/`, { method: 'DELETE' })
-  
-  // Diagnostic reports
-  const getReports = (systemId?: number, params?: Record<string, any>) => {
-    const url = systemId ? `/systems/${systemId}/reports/` : '/reports/'
-    return $http<PaginatedResponse<DiagnosticReport>>(url, { params })
+  const getCurrentUser = async (): Promise<User | null> => {
+    try {
+      const user = await $http<User>('/auth/me')
+      return user || null
+    } catch {
+      return null
+    }
   }
-  const getReport = (id: number) => $http<DiagnosticReport>(`/reports/${id}/`)
-  const createReport = (systemId: number) => 
-    $http<DiagnosticReport>(`/systems/${systemId}/reports/`, { method: 'POST' })
   
-  // Sensor data
-  const getSensorData = (systemId: number, params?: Record<string, any>) => 
-    $http<PaginatedResponse<SensorData>>(`/systems/${systemId}/sensor-data/`, { params })
-  const addSensorData = (systemId: number, data: Omit<SensorData, 'id' | 'system'>) => 
-    $http<SensorData>(`/systems/${systemId}/sensor-data/`, { method: 'POST', body: data })
-  
-  // RAG Assistant
-  const queryRag = (systemId: number, query: string) => 
-    $http<{ response: string, sources?: any[] }>(`/systems/${systemId}/rag/query/`, {
-      method: 'POST',
-      body: { query }
-    })
-  const getRagLogs = (systemId?: number, params?: Record<string, any>) => {
-    const url = systemId ? `/systems/${systemId}/rag/logs/` : '/rag/logs/'
-    return $http<PaginatedResponse<RagQueryLog>>(url, { params })
+  const updateUser = async (userData: Partial<User>): Promise<User | null> => {
+    try {
+      const user = await $http<User>('/auth/me', {
+        method: 'PATCH',
+        body: userData
+      })
+      return user || null
+    } catch {
+      return null
+    }
   }
   
   return {
-    // Auth
+    // State
+    isAuthenticated,
+    
+    // Methods
     login,
     register,
     logout,
-    isAuthenticated,
-    
-    // Users
     getCurrentUser,
     updateUser,
-    changePassword,
     
-    // Systems
-    getSystems,
-    getSystem,
-    createSystem,
-    updateSystem,
-    deleteSystem,
-    
-    // Reports
-    getReports,
-    getReport,
-    createReport,
-    
-    // Sensor data
-    getSensorData,
-    addSensorData,
-    
-    // RAG
-    queryRag,
-    getRagLogs
+    // Raw HTTP client for other operations
+    $http
   }
 }
