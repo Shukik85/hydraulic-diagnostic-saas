@@ -9,7 +9,11 @@ const mapName = (path: string) => ({
   '/diagnostics': 'Диагностика',
   '/reports': 'Отчёты',
   '/chat': 'ИИ Чат',
-  '/settings': 'Настройки'
+  '/settings': 'Настройки',
+  '/about': 'О платформе',
+  '/features': 'Возможности',
+  '/pricing': 'Тарифы',
+  '/contact': 'Контакты'
 }[path] || 'Страница')
 
 const breadcrumbs = computed(() => {
