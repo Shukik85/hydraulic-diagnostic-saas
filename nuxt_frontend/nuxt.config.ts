@@ -7,6 +7,12 @@ export default defineNuxtConfig({
   typescript: { strict: true, typeCheck: false },
   modules: ['@nuxt/icon', '@pinia/nuxt', '@nuxtjs/color-mode', '@nuxt/content'],
   css: ['~/styles/premium-tokens.css'],
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {}
+    }
+  },
   app: {
     head: {
       charset: 'utf-8',
