@@ -1,20 +1,20 @@
 <script setup lang="ts">
-// Fixed landing page with SSR-safe random values
+// Russian-localized landing page with improved UX
 definePageMeta({
   layout: 'landing'
 })
 
 useSeoMeta({
-  title: 'Hydraulic Diagnostic SaaS - AI-Powered Industrial Monitoring',
-  description: 'Enterprise-grade hydraulic systems monitoring with predictive analytics, real-time diagnostics, and intelligent maintenance scheduling.'
+  title: 'Гидравлика ИИ - Платформа мониторинга промышленного оборудования',
+  description: 'Enterprise-платформа мониторинга гидравлических систем с ИИ-аналитикой, предиктивным обслуживанием и интеллектуальным планированием ремонтов.'
 })
 
 // SSR-safe demo data with fixed initial values
 const demoMetrics = ref({
-  systems: { value: 0, target: 127, label: 'Active Systems' },
-  uptime: { value: 0, target: 99.94, label: 'Uptime %' },
-  alerts: { value: 0, target: 23, label: 'Prevented Failures' },
-  savings: { value: 0, target: 89, label: 'Cost Reduction %' }
+  systems: { value: 0, target: 127, label: 'Активных систем', suffix: '' },
+  uptime: { value: 0, target: 99.94, label: 'Время работы', suffix: '%' },
+  alerts: { value: 0, target: 23, label: 'Предотвращено аварий', suffix: '' },
+  savings: { value: 0, target: 89, label: 'Снижение затрат', suffix: '%' }
 })
 
 const isAnimated = ref(false)
@@ -66,14 +66,14 @@ const animateCounters = () => {
           <div class="mb-8 premium-fade-in">
             <h1 class="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
               <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                AI-Powered
+                ИИ-Платформа
               </span><br>
-              Hydraulic Diagnostics
+              Гидравлической Диагностики
             </h1>
             <p class="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
-              Predictive maintenance for industrial hydraulic systems. 
-              <strong class="text-blue-600 dark:text-blue-400">Reduce downtime by 89%</strong> 
-              with intelligent monitoring.
+              Предиктивное обслуживание промышленных гидравлических систем. 
+              <strong class="text-blue-600 dark:text-blue-400">Снижение простоев на 89%</strong> 
+              с помощью интеллектуального мониторинга.
             </p>
           </div>
           
@@ -86,7 +86,7 @@ const animateCounters = () => {
               icon="heroicons:rocket-launch"
               class="text-lg px-8 py-4"
             >
-              Start Free Trial
+              Начать бесплатно
             </PremiumButton>
             <PremiumButton 
               to="/investors" 
@@ -95,7 +95,7 @@ const animateCounters = () => {
               icon="heroicons:presentation-chart-line"
               class="text-lg px-8 py-4"
             >
-              View Demo
+              Смотреть демо
             </PremiumButton>
           </div>
           
@@ -108,16 +108,13 @@ const animateCounters = () => {
             >
               <div class="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
                 <span 
-                  v-if="key === 'uptime' || key === 'savings'"
                   :class="{ 'transition-all duration-300': isAnimated }"
                 >
-                  {{ metric.value.toFixed(key === 'systems' || key === 'alerts' ? 0 : 2) }}{{ key === 'uptime' || key === 'savings' ? '%' : '' }}
-                </span>
-                <span 
-                  v-else
-                  :class="{ 'transition-all duration-300': isAnimated }"
-                >
-                  {{ Math.round(metric.value) }}
+                  {{ 
+                    key === 'uptime' || key === 'savings' 
+                      ? metric.value.toFixed(2) 
+                      : Math.round(metric.value) 
+                  }}{{ metric.suffix }}
                 </span>
               </div>
               <div class="text-sm text-gray-600 dark:text-gray-300">{{ metric.label }}</div>
@@ -132,10 +129,10 @@ const animateCounters = () => {
       <div class="container mx-auto px-4">
         <div class="text-center mb-16">
           <h2 class="premium-heading-xl text-gray-900 dark:text-white mb-4">
-            🚀 Enterprise Features
+            🚀 Возможности платформы
           </h2>
           <p class="premium-body-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Advanced hydraulic system monitoring with AI-driven insights and predictive maintenance capabilities
+            Передовой мониторинг гидравлических систем с ИИ-аналитикой и предиктивным обслуживанием
           </p>
         </div>
         
@@ -146,13 +143,13 @@ const animateCounters = () => {
               <Icon name="heroicons:cpu-chip" class="w-8 h-8 text-white" />
             </div>
             <h3 class="premium-heading-sm text-gray-900 dark:text-white mb-4">
-              AI Predictive Analytics
+              ИИ Предиктивная Аналитика
             </h3>
             <p class="premium-body text-gray-600 dark:text-gray-300 mb-4">
-              Machine learning algorithms analyze sensor data to predict failures 30 days in advance with 94.8% accuracy
+              Алгоритмы машинного обучения анализируют данные сенсоров для прогнозирования поломок за 30 дней с точностью 94.8%
             </p>
             <div class="text-sm text-blue-600 dark:text-blue-400 font-medium">
-              ✓ Real-time anomaly detection
+              ✓ Обнаружение аномалий в реальном времени
             </div>
           </div>
           
@@ -162,13 +159,13 @@ const animateCounters = () => {
               <Icon name="heroicons:chart-bar-square" class="w-8 h-8 text-white" />
             </div>
             <h3 class="premium-heading-sm text-gray-900 dark:text-white mb-4">
-              Real-Time Monitoring
+              Мониторинг в реальном времени
             </h3>
             <p class="premium-body text-gray-600 dark:text-gray-300 mb-4">
-              Continuous monitoring of pressure, temperature, flow rate, and vibration with instant alerts
+              Непрерывный контроль давления, температуры, расхода и вибрации с мгновенными уведомлениями
             </p>
             <div class="text-sm text-green-600 dark:text-green-400 font-medium">
-              ✓ 1.2s response time
+              ✓ Время отклика 1.2 секунды
             </div>
           </div>
           
@@ -178,13 +175,13 @@ const animateCounters = () => {
               <Icon name="heroicons:wrench-screwdriver" class="w-8 h-8 text-white" />
             </div>
             <h3 class="premium-heading-sm text-gray-900 dark:text-white mb-4">
-              Smart Maintenance
+              Умное обслуживание
             </h3>
             <p class="premium-body text-gray-600 dark:text-gray-300 mb-4">
-              Automated maintenance scheduling based on actual system condition and usage patterns
+              Автоматическое планирование технического обслуживания на основе фактического состояния и режима эксплуатации
             </p>
             <div class="text-sm text-purple-600 dark:text-purple-400 font-medium">
-              ✓ 89% cost reduction
+              ✓ Снижение затрат на 89%
             </div>
           </div>
         </div>
@@ -195,28 +192,28 @@ const animateCounters = () => {
     <section class="py-20 bg-gradient-to-r from-blue-600 to-purple-600">
       <div class="container mx-auto px-4">
         <div class="text-center text-white mb-16">
-          <h2 class="premium-heading-xl mb-4">Trusted by Industry Leaders</h2>
+          <h2 class="premium-heading-xl mb-4">Нам доверяют лидеры отрасли</h2>
           <p class="premium-body-lg opacity-90">
-            Join 127+ enterprises optimizing their hydraulic systems
+            Присоединяйтесь к 127+ предприятиям, оптимизирующим свои гидравлические системы
           </p>
         </div>
         
         <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center text-white">
           <div>
             <div class="text-4xl font-bold mb-2">1,847</div>
-            <div class="text-sm opacity-80">Systems Monitored</div>
+            <div class="text-sm opacity-80">Систем под мониторингом</div>
           </div>
           <div>
             <div class="text-4xl font-bold mb-2">99.94%</div>
-            <div class="text-sm opacity-80">Uptime Achieved</div>
+            <div class="text-sm opacity-80">Достигнутое время работы</div>
           </div>
           <div>
-            <div class="text-4xl font-bold mb-2">₽3.2M</div>
-            <div class="text-sm opacity-80">Cost Savings</div>
+            <div class="text-4xl font-bold mb-2">₽3.2М</div>
+            <div class="text-sm opacity-80">Экономия средств</div>
           </div>
           <div>
             <div class="text-4xl font-bold mb-2">24/7</div>
-            <div class="text-sm opacity-80">Expert Support</div>
+            <div class="text-sm opacity-80">Экспертная поддержка</div>
           </div>
         </div>
       </div>
@@ -227,11 +224,11 @@ const animateCounters = () => {
       <div class="container mx-auto px-4 text-center">
         <div class="max-w-3xl mx-auto">
           <h2 class="premium-heading-xl text-gray-900 dark:text-white mb-6">
-            Ready to Transform Your Operations?
+            Готовы трансформировать свои операции?
           </h2>
           <p class="premium-body-lg text-gray-600 dark:text-gray-300 mb-8">
-            Start your journey towards predictive maintenance and operational excellence. 
-            Enterprise trial available.
+            Начните путь к предиктивному обслуживанию и операционному совершенству. 
+            Доступна корпоративная пробная версия.
           </p>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <PremiumButton 
@@ -240,7 +237,7 @@ const animateCounters = () => {
               gradient 
               icon="heroicons:arrow-right"
             >
-              Get Started Now
+              Начать сейчас
             </PremiumButton>
             <PremiumButton 
               to="/investors" 
@@ -248,7 +245,7 @@ const animateCounters = () => {
               size="lg" 
               icon="heroicons:phone"
             >
-              Schedule Demo
+              Запланировать демо
             </PremiumButton>
           </div>
         </div>

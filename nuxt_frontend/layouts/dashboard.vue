@@ -1,61 +1,56 @@
 <script setup lang="ts">
-// Professional dashboard layout with navigation and user management
+// Enhanced dashboard layout with better contrast and full Russian localization
 const authStore = useAuthStore()
-const router = useRouter()
-const route = useRoute()
+const colorMode = useColorMode()
 
-// Navigation items
-const navigation = [
-  {
-    name: 'Обзор',
-    href: '/dashboard',
-    icon: 'heroicons:home',
-    current: route.path === '/dashboard'
-  },
-  {
-    name: 'Оборудование',
-    href: '/equipment',
-    icon: 'heroicons:wrench-screwdriver',
-    current: route.path.startsWith('/equipment')
-  },
-  {
-    name: 'Диагностика',
-    href: '/diagnostics',
-    icon: 'heroicons:chart-pie',
-    current: route.path === '/diagnostics'
-  },
-  {
-    name: 'Отчёты',
-    href: '/reports',
-    icon: 'heroicons:document-chart-bar',
-    current: route.path.startsWith('/reports')
-  },
-  {
-    name: 'Сенсоры',
-    href: '/sensors',
-    icon: 'heroicons:signal',
-    current: route.path === '/sensors'
-  },
-  {
-    name: 'AI-ассистент',
-    href: '/chat',
-    icon: 'heroicons:chat-bubble-left-right',
-    current: route.path === '/chat'
-  }
-]
-
-// Special navigation for privileged users
-const privilegedNavigation = computed(() => {
-  const items = []
+// Navigation items with full Russian translation
+const navigationItems = computed(() => {
+  const items = [
+    {
+      name: 'Обзор',
+      href: '/dashboard',
+      icon: 'heroicons:squares-2x2',
+      description: 'Главный дашборд и метрики'
+    },
+    {
+      name: 'Системы',
+      href: '/systems',
+      icon: 'heroicons:server-stack',
+      description: 'Мониторинг гидравлических систем'
+    },
+    {
+      name: 'Диагностика',
+      href: '/diagnostics',
+      icon: 'heroicons:cpu-chip',
+      description: 'ИИ-анализ и диагностика'
+    },
+    {
+      name: 'Отчёты',
+      href: '/reports',
+      icon: 'heroicons:document-text',
+      description: 'Отчёты и аналитика'
+    },
+    {
+      name: 'ИИ Чат',
+      href: '/chat',
+      icon: 'heroicons:chat-bubble-left-ellipsis',
+      description: 'Интеллектуальный помощник'
+    },
+    {
+      name: 'Настройки',
+      href: '/settings',
+      icon: 'heroicons:cog-6-tooth',
+      description: 'Конфигурация системы'
+    }
+  ]
   
-  // Investor dashboard for admins/investors
-  if (authStore.user?.role === 'admin' || authStore.user?.role === 'investor') {
+  // Add investor dashboard for admin/investor role
+  if (authStore.user?.role === 'admin' || authStore.user?.role === 'operator') {
     items.push({
       name: 'Бизнес-аналитика',
       href: '/investors',
       icon: 'heroicons:presentation-chart-line',
-      current: route.path === '/investors',
-      special: true
+      description: 'Показатели для руководства'
     })
   }
   
@@ -64,366 +59,223 @@ const privilegedNavigation = computed(() => {
 
 // Mobile menu state
 const isMobileMenuOpen = ref(false)
-const sidebarOpen = ref(false)
-
-// User menu state
-const userMenuOpen = ref(false)
 
 // User menu items
-const userNavigation = [
+const userMenuItems = [
   { name: 'Профиль', href: '/profile', icon: 'heroicons:user' },
-  { name: 'Настройки', href: '/settings', icon: 'heroicons:cog-6-tooth' },
-  { name: 'Поддержка', href: '/support', icon: 'heroicons:life-buoy' }
+  { name: 'Уведомления', href: '/notifications', icon: 'heroicons:bell' },
+  { name: 'Помощь', href: '/help', icon: 'heroicons:question-mark-circle' }
 ]
 
 const handleLogout = async () => {
-  try {
-    await authStore.logout()
-    await navigateTo('/auth/login')
-  } catch (error) {
-    console.error('Logout error:', error)
-  }
+  await authStore.logout()
+  await navigateTo('/auth/login')
 }
-
-// Close mobile menu on route change
-watch(() => route.path, () => {
-  isMobileMenuOpen.value = false
-  userMenuOpen.value = false
-})
-
-// Close dropdowns when clicking outside
-const handleClickOutside = () => {
-  userMenuOpen.value = false
-}
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
-    <!-- Desktop sidebar -->
-    <div class="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
-      <div class="flex flex-col flex-grow bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-5 pb-4 overflow-y-auto">
-        <!-- Logo -->
-        <div class="flex items-center flex-shrink-0 px-6 mb-8">
-          <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center mr-3">
-            <Icon name="heroicons:chart-bar-square" class="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 class="text-lg font-bold text-gray-900 dark:text-white">Hydraulic</h1>
-            <p class="text-xs text-gray-500 dark:text-gray-400">Диагностика</p>
-          </div>
-        </div>
-        
-        <!-- Navigation -->
-        <nav class="flex-1 px-3 space-y-1">
-          <!-- Privileged navigation -->
-          <div v-if="privilegedNavigation.length > 0" class="mb-6">
-            <div class="px-3 py-2">
-              <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Бизнес-аналитика
-              </p>
-            </div>
-            <NuxtLink
-              v-for="item in privilegedNavigation"
-              :key="item.name"
-              :to="item.href"
-              :class="[
-                item.current
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400',
-                'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200'
-              ]"
-            >
-              <Icon :name="item.icon" :class="[
-                item.current ? 'text-white' : 'text-gray-400 group-hover:text-blue-500',
-                'mr-3 flex-shrink-0 h-5 w-5'
-              ]" />
-              {{ item.name }}
-              <Icon v-if="item.special" name="heroicons:sparkles" class="w-4 h-4 ml-auto text-yellow-400" />
-            </NuxtLink>
-          </div>
-          
-          <!-- Standard navigation -->
-          <div>
-            <div class="px-3 py-2">
-              <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Основное
-              </p>
-            </div>
-            <NuxtLink
-              v-for="item in navigation"
-              :key="item.name"
-              :to="item.href"
-              :class="[
-                item.current
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400',
-                'group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200'
-              ]"
-            >
-              <Icon :name="item.icon" :class="[
-                item.current ? 'text-white' : 'text-gray-400 group-hover:text-blue-500',
-                'mr-3 flex-shrink-0 h-5 w-5'
-              ]" />
-              {{ item.name }}
-            </NuxtLink>
-          </div>
-        </nav>
-        
-        <!-- User menu -->
-        <div class="flex-shrink-0 px-3">
-          <div class="relative" @click.stop>
-            <button
-              @click="userMenuOpen = !userMenuOpen"
-              class="group w-full bg-gray-50 dark:bg-gray-700 rounded-lg p-3 flex items-center text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-            >
-              <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-3 text-white font-bold text-xs">
-                {{ (authStore.user?.first_name?.[0] || 'U').toUpperCase() }}{{ (authStore.user?.last_name?.[0] || '').toUpperCase() }}
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
-                  {{ authStore.user?.first_name }} {{ authStore.user?.last_name }}
-                </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  {{ authStore.user?.email }}
-                </p>
-              </div>
-              <Icon name="heroicons:chevron-up-down" class="w-4 h-4 text-gray-400 group-hover:text-gray-500" />
-            </button>
-            
-            <!-- User dropdown -->
-            <div
-              v-show="userMenuOpen"
-              class="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 py-1"
-            >
-              <NuxtLink
-                v-for="item in userNavigation"
-                :key="item.name"
-                :to="item.href"
-                class="group flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              >
-                <Icon :name="item.icon" class="w-4 h-4 mr-3 text-gray-400 group-hover:text-gray-500" />
-                {{ item.name }}
-              </NuxtLink>
-              
-              <hr class="my-1 border-gray-200 dark:border-gray-600" />
-              
-              <button
-                @click="handleLogout"
-                class="group flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              >
-                <Icon name="heroicons:arrow-right-on-rectangle" class="w-4 h-4 mr-3" />
-                Выйти
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <!-- Mobile menu overlay -->
+    <div 
+      v-if="isMobileMenuOpen"
+      class="fixed inset-0 z-40 lg:hidden"
+      @click="isMobileMenuOpen = false"
+    >
+      <div class="fixed inset-0 bg-gray-600/75 transition-opacity"></div>
     </div>
 
-    <!-- Mobile header -->
-    <div class="lg:hidden">
-      <div class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div class="px-4 sm:px-6">
-          <div class="flex items-center justify-between h-16">
-            <!-- Mobile logo -->
-            <div class="flex items-center">
-              <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                <Icon name="heroicons:chart-bar-square" class="w-4 h-4 text-white" />
-              </div>
-              <h1 class="text-lg font-bold text-gray-900 dark:text-white">Hydraulic</h1>
-            </div>
-            
-            <!-- Mobile menu button -->
-            <button
-              @click="isMobileMenuOpen = !isMobileMenuOpen"
-              class="lg:hidden p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <Icon name="heroicons:bars-3" class="w-6 h-6" />
-            </button>
-          </div>
+    <!-- Mobile sidebar -->
+    <div 
+      :class="[
+        'fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-xl transform transition-transform lg:hidden',
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      ]"
+    >
+      <div class="flex h-full flex-col">
+        <!-- Mobile header -->
+        <div class="flex h-16 items-center justify-between px-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Меню</h2>
+          <button
+            @click="isMobileMenuOpen = false"
+            class="rounded-lg p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+          >
+            <Icon name="heroicons:x-mark" class="h-6 w-6" />
+          </button>
         </div>
-      </div>
-      
-      <!-- Mobile menu -->
-      <div v-show="isMobileMenuOpen" class="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-        <div class="px-2 pt-2 pb-3 space-y-1">
-          <!-- Privileged mobile navigation -->
-          <div v-if="privilegedNavigation.length > 0" class="mb-4">
-            <div class="px-3 py-2">
-              <p class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Бизнес-аналитика
-              </p>
-            </div>
-            <NuxtLink
-              v-for="item in privilegedNavigation"
-              :key="item.name"
-              :to="item.href"
-              :class="[
-                item.current
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700',
-                'group flex items-center px-3 py-2 text-base font-medium rounded-lg'
-              ]"
-            >
-              <Icon :name="item.icon" class="mr-3 flex-shrink-0 h-5 w-5" />
-              {{ item.name }}
-              <Icon v-if="item.special" name="heroicons:sparkles" class="w-4 h-4 ml-auto text-yellow-400" />
-            </NuxtLink>
-          </div>
-          
+        
+        <!-- Mobile navigation -->
+        <nav class="flex-1 space-y-1 px-3 py-4">
           <NuxtLink
-            v-for="item in navigation"
+            v-for="item in navigationItems"
             :key="item.name"
             :to="item.href"
+            @click="isMobileMenuOpen = false"
             :class="[
-              item.current
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700',
-              'group flex items-center px-3 py-2 text-base font-medium rounded-lg'
+              'group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              $route.path === item.href
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
             ]"
           >
-            <Icon :name="item.icon" class="mr-3 flex-shrink-0 h-5 w-5" />
+            <Icon :name="item.icon" class="mr-3 h-5 w-5 flex-shrink-0" />
             {{ item.name }}
           </NuxtLink>
-        </div>
-        
-        <!-- Mobile user info -->
-        <div class="border-t border-gray-200 dark:border-gray-700 px-4 py-3">
-          <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-              {{ (authStore.user?.first_name?.[0] || 'U').toUpperCase() }}{{ (authStore.user?.last_name?.[0] || '').toUpperCase() }}
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-base font-medium text-gray-900 dark:text-white">
-                {{ authStore.user?.first_name }} {{ authStore.user?.last_name }}
-              </p>
-              <p class="text-sm text-gray-500 dark:text-gray-400 truncate">
-                {{ authStore.user?.email }}
-              </p>
-            </div>
-            <button
-              @click="handleLogout"
-              class="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg transition-colors"
-            >
-              <Icon name="heroicons:arrow-right-on-rectangle" class="w-5 h-5" />
-            </button>
-          </div>
-        </div>
+        </nav>
       </div>
     </div>
 
-    <!-- Main content area -->
-    <div class="lg:pl-64">
-      <!-- Top bar -->
-      <div class="sticky top-0 z-10 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700">
-        <div class="px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between h-14">
-            <!-- Page title will be inserted here by individual pages -->
-            <div class="flex items-center space-x-4">
-              <h1 class="text-lg font-semibold text-gray-900 dark:text-white">
-                <!-- Dynamic title based on current route -->
-                {{ 
-                  route.path === '/dashboard' ? 'Обзор систем' :
-                  route.path === '/investors' ? 'Бизнес-аналитика' :
-                  route.path.startsWith('/equipment') ? 'Оборудование' :
-                  route.path === '/diagnostics' ? 'Диагностика' :
-                  route.path.startsWith('/reports') ? 'Отчёты' :
-                  route.path === '/sensors' ? 'Сенсоры' :
-                  route.path === '/chat' ? 'AI-ассистент' :
-                  route.path === '/settings' ? 'Настройки' :
-                  'Платформа'
-                }}
-              </h1>
+    <!-- Desktop sidebar -->
+    <div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
+      <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+        <!-- Logo -->
+        <div class="flex h-16 shrink-0 items-center px-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+              <Icon name="heroicons:cpu-chip" class="w-5 h-5 text-white" />
             </div>
-            
-            <!-- Desktop user menu -->
-            <div class="hidden lg:flex items-center space-x-4">
-              <!-- Theme toggle -->
-              <button 
-                @click="$colorMode.preference = $colorMode.value === 'dark' ? 'light' : 'dark'"
-                class="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 rounded-lg transition-colors"
+            <div>
+              <h1 class="text-lg font-bold text-gray-900 dark:text-white">
+                Гидравлика ИИ
+              </h1>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                Диагностическая платформа
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Navigation with improved contrast -->
+        <nav class="flex flex-1 flex-col px-4">
+          <ul role="list" class="flex flex-1 flex-col gap-y-2">
+            <li v-for="item in navigationItems" :key="item.name">
+              <NuxtLink
+                :to="item.href"
+                :class="[
+                  'group flex gap-x-3 rounded-lg p-3 text-sm font-semibold leading-6 transition-all duration-200',
+                  $route.path === item.href
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg'
+                    : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50 dark:text-gray-200 dark:hover:text-blue-400 dark:hover:bg-blue-900/30'
+                ]"
               >
                 <Icon 
-                  :name="$colorMode.value === 'dark' ? 'heroicons:sun' : 'heroicons:moon'"
-                  class="w-5 h-5"
+                  :name="item.icon" 
+                  :class="[
+                    'h-6 w-6 shrink-0 transition-colors',
+                    $route.path === item.href
+                      ? 'text-blue-100'
+                      : 'text-gray-500 group-hover:text-blue-600 dark:text-gray-400 dark:group-hover:text-blue-400'
+                  ]" 
                 />
-              </button>
-              
-              <!-- Notifications -->
-              <button class="p-2 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 rounded-lg transition-colors relative">
-                <Icon name="heroicons:bell" class="w-5 h-5" />
-                <span class="absolute top-1 right-1 block h-2 w-2 bg-red-500 rounded-full"></span>
-              </button>
-              
-              <!-- User menu -->
-              <div class="relative" @click.stop>
-                <button
-                  @click="userMenuOpen = !userMenuOpen"
-                  class="flex items-center space-x-3 p-2 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xs">
-                    {{ (authStore.user?.first_name?.[0] || 'U').toUpperCase() }}{{ (authStore.user?.last_name?.[0] || '').toUpperCase() }}
+                <div class="flex-1">
+                  <div class="font-semibold">{{ item.name }}</div>
+                  <div :class="[
+                    'text-xs mt-0.5',
+                    $route.path === item.href
+                      ? 'text-blue-100'
+                      : 'text-gray-500 group-hover:text-blue-500 dark:text-gray-400 dark:group-hover:text-blue-300'
+                  ]">
+                    {{ item.description }}
                   </div>
-                  <Icon name="heroicons:chevron-down" class="w-4 h-4 text-gray-400" />
-                </button>
-                
-                <!-- User dropdown -->
-                <div
-                  v-show="userMenuOpen"
-                  class="absolute right-0 bottom-full mb-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 py-1"
-                >
-                  <!-- User info -->
-                  <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-600">
-                    <p class="text-sm font-medium text-gray-900 dark:text-white">
-                      {{ authStore.user?.first_name }} {{ authStore.user?.last_name }}
-                    </p>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {{ authStore.user?.email }}
-                    </p>
-                    <p class="text-xs text-blue-600 dark:text-blue-400 mt-1 capitalize">
-                      {{ authStore.user?.role || 'Пользователь' }}
-                    </p>
-                  </div>
-                  
-                  <NuxtLink
-                    v-for="item in userNavigation"
-                    :key="item.name"
-                    :to="item.href"
-                    class="group flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Icon :name="item.icon" class="w-4 h-4 mr-3 text-gray-400 group-hover:text-gray-500" />
-                    {{ item.name }}
-                  </NuxtLink>
-                  
-                  <hr class="my-1 border-gray-200 dark:border-gray-600" />
-                  
-                  <button
-                    @click="handleLogout"
-                    class="group flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                  >
-                    <Icon name="heroicons:arrow-right-on-rectangle" class="w-4 h-4 mr-3" />
-                    Выйти
-                  </button>
+                </div>
+              </NuxtLink>
+            </li>
+          </ul>
+          
+          <!-- User section with better contrast -->
+          <div class="mt-auto pb-4">
+            <div class="bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/30 rounded-xl p-4 mb-4">
+              <div class="flex items-center space-x-3 mb-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <Icon name="heroicons:user" class="w-5 h-5 text-white" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    {{ authStore.userName || 'Пользователь' }}
+                  </p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {{ authStore.user?.email || 'email@domain.com' }}
+                  </p>
                 </div>
               </div>
+              
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  @click="colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'"
+                  class="flex items-center justify-center space-x-1 px-3 py-2 text-xs font-medium rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <Icon :name="colorMode.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-3 h-3" />
+                  <span>{{ colorMode.preference === 'dark' ? 'Светлая' : 'Тёмная' }}</span>
+                </button>
+                
+                <button
+                  @click="handleLogout"
+                  class="flex items-center justify-center space-x-1 px-3 py-2 text-xs font-medium rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
+                >
+                  <Icon name="heroicons:arrow-right-on-rectangle" class="w-3 h-3" />
+                  <span>Выход</span>
+                </button>
+              </div>
             </div>
+          </div>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="lg:pl-72">
+      <!-- Top bar -->
+      <div class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-4 sm:gap-x-6 sm:px-6 lg:px-8">
+        <button
+          type="button"
+          class="-m-2.5 p-2.5 text-gray-700 dark:text-gray-300 lg:hidden"
+          @click="isMobileMenuOpen = true"
+        >
+          <Icon name="heroicons:bars-3" class="h-6 w-6" />
+        </button>
+        
+        <div class="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
+          <div class="flex flex-1 items-center">
+            <div class="w-full max-w-md">
+              <label class="sr-only">Поиск</label>
+              <div class="relative">
+                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <Icon name="heroicons:magnifying-glass" class="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="search"
+                  placeholder="Поиск по системам, отчётам..."
+                  class="block w-full rounded-lg border-0 py-2 pl-10 pr-3 text-gray-900 dark:text-white bg-white/60 dark:bg-gray-700/60 ring-1 ring-inset ring-gray-300 dark:ring-gray-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-x-4 lg:gap-x-6">
+            <!-- Notifications -->
+            <button class="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 relative">
+              <Icon name="heroicons:bell" class="h-6 w-6" />
+              <span class="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center">
+                <span class="text-xs font-medium text-white">3</span>
+              </span>
+            </button>
+            
+            <!-- Quick actions -->
+            <PremiumButton 
+              to="/diagnostics" 
+              size="sm" 
+              icon="heroicons:plus" 
+              gradient
+              class="hidden sm:inline-flex"
+            >
+              Новая диагностика
+            </PremiumButton>
           </div>
         </div>
       </div>
       
       <!-- Page content -->
       <main class="py-8">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <slot />
-        </div>
+        <slot />
       </main>
     </div>
   </div>
