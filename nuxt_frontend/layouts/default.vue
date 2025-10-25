@@ -1,7 +1,28 @@
 <script setup lang="ts">
-// Default layout with home navigation
 const authStore = useAuthStore()
 const colorMode = useColorMode()
+const route = useRoute()
+
+const mapName = (path: string) => ({
+  '/': 'Главная',
+  '/dashboard': 'Дашборд',
+  '/systems': 'Системы',
+  '/diagnostics': 'Диагностика',
+  '/reports': 'Отчёты',
+  '/chat': 'ИИ Чат',
+  '/settings': 'Настройки'
+}[path] || 'Страница')
+
+const breadcrumbs = computed(() => {
+  const parts = route.path.split('/').filter(Boolean)
+  const acc: { name: string, href: string }[] = [{ name: 'Главная', href: '/' }]
+  let current = ''
+  for (const p of parts) {
+    current += `/${p}`
+    acc.push({ name: mapName(current), href: current })
+  }
+  return acc
+})
 </script>
 
 <template>
@@ -19,7 +40,7 @@ const colorMode = useColorMode()
               <p class="text-xs text-gray-600 dark:text-gray-400 leading-tight">Промышленный мониторинг</p>
             </div>
           </NuxtLink>
-
+          
           <div class="flex items-center space-x-3">
             <button @click="colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'" class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
               <Icon :name="colorMode.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-5 h-5" />
@@ -32,7 +53,7 @@ const colorMode = useColorMode()
             </NuxtLink>
           </div>
         </div>
-
+        
         <!-- Enhanced Breadcrumbs -->
         <nav class="flex items-center space-x-2 text-sm py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <Icon name="heroicons:home" class="w-4 h-4 text-gray-400 dark:text-gray-500" />
