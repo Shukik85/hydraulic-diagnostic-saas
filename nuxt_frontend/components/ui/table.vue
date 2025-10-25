@@ -1,220 +1,175 @@
 <template>
   <div class="w-full">
-    <!-- Table Header with Search and Filters -->
-    <div class="flex flex-col sm:flex-row gap-4 mb-4">
-      <div class="flex-1">
-        <UiInput
-          v-model="searchQuery"
-          placeholder="Поиск..."
-          class="max-w-sm"
-        />
-      </div>
-      <div class="flex gap-2">
-        <UiSelect v-model="itemsPerPage" class="w-20">
-          <UiSelectItem value="5">5</UiSelectItem>
-          <UiSelectItem value="10">10</UiSelectItem>
-          <UiSelectItem value="25">25</UiSelectItem>
-          <UiSelectItem value="50">50</UiSelectItem>
-        </UiSelect>
-        <UiButton
-          variant="outline"
-          size="sm"
-          @click="toggleView"
-          class="hidden sm:flex"
-        >
-          <Icon name="lucide:grid" class="h-4 w-4" v-if="viewMode === 'table'" />
-          <Icon name="lucide:list" class="h-4 w-4" v-else />
-        </UiButton>
-      </div>
-    </div>
-
-    <!-- Table View -->
-    <div v-if="viewMode === 'table'" class="rounded-md border">
-      <div class="overflow-x-auto">
-        <table class="w-full caption-bottom text-sm">
-          <thead class="border-b bg-muted/50">
-            <tr>
-              <th
-                v-for="column in columns"
-                :key="column.key"
-                class="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors"
-                @click="sortBy(column.key)"
-              >
-                <div class="flex items-center gap-2">
-                  {{ column.label }}
-                  <Icon
-                    :name="sortKey === column.key && sortOrder === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'"
-                    class="h-4 w-4"
-                    :class="{ 'opacity-50': sortKey !== column.key }"
-                  />
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in paginatedItems"
-              :key="item.id"
-              class="border-b hover:bg-muted/50 transition-colors"
-            >
-              <td
-                v-for="column in columns"
-                :key="column.key"
-                class="p-4 align-middle"
-              >
-                <slot :name="`column-${column.key}`" :item="item" :value="item[column.key]">
-                  {{ item[column.key] }}
-                </slot>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Card View for Mobile -->
-    <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <UiCard
-        v-for="item in paginatedItems"
-        :key="item.id"
-        class="cursor-pointer hover:shadow-md transition-shadow"
-      >
-        <UiCardHeader>
-          <UiCardTitle class="text-lg">
-            <slot name="card-title" :item="item">
-              {{ item[columns[0]?.key] || 'Item' }}
-            </slot>
-          </UiCardTitle>
-        </UiCardHeader>
-        <UiCardContent>
-          <div class="space-y-2">
-            <div
-              v-for="column in columns.slice(1)"
+    <!-- Desktop Table -->
+    <div class="hidden md:block premium-card overflow-hidden">
+      <table class="w-full">
+        <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+          <tr>
+            <th
+              v-for="column in columns"
               :key="column.key"
-              class="flex justify-between items-center"
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
             >
-              <span class="text-sm text-muted-foreground">{{ column.label }}:</span>
-              <span class="text-sm font-medium">
-                <slot :name="`column-${column.key}`" :item="item" :value="item[column.key]">
-                  {{ item[column.key] }}
-                </slot>
-              </span>
-            </div>
-          </div>
-        </UiCardContent>
-      </UiCard>
+              <div class="flex items-center space-x-1">
+                <span>{{ column.label }}</span>
+                <button
+                  v-if="column.sortable"
+                  @click="toggleSort(column.key)"
+                  class="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <Icon name="heroicons:chevron-up-down" class="w-4 h-4" />
+                </button>
+              </div>
+            </th>
+            <th v-if="$slots.actions" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+          <tr
+            v-for="(item, index) in sortedData"
+            :key="getItemKey(item, index)"
+            class="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <td
+              v-for="column in columns"
+              :key="column.key"
+              class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white"
+            >
+              <slot :name="column.key" :item="item" :value="getItemValue(item, column.key)">
+                {{ getItemValue(item, column.key) }}
+              </slot>
+            </td>
+            <td v-if="$slots.actions" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <slot name="actions" :item="item" :index="index" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-
-    <!-- Pagination -->
-    <div class="flex items-center justify-between mt-4">
-      <div class="text-sm text-muted-foreground">
-        Показано {{ startIndex + 1 }}-{{ Math.min(endIndex, filteredItems.length) }} из {{ filteredItems.length }}
+    
+    <!-- Mobile Cards -->
+    <div class="md:hidden space-y-4">
+      <div
+        v-for="(item, index) in sortedData"
+        :key="getItemKey(item, index)"
+        class="premium-card"
+      >
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white">
+            <slot name="card-title" :item="item">
+              {{ getItemValue(item, columns?.[0]?.key || 'id') || 'Item' }}
+            </slot>
+          </h3>
+        </div>
+        <div class="p-4 space-y-3">
+          <div
+            v-for="column in columns.slice(1)"
+            :key="column.key"
+            class="flex justify-between items-center"
+          >
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ column.label }}</span>
+            <span class="text-sm text-gray-900 dark:text-white">
+              <slot :name="column.key" :item="item" :value="getItemValue(item, column.key)">
+                {{ getItemValue(item, column.key) }}
+              </slot>
+            </span>
+          </div>
+          <div v-if="$slots.actions" class="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-700">
+            <slot name="actions" :item="item" :index="index" />
+          </div>
+        </div>
       </div>
-      <div class="flex gap-2">
-        <UiButton
-          variant="outline"
-          size="sm"
-          :disabled="currentPage === 1"
-          @click="currentPage--"
-        >
-          <Icon name="lucide:chevron-left" class="h-4 w-4" />
-          Предыдущая
-        </UiButton>
-        <UiButton
-          variant="outline"
-          size="sm"
-          :disabled="currentPage === totalPages"
-          @click="currentPage++"
-        >
-          Следующая
-          <Icon name="lucide:chevron-right" class="h-4 w-4" />
-        </UiButton>
-      </div>
+    </div>
+    
+    <!-- Empty State -->
+    <div v-if="!data || data.length === 0" class="premium-card p-12 text-center">
+      <Icon name="heroicons:table-cells" class="w-12 h-12 mx-auto text-gray-400 mb-4" />
+      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No data available</h3>
+      <p class="text-gray-500 dark:text-gray-400">There are no items to display in this table.</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import type { TableColumn } from '~/types/api'
 
-interface Column {
-  key: string
-  label: string
-  sortable?: boolean
+interface TableProps {
+  data?: any[]
+  columns: TableColumn[]
+  sortBy?: string
+  sortDirection?: 'asc' | 'desc'
 }
 
-interface Props {
-  columns: Column[]
-  items: any[]
-  searchable?: boolean
-  sortable?: boolean
+interface TableEmits {
+  'update:sortBy': [key: string]
+  'update:sortDirection': [direction: 'asc' | 'desc']
 }
 
-const props = withDefaults(defineProps<Props>(), {
-  searchable: true,
-  sortable: true,
+const props = withDefaults(defineProps<TableProps>(), {
+  data: () => [],
+  sortDirection: 'asc'
 })
 
-const searchQuery = ref('')
-const sortKey = ref('')
-const sortOrder = ref<'asc' | 'desc'>('asc')
-const currentPage = ref(1)
-const itemsPerPage = ref(10)
-const viewMode = ref<'table' | 'card'>('table')
+const emit = defineEmits<TableEmits>()
 
-const filteredItems = computed(() => {
-  let filtered = props.items
-
-  if (searchQuery.value) {
-    filtered = filtered.filter(item =>
-      Object.values(item).some(value =>
-        String(value).toLowerCase().includes(searchQuery.value.toLowerCase())
-      )
-    )
+// Safe item key extraction
+const getItemKey = (item: any, index: number): string | number => {
+  if (item && typeof item === 'object') {
+    return item.id || item.key || index
   }
+  return index
+}
 
-  if (sortKey.value) {
-    filtered = [...filtered].sort((a, b) => {
-      const aVal = a[sortKey.value]
-      const bVal = b[sortKey.value]
-
-      if (aVal < bVal) return sortOrder.value === 'asc' ? -1 : 1
-      if (aVal > bVal) return sortOrder.value === 'asc' ? 1 : -1
-      return 0
-    })
+// Safe item value extraction with null checks
+const getItemValue = (item: any, key: string): any => {
+  if (!item || !key) return ''
+  
+  // Handle nested keys (e.g., 'user.name')
+  const keys = key.split('.')
+  let value = item
+  
+  for (const k of keys) {
+    if (value && typeof value === 'object' && k in value) {
+      value = value[k]
+    } else {
+      return ''
+    }
   }
+  
+  return value ?? ''
+}
 
-  return filtered
-})
-
-const totalPages = computed(() => Math.ceil(filteredItems.value.length / itemsPerPage.value))
-const startIndex = computed(() => (currentPage.value - 1) * itemsPerPage.value)
-const endIndex = computed(() => startIndex.value + itemsPerPage.value)
-
-const paginatedItems = computed(() =>
-  filteredItems.value.slice(startIndex.value, endIndex.value)
-)
-
-const sortBy = (key: string) => {
-  if (!props.sortable) return
-
-  if (sortKey.value === key) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+// Sorting functionality
+const toggleSort = (key: string) => {
+  if (props.sortBy === key) {
+    emit('update:sortDirection', props.sortDirection === 'asc' ? 'desc' : 'asc')
   } else {
-    sortKey.value = key
-    sortOrder.value = 'asc'
+    emit('update:sortBy', key)
+    emit('update:sortDirection', 'asc')
   }
 }
 
-const toggleView = () => {
-  viewMode.value = viewMode.value === 'table' ? 'card' : 'table'
-}
-
-watch(filteredItems, () => {
-  currentPage.value = 1
-})
-
-watch(itemsPerPage, () => {
-  currentPage.value = 1
+const sortedData = computed(() => {
+  if (!props.data || !props.sortBy) return props.data || []
+  
+  return [...props.data].sort((a, b) => {
+    const aValue = getItemValue(a, props.sortBy!)
+    const bValue = getItemValue(b, props.sortBy!)
+    
+    // Handle different data types
+    let comparison = 0
+    
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      comparison = aValue - bValue
+    } else {
+      const aStr = String(aValue || '').toLowerCase()
+      const bStr = String(bValue || '').toLowerCase()
+      comparison = aStr.localeCompare(bStr)
+    }
+    
+    return props.sortDirection === 'desc' ? -comparison : comparison
+  })
 })
 </script>
