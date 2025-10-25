@@ -1,28 +1,53 @@
 <script setup lang="ts">
-// Enhanced dashboard with AppNavbar integration
 const route = useRoute()
 
-// Dashboard navigation items
-const dashboardNavItems = [
-  { to: '/', label: 'Главная', icon: 'heroicons:home', external: true },
-  { to: '/dashboard', label: 'Обзор', icon: 'heroicons:squares-2x2' },
-  { to: '/systems', label: 'Системы', icon: 'heroicons:server-stack' },
-  { to: '/diagnostics', label: 'Диагностика', icon: 'heroicons:cpu-chip' },
-  { to: '/reports', label: 'Отчёты', icon: 'heroicons:document-text' },
-  { to: '/chat', label: 'ИИ Чат', icon: 'heroicons:chat-bubble-left-ellipsis' },
-  { to: '/settings', label: 'Настройки', icon: 'heroicons:cog-6-tooth' },
-  { to: '/investors', label: 'Бизнес-аналитика', icon: 'heroicons:presentation-chart-line' }
-]
+// Safe store initialization
+let authStore: any = null
+let colorMode: any = { preference: 'light' }
 
-// Breadcrumbs
+onMounted(() => {
+  try {
+    authStore = useAuthStore()
+  } catch (e) {
+    authStore = { 
+      user: { name: 'Пользователь', email: 'user@example.com' },
+      isAuthenticated: true 
+    }
+  }
+  
+  try {
+    colorMode = useColorMode()
+  } catch (e) {
+    colorMode = { preference: 'light' }
+  }
+})
+
+// Computed for user
+const userName = computed(() => authStore?.user?.name || 'Пользователь')
+const userInitials = computed(() => {
+  const name = userName.value
+  return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
+})
+
+const toggleTheme = () => {
+  if (colorMode?.preference) {
+    colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'
+  }
+}
+
+// Breadcrumbs only for deep navigation
+const showBreadcrumbs = computed(() => {
+  const depth = route.path.split('/').filter(Boolean).length
+  return depth > 1 // Only show if deeper than /dashboard
+})
+
 const mapName = (path: string) => ({
   '/dashboard': 'Дашборд',
-  '/systems': 'Системы',
+  '/systems': 'Системы', 
   '/diagnostics': 'Диагностика',
   '/reports': 'Отчёты',
   '/chat': 'ИИ Чат',
-  '/settings': 'Настройки',
-  '/investors': 'Бизнес-аналитика'
+  '/settings': 'Настройки'
 }[path] || 'Страница')
 
 const breadcrumbs = computed(() => {
@@ -35,64 +60,139 @@ const breadcrumbs = computed(() => {
   }
   return acc
 })
-
-// Event handlers
-const handleSearch = () => {
-  console.log('Opening dashboard search...')
-}
-
-const handleNotifications = () => {
-  console.log('Opening notifications panel...')
-}
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <!-- Enhanced Navbar for Dashboard -->
-    <AppNavbar 
-      :items="dashboardNavItems"
-      :show-search="true"
-      :show-notifications="true"
-      :show-profile="true"
-      :notifications-count="5"
-      @open-search="handleSearch"
-      @open-notifications="handleNotifications"
-    >
-      <template #cta>
-        <NuxtLink 
-          to="/diagnostics" 
-          class="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transition-all duration-200"
-        >
-          <Icon name="heroicons:plus" class="w-4 h-4 mr-2 inline" />
-          Новая диагностика
-        </NuxtLink>
-      </template>
-    </AppNavbar>
-
-    <!-- Dashboard Breadcrumbs -->
-    <div class="pt-16">
-      <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div class="container mx-auto px-4">
-          <nav class="flex items-center space-x-2 text-sm py-4">
-            <Icon name="heroicons:home" class="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            <template v-for="(crumb, i) in breadcrumbs" :key="crumb.href">
-              <NuxtLink
-                v-if="i < breadcrumbs.length - 1"
-                :to="crumb.href"
-                class="font-medium text-gray-700 hover:text-blue-700 dark:text-gray-300 dark:hover:text-blue-300 transition-colors duration-200 hover:underline hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-md"
-              >
-                {{ crumb.name }}
-              </NuxtLink>
-              <span 
-                v-else 
-                class="font-semibold text-gray-900 dark:text-white bg-blue-50/60 dark:bg-blue-800/30 px-2.5 py-1 rounded-md border border-blue-100/60 dark:border-blue-700/40"
-              >
-                {{ crumb.name }}
+    <!-- Compact Dashboard Navbar -->
+    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+      <div class="container mx-auto flex items-center justify-between h-16 px-4">
+        <!-- Fixed width logo section -->
+        <div class="flex items-center space-x-3" style="min-width: 220px">
+          <NuxtLink to="/" class="flex items-center space-x-2 group">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+              <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <span class="text-sm font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                Гидравлика ИИ
               </span>
-              <Icon v-if="i < breadcrumbs.length - 1" name="heroicons:chevron-right" class="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            </template>
-          </nav>
+              <span class="block text-xs text-gray-500 dark:text-gray-400 leading-tight">
+                Диагностическая платформа
+              </span>
+            </div>
+          </NuxtLink>
         </div>
+
+        <!-- Core navigation - only essential items -->
+        <div class="hidden lg:flex items-center space-x-6">
+          <NuxtLink 
+            to="/dashboard" 
+            :class="[
+              'px-4 py-2 rounded-lg font-medium transition-colors',
+              route.path === '/dashboard' 
+                ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
+                : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            ]"
+          >
+            <Icon name="heroicons:squares-2x2" class="w-4 h-4 inline mr-2" />
+            Обзор
+          </NuxtLink>
+          <NuxtLink 
+            to="/systems" 
+            :class="[
+              'px-4 py-2 rounded-lg font-medium transition-colors',
+              route.path === '/systems' 
+                ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
+                : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            ]"
+          >
+            <Icon name="heroicons:server-stack" class="w-4 h-4 inline mr-2" />
+            Системы
+          </NuxtLink>
+          <NuxtLink 
+            to="/diagnostics" 
+            :class="[
+              'px-4 py-2 rounded-lg font-medium transition-colors',
+              route.path === '/diagnostics' 
+                ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
+                : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            ]"
+          >
+            <Icon name="heroicons:cpu-chip" class="w-4 h-4 inline mr-2" />
+            Диагностика
+          </NuxtLink>
+          <NuxtLink 
+            to="/reports" 
+            :class="[
+              'px-4 py-2 rounded-lg font-medium transition-colors',
+              route.path === '/reports' 
+                ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
+                : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+            ]"
+          >
+            <Icon name="heroicons:document-text" class="w-4 h-4 inline mr-2" />
+            Отчёты
+          </NuxtLink>
+        </div>
+
+        <!-- Right actions -->
+        <div class="flex items-center space-x-3">
+          <!-- Search -->
+          <button class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Icon name="heroicons:magnifying-glass" class="w-5 h-5" />
+          </button>
+          
+          <!-- Notifications -->
+          <button class="relative p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Icon name="heroicons:bell" class="w-5 h-5" />
+            <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+          </button>
+
+          <!-- Theme toggle -->
+          <button @click="toggleTheme" class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Icon :name="colorMode?.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-5 h-5" />
+          </button>
+
+          <!-- User profile -->
+          <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md cursor-pointer hover:shadow-lg transition-shadow">
+            {{ userInitials }}
+          </div>
+
+          <!-- Primary CTA -->
+          <NuxtLink 
+            to="/diagnostics" 
+            class="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            <Icon name="heroicons:plus" class="w-4 h-4 mr-2 inline" />
+            Новая диагностика
+          </NuxtLink>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Breadcrumbs only for deep navigation -->
+    <div v-if="showBreadcrumbs" class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+      <div class="container mx-auto px-4">
+        <nav class="flex items-center space-x-2 text-sm py-3">
+          <Icon name="heroicons:home" class="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <template v-for="(crumb, i) in breadcrumbs" :key="crumb.href">
+            <NuxtLink
+              v-if="i < breadcrumbs.length - 1"
+              :to="crumb.href"
+              class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+            >
+              {{ crumb.name }}
+            </NuxtLink>
+            <span 
+              v-else 
+              class="font-medium text-gray-900 dark:text-white"
+            >
+              {{ crumb.name }}
+            </span>
+            <Icon v-if="i < breadcrumbs.length - 1" name="heroicons:chevron-right" class="w-4 h-4 text-gray-400 dark:text-gray-500" />
+          </template>
+        </nav>
       </div>
     </div>
 

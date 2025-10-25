@@ -1,109 +1,91 @@
 <script setup lang="ts">
 const route = useRoute()
+const isDark = ref(false)
 
-// Breadcrumbs mapping
-const mapName = (path: string) => ({
-  '/': 'Главная',
-  '/dashboard': 'Дашборд',
-  '/systems': 'Системы',
-  '/diagnostics': 'Диагностика',
-  '/reports': 'Отчёты',
-  '/chat': 'ИИ Чат',
-  '/settings': 'Настройки',
-  '/about': 'О платформе',
-  '/features': 'Возможности',
-  '/pricing': 'Тарифы',
-  '/contact': 'Контакты'
-}[path] || 'Страница')
-
-const breadcrumbs = computed(() => {
-  const parts = route.path.split('/').filter(Boolean)
-  const acc: { name: string; href: string }[] = [{ name: 'Главная', href: '/' }]
-  let current = ''
-  for (const p of parts) {
-    current += `/${p}`
-    acc.push({ name: mapName(current), href: current })
+// Simple theme toggle without stores
+const toggleTheme = () => {
+  isDark.value = !isDark.value
+  if (process.client) {
+    document.documentElement.classList.toggle('dark', isDark.value)
   }
-  return acc
+}
+
+// Initialize theme on client
+onMounted(() => {
+  const stored = localStorage.getItem('color-mode')
+  isDark.value = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  document.documentElement.classList.toggle('dark', isDark.value)
 })
-
-// Navigation items for public layout
-const publicNavItems = [
-  { to: '/', label: 'Главная', icon: 'heroicons:home' },
-  { to: '/about', label: 'О платформе', icon: 'heroicons:information-circle' },
-  { to: '/features', label: 'Возможности', icon: 'heroicons:star' },
-  { to: '/pricing', label: 'Тарифы', icon: 'heroicons:currency-dollar' },
-  { to: '/contact', label: 'Контакты', icon: 'heroicons:phone' }
-]
-
-// Event handlers
-const handleSearch = () => {
-  // TODO: Открыть command palette
-  console.log('Opening search...')
-}
-
-const handleNotifications = () => {
-  // TODO: Открыть панель уведомлений
-  console.log('Opening notifications...')
-}
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <!-- Enhanced Navbar Component -->
-    <AppNavbar 
-      :items="publicNavItems"
-      :show-search="true"
-      :show-notifications="false"
-      :show-profile="false"
-      @open-search="handleSearch"
-      @open-notifications="handleNotifications"
-    >
-      <template #cta>
-        <NuxtLink 
-          to="/auth/login" 
-          class="hidden sm:inline-flex px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-        >
-          Войти
+    <!-- Clean Static Navbar for Landing -->
+    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
+      <div class="container mx-auto flex items-center justify-between h-16 px-6">
+        <!-- Logo with breathing room -->
+        <NuxtLink to="/" class="flex items-center space-x-3 mr-12 group">
+          <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-shadow">
+            <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <span class="text-lg font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              Гидравлика ИИ
+            </span>
+            <span class="block text-xs text-gray-500 dark:text-gray-400 leading-tight">
+              Диагностическая платформа
+            </span>
+          </div>
         </NuxtLink>
-        <NuxtLink 
-          to="/dashboard" 
-          class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
-        >
-          Открыть дашборд
-        </NuxtLink>
-      </template>
-    </AppNavbar>
 
-    <!-- Breadcrumbs Section -->
-    <div class="pt-16">
-      <div v-if="route.path !== '/'" class="bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
-        <div class="container mx-auto px-4">
-          <nav class="flex items-center space-x-2 text-sm py-3">
-            <Icon name="heroicons:home" class="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            <template v-for="(crumb, i) in breadcrumbs" :key="crumb.href">
-              <NuxtLink
-                v-if="i < breadcrumbs.length - 1"
-                :to="crumb.href"
-                class="font-medium text-gray-700 hover:text-blue-700 dark:text-gray-300 dark:hover:text-blue-300 transition-colors duration-200 hover:underline hover:bg-blue-50 dark:hover:bg-blue-900/30 px-2 py-1 rounded-md"
-              >
-                {{ crumb.name }}
-              </NuxtLink>
-              <span 
-                v-else 
-                class="font-semibold text-gray-900 dark:text-white bg-blue-50/60 dark:bg-blue-800/30 px-2.5 py-1 rounded-md border border-blue-100/60 dark:border-blue-700/40"
-              >
-                {{ crumb.name }}
-              </span>
-              <Icon v-if="i < breadcrumbs.length - 1" name="heroicons:chevron-right" class="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            </template>
-          </nav>
+        <!-- Simple public navigation -->
+        <div class="hidden md:flex items-center space-x-8">
+          <NuxtLink 
+            to="/about" 
+            class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
+          >
+            О платформе
+          </NuxtLink>
+          <NuxtLink 
+            to="/pricing" 
+            class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
+          >
+            Тарифы
+          </NuxtLink>
+          <NuxtLink 
+            to="/contact" 
+            class="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
+          >
+            Контакты
+          </NuxtLink>
         </div>
-      </div>
-    </div>
 
-    <!-- Main Content -->
-    <main :class="route.path === '/' ? 'pt-16' : 'pt-0'">
+        <!-- Clean actions -->
+        <div class="flex items-center space-x-4">
+          <button 
+            @click="toggleTheme" 
+            class="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            title="Переключить тему"
+          >
+            <Icon :name="isDark ? 'heroicons:sun' : 'heroicons:moon'" class="w-5 h-5" />
+          </button>
+          <NuxtLink 
+            to="/dashboard" 
+            class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
+          >
+            Открыть дашборд
+          </NuxtLink>
+        </div>
+
+        <!-- Mobile menu button -->
+        <button class="md:hidden p-2 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <Icon name="heroicons:bars-3" class="w-6 h-6" />
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main Content - NO breadcrumbs on landing -->
+    <main>
       <slot />
     </main>
   </div>
