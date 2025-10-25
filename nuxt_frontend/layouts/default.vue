@@ -1,6 +1,14 @@
 <script setup lang="ts">
-const authStore = useAuthStore()
-const colorMode = useColorMode()
+const isClient = typeof window !== 'undefined'
+
+let authStore: any = null
+let colorMode: any = { preference: 'light' } // безопасный дефолт для SSR
+
+if (isClient) {
+  try { authStore = useAuthStore() } catch (e) { authStore = { isAuthenticated: false } }
+  try { colorMode = useColorMode() } catch (e) { colorMode = { preference: 'light' } }
+}
+
 const route = useRoute()
 
 const mapName = (path: string) => ({
@@ -15,7 +23,7 @@ const mapName = (path: string) => ({
 
 const breadcrumbs = computed(() => {
   const parts = route.path.split('/').filter(Boolean)
-  const acc: { name: string, href: string }[] = [{ name: 'Главная', href: '/' }]
+  const acc: { name: string; href: string }[] = [{ name: 'Главная', href: '/' }]
   let current = ''
   for (const p of parts) {
     current += `/${p}`
@@ -23,6 +31,12 @@ const breadcrumbs = computed(() => {
   }
   return acc
 })
+
+function toggleTheme() {
+  if (!isClient) return
+  colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'
+}
+
 </script>
 
 <template>
@@ -32,7 +46,7 @@ const breadcrumbs = computed(() => {
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between h-16">
           <NuxtLink to="/" class="flex items-center space-x-3 hover:opacity-90 transition-opacity duration-200">
-            <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+            <div class="w-8 h-8 bg-linear-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
               <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]" />
             </div>
             <div>
@@ -40,20 +54,20 @@ const breadcrumbs = computed(() => {
               <p class="text-xs text-gray-700 dark:text-gray-300 leading-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">Промышленный мониторинг</p>
             </div>
           </NuxtLink>
-          
+
           <div class="flex items-center space-x-3">
             <button @click="colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'" class="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
               <Icon :name="colorMode.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-5 h-5 drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]" />
             </button>
             <NuxtLink
               to="/dashboard"
-              class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              class="px-6 py-2.5 text-sm font-bold text-white bg-linear-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
             >
               Открыть дашборд
             </NuxtLink>
           </div>
         </div>
-        
+
         <!-- Softer Breadcrumbs -->
         <nav class="flex items-center space-x-2 text-sm py-3 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
           <Icon name="heroicons:home" class="w-4 h-4 text-gray-600 dark:text-gray-400" />
