@@ -6,59 +6,28 @@ const props = defineProps<{
   vibration: number[]
 }>()
 
-// Create ECharts options for each sparkline
-const createSparklineOption = (data: number[], color: string, name: string) => {
+// Simple CSS-based sparklines using SVG paths
+const createSparklinePath = (data: number[]) => {
+  if (!data || data.length === 0) return ''
   const min = Math.min(...data)
   const max = Math.max(...data)
-  const padding = (max - min) * 0.1 || 1
+  const range = max - min || 1
+  const width = 100
+  const height = 30
   
-  return {
-    animation: true,
-    animationDuration: 700,
-    grid: {
-      left: 0,
-      right: 0,
-      top: 2,
-      bottom: 2
-    },
-    xAxis: {
-      type: 'category',
-      show: false,
-      data: data.map((_, i) => i)
-    },
-    yAxis: {
-      type: 'value',
-      show: false,
-      min: min - padding,
-      max: max + padding
-    },
-    series: [{
-      type: 'line',
-      data,
-      smooth: true,
-      symbol: 'none',
-      lineStyle: {
-        width: 2.5,
-        color
-      },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: color + '40' },
-            { offset: 1, color: color + '10' }
-          ]
-        }
-      }
-    }]
-  }
+  const points = data.map((value, index) => {
+    const x = (index / (data.length - 1)) * width
+    const y = height - ((value - min) / range) * height
+    return `${x},${y}`
+  }).join(' ')
+  
+  return `M ${points.replace(/,/g, ' L ')}`
 }
 
-const tempOption = computed(() => createSparklineOption(props.temp, '#ef4444', 'Temperature'))
-const pressureOption = computed(() => createSparklineOption(props.pressure, '#3b82f6', 'Pressure'))
-const flowOption = computed(() => createSparklineOption(props.flow, '#10b981', 'Flow'))
-const vibrationOption = computed(() => createSparklineOption(props.vibration, '#a855f7', 'Vibration'))
+const tempPath = computed(() => createSparklinePath(props.temp))
+const pressurePath = computed(() => createSparklinePath(props.pressure))
+const flowPath = computed(() => createSparklinePath(props.flow))
+const vibrationPath = computed(() => createSparklinePath(props.vibration))
 </script>
 
 <template>
@@ -68,8 +37,17 @@ const vibrationOption = computed(() => createSparklineOption(props.vibration, '#
         <span class="text-xs text-gray-500 dark:text-gray-400">Температура</span>
         <span class="text-xs font-medium text-gray-900 dark:text-white">{{ temp[temp.length-1] }}°C</span>
       </div>
-      <div class="h-14">
-        <VChart :option="tempOption" autoresize />
+      <div class="h-8">
+        <svg viewBox="0 0 100 30" class="w-full h-full">
+          <defs>
+            <linearGradient id="tempGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#ef4444;stop-opacity:0.3" />
+              <stop offset="100%" style="stop-color:#ef4444;stop-opacity:0.1" />
+            </linearGradient>
+          </defs>
+          <path :d="tempPath + ' L 100,30 L 0,30 Z'" fill="url(#tempGradient)" />
+          <path :d="tempPath" stroke="#ef4444" stroke-width="2" fill="none" />
+        </svg>
       </div>
     </div>
 
@@ -78,8 +56,17 @@ const vibrationOption = computed(() => createSparklineOption(props.vibration, '#
         <span class="text-xs text-gray-500 dark:text-gray-400">Давление</span>
         <span class="text-xs font-medium text-gray-900 dark:text-white">{{ pressure[pressure.length-1] }} бар</span>
       </div>
-      <div class="h-14">
-        <VChart :option="pressureOption" autoresize />
+      <div class="h-8">
+        <svg viewBox="0 0 100 30" class="w-full h-full">
+          <defs>
+            <linearGradient id="pressureGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.3" />
+              <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0.1" />
+            </linearGradient>
+          </defs>
+          <path :d="pressurePath + ' L 100,30 L 0,30 Z'" fill="url(#pressureGradient)" />
+          <path :d="pressurePath" stroke="#3b82f6" stroke-width="2" fill="none" />
+        </svg>
       </div>
     </div>
 
@@ -88,8 +75,17 @@ const vibrationOption = computed(() => createSparklineOption(props.vibration, '#
         <span class="text-xs text-gray-500 dark:text-gray-400">Расход</span>
         <span class="text-xs font-medium text-gray-900 dark:text-white">{{ flow[flow.length-1] }} л/мин</span>
       </div>
-      <div class="h-14">
-        <VChart :option="flowOption" autoresize />
+      <div class="h-8">
+        <svg viewBox="0 0 100 30" class="w-full h-full">
+          <defs>
+            <linearGradient id="flowGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.3" />
+              <stop offset="100%" style="stop-color:#10b981;stop-opacity:0.1" />
+            </linearGradient>
+          </defs>
+          <path :d="flowPath + ' L 100,30 L 0,30 Z'" fill="url(#flowGradient)" />
+          <path :d="flowPath" stroke="#10b981" stroke-width="2" fill="none" />
+        </svg>
       </div>
     </div>
 
@@ -98,8 +94,17 @@ const vibrationOption = computed(() => createSparklineOption(props.vibration, '#
         <span class="text-xs text-gray-500 dark:text-gray-400">Вибрация</span>
         <span class="text-xs font-medium text-gray-900 dark:text-white">{{ vibration[vibration.length-1] }} мм/с</span>
       </div>
-      <div class="h-14">
-        <VChart :option="vibrationOption" autoresize />
+      <div class="h-8">
+        <svg viewBox="0 0 100 30" class="w-full h-full">
+          <defs>
+            <linearGradient id="vibrationGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#a855f7;stop-opacity:0.3" />
+              <stop offset="100%" style="stop-color:#a855f7;stop-opacity:0.1" />
+            </linearGradient>
+          </defs>
+          <path :d="vibrationPath + ' L 100,30 L 0,30 Z'" fill="url(#vibrationGradient)" />
+          <path :d="vibrationPath" stroke="#a855f7" stroke-width="2" fill="none" />
+        </svg>
       </div>
     </div>
   </div>

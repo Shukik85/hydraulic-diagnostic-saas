@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   nitro: { preset: 'node', compressPublicAssets: true, minify: true },
   future: { compatibilityVersion: 4 },
   typescript: { strict: true, typeCheck: false },
-  modules: ['@nuxt/icon', '@pinia/nuxt', '@nuxtjs/color-mode', '@nuxt/content', 'echarts-for-vue'],
+  modules: ['@nuxt/icon', '@pinia/nuxt', '@nuxtjs/color-mode', '@nuxt/content'],
   css: ['~/styles/premium-tokens.css'],
   postcss: { plugins: { '@tailwindcss/postcss': {}, autoprefixer: {} } },
   app: {
