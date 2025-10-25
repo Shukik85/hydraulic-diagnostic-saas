@@ -1,5 +1,4 @@
-@import "tailwindcss";
-
+@tailwind utilities;
 /* Premium Design Tokens */
 :root {
   /* Colors */
@@ -242,11 +241,11 @@
   .premium-no-print {
     display: none !important;
   }
-  
+
   .premium-card {
     @apply shadow-none border border-gray-300;
   }
-  
+
   .premium-button {
     @apply shadow-none;
   }
