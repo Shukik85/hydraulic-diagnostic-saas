@@ -1,13 +1,19 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
+  compatibilityDate: '2025-10-25',
   devtools: { enabled: true },
   nitro: { preset: 'node', compressPublicAssets: true, minify: true },
   future: { compatibilityVersion: 4 },
   typescript: { strict: true, typeCheck: false },
   modules: ['@nuxt/icon', '@pinia/nuxt', '@nuxtjs/color-mode', '@nuxt/content'],
   css: ['~/styles/premium-tokens.css'],
-  postcss: { plugins: { '@tailwindcss/postcss': {}, autoprefixer: {} } },
+  postcss: {
+    plugins: {
+      '@tailwindcss/postcss': {},
+      autoprefixer: {}
+    }
+  },
   app: {
     head: {
       charset: 'utf-8',
@@ -20,10 +26,13 @@ export default defineNuxtConfig({
   },
   colorMode: { preference: 'light', fallback: 'light', classSuffix: '' },
   content: { documentDriven: false },
-  build: { transpile: ['@headlessui/vue'] },
+  build: { transpile: ['@headlessui/vue', 'echarts', 'vue-echarts'] },
   vite: {
     css: { devSourcemap: false },
-    server: { hmr: { overlay: false } }
+    server: { hmr: { overlay: false } },
+    optimizeDeps: {
+      include: ['echarts', 'vue-echarts']
+    }
   },
   runtimeConfig: {
     public: {
