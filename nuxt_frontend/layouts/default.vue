@@ -27,34 +27,34 @@ const breadcrumbs = computed(() => {
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <!-- Maximum Contrast Top bar -->
+    <!-- Maximum Contrast Top bar with subtle text shadows -->
     <div class="border-b border-gray-200 dark:border-gray-700 bg-white/96 dark:bg-gray-800/96 backdrop-blur-md shadow-sm">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between h-16">
           <NuxtLink to="/" class="flex items-center space-x-3 hover:opacity-90 transition-opacity duration-200">
             <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-              <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white" />
+              <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]" />
             </div>
             <div>
-              <h1 class="text-lg font-bold text-gray-900 dark:text-white">Гидравлика ИИ</h1>
-              <p class="text-xs text-gray-700 dark:text-gray-300 leading-tight">Промышленный мониторинг</p>
+              <h1 class="text-lg font-bold text-gray-900 dark:text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)] dark:drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]">Гидравлика ИИ</h1>
+              <p class="text-xs text-gray-700 dark:text-gray-300 leading-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">Промышленный мониторинг</p>
             </div>
           </NuxtLink>
           
           <div class="flex items-center space-x-3">
             <button @click="colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'" class="p-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <Icon :name="colorMode.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-5 h-5" />
+              <Icon :name="colorMode.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-5 h-5 drop-shadow-[0_1px_1px_rgba(0,0,0,0.35)]" />
             </button>
             <NuxtLink
               to="/dashboard"
-              class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:bg-blue-100"
+              class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl hover:bg-blue-100 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]"
             >
               Открыть дашборд
             </NuxtLink>
           </div>
         </div>
         
-        <!-- Maximum Contrast Breadcrumbs -->
+        <!-- Softer Breadcrumbs -->
         <nav class="flex items-center space-x-2 text-sm py-3 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
           <Icon name="heroicons:home" class="w-4 h-4 text-gray-600 dark:text-gray-400" />
           <template v-for="(crumb, i) in breadcrumbs" :key="crumb.href">
@@ -65,7 +65,9 @@ const breadcrumbs = computed(() => {
             >
               {{ crumb.name }}
             </NuxtLink>
-            <span v-else class="font-bold text-gray-900 dark:text-white bg-blue-100 dark:bg-blue-800/50 px-3 py-1 rounded-lg border border-blue-200 dark:border-blue-700">{{ crumb.name }}</span>
+            <span v-else class="font-semibold text-gray-900 dark:text-white bg-blue-50/60 dark:bg-blue-800/30 px-2.5 py-1 rounded-md border border-blue-100/60 dark:border-blue-700/40">
+              {{ crumb.name }}
+            </span>
             <Icon v-if="i < breadcrumbs.length - 1" name="heroicons:chevron-right" class="w-4 h-4 text-gray-600 dark:text-gray-400" />
           </template>
         </nav>
