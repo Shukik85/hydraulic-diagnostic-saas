@@ -1,392 +1,404 @@
-<template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-3xl font-bold tracking-tight">Reports</h1>
-        <p class="text-muted-foreground">Generate and manage diagnostic reports</p>
-      </div>
-      <UiButton @click="showGenerateModal = true">
-        <Icon name="lucide:plus" class="mr-2 h-4 w-4" />
-        Generate Report
-      </UiButton>
-    </div>
-
-    <!-- Filters -->
-    <UiCard>
-      <UiCardContent class="pt-6">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div class="flex flex-1 items-center gap-2">
-            <div class="relative flex-1 max-w-sm">
-              <Icon name="lucide:search" class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <UiInput
-                placeholder="Search reports..."
-                class="pl-10"
-                v-model="searchQuery"
-              />
-            </div>
-            <UiSelect v-model="typeFilter">
-              <UiSelectItem value="all">All Types</UiSelectItem>
-              <UiSelectItem value="diagnostic">Diagnostic</UiSelectItem>
-              <UiSelectItem value="maintenance">Maintenance</UiSelectItem>
-              <UiSelectItem value="performance">Performance</UiSelectItem>
-            </UiSelect>
-            <UiSelect v-model="dateFilter">
-              <UiSelectItem value="all">All Dates</UiSelectItem>
-              <UiSelectItem value="today">Today</UiSelectItem>
-              <UiSelectItem value="week">This Week</UiSelectItem>
-              <UiSelectItem value="month">This Month</UiSelectItem>
-            </UiSelect>
-          </div>
-          <div class="flex items-center gap-2">
-            <UiButton variant="outline" size="sm">
-              <Icon name="lucide:filter" class="mr-2 h-4 w-4" />
-              More Filters
-            </UiButton>
-          </div>
-        </div>
-      </UiCardContent>
-    </UiCard>
-
-    <!-- Reports Grid -->
-    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <UiCard
-        v-for="report in filteredReports"
-        :key="report.id"
-        class="cursor-pointer hover:shadow-lg transition-shadow"
-        @click="previewReport(report)"
-      >
-        <UiCardHeader>
-          <div class="flex items-center justify-between">
-            <UiCardTitle class="text-lg">{{ report.title }}</UiCardTitle>
-            <div :class="`h-3 w-3 rounded-full ${getStatusColor(report.status)}`"></div>
-          </div>
-          <UiCardDescription>{{ report.type }} • {{ report.equipment }}</UiCardDescription>
-        </UiCardHeader>
-        <UiCardContent>
-          <div class="space-y-4">
-            <p class="text-sm text-muted-foreground line-clamp-2">{{ report.description }}</p>
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-muted-foreground">Generated</span>
-              <span>{{ report.generatedAt }}</span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-muted-foreground">Size</span>
-              <span>{{ report.size }}</span>
-            </div>
-          </div>
-        </UiCardContent>
-        <UiCardFooter>
-          <div class="flex items-center justify-between w-full">
-            <UiButton variant="outline" size="sm" @click.stop="downloadReport(report)">
-              <Icon name="lucide:download" class="mr-2 h-4 w-4" />
-              Download
-            </UiButton>
-            <UiButton variant="outline" size="sm" @click.stop="shareReport(report)">
-              <Icon name="lucide:share" class="mr-2 h-4 w-4" />
-              Share
-            </UiButton>
-          </div>
-        </UiCardFooter>
-      </UiCard>
-    </div>
-
-    <!-- Generate Report Modal -->
-    <UiDialog :open="showGenerateModal" @update:open="showGenerateModal = $event">
-      <UiDialogContent>
-        <UiDialogHeader>
-          <UiDialogTitle>Generate New Report</UiDialogTitle>
-          <UiDialogDescription>
-            Select report type and parameters
-          </UiDialogDescription>
-        </UiDialogHeader>
-
-        <div class="space-y-4">
-          <div class="space-y-2">
-            <label class="text-sm font-medium">Report Type</label>
-            <UiSelect v-model="reportType">
-              <UiSelectItem value="diagnostic">Diagnostic Report</UiSelectItem>
-              <UiSelectItem value="maintenance">Maintenance Report</UiSelectItem>
-              <UiSelectItem value="performance">Performance Analysis</UiSelectItem>
-              <UiSelectItem value="compliance">Compliance Report</UiSelectItem>
-            </UiSelect>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium">Equipment</label>
-            <UiSelect v-model="selectedEquipment">
-              <UiSelectItem value="all">All Equipment</UiSelectItem>
-              <UiSelectItem value="hyd-001">HYD-001 - Pump Station A</UiSelectItem>
-              <UiSelectItem value="hyd-002">HYD-002 - Hydraulic Motor B</UiSelectItem>
-              <UiSelectItem value="hyd-003">HYD-003 - Control Valve C</UiSelectItem>
-            </UiSelect>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium">Date Range</label>
-            <UiSelect v-model="dateRange">
-              <UiSelectItem value="7d">Last 7 Days</UiSelectItem>
-              <UiSelectItem value="30d">Last 30 Days</UiSelectItem>
-              <UiSelectItem value="90d">Last 90 Days</UiSelectItem>
-              <UiSelectItem value="custom">Custom Range</UiSelectItem>
-            </UiSelect>
-          </div>
-
-          <div class="space-y-2">
-            <label class="text-sm font-medium">Format</label>
-            <div class="flex gap-2">
-              <UiButton
-                variant="outline"
-                size="sm"
-                :class="{ 'bg-muted': selectedFormat === 'pdf' }"
-                @click="selectedFormat = 'pdf'"
-              >
-                PDF
-              </UiButton>
-              <UiButton
-                variant="outline"
-                size="sm"
-                :class="{ 'bg-muted': selectedFormat === 'excel' }"
-                @click="selectedFormat = 'excel'"
-              >
-                Excel
-              </UiButton>
-              <UiButton
-                variant="outline"
-                size="sm"
-                :class="{ 'bg-muted': selectedFormat === 'csv' }"
-                @click="selectedFormat = 'csv'"
-              >
-                CSV
-              </UiButton>
-            </div>
-          </div>
-
-          <div class="flex items-center space-x-2">
-            <UiCheckbox id="email-report" v-model="emailReport" />
-            <label for="email-report" class="text-sm">Email report when ready</label>
-          </div>
-
-          <div class="flex items-center space-x-2">
-            <UiCheckbox id="schedule-report" v-model="scheduleReport" />
-            <label for="schedule-report" class="text-sm">Schedule recurring report</label>
-          </div>
-        </div>
-
-        <UiDialogFooter>
-          <UiButton variant="outline" @click="showGenerateModal = false">
-            Cancel
-          </UiButton>
-          <UiButton @click="generateReport">
-            <Icon name="lucide:file-text" class="mr-2 h-4 w-4" />
-            Generate Report
-          </UiButton>
-        </UiDialogFooter>
-      </UiDialogContent>
-    </UiDialog>
-
-    <!-- Preview Modal -->
-    <UiDialog :open="showPreviewModal" @update:open="showPreviewModal = $event">
-      <UiDialogContent class="max-w-4xl max-h-[80vh] overflow-y-auto">
-        <UiDialogHeader>
-          <UiDialogTitle>{{ selectedReport?.title }}</UiDialogTitle>
-          <UiDialogDescription>
-            Report preview and details
-          </UiDialogDescription>
-        </UiDialogHeader>
-
-        <div class="space-y-6">
-          <!-- Report Preview -->
-          <div class="border rounded-lg p-6 bg-muted/20">
-            <div class="text-center py-12">
-              <Icon name="lucide:file-text" class="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-              <h3 class="text-lg font-medium mb-2">Report Preview</h3>
-              <p class="text-muted-foreground mb-4">
-                This is where the PDF preview would be displayed
-              </p>
-              <div class="text-sm text-muted-foreground">
-                <p><strong>Type:</strong> {{ selectedReport?.type }}</p>
-                <p><strong>Equipment:</strong> {{ selectedReport?.equipment }}</p>
-                <p><strong>Generated:</strong> {{ selectedReport?.generatedAt }}</p>
-                <p><strong>Size:</strong> {{ selectedReport?.size }}</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Report Summary -->
-          <UiCard>
-            <UiCardHeader>
-              <UiCardTitle>Report Summary</UiCardTitle>
-            </UiCardHeader>
-            <UiCardContent>
-              <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <p class="text-sm text-muted-foreground">Total Pages</p>
-                    <p class="text-lg font-medium">12</p>
-                  </div>
-                  <div>
-                    <p class="text-sm text-muted-foreground">Data Points</p>
-                    <p class="text-lg font-medium">1,247</p>
-                  </div>
-                </div>
-                <div>
-                  <p class="text-sm text-muted-foreground mb-2">Key Findings</p>
-                  <ul class="text-sm space-y-1">
-                    <li>• System health score: 92/100</li>
-                    <li>• 3 maintenance items identified</li>
-                    <li>• Pressure stability within acceptable range</li>
-                    <li>• Filter replacement recommended</li>
-                  </ul>
-                </div>
-              </div>
-            </UiCardContent>
-          </UiCard>
-        </div>
-
-        <UiDialogFooter>
-          <UiButton variant="outline" @click="showPreviewModal = false">
-            Close
-          </UiButton>
-          <UiButton @click="downloadReport(selectedReport)">
-            <Icon name="lucide:download" class="mr-2 h-4 w-4" />
-            Download PDF
-          </UiButton>
-        </UiDialogFooter>
-      </UiDialogContent>
-    </UiDialog>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+// Fixed reports page without UiDialog components
+definePageMeta({
+  middleware: 'auth'
+})
+
+useSeoMeta({
+  title: 'Отчёты | Hydraulic Diagnostic SaaS',
+  description: 'Comprehensive diagnostic reports and analytics for hydraulic systems'
+})
 
 interface Report {
   id: number
   title: string
-  type: string
-  equipment: string
-  description: string
-  status: string
-  generatedAt: string
-  size: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  system_name: string
+  created_at: string
+  completed_at?: string
+  summary?: string
+  recommendations?: string[]
 }
 
-const showGenerateModal = ref(false)
-const showPreviewModal = ref(false)
-const searchQuery = ref('')
-const typeFilter = ref('all')
-const dateFilter = ref('all')
-const reportType = ref('diagnostic')
-const selectedEquipment = ref('all')
-const dateRange = ref('30d')
-const selectedFormat = ref('pdf')
-const emailReport = ref(true)
-const scheduleReport = ref(false)
-const selectedReport = ref<Report | null>(null)
-
-const reports = ref([
+// Demo reports data
+const reports = ref<Report[]>([
   {
     id: 1,
-    title: 'Monthly Diagnostic Report',
-    type: 'Diagnostic',
-    equipment: 'HYD-001',
-    description: 'Comprehensive health analysis of Pump Station A including pressure, temperature, and vibration data.',
+    title: 'Анализ эффективности HYD-001',
+    severity: 'medium',
     status: 'completed',
-    generatedAt: '2024-01-20',
-    size: '2.4 MB'
+    system_name: 'Насосная станция A',
+    created_at: '2024-10-24T10:30:00Z',
+    completed_at: '2024-10-24T10:45:00Z',
+    summary: 'Система работает в пределах нормы. Обнаружены незначительные отклонения в температурном режиме.',
+    recommendations: [
+      'Проверить систему охлаждения',
+      'Заменить фильтр в течение недели',
+      'Откалибровать датчик температуры'
+    ]
   },
   {
     id: 2,
-    title: 'Maintenance Schedule',
-    type: 'Maintenance',
-    equipment: 'All Systems',
-    description: 'Upcoming maintenance tasks and service recommendations for all equipment.',
+    title: 'Диагностика давления HYD-002',
+    severity: 'high',
     status: 'completed',
-    generatedAt: '2024-01-18',
-    size: '1.8 MB'
+    system_name: 'Гидромотор B',
+    created_at: '2024-10-24T09:15:00Z',
+    completed_at: '2024-10-24T09:30:00Z',
+    summary: 'Критические колебания давления. Требуется немедленное вмешательство.',
+    recommendations: [
+      'Остановить систему для проверки',
+      'Проверить состояние уплотнений',
+      'Заменить клапан регулировки давления'
+    ]
   },
   {
     id: 3,
-    title: 'Performance Analysis Q4',
-    type: 'Performance',
-    equipment: 'HYD-002',
-    description: 'Quarterly performance metrics and efficiency analysis for Hydraulic Motor B.',
-    status: 'processing',
-    generatedAt: '2024-01-15',
-    size: '3.1 MB'
-  },
-  {
-    id: 4,
-    title: 'Compliance Audit',
-    type: 'Compliance',
-    equipment: 'All Systems',
-    description: 'Regulatory compliance check and safety certification report.',
-    status: 'completed',
-    generatedAt: '2024-01-10',
-    size: '4.2 MB'
+    title: 'Профилактическая проверка HYD-003',
+    severity: 'low',
+    status: 'in_progress',
+    system_name: 'Клапан управления C',
+    created_at: '2024-10-24T08:00:00Z'
   }
 ])
 
+// Modal state
+const selectedReport = ref<Report | null>(null)
+const showReportModal = ref<boolean>(false)
+
+// Filter and sort
+const selectedSeverity = ref<string>('all')
+const selectedStatus = ref<string>('all')
+const searchQuery = ref<string>('')
+
+// Computed filtered reports
 const filteredReports = computed(() => {
   return reports.value.filter(report => {
-    const matchesSearch = report.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                         report.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-
-    const matchesType = typeFilter.value === 'all' || report.type.toLowerCase() === typeFilter.value
-
-    return matchesSearch && matchesType
+    const matchesSearch = !searchQuery.value || 
+      report.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      report.system_name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    
+    const matchesSeverity = selectedSeverity.value === 'all' || report.severity === selectedSeverity.value
+    const matchesStatus = selectedStatus.value === 'all' || report.status === selectedStatus.value
+    
+    return matchesSearch && matchesSeverity && matchesStatus
   })
 })
 
-const getStatusColor = (status: string) => {
+// Helper functions
+const getSeverityColor = (severity: string): string => {
+  switch (severity) {
+    case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+    case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
+    case 'high': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+    case 'critical': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+    default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+  }
+}
+
+const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'completed': return 'bg-status-success'
-    case 'processing': return 'bg-status-warning'
-    case 'failed': return 'bg-status-error'
-    default: return 'bg-muted-foreground'
+    case 'completed': return 'text-green-600 dark:text-green-400'
+    case 'in_progress': return 'text-blue-600 dark:text-blue-400'
+    case 'pending': return 'text-yellow-600 dark:text-yellow-400'
+    case 'failed': return 'text-red-600 dark:text-red-400'
+    default: return 'text-gray-500 dark:text-gray-400'
   }
 }
 
-const generateReport = () => {
-  // Simulate report generation
-  const newReport = {
-    id: Date.now(),
-    title: `${reportType.value} Report`,
-    type: reportType.value.charAt(0).toUpperCase() + reportType.value.slice(1),
-    equipment: selectedEquipment.value === 'all' ? 'All Systems' : selectedEquipment.value.toUpperCase(),
-    description: `Generated ${reportType.value} report for ${selectedEquipment.value === 'all' ? 'all equipment' : selectedEquipment.value.toUpperCase()}`,
-    status: 'processing',
-    generatedAt: new Date().toLocaleDateString(),
-    size: '1.5 MB'
+const getStatusIcon = (status: string): string => {
+  switch (status) {
+    case 'completed': return 'heroicons:check-circle'
+    case 'in_progress': return 'heroicons:clock'
+    case 'pending': return 'heroicons:pause-circle'
+    case 'failed': return 'heroicons:x-circle'
+    default: return 'heroicons:question-mark-circle'
   }
-
-  reports.value.unshift(newReport)
-  showGenerateModal.value = false
-
-  // Reset form
-  reportType.value = 'diagnostic'
-  selectedEquipment.value = 'all'
-  dateRange.value = '30d'
-  selectedFormat.value = 'pdf'
-  emailReport.value = true
-  scheduleReport.value = false
 }
 
-const previewReport = (report: Report) => {
+const formatDateTime = (dateString: string): string => {
+  return new Date(dateString).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const openReportModal = (report: Report): void => {
   selectedReport.value = report
-  showPreviewModal.value = true
+  showReportModal.value = true
 }
 
-const downloadReport = (report: Report | null) => {
-  // Simulate download
-  if (report) {
-    console.log('Downloading report:', report.title)
+const closeReportModal = (): void => {
+  selectedReport.value = null
+  showReportModal.value = false
+}
+
+// Handle ESC key
+onMounted(() => {
+  const handleEsc = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeReportModal()
+    }
   }
-}
-
-const shareReport = (report: Report) => {
-  // Simulate sharing
-  console.log('Sharing report:', report.title)
-}
+  document.addEventListener('keydown', handleEsc)
+  
+  onUnmounted(() => {
+    document.removeEventListener('keydown', handleEsc)
+  })
+})
 </script>
+
+<template>
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div class="container mx-auto px-4 py-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="premium-heading-xl text-gray-900 dark:text-white mb-2">
+          📊 Отчёты диагностики
+        </h1>
+        <p class="premium-body text-gray-600 dark:text-gray-300">
+          Comprehensive analysis and recommendations for hydraulic systems
+        </p>
+      </div>
+
+      <!-- Filters -->
+      <div class="premium-card p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <!-- Search -->
+          <div class="md:col-span-2">
+            <label class="premium-label">Поиск по отчётам</label>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Название отчёта или система..."
+              class="premium-input"
+            />
+          </div>
+          
+          <!-- Severity Filter -->
+          <div>
+            <label class="premium-label">Критичность</label>
+            <select v-model="selectedSeverity" class="premium-input">
+              <option value="all">Все уровни</option>
+              <option value="low">Низкая</option>
+              <option value="medium">Средняя</option>
+              <option value="high">Высокая</option>
+              <option value="critical">Критическая</option>
+            </select>
+          </div>
+          
+          <!-- Status Filter -->
+          <div>
+            <label class="premium-label">Статус</label>
+            <select v-model="selectedStatus" class="premium-input">
+              <option value="all">Все статусы</option>
+              <option value="completed">Завершён</option>
+              <option value="in_progress">Выполняется</option>
+              <option value="pending">Ожидает</option>
+              <option value="failed">Ошибка</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reports List -->
+      <div class="space-y-6">
+        <div v-if="filteredReports.length === 0" class="premium-card p-12 text-center">
+          <Icon name="heroicons:document-text" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">Отчёты не найдены</h3>
+          <p class="text-gray-500 dark:text-gray-400">Попробуйте изменить фильтры поиска</p>
+        </div>
+
+        <div
+          v-for="report in filteredReports"
+          :key="report.id"
+          class="premium-card hover:shadow-xl transition-all duration-300 cursor-pointer"
+          @click="openReportModal(report)"
+        >
+          <div class="p-6">
+            <div class="flex items-start justify-between mb-4">
+              <div class="flex-1">
+                <div class="flex items-center space-x-3 mb-2">
+                  <span
+                    class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                    :class="getSeverityColor(report.severity)"
+                  >
+                    {{ report.severity.toUpperCase() }}
+                  </span>
+                  <div class="flex items-center space-x-2">
+                    <Icon :name="getStatusIcon(report.status)" class="w-4 h-4" :class="getStatusColor(report.status)" />
+                    <span class="text-sm font-medium capitalize" :class="getStatusColor(report.status)">
+                      {{ report.status.replace('_', ' ') }}
+                    </span>
+                  </div>
+                </div>
+                
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  {{ report.title }}
+                </h3>
+                
+                <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                  {{ report.summary || 'Подробная информация доступна в отчёте' }}
+                </p>
+                
+                <div class="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                  <span class="flex items-center">
+                    <Icon name="heroicons:server" class="w-3 h-3 mr-1" />
+                    {{ report.system_name }}
+                  </span>
+                  <span class="flex items-center">
+                    <Icon name="heroicons:calendar" class="w-3 h-3 mr-1" />
+                    {{ formatDateTime(report.created_at) }}
+                  </span>
+                  <span v-if="report.completed_at" class="flex items-center">
+                    <Icon name="heroicons:check" class="w-3 h-3 mr-1" />
+                    Завершён {{ formatDateTime(report.completed_at) }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="text-right">
+                <PremiumButton variant="secondary" size="sm">
+                  Подробнее
+                </PremiumButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Native HTML Modal (instead of UiDialog) -->
+    <div 
+      v-if="showReportModal && selectedReport"
+      class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      @click="closeReportModal"
+    >
+      <div 
+        class="premium-card max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+        @click.stop
+      >
+        <!-- Modal Header -->
+        <div class="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3 mb-2">
+                <span
+                  class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                  :class="getSeverityColor(selectedReport.severity)"
+                >
+                  {{ selectedReport.severity.toUpperCase() }}
+                </span>
+                <div class="flex items-center space-x-2">
+                  <Icon :name="getStatusIcon(selectedReport.status)" class="w-4 h-4" :class="getStatusColor(selectedReport.status)" />
+                  <span class="text-sm font-medium capitalize" :class="getStatusColor(selectedReport.status)">
+                    {{ selectedReport.status.replace('_', ' ') }}
+                  </span>
+                </div>
+              </div>
+              
+              <h2 class="premium-heading-lg text-gray-900 dark:text-white mb-2">
+                {{ selectedReport.title }}
+              </h2>
+              
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                {{ selectedReport.system_name }} • {{ formatDateTime(selectedReport.created_at) }}
+              </p>
+            </div>
+            
+            <button
+              @click="closeReportModal"
+              class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            >
+              <Icon name="heroicons:x-mark" class="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+        
+        <!-- Modal Content -->
+        <div class="p-6">
+          <!-- Summary -->
+          <div v-if="selectedReport.summary" class="mb-8">
+            <h3 class="premium-heading-sm text-gray-900 dark:text-white mb-3">📋 Сводка</h3>
+            <div class="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+              <p class="premium-body text-gray-700 dark:text-gray-300">{{ selectedReport.summary }}</p>
+            </div>
+          </div>
+          
+          <!-- Recommendations -->
+          <div v-if="selectedReport.recommendations?.length" class="mb-8">
+            <h3 class="premium-heading-sm text-gray-900 dark:text-white mb-3">💡 Рекомендации</h3>
+            <div class="space-y-3">
+              <div
+                v-for="(recommendation, index) in selectedReport.recommendations"
+                :key="index"
+                class="flex items-start space-x-3 p-4 bg-green-50 dark:bg-green-900/30 rounded-lg"
+              >
+                <Icon name="heroicons:light-bulb" class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                <p class="premium-body text-gray-700 dark:text-gray-300">{{ recommendation }}</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Technical Details -->
+          <div class="mb-8">
+            <h3 class="premium-heading-sm text-gray-900 dark:text-white mb-3">🔧 Технические данные</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">ID отчёта</div>
+                <div class="font-mono text-sm text-gray-900 dark:text-white">#{{ selectedReport.id.toString().padStart(4, '0') }}</div>
+              </div>
+              
+              <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Система</div>
+                <div class="text-sm text-gray-900 dark:text-white">{{ selectedReport.system_name }}</div>
+              </div>
+              
+              <div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Создан</div>
+                <div class="text-sm text-gray-900 dark:text-white">{{ formatDateTime(selectedReport.created_at) }}</div>
+              </div>
+              
+              <div v-if="selectedReport.completed_at" class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Завершён</div>
+                <div class="text-sm text-gray-900 dark:text-white">{{ formatDateTime(selectedReport.completed_at) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="p-6 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-end space-x-3">
+            <PremiumButton
+              variant="secondary"
+              @click="closeReportModal"
+            >
+              Закрыть
+            </PremiumButton>
+            <PremiumButton
+              icon="heroicons:arrow-down-tray"
+              gradient
+            >
+              Скачать PDF
+            </PremiumButton>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+/* Additional styles for modal */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>
