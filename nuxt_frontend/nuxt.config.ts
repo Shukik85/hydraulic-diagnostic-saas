@@ -4,38 +4,46 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   // Enhanced devtools for development
   devtools: { enabled: true },
-
+  
   // Performance optimizations
   nitro: {
     preset: 'node',
     compressPublicAssets: true,
     minify: true
   },
-
+  
   // Future-ready Nuxt 4 compatibility
   future: {
     compatibilityVersion: 4
   },
-
+  
   // Enhanced TypeScript support
   typescript: {
     strict: true,
     typeCheck: false // Disable for faster dev builds
   },
-
-  // Core modules for enterprise SaaS
+  
+  // Core modules for enterprise SaaS (removed @nuxtjs/tailwindcss)
   modules: [
     '@nuxt/icon',
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
     '@nuxt/content'
   ],
-
+  
   // Premium styling system
   css: [
     '~/styles/premium-tokens.css'
   ],
-
+  
+  // PostCSS configuration (Nuxt-native way for Tailwind v4)
+  postcss: {
+    plugins: {
+      '@tailwindcss/postcss': {},
+      autoprefixer: {}
+    }
+  },
+  
   // Optimized app configuration
   app: {
     head: {
@@ -55,7 +63,7 @@ export default defineNuxtConfig({
     pageTransition: { name: 'page', mode: 'out-in' },
     layoutTransition: { name: 'layout', mode: 'out-in' }
   },
-
+  
   // Component auto-import for clean code
   components: [
     {
@@ -63,7 +71,7 @@ export default defineNuxtConfig({
       pathPrefix: false
     }
   ],
-
+  
   // Fast icon configuration (local-first)
   icon: {
     mode: 'local',
@@ -73,24 +81,24 @@ export default defineNuxtConfig({
       collections: ['heroicons']
     }
   },
-
+  
   // Theme configuration
   colorMode: {
     preference: 'light',
     fallback: 'light',
     classSuffix: ''
   },
-
-  // Content configuration (removed deprecated options)
+  
+  // Content configuration
   content: {
     documentDriven: false
   },
-
+  
   // Production build optimizations
   build: {
     transpile: ['@headlessui/vue']
   },
-
+  
   // Development performance
   vite: {
     define: {
@@ -105,11 +113,11 @@ export default defineNuxtConfig({
       }
     }
   },
-
+  
   // Runtime configuration
   runtimeConfig: {
     apiSecret: process.env.NUXT_API_SECRET || 'dev-secret',
-
+    
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
       appName: 'Hydraulic Diagnostic SaaS',
@@ -117,7 +125,7 @@ export default defineNuxtConfig({
       disableFontshare: true
     }
   },
-
+  
   // Route rules for performance
   routeRules: {
     '/': { prerender: true },
@@ -126,9 +134,9 @@ export default defineNuxtConfig({
     '/investors': { prerender: true },
     '/api/**': { cors: true }
   },
-
+  
   ssr: true,
-
+  
   // Removed deprecated experimental options
   experimental: {
     payloadExtraction: false,
