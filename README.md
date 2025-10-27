@@ -1,399 +1,541 @@
-# 🔧 Hydraulic Diagnostic SaaS
+# 🛠️ Hydraulic Diagnostic SaaS
+
+<div align="center">
 
 **Интеллектуальная SaaS-платформа для диагностики и мониторинга гидравлических систем**
 
-[![CI Status](https://github.com/Shukik85/hydraulic-diagnostic-saas/actions/workflows/ci.yml/badge.svg)](https://github.com/Shukik85/hydraulic-diagnostic-saas/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Django](https://img.shields.io/badge/Django-5.2-green.svg)](https://djangoproject.com/)
-[![TimescaleDB](https://img.shields.io/badge/TimescaleDB-2.17-orange.svg)](https://www.timescale.com/)
+*Передовое решение с AI-поддержкой, RAG-ассистентом на базе Qwen3 + LangChain и TimescaleDB*
 
-> Передовое решение для мониторинга гидравлических систем с AI-поддержкой, RAG-ассистентом на базе Qwen3 + LangChain и масштабируемой архитектурой на TimescaleDB.
+[![Django](https://img.shields.io/badge/Django-5.2+-darkgreen.svg)](https://docs.djangoproject.com/)
+[![TimescaleDB](https://img.shields.io/badge/TimescaleDB-2.17+-orange.svg)](https://www.timescale.com/)
+[![Nuxt](https://img.shields.io/badge/Nuxt-4-darkgreen.svg)](https://nuxt.com/)
+[![Vue](https://img.shields.io/badge/Vue-3-4FC08D.svg)](https://vuejs.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4.svg)](https://tailwindcss.com/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776ab.svg)](https://www.python.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg)](https://docker.com/)
 
----
-
-## 🎯 Основные возможности
-
-📈 **Мониторинг в реальном времени** - сбор и анализ данных датчиков
-🤖 **AI-диагностика** - автоматическое выявление аномалий
-💬 **RAG Assistant** - интеллектуальный помощник на базе LLM
-📊 **TimescaleDB** - высокопроизводительное хранение временных рядов
-⚡ **Celery** - асинхронная обработка данных
-📱 **Современный UI** - Nuxt 3 + Vue 3 + Chart.js
+</div>
 
 ---
 
-## 🛠️ Технологический стек
+## 📚 Содержание
 
-| Компонент | Технология | Версия |
-|----------|-------------|--------|
-| **Backend** | Django + DRF | 5.2+ |
-| **Database** | TimescaleDB + PostgreSQL | 2.17 + 16+ |
-| **Cache** | Redis | 7.0+ |
-| **Task Queue** | Celery + Redis | 5.4+ |
-| **AI/LLM** | Ollama + Qwen3 | Локально |
-| **RAG** | LangChain + FAISS | 0.3+ |
-| **WebSockets** | Django Channels | 4.1+ |
-| **Frontend** | Nuxt 3 + Vue 3 | 3.0+ |
-| **Стили** | Tailwind CSS | 3.4+ |
-| **CI/CD** | GitHub Actions | - |
+- [Возможности](#-возможности)
+- [Технологический стек](#-технологический-стек)
+- [Быстрый старт](#-быстрый-старт)
+- [Архитектура проекта](#-архитектура-проекта)
+- [API](#-api)
+- [Разработка](#-разработка)
+- [Контакты](#-контакты)
+
+---
+
+## 🎯 Возможности
+
+### 📈 Мониторинг в реальном времени
+- **Сбор данных датчиков** давления, температуры, вибрации
+- **Система мониторинга** с иерархией: Системы → Оборудование / Датчики
+- **Дашборд** с интерактивными графиками и метриками
+
+### 🤖 AI-диагностика и RAG
+- **Автоматическое выявление аномалий** с помощью ML
+- **RAG-ассистент** на базе Qwen3 + LangChain
+- **Интеллектуальный поиск** в базе знаний с FAISS
+- **Предсказание отказов** за недели до проблем
+
+### 💬 Интеграция LLM
+- **Ollama + Qwen3:8b** локально без облака
+- **Embeddings** через nomic-embed-text
+- **Семантический поиск** документов
+- **Контекстные ответы** на вопросы о гидросистемах
+
+### ⚡ Высокопроизводительность
+- **TimescaleDB** для временных рядов (2.17+)
+- **Celery + Redis** асинхронная обработка
+- **Django Channels** для WebSocket
+- **Кэширование** на Redis
+- **Гипертаблицы** с автоматическим сжатием
+
+### 📊 Аналитика и отчёты
+- **Отчёты** с аналитикой тенденций
+- **Диагностические сессии** с результатами
+- **История событий** датчиков
+- **Экспорт данных** в формате
+
+### ⚙️ Управление пользователями
+- **Профиль** с настройками
+- **Уведомления** email/push/in-app
+- **Двухфакторная аутентификация** (2FA)
+- **API ключи** и Webhooks
+- **Управление биллингом**
+
+---
+
+## 🛠 Технологический стек
+
+### Backend
+
+| Компонент | Версия | Назначение |
+|-----------|--------|-----------|
+| **Django** | 5.2+ | Web фреймворк |
+| **Django REST Framework** | 3.14+ | REST API |
+| **TimescaleDB** | 2.17+ | Временные ряды |
+| **PostgreSQL** | 16+ | Основная БД |
+| **Redis** | 7.0+ | Кэш и очереди |
+| **Celery** | 5.4+ | Асинхронные задачи |
+| **Django Channels** | 4.1+ | WebSocket |
+| **Ollama** | Latest | Локальные LLM |
+| **LangChain** | 0.3+ | RAG pipeline |
+| **FAISS** | 1.7+ | Векторный поиск |
+
+### Frontend
+
+| Компонент | Версия | Назначение |
+|-----------|--------|-----------|
+| **Nuxt** | 4.x | Full-stack фреймворк |
+| **Vue** | 3.x | Реактивные компоненты |
+| **Tailwind CSS** | 3.4+ | Стилинг |
+| **Chart.js** | 4.x | Графики и диаграммы |
+| **TypeScript** | 5.0+ | Типизация |
+| **Vite** | 5.x+ | Сборка и HMR |
+
+### Инфраструктура
+
+- **Docker** & **Docker Compose** — контейнеризация
+- **Nginx** — reverse proxy, балансировщик, gzip
+- **GitHub Actions** — CI/CD, автоматические тесты
+- **Pre-commit hooks** — проверка качества кода
 
 ---
 
 ## 🚀 Быстрый старт
 
-### 1. Клонирование и настройка
+### 1. Клонирование
+
 ```bash
 git clone https://github.com/Shukik85/hydraulic-diagnostic-saas.git
 cd hydraulic-diagnostic-saas
-cp .env.example .env  # Отредактируйте под свои нужды
+cp backend/.env.example backend/.env
 ```
 
-### 2. Запуск через Docker Compose
+### 2. Запуск с Docker Compose
+
 ```bash
 # Режим разработки
 make dev
 
-# Альтернативно
+# Или вручную
 docker-compose -f docker-compose.dev.yml up -d
 ```
 
 ### 3. Инициализация
+
 ```bash
 # Миграции БД
 make migrate
 
-# Создание админа
+# Создание суперпользователя
 make superuser
 
 # Тестовые данные + RAG система
 make init-data
 ```
 
-### 4. Доступк приложению
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000/api/
-- **Admin Panel**: http://localhost:8000/admin/
-- **API Docs**: http://localhost:8000/api/docs/
+### 4. Доступ к приложению
+
+| Сервис | URL | Учётные данные |
+|--------|-----|---|
+| **Frontend** | http://localhost:3000 | Авто |
+| **Backend API** | http://localhost:8000/api | Swagger docs |
+| **Admin Panel** | http://localhost:8000/admin | Superuser |
+| **Ollama UI** | http://localhost:11434 | Локально |
 
 ---
 
-## 🏗️ Архитектура
+## 🏗️ Архитектура проекта
 
-Проект построен по **модульной архитектуре** с разделением ответственности:
+### Структура каталогов
 
 ```
 hydraulic-diagnostic-saas/
-├── backend/           # Django бэкенд
+├── backend/                          # Django 5.2 приложение
 │   ├── apps/
-│   │   ├── diagnostics/    # Система диагностики
-│   │   ├── rag_assistant/  # RAG-ассистент
-│   │   └── users/          # Пользователи
-│   └── core/           # Настройки Django
-├── nuxt_frontend/    # Nuxt 3 фронтэнд
-├── docker/           # Docker конфигурация
-└── data/             # Локальные данные (FAISS индексы)
+│   │   ├── diagnostics/             # Мониторинг и диагностика
+│   │   │   ├── models.py            # System, Equipment, SensorData
+│   │   │   ├── views.py             # API endpoints
+│   │   │   ├── services.py          # Бизнес-логика
+│   │   │   ├── ai_engine.py         # ML анализ аномалий
+│   │   │   ├── websocket_consumers.py # Real-time обновления
+│   │   │   └── timescale_tasks.py   # Celery задачи
+│   │   ├── rag_assistant/           # RAG система
+│   │   │   ├── models.py            # Document, RagSystem
+│   │   │   ├── rag_system.py        # Логика RAG
+│   │   │   └── views.py             # API /rag/query/
+│   │   └── users/                   # Управление пользователями
+│   ├── core/                        # Django settings & конфиг
+│   │   ├── settings.py              # Настройки проекта
+│   │   ├── urls.py                  # Корневые URL
+│   │   └── wsgi.py                  # Production WSGI
+│   ├── manage.py                    # Django CLI
+│   ├── requirements.txt             # Python зависимости
+│   ├── pytest.ini                   # Pytest конфиг
+│   ├── Makefile                     # Быстрые команды
+│   └── tests/                       # Unit и integration тесты
+│
+├── nuxt_frontend/                    # Nuxt 4 фронтенд
+│   ├── pages/                        # File-based routing
+│   │   ├── index.vue                # Лендинг (/)
+│   │   ├── auth/
+│   │   │   ├── login.vue            # /auth/login
+│   │   │   └── register.vue         # /auth/register
+│   │   ├── dashboard.vue            # /dashboard (главная app)
+│   │   ├── chat.vue                 # /chat (ИИ чат)
+│   │   ├── diagnostics/
+│   │   │   └── index.vue            # /diagnostics
+│   │   ├── reports/                 # Отчёты
+│   │   │   ├── index.vue            # /reports
+│   │   │   └── [reportId]/
+│   │   │       ├── index.vue        # /reports/123
+│   │   │       └── details.vue      # /reports/123/details
+│   │   ├── settings/                # Настройки пользователя
+│   │   │   ├── index.vue            # /settings
+│   │   │   ├── profile.vue          # /settings/profile
+│   │   │   ├── notifications.vue    # /settings/notifications
+│   │   │   ├── security.vue         # /settings/security
+│   │   │   └── billing.vue          # /settings/billing
+│   │   └── systems/                 # ⭐ ГЛАВНЫЙ МОДУЛЬ
+│   │       ├── index.vue            # /systems
+│   │       └── [systemId]/
+│   │           ├── index.vue        # /systems/123 (pill-tabs)
+│   │           ├── equipments/
+│   │           │   ├── index.vue    # /systems/123/equipments
+│   │           │   └── [equipmentId].vue # /systems/123/equipments/456
+│   │           └── sensors/         # Датчики системы!
+│   │               ├── index.vue    # /systems/123/sensors
+│   │               └── [sensorId]/
+│   │                   ├── index.vue       # /systems/123/sensors/789
+│   │                   ├── data.vue        # /systems/123/sensors/789/data
+│   │                   ├── calibration.vue # .../calibration
+│   │                   └── alerts.vue      # .../alerts
+│   ├── layouts/
+│   │   ├── default.vue              # Dashboard layout
+│   │   ├── landing.vue              # Публичный лендинг
+│   │   └── auth.vue                 # Страницы авторизации
+│   ├── components/                  # Переиспользуемые компоненты
+│   │   ├── ui/                      # UI библиотека
+│   │   │   ├── AppNavbar.vue        # Навбар приложения
+│   │   │   └── ...
+│   │   └── dashboard/               # Dashboard компоненты
+│   ├── composables/                 # Vue 3 Composition API
+│   ├── stores/                      # Pinia state management
+│   ├── plugins/                     # Vue плагины
+│   ├── nuxt.config.ts               # Конфиг Nuxt
+│   ├── tailwind.config.js           # Tailwind CSS конфиг
+│   └── package.json                 # npm зависимости
+│
+├── docker/                          # Docker конфигурация
+│   ├── nginx/                       # Nginx reverse proxy
+│   │   └── nginx.conf               # Production конфиг
+│   ├── entrypoint.sh                # Инициализация контейнеров
+│   └── init-timescale.sql           # TimescaleDB setup
+│
+├── scripts/                         # Вспомогательные скрипты
+├── tools/                           # Утилиты разработки
+├── data/indexes/                    # FAISS индексы (локально)
+│
+├── docker-compose.dev.yml           # Dev конфиг
+├── docker-compose.prod.yml          # Production конфиг
+├── .github/workflows/
+│   ├── ci.yml                       # CI/CD пайплайн
+│   └── rag_smoke.yml                # RAG smoke тесты
+├── .pre-commit-config.yaml          # Pre-commit хуки
+├── Makefile                         # Команды разработки
+├── README.md                        # Этот файл
+└── LICENSE                          # MIT лицензия
 ```
 
-### 🔍 Ключевые компоненты
+### Иерархия навигации (UX flow)
 
-- **`apps.diagnostics`** - Мониторинг гидросистем, AI-анализ аномалий
-- **`apps.rag_assistant`** - Интеллектуальный помощник на базе Qwen3
-- **TimescaleDB** - Оптимизированное хранение и анализ временных рядов
-- **FAISS** - Векторная база знаний для семантического поиска
+```
+🏠 Главная (/)
+ ├─ 🔐 Авторизация (/auth/*)
+ └─ 📊 Приложение (Dashboard)
+     ├─ 🔧 Системы (/systems)
+     │   └─ Система #123 (/systems/123) [pill-tabs]
+     │       ├─ ⚙️ Оборудование
+     │       │   └─ Оборудование #456
+     │       └─ 📡 Датчики
+     │           └─ Датчик #789
+     │               ├─ Данные
+     │               ├─ Калибровка
+     │               └─ События
+     ├─ 🔍 Диагностика (/diagnostics)
+     ├─ 📈 Отчёты (/reports)
+     ├─ ⚙️ Настройки (/settings/*)
+     └─ 💬 ИИ Чат (/chat)
+```
+
+**🎨 Ключевые компоненты UI:**
+- **Pill-tabs**: Активные разделы (Оборудование | Датчики)
+- **Breadcrumbs**: Навигация по иерархии
+- **Dark/Light mode**: Полная поддержка Tailwind CSS
+- **Responsive дизайн**: Mobile-first, все размеры
 
 ---
 
-## 🔧 Makefile команды
+## 🔌 API
+
+### Основные endpoints
+
+```
+GET    /api/systems/                    # Список систем
+POST   /api/systems/                    # Создать систему
+GET    /api/systems/{id}/               # Детали системы
+GET    /api/systems/{id}/equipments/    # Оборудование системы
+GET    /api/systems/{id}/sensors/       # Датчики системы
+POST   /api/sensor-data/                # Отправить данные датчика
+POST   /api/diagnostics/                # Запустить диагностику
+GET    /api/diagnostics/{id}/results/   # Результаты
+POST   /api/rag/query/                  # RAG запрос к ассистенту
+```
+
+### Swagger документация
+
+```
+http://localhost:8000/api/schema/swagger-ui/
+```
+
+---
+
+## 🔧 Разработка
+
+### Makefile команды
 
 ```bash
-# 🚀 Разработка
-make dev              # Запустить в режиме dev
-make logs             # Посмотреть логи
-make shell            # Django shell
-make migrate          # Миграции
-make superuser        # Создать админа
-make init-data        # Тестовые данные + RAG
+# 🚀 Запуск
+make dev                # Dev сервер
+make prod               # Production
+make logs               # Логи контейнеров
 
 # 🧪 Тестирование
-make test             # Все тесты
-make test-backend     # Только backend
-make test-rag         # Тест RAG системы
-make smoke-test       # Smoke тесты
+make test               # Все тесты
+make test-backend       # Только backend
+make test-rag           # Тест RAG
+make smoke-test         # Smoke тесты
 
 # 🎨 Качество кода
-make lint             # Проверка линтером
-make format           # Автоформатирование
-make check            # Pre-commit проверка
+make lint               # Проверка линтером
+make format             # Автоформатирование
+make check              # Pre-commit проверка
 
-# 🚢 Production
-make prod             # Запустить production
-make prod-logs        # Production логи
-make backup-db        # Бекап БД
+# 🛠 Управление
+make migrate            # Миграции БД
+make superuser          # Создать админа
+make init-data          # Тестовые данные + RAG
+make shell              # Django shell
 ```
 
----
+### Backend разработка
 
-## 🐍 Пример использования API
+```bash
+cd backend
 
-### 1. Добавить новую гидросистему
-```python
-import requests
+# Установка зависимостей
+pip install -r requirements.txt
 
-response = requests.post('http://localhost:8000/api/systems/', {
-    'name': 'Промышленный пресс #1',
-    'system_type': 'industrial',
-    'max_pressure': 250.0,
-    'location': 'Цех 1'
-})
-print(response.json())
+# Запуск миграций
+python manage.py migrate
+
+# Dev сервер
+python manage.py runserver
+
+# Создание админа
+python manage.py createsuperuser
 ```
 
-### 2. Отправить данные датчика
-```python
-sensor_data = {
-    'system_id': 1,
-    'sensor_type': 'pressure',
-    'value': 185.5,
-    'unit': 'bar',
-    'timestamp': '2025-10-21T00:00:00Z'
-}
-response = requests.post('http://localhost:8000/api/sensor-data/', sensor_data)
+### Frontend разработка
+
+```bash
+cd nuxt_frontend
+
+# Установка зависимостей
+npm install
+
+# Dev сервер с HMR
+npm run dev
+
+# Сборка production
+npm run build
+
+# Запуск production
+npm run start
 ```
 
-### 3. Использовать RAG-ассистента
-```python
-query = {
-    'question': 'Как диагностировать проблемы с давлением?',
-    'system_id': 1
-}
-response = requests.post('http://localhost:8000/api/rag/query/', query)
-print(response.json()['answer'])
+### Качество кода
+
+```bash
+# Backend
+cd backend
+flake8 .
+black --check .
+isort --check-only .
+mypy .
+
+# Frontend
+cd nuxt_frontend
+npm run lint
+npm run typecheck
 ```
 
 ---
 
 ## 🧪 Тестирование
 
-Проект использует **pytest** для backend и **Vitest** для frontend.
+### Запуск тестов
 
 ```bash
-# Запуск всех тестов
+# Все тесты с покрытием
 make test
 
-# Тесты с покрытием
-pytest --cov=apps --cov-report=html
+# Параллельные тесты
+pytest -n auto
 
-# Специальные тесты
-python smoke_diagnostics.py  # Smoke тесты
-python test_rag.py           # Тест RAG
+# Только быстрые
+pytest -m "not slow"
+
+# С профилированием
+pytest --durations=10
 ```
 
-Подробности в [TESTING.md](TESTING.md)
+Подробности в `TESTING.md`
 
 ---
 
-## 🛡️ Безопасность и качество
+## 🛡️ Безопасность
 
-Проект следует **лучшим практикам** разработки:
-
-✅ **SQL Injection защита** - параметризованные запросы
-✅ **Pre-commit хуки** - автоматическая проверка кода
-✅ **GitHub Actions CI** - автоматические тесты
-✅ **Type Hints** - поддержка mypy
-✅ **Code Coverage** - покрытие тестами > 80%
+✅ **SQL Injection защита** — параметризованные запросы  
+✅ **Pre-commit хуки** — автоматическая проверка  
+✅ **GitHub Actions CI** — автоматические тесты  
+✅ **Type Hints** — поддержка mypy  
+✅ **Code Coverage** — покрытие > 80%  
 
 ```bash
 # Проверка безопасности
 bandit -r backend/ -c .bandit
-
-# Линтинг
-flake8 backend/
-isort --check backend/
-black --check backend/
-
-# Pre-commit проверка
-pre-commit run --all-files
 ```
 
 ---
 
-## 📊 Особенности TimescaleDB
+## 🤖 AI и RAG система
 
-Проект оптимизирован для работы с **большими объемами временных данных**:
+### Компоненты
 
-- **Автоматические гипертаблицы** для `SensorData`
-- **Chunk management** - автоматические партиции по 7 дней
-- **Compression** - сжатие старых данных
-- **Retention policies** - автоочистка по расписанию
+- **Qwen3:8b** (Ollama) — локальная LLM для генерации
+- **nomic-embed-text** — embeddings
+- **FAISS** — векторный поиск в базе знаний
+- **LangChain** — оркестрация RAG pipeline
 
-Подробности в [backend/BACKEND_ARCHITECTURE_REVIEW.md](backend/BACKEND_ARCHITECTURE_REVIEW.md)
+### Пример RAG запроса
 
----
-
-## 🤖 AI и RAG возможности
-
-Платформа интегрирована с **локальными LLM**:
-
-- **Qwen3:8b** (через Ollama) для генерации ответов
-- **nomic-embed-text** для создания embeddings
-- **FAISS** для векторного поиска
-- **LangChain** для оркестрации RAG-pipeline
-
-### RAG Пример:
 ```python
-# Создание базы знаний
-from apps.rag_assistant.models import RagSystem, Document
+import requests
 
-rag_system = RagSystem.objects.create(name="Гидросистемы")
-Document.objects.create(
-    rag_system=rag_system,
-    title="Руководство по эксплуатации",
-    content="При снижении давления проверьте насос..."
-)
-
-# Запрос к ассистенту
 response = requests.post('http://localhost:8000/api/rag/query/', {
-    'question': 'Почему упало давление?'
+    'question': 'Почему упало давление в системе?',
+    'system_id': 1
 })
+
+print(response.json()['answer'])
 ```
+
+Подробности в `backend/BACKEND_ARCHITECTURE_REVIEW.md`
 
 ---
 
-## 📚 Производительность тестов
+## 📊 TimescaleDB оптимизация
 
-### Оптимизация скорости
+Проект использует **TimescaleDB** для высокопроизводительного хранения временных рядов:
+
+- **Гипертаблицы** с автоматическими чанками
+- **Chunk interval** = 7 дней
+- **Compression policy** = 30 дней
+- **Retention policy** = 365 дней
+- **BRIN индексы** для timestamp
+
+---
+
+## 📈 Дорожная карта
+
+### ✅ Завершено
+
+- ✓ Django 5.2 + TimescaleDB архитектура
+- ✓ Nuxt 4 с file-based routing
+- ✓ RAG система на Qwen3 + LangChain
+- ✓ WebSocket для real-time обновлений
+- ✓ Иерархический роутинг систем/оборудования/датчиков
+- ✓ Pill-tabs и breadcrumbs навигация
+- ✓ Dark/Light theme поддержка
+- ✓ Docker контейнеризация
+- ✓ CI/CD пайплайн
+
+### 🟡 В процессе
+
+- ML алгоритмы для прогнозирования
+- Расширенная аналитика
+- Мобильное приложение
+- Интеграция с промышленными датчиками
+
+### 🔴 Планируется
+
+- Поддержка разных типов оборудования
+- Экспорт отчётов в PDF/Excel
+- AI видеоанализ гидросистем
+- Microservices архитектура
+
+---
+
+## 🤝 Вклад в проект
 
 ```bash
-# Параллельные тесты (pytest-xdist)
-pytest -n auto
+# 1. Fork репозитория
+git checkout -b feature/amazing-feature
 
-# Только быстрые тесты
-pytest -m "not slow"
+# 2. Commit с понятным сообщением
+git commit -m 'feat: добавить потрясающую фичу'
 
-# Повторный запуск последних неудачных тестов
-pytest --lf  # last failed
+# 3. Push ветку
+git push origin feature/amazing-feature
+
+# 4. Создать Pull Request
 ```
 
-### Профилирование тестов
-
-```bash
-# Время выполнения тестов
-pytest --durations=10
-
-# Профилирование с cProfile
-pytest --profile
-```
-
----
-
-## 🚢 Развертывание
-
-### Production
-```bash
-# Сборка и запуск
-docker-compose -f docker-compose.prod.yml up -d
-
-# Инициализация БД
-docker-compose -f docker-compose.prod.yml exec backend python manage.py migrate
-docker-compose -f docker-compose.prod.yml exec backend python manage.py collectstatic
-```
-
-### Environment Variables
-```env
-# Database
-DATABASE_URL=timescale://user:pass@localhost:5432/dbname
-REDIS_URL=redis://localhost:6379/0
-
-# AI Settings
-OLLAMA_BASE_URL=http://localhost:11434
-DEFAULT_LLM_MODEL=qwen3:8b
-DEFAULT_EMBEDDING_MODEL=nomic-embed-text
-
-# Security
-SECRET_KEY=your-secret-key
-DEBUG=False
-ALLOWED_HOSTS=yourdomain.com
-```
-
----
-
-## 📝 Документация
-
-- [TESTING.md](TESTING.md) - Инструкции по тестированию
-- [backend/BACKEND_ARCHITECTURE_REVIEW.md](backend/BACKEND_ARCHITECTURE_REVIEW.md) - Обзор архитектуры
-- [backend/IMPLEMENTATION_GUIDE.md](backend/IMPLEMENTATION_GUIDE.md) - Гайд по разработке
-- [RUN_PRECOMMIT_TESTS.md](RUN_PRECOMMIT_TESTS.md) - Pre-commit тестирование
-
----
-
-## 📋 TODO - Текущие задачи
-
-### 🏗️ Оптимизация моделей Django
-- [ ] **models.py**: Добавить составные индексы (BTree/BRIN) для SensorData
-- [ ] **models.py**: UniqueConstraint для (owner,name) и (system,name)
-- [ ] **models.py**: QuerySet-методы (for_system, with_system_component, time_range, recent)
-- [ ] **models.py**: Валидация timestamp и обновление last_reading_at
-
-### ⏱️ TimescaleDB оптимизация
-- [ ] **migrations**: create_hypertable для diagnostics_sensordata
-- [ ] **migrations**: chunk_time_interval = 7 days
-- [ ] **migrations**: add_compression_policy = 30 days
-- [ ] **migrations**: add_retention_policy = 365 days
-
-### 🔧 Celery Tasks
-- [ ] **timescale_tasks.py**: Дефолты retention/compression под новые политики
-- [ ] **timescale_tasks.py**: Комментарии и примеры под 7-дневные чанки
-
-### 🧪 Тесты
-- [ ] **test_models.py**: Тесты валидации моделей и индексов
-- [ ] **test_models.py**: Проверки QuerySet-методов
-- [ ] **test_models.py**: Тест обновления last_reading_at
-
-### 🎛️ Admin панель
-- [ ] **admin.py**: Фильтры по sensor_type и is_critical
-- [ ] **admin.py**: Удобные list_display для SensorData
-
----
-
-## 🤝 Участие в разработке
-
-1. **Fork** репозитория
-2. Создайте **feature branch**: `git checkout -b feature/amazing-feature`
-3. **Commit** изменения: `git commit -m 'Add amazing feature'`
-4. **Push** в branch: `git push origin feature/amazing-feature`
-5. Создайте **Pull Request**
-
-### Стандарты кода
-- Следуйте PEP 8 для Python
-- Используйте pre-commit хуки
-- Покрытие тестами > 80%
-- Документируйте API изменения
+**Требования к PR:**
+- ✅ Code passes lint и typecheck
+- ✅ Tests зелёные
+- ✅ Conventional commits
+- ✅ Документированы API изменения
 
 ---
 
 ## 📄 Лицензия
 
-Этот проект распространяется под лицензией MIT. Подробности в файле [LICENSE](LICENSE).
+MIT License — смотрите `LICENSE` файл
 
 ---
 
-## 👨‍💻 Автор
+## 👨‍💻 Контакты
 
-**Плотников Александр**
-📧 shukik85@ya.ru
-🐙 [@Shukik85](https://github.com/Shukik85)
-
----
-
-## 🙏 Благодарности
-
-- [Django](https://djangoproject.com/) - Web framework
-- [TimescaleDB](https://www.timescale.com/) - Time-series database
-- [Ollama](https://ollama.com/) - Local LLM runtime
-- [LangChain](https://langchain.com/) - LLM framework
-- [Vue.js](https://vuejs.org/) - Frontend framework
+- 📧 **Email**: a.s.plotnikov85@gmail.com
+- 🐙 **GitHub**: [@Shukik85](https://github.com/Shukik85)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/Shukik85/hydraulic-diagnostic-saas/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/Shukik85/hydraulic-diagnostic-saas/discussions)
 
 ---
 
-**⭐ Star на GitHub, если проект полезен!**
+<div align="center">
+
+### ⭐ Star на GitHub, если проект полезен!
+
+**Спасибо за ваш интерес к Hydraulic Diagnostic SaaS!**
+
+</div>
