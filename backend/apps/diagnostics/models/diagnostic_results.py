@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib.postgres.indexes import BTreeIndex, BrinIndex
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
-
-from .core import HydraulicSystem
 
 if TYPE_CHECKING:
     from django.db.models import Manager as RelatedManager
@@ -55,17 +53,17 @@ class MathematicalModelResult(models.Model):
     по формулам гидравлики.
     """
 
-    STATUS_CHOICES = [
-        ("normal", "Норма"),  # Δ < 5%
-        ("warning", "Предупреждение"),  # 5% ≤ Δ < 10%
-        ("fault", "Неисправность"),  # Δ ≥ 10%
+    STATUS_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("normal", "Норма"),  # Delta < 5%
+        ("warning", "Предупреждение"),  # 5% <= Delta < 10%
+        ("fault", "Неисправность"),  # Delta >= 10%
     ]
 
     id: models.UUIDField = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False
     )
     system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem,
+        "diagnostics.HydraulicSystem",
         on_delete=models.CASCADE,
         related_name="math_model_results",
         db_index=True,
@@ -154,7 +152,7 @@ class MathematicalModelResult(models.Model):
             Строковое представление объекта
         """
         sys_name = str(getattr(self.system, "name", "N/A"))
-        return f"MathModel[{sys_name}]: {self.status} (Δ={self.max_deviation:.1f}%)"
+        return f"MathModel[{sys_name}]: {self.status} (Delta={self.max_deviation:.1f}%)"
 
 
 # -------------------- Phase Portrait Results -------------------- #
@@ -184,13 +182,13 @@ class PhasePortraitResult(models.Model):
     для выявления предотказных состояний.
     """
 
-    STATUS_CHOICES = [
-        ("normal", "Норма"),  # ΔS < 10%
-        ("pre_fault", "Предотказ"),  # 10% ≤ ΔS < 25%
-        ("fault", "Отказ"),  # ΔS ≥ 25%
+    STATUS_CHOICES: ClassVar[list[tuple[str, str]]] = [
+        ("normal", "Норма"),  # DeltaS < 10%
+        ("pre_fault", "Предотказ"),  # 10% <= DeltaS < 25%
+        ("fault", "Отказ"),  # DeltaS >= 25%
     ]
 
-    PORTRAIT_TYPES = [
+    PORTRAIT_TYPES: ClassVar[list[tuple[str, str]]] = [
         ("velocity_position", "V=f(x) - Скорость от положения"),
         ("force_velocity", "F=f(V) - Усилие от скорости"),
         ("pressure_flow", "P=f(Q) - Давление от расхода"),
@@ -200,7 +198,7 @@ class PhasePortraitResult(models.Model):
         primary_key=True, default=uuid.uuid4, editable=False
     )
     system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem,
+        "diagnostics.HydraulicSystem",
         on_delete=models.CASCADE,
         related_name="phase_portrait_results",
         db_index=True,
@@ -293,7 +291,7 @@ class PhasePortraitResult(models.Model):
         sys_name = str(getattr(self.system, "name", "N/A"))
         return (
             f"PhasePortrait[{sys_name}]: {self.portrait_type} - "
-            f"{self.status} (ΔS={self.area_deviation:.1f}%)"
+            f"{self.status} (DeltaS={self.area_deviation:.1f}%)"
         )
 
 
@@ -324,17 +322,17 @@ class TribodiagnosticResult(models.Model):
     свойства для определения источников износа.
     """
 
-    STATUS_CHOICES = [
+    STATUS_CHOICES: ClassVar[list[tuple[str, str]]] = [
         ("normal", "Норма"),  # ISO 15/13/10
         ("attention", "Внимание"),  # ISO 16/14/11
-        ("critical", "Критическое"),  # ISO ≥17/15/12
+        ("critical", "Критическое"),  # ISO >=17/15/12
     ]
 
     id: models.UUIDField = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False
     )
     system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem,
+        "diagnostics.HydraulicSystem",
         on_delete=models.CASCADE,
         related_name="tribo_results",
         db_index=True,
@@ -353,13 +351,13 @@ class TribodiagnosticResult(models.Model):
 
     # ISO 4406 - чистота по частицам
     particles_4um: models.IntegerField = models.IntegerField(
-        help_text="Частицы ≥4 мкм на мл", default=0
+        help_text="Частицы >=4 мкм на мл", default=0
     )
     particles_6um: models.IntegerField = models.IntegerField(
-        help_text="Частицы ≥6 мкм на мл", default=0
+        help_text="Частицы >=6 мкм на мл", default=0
     )
     particles_14um: models.IntegerField = models.IntegerField(
-        help_text="Частицы ≥14 мкм на мл", default=0
+        help_text="Частицы >=14 мкм на мл", default=0
     )
     iso_class: models.CharField = models.CharField(
         max_length=20,
@@ -510,22 +508,22 @@ class IntegratedDiagnosticResult(models.Model):
     """Интегральный результат диагностики.
 
     Объединяет результаты всех трех методов по формуле:
-    D = 0.4 × M + 0.4 × P + 0.2 × T
+    D = 0.4 * M + 0.4 * P + 0.2 * T
 
     где M - математическая модель, P - фазовые портреты, T - трибодиагностика
     """
 
-    OVERALL_STATUS_CHOICES = [
+    OVERALL_STATUS_CHOICES: ClassVar[list[tuple[str, str]]] = [
         ("normal", "Норма"),  # D < 0.3
-        ("warning", "Предупреждение"),  # 0.3 ≤ D < 0.6
-        ("fault", "Неисправность"),  # D ≥ 0.6
+        ("warning", "Предупреждение"),  # 0.3 <= D < 0.6
+        ("fault", "Неисправность"),  # D >= 0.6
     ]
 
     id: models.UUIDField = models.UUIDField(
         primary_key=True, default=uuid.uuid4, editable=False
     )
     system: models.ForeignKey = models.ForeignKey(
-        HydraulicSystem,
+        "diagnostics.HydraulicSystem",
         on_delete=models.CASCADE,
         related_name="integrated_results",
         db_index=True,
@@ -572,7 +570,7 @@ class IntegratedDiagnosticResult(models.Model):
     # Интегральная оценка
     integrated_score: models.FloatField = models.FloatField(
         validators=[MinValueValidator(0.0), MaxValueValidator(1.0)],
-        help_text="D = 0.4×M + 0.4×P + 0.2×T",
+        help_text="D = 0.4*M + 0.4*P + 0.2*T",
         db_index=True,
     )
 
