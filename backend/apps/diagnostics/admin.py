@@ -7,7 +7,15 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from .models import DiagnosticReport, HydraulicSystem, SensorData
+from .models import (
+    DiagnosticReport,
+    HydraulicSystem,
+    IntegratedDiagnosticResult,
+    MathematicalModelResult,
+    PhasePortraitResult,
+    SensorData,
+    TribodiagnosticResult,
+)
 
 
 @admin.register(HydraulicSystem)
@@ -402,6 +410,185 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
                 )
 
         self.message_user(request, f"AI анализ регенерирован для {count} отчетов")
+
+
+# Новые админы для диагностических моделей Sprint 1
+
+
+@admin.register(MathematicalModelResult)
+class MathematicalModelResultAdmin(admin.ModelAdmin):
+    """Админ интерфейс результатов математической модели."""
+    
+    list_display = (
+        "id",
+        "system",
+        "timestamp", 
+        "pressure_deviation",
+        "flow_deviation",
+        "speed_deviation",
+        "max_deviation",
+        "score",
+        "status",
+        "created_at",
+    )
+    
+    list_filter = (
+        "status",
+        ("timestamp", admin.DateFieldListFilter),
+        ("created_at", admin.DateFieldListFilter),
+        "system",
+    )
+    
+    search_fields = ("system__name",)
+    ordering = ("-timestamp",)
+    readonly_fields = ("created_at",)
+    date_hierarchy = "timestamp"
+    list_per_page = 30
+
+
+@admin.register(PhasePortraitResult)
+class PhasePortraitResultAdmin(admin.ModelAdmin):
+    """Админ интерфейс результатов фазового портрета."""
+    
+    list_display = (
+        "id",
+        "system",
+        "timestamp",
+        "portrait_type",
+        "area_deviation",
+        "center_shift_x",
+        "center_shift_y",
+        "contour_breaks",
+        "shape_distortion",
+        "score",
+        "status",
+        "created_at",
+    )
+    
+    list_filter = (
+        "portrait_type",
+        "status",
+        ("timestamp", admin.DateFieldListFilter),
+        ("created_at", admin.DateFieldListFilter),
+        "system",
+    )
+    
+    search_fields = ("system__name",)
+    ordering = ("-timestamp",)
+    readonly_fields = ("created_at",)
+    date_hierarchy = "timestamp"
+    list_per_page = 30
+
+
+@admin.register(TribodiagnosticResult)
+class TribodiagnosticResultAdmin(admin.ModelAdmin):
+    """Админ интерфейс результатов трибодиагностики."""
+    
+    list_display = (
+        "id",
+        "system",
+        "analysis_date",
+        "iso_class",
+        "particles_4um",
+        "particles_6um",
+        "particles_14um",
+        "water_content_ppm",
+        "viscosity_cst",
+        "ph_level",
+        "iron_ppm",
+        "copper_ppm",
+        "aluminum_ppm",
+        "score",
+        "status",
+        "created_at",
+    )
+    
+    list_filter = (
+        "status",
+        ("analysis_date", admin.DateFieldListFilter),
+        ("created_at", admin.DateFieldListFilter),
+        "system",
+        "wear_source",
+    )
+    
+    search_fields = ("system__name", "lab_report_number", "analyzed_by")
+    ordering = ("-analysis_date",)
+    readonly_fields = ("created_at",)
+    date_hierarchy = "analysis_date"
+    list_per_page = 25
+
+
+class MathInline(admin.TabularInline):
+    """Инлайн для результатов математической модели."""
+    
+    model = MathematicalModelResult
+    extra = 0
+    fields = ("timestamp", "score", "status", "max_deviation")
+    readonly_fields = fields
+    can_delete = False
+    show_change_link = True
+
+
+class PhaseInline(admin.TabularInline):
+    """Инлайн для результатов фазового портрета."""
+    
+    model = PhasePortraitResult
+    extra = 0
+    fields = ("timestamp", "portrait_type", "area_deviation", "score", "status")
+    readonly_fields = fields
+    can_delete = False
+    show_change_link = True
+
+
+class TriboInline(admin.TabularInline):
+    """Инлайн для результатов трибодиагностики."""
+    
+    model = TribodiagnosticResult
+    extra = 0
+    fields = ("analysis_date", "iso_class", "score", "status")
+    readonly_fields = fields
+    can_delete = False
+    show_change_link = True
+
+
+@admin.register(IntegratedDiagnosticResult)
+class IntegratedDiagnosticResultAdmin(admin.ModelAdmin):
+    """Админ интерфейс интегрированных результатов диагностики."""
+    
+    list_display = (
+        "id",
+        "system",
+        "timestamp",
+        "math_score",
+        "phase_score",
+        "tribo_score",
+        "integrated_score",
+        "overall_status",
+        "predicted_remaining_life",
+        "confidence_level",
+        "data_quality_score",
+        "created_at",
+    )
+    
+    list_filter = (
+        "overall_status",
+        ("timestamp", admin.DateFieldListFilter),
+        ("created_at", admin.DateFieldListFilter),
+        "system",
+    )
+    
+    search_fields = ("system__name",)
+    ordering = ("-timestamp",)
+    
+    readonly_fields = (
+        "integrated_score",
+        "overall_status",
+        "created_at",
+    )
+    
+    inlines = (MathInline, PhaseInline, TriboInline)
+    date_hierarchy = "timestamp"
+    list_per_page = 25
 
 
 # Дополнительная конфигурация админки
