@@ -353,11 +353,11 @@ LOGGING = {
     "formatters": {
         "json": {
             "()": "structlog.stdlib.ProcessorFormatter",
-            "processor": "structlog.processors.JSONRenderer",
+            "processor": structlog.processors.JSONRenderer(),
         },
         "console": {
             "()": "structlog.stdlib.ProcessorFormatter",
-            "processor": "structlog.dev.ConsoleRenderer",
+            "processor": structlog.dev.ConsoleRenderer(),
         },
     },
     "handlers": {
