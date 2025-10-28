@@ -40,6 +40,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
+    "drf_spectacular",  # OpenAPI/Swagger documentation
     "corsheaders",
     "django_filters",
     "django_extensions",
@@ -178,7 +179,7 @@ CORS_URLS_REGEX = config("CORS_URLS_REGEX", default=r"^/api/.*$")
 CORS_ALLOW_HEADERS = [*list(default_headers), "Authorization", "X-Requested-With"]
 
 # ----------------------------------------------------------------------------
-# DRF / JWT
+# DRF / JWT / OpenAPI
 # ----------------------------------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -194,6 +195,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardResultsSetPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 SIMPLE_JWT = {
@@ -204,6 +206,73 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     "SIGNING_KEY": SECRET_KEY,
     "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+# ----------------------------------------------------------------------------
+# OpenAPI/Swagger Configuration (drf-spectacular)
+# ----------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Hydraulic Diagnostic SaaS API",
+    "DESCRIPTION": "Enterprise hydraulic systems diagnostic platform with AI-powered analysis and RAG knowledge base",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": "/api/",
+    "SERVERS": [
+        {"url": "http://localhost:8000", "description": "Development server"},
+        {"url": "https://api.hydraulic-diagnostic.com", "description": "Production server"},
+    ],
+    "TAGS": [
+        {"name": "diagnostics", "description": "Hydraulic system diagnostics operations"},
+        {"name": "rag", "description": "Knowledge base and RAG operations"},
+        {"name": "users", "description": "User management and authentication"},
+    ],
+    "CONTACT": {
+        "name": "API Support",
+        "email": "support@hydraulic-diagnostic.com",
+    },
+    "LICENSE": {
+        "name": "Proprietary",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "Enterprise Documentation",
+        "url": "https://docs.hydraulic-diagnostic.com",
+    },
+    "PREPROCESSING_HOOKS": ["drf_spectacular.hooks.preprocess_exclude_path_format"],
+    "POSTPROCESSING_HOOKS": ["drf_spectacular.hooks.postprocess_schema_enums"],
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": False,
+        "defaultModelsExpandDepth": 2,
+        "defaultModelExpandDepth": 2,
+        "displayRequestDuration": True,
+        "docExpansion": "none",
+        "filter": True,
+        "showExtensions": True,
+        "showCommonExtensions": True,
+        "tryItOutEnabled": True,
+    },
+    "REDOC_UI_SETTINGS": {
+        "hideDownloadButton": False,
+        "hideHostname": False,
+        "hideLoading": False,
+        "lazyRendering": True,
+        "menuToggle": True,
+        "nativeScrollbars": False,
+        "pathInMiddlePanel": True,
+        "scrollYOffset": 0,
+        "suppressWarnings": False,
+        "theme": {
+            "colors": {
+                "primary": {"main": "#1976d2"},
+            },
+            "typography": {
+                "fontSize": "14px",
+                "headings": {"fontFamily": "Roboto, sans-serif"},
+            },
+        },
+    },
 }
 
 # ----------------------------------------------------------------------------
