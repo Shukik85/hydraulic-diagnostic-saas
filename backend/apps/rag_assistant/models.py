@@ -6,47 +6,6 @@ from django.db import models
 from django.db.models import JSONField
 
 
-class Document(models.Model):
-    """Хранит исходные документы разных форматов и языков."""
-
-    FORMAT_CHOICES = [
-        ("txt", "PlainText"),
-        ("pdf", "PDF"),
-        ("docx", "Word"),
-        ("md", "Markdown"),
-    ]
-    LANGUAGE_CHOICES = [
-        ("en", "English"),
-        ("ru", "Russian"),
-        ("de", "German"),
-    ]
-
-    title: models.CharField = models.CharField(max_length=255, verbose_name="Название")
-    content: models.TextField = models.TextField(verbose_name="Содержимое")
-    format: models.CharField = models.CharField(
-        max_length=10, choices=FORMAT_CHOICES, verbose_name="Формат"
-    )
-    language: models.CharField = models.CharField(
-        max_length=10, choices=LANGUAGE_CHOICES, verbose_name="Язык"
-    )
-    metadata: JSONField = JSONField(default=dict, verbose_name="Метаданные")
-    created_at: models.DateTimeField = models.DateTimeField(
-        auto_now_add=True, db_index=True
-    )
-    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["language", "format"]),
-            models.Index(fields=["created_at"]),
-        ]
-        verbose_name = "Документ"
-        verbose_name_plural = "Документы"
-
-    def __str__(self) -> str:
-        return str(self.title)
-
-
 class RagSystem(models.Model):
     """Конфигурация RAG-пайплайна."""
 
@@ -65,9 +24,58 @@ class RagSystem(models.Model):
     class Meta:
         verbose_name = "RAG-система"
         verbose_name_plural = "RAG-системы"
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self) -> str:
         return str(self.name)
+
+
+class Document(models.Model):
+    """Хранит исходные документы разных форматов и языков."""
+
+    FORMAT_CHOICES = [
+        ("txt", "PlainText"),
+        ("pdf", "PDF"),
+        ("docx", "Word"),
+        ("md", "Markdown"),
+    ]
+    LANGUAGE_CHOICES = [
+        ("en", "English"),
+        ("ru", "Russian"),
+        ("de", "German"),
+    ]
+
+    rag_system: models.ForeignKey = models.ForeignKey(
+        RagSystem, on_delete=models.CASCADE, related_name="documents"
+    )
+    title: models.CharField = models.CharField(max_length=255, verbose_name="Название")
+    content: models.TextField = models.TextField(verbose_name="Содержимое")
+    format: models.CharField = models.CharField(
+        max_length=10, choices=FORMAT_CHOICES, verbose_name="Формат"
+    )
+    language: models.CharField = models.CharField(
+        max_length=10, choices=LANGUAGE_CHOICES, verbose_name="Язык"
+    )
+    metadata: JSONField = JSONField(default=dict, verbose_name="Метаданные")
+    created_at: models.DateTimeField = models.DateTimeField(
+        auto_now_add=True, db_index=True
+    )
+    updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["rag_system", "language"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["format"]),
+        ]
+        verbose_name = "Документ"
+        verbose_name_plural = "Документы"
+
+    def __str__(self) -> str:
+        return str(self.title)
 
 
 class RagQueryLog(models.Model):
