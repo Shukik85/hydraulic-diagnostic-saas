@@ -27,9 +27,6 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
         "system_type",
         "status",
         "owner",
-        "location",
-        "max_pressure",
-        "max_flow",
         "health_indicator",
         "last_sensor_data",
         "created_at",
@@ -40,10 +37,9 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
         "status",
         "created_at",
         "owner",
-        ("installation_date", admin.DateFieldListFilter),
     ]
 
-    search_fields = ["name", "location", "owner__username", "owner__email"]
+    search_fields = ["name", "owner__username", "owner__email"]
 
     readonly_fields = [
         "created_at",
@@ -55,18 +51,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             "Основная информация",
-            {"fields": ("name", "system_type", "location", "status", "owner")},
-        ),
-        (
-            "Технические характеристики",
-            {
-                "fields": (
-                    "max_pressure",
-                    "max_flow",
-                    "temperature_range",
-                    "installation_date",
-                )
-            },
+            {"fields": ("name", "system_type", "status", "owner")},
         ),
         (
             "Системная информация",
@@ -418,11 +403,11 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
 @admin.register(MathematicalModelResult)
 class MathematicalModelResultAdmin(admin.ModelAdmin):
     """Админ интерфейс результатов математической модели."""
-    
+
     list_display = (
         "id",
         "system",
-        "timestamp", 
+        "timestamp",
         "pressure_deviation",
         "flow_deviation",
         "speed_deviation",
@@ -431,14 +416,14 @@ class MathematicalModelResultAdmin(admin.ModelAdmin):
         "status",
         "created_at",
     )
-    
+
     list_filter = (
         "status",
         ("timestamp", admin.DateFieldListFilter),
         ("created_at", admin.DateFieldListFilter),
         "system",
     )
-    
+
     search_fields = ("system__name",)
     ordering = ("-timestamp",)
     readonly_fields = ("created_at",)
@@ -449,7 +434,7 @@ class MathematicalModelResultAdmin(admin.ModelAdmin):
 @admin.register(PhasePortraitResult)
 class PhasePortraitResultAdmin(admin.ModelAdmin):
     """Админ интерфейс результатов фазового портрета."""
-    
+
     list_display = (
         "id",
         "system",
@@ -464,7 +449,7 @@ class PhasePortraitResultAdmin(admin.ModelAdmin):
         "status",
         "created_at",
     )
-    
+
     list_filter = (
         "portrait_type",
         "status",
@@ -472,7 +457,7 @@ class PhasePortraitResultAdmin(admin.ModelAdmin):
         ("created_at", admin.DateFieldListFilter),
         "system",
     )
-    
+
     search_fields = ("system__name",)
     ordering = ("-timestamp",)
     readonly_fields = ("created_at",)
@@ -483,7 +468,7 @@ class PhasePortraitResultAdmin(admin.ModelAdmin):
 @admin.register(TribodiagnosticResult)
 class TribodiagnosticResultAdmin(admin.ModelAdmin):
     """Админ интерфейс результатов трибодиагностики."""
-    
+
     list_display = (
         "id",
         "system",
@@ -502,7 +487,7 @@ class TribodiagnosticResultAdmin(admin.ModelAdmin):
         "status",
         "created_at",
     )
-    
+
     list_filter = (
         "status",
         ("analysis_date", admin.DateFieldListFilter),
@@ -510,7 +495,7 @@ class TribodiagnosticResultAdmin(admin.ModelAdmin):
         "system",
         "wear_source",
     )
-    
+
     search_fields = ("system__name", "lab_report_number", "analyzed_by")
     ordering = ("-analysis_date",)
     readonly_fields = ("created_at",)
@@ -518,43 +503,10 @@ class TribodiagnosticResultAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
-class MathInline(admin.TabularInline):
-    """Инлайн для результатов математической модели."""
-    
-    model = MathematicalModelResult
-    extra = 0
-    fields = ("timestamp", "score", "status", "max_deviation")
-    readonly_fields = fields
-    can_delete = False
-    show_change_link = True
-
-
-class PhaseInline(admin.TabularInline):
-    """Инлайн для результатов фазового портрета."""
-    
-    model = PhasePortraitResult
-    extra = 0
-    fields = ("timestamp", "portrait_type", "area_deviation", "score", "status")
-    readonly_fields = fields
-    can_delete = False
-    show_change_link = True
-
-
-class TriboInline(admin.TabularInline):
-    """Инлайн для результатов трибодиагностики."""
-    
-    model = TribodiagnosticResult
-    extra = 0
-    fields = ("analysis_date", "iso_class", "score", "status")
-    readonly_fields = fields
-    can_delete = False
-    show_change_link = True
-
-
 @admin.register(IntegratedDiagnosticResult)
 class IntegratedDiagnosticResultAdmin(admin.ModelAdmin):
     """Админ интерфейс интегрированных результатов диагностики."""
-    
+
     list_display = (
         "id",
         "system",
@@ -569,24 +521,23 @@ class IntegratedDiagnosticResultAdmin(admin.ModelAdmin):
         "data_quality_score",
         "created_at",
     )
-    
+
     list_filter = (
         "overall_status",
         ("timestamp", admin.DateFieldListFilter),
         ("created_at", admin.DateFieldListFilter),
         "system",
     )
-    
+
     search_fields = ("system__name",)
     ordering = ("-timestamp",)
-    
+
     readonly_fields = (
         "integrated_score",
         "overall_status",
         "created_at",
     )
-    
-    inlines = (MathInline, PhaseInline, TriboInline)
+
     date_hierarchy = "timestamp"
     list_per_page = 25
 
