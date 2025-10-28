@@ -1,18 +1,11 @@
-"""Модуль проекта с автогенерированным докстрингом."""
-
+# backend/manage.py
 import os
 import sys
 
 
-def main():
-    """Запуск Django-команд через командную строку."""
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.core.settings")
-    try:
-        from django.core.management import execute_from_command_line
-    except ImportError as exc:
-        raise ImportError(
-            "Не удалось импортировать Django. Убедитесь, что зависимости установлены."
-        ) from exc
+def main() -> None:
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+    from django.core.management import execute_from_command_line  # noqa: PLC0415
     execute_from_command_line(sys.argv)
 
 

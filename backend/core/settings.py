@@ -3,14 +3,14 @@
 CI-compatible with TimescaleDB and Celery Beat integration.
 """
 
-from datetime import timedelta
 import os
+from datetime import timedelta
 from pathlib import Path
 
+import structlog
 from celery.schedules import crontab
 from corsheaders.defaults import default_headers
 from decouple import Csv, config
-import structlog
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -42,6 +42,7 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "django_filters",
+    "django_extensions",
     "django_celery_beat",  # Database-backed periodic tasks for TimescaleDB
 ]
 
