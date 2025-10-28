@@ -222,12 +222,12 @@ class MathematicalModelResultSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "system",
-            "analysis_date",
+            "timestamp",
             "pressure_deviation",
             "flow_deviation",
             "speed_deviation",
             "max_deviation", 
-            "mathematical_score",
+            "score",
             "status",
             "created_at",
         ]
@@ -251,7 +251,7 @@ class MathematicalModelResultSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Отклонение скорости не может быть отрицательным")
         return value
 
-    def validate_mathematical_score(self, value):
+    def validate_score(self, value):
         """Валидация математического скора."""
         if not (0 <= value <= 1):
             raise serializers.ValidationError("Математический скор должен быть в диапазоне [0, 1]")
@@ -284,10 +284,10 @@ class PhasePortraitResultSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "system", 
-            "analysis_date",
+            "timestamp",
             "portrait_type",
             "area_deviation",
-            "phase_score",
+            "score",
             "status",
             "created_at",
         ]
@@ -308,7 +308,7 @@ class PhasePortraitResultSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Отклонение площади не может быть отрицательным")
         return value
 
-    def validate_phase_score(self, value):
+    def validate_score(self, value):
         """Валидация фазового скора."""
         if not (0 <= value <= 1):
             raise serializers.ValidationError("Фазовый скор должен быть в диапазоне [0, 1]")
@@ -349,16 +349,16 @@ class TribodiagnosticResultSerializer(serializers.ModelSerializer):
             "system",
             "analysis_date",
             "iso_class",
-            "particles_4_micron",
-            "particles_6_micron", 
-            "particles_14_micron",
+            "particles_4um",
+            "particles_6um", 
+            "particles_14um",
             "water_content_ppm",
-            "viscosity",
+            "viscosity_cst",
             "ph_level",
-            "iron_content",
-            "copper_content",
-            "aluminum_content",
-            "tribo_score",
+            "iron_ppm",
+            "copper_ppm",
+            "aluminum_ppm",
+            "score",
             "status",
             "created_at",
         ]
@@ -378,19 +378,19 @@ class TribodiagnosticResultSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("pH уровень должен быть в диапазоне [0, 14]")
         return value
 
-    def validate_particles_4_micron(self, value):
+    def validate_particles_4um(self, value):
         """Валидация частиц 4 мкм."""
         if value < 0:
             raise serializers.ValidationError("Количество частиц не может быть отрицательным")
         return value
 
-    def validate_particles_6_micron(self, value):
+    def validate_particles_6um(self, value):
         """Валидация частиц 6 мкм."""
         if value < 0:
             raise serializers.ValidationError("Количество частиц не может быть отрицательным")
         return value
 
-    def validate_particles_14_micron(self, value):
+    def validate_particles_14um(self, value):
         """Валидация частиц 14 мкм."""
         if value < 0:
             raise serializers.ValidationError("Количество частиц не может быть отрицательным")
@@ -402,31 +402,31 @@ class TribodiagnosticResultSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Содержание воды не может быть отрицательным")
         return value
 
-    def validate_viscosity(self, value):
+    def validate_viscosity_cst(self, value):
         """Валидация вязкости."""
         if value < 0:
             raise serializers.ValidationError("Вязкость не может быть отрицательной")
         return value
 
-    def validate_iron_content(self, value):
+    def validate_iron_ppm(self, value):
         """Валидация содержания железа."""
         if value < 0:
             raise serializers.ValidationError("Содержание железа не может быть отрицательным")
         return value
 
-    def validate_copper_content(self, value):
+    def validate_copper_ppm(self, value):
         """Валидация содержания меди."""
         if value < 0:
             raise serializers.ValidationError("Содержание меди не может быть отрицательным")
         return value
 
-    def validate_aluminum_content(self, value):
+    def validate_aluminum_ppm(self, value):
         """Валидация содержания алюминия."""
         if value < 0:
             raise serializers.ValidationError("Содержание алюминия не может быть отрицательным")
         return value
 
-    def validate_tribo_score(self, value):
+    def validate_score(self, value):
         """Валидация трибологического скора."""
         if not (0 <= value <= 1):
             raise serializers.ValidationError("Трибологический скор должен быть в диапазоне [0, 1]")
@@ -444,7 +444,7 @@ class IntegratedDiagnosticResultSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "system",
-            "analysis_date",
+            "timestamp",
             "math_result",
             "phase_result",
             "tribo_result",
