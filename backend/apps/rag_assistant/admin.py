@@ -11,16 +11,13 @@ class DocumentAdmin(admin.ModelAdmin):
         "title",
         "language",
         "format",
-        "rag_system",
+        "model_name",
+        "index_type",
         "created_at",
-        "updated_at",
     ]
-    list_filter = ["language", "format", "rag_system", "created_at"]
-    search_fields = ["title", "content", "rag_system__name"]
+    list_filter = ["language", "format", "index_type", ("created_at", admin.DateFieldListFilter)]
+    search_fields = ["title", "content", "model_name"]
     ordering = ["-created_at"]
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related("rag_system")
 
 
 @admin.register(RagSystem)
@@ -37,12 +34,10 @@ class RagQueryLogAdmin(admin.ModelAdmin):
     ordering = ["-timestamp"]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("system", "document")
+        return super().get_queryset(request).select_related("system")
 
     @admin.display(description="Запрос")
     def query_text_preview(self, obj):
         return (
-            (obj.query_text[:100] + "...")
-            if len(obj.query_text) > 100
-            else obj.query_text
+            (obj.query_text[:100] + "...") if len(obj.query_text) > 100 else obj.query_text
         )
