@@ -1,9 +1,14 @@
-"""Модуль проекта с автогенерированным докстрингом."""
+"""Core URL configuration with API documentation and health checks."""
 
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -24,10 +29,22 @@ urlpatterns = [
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
+    # API Documentation (drf-spectacular)
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path(
+        "api/redoc/",
+        SpectacularRedocView.as_view(url_name="schema"),
+        name="redoc",
+    ),
     # API endpoints
     path("api/users/", include("apps.users.urls")),
     path("api/diagnostics/", include("apps.diagnostics.urls")),
-    path("api/rag_assistant/", include("apps.rag_assistant.urls")),
+    path("api/rag/", include("apps.rag_assistant.urls")),
 ]
 
 # Static files serving in development
