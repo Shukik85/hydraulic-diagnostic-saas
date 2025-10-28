@@ -2,30 +2,35 @@
 // Optimized application root for investor demo performance
 useSeoMeta({
   titleTemplate: '%s | Hydraulic Diagnostic SaaS',
-  description: 'AI-powered hydraulic system monitoring and predictive maintenance platform for industrial operations.',
+  description:
+    'AI-powered hydraulic system monitoring and predictive maintenance platform for industrial operations.',
   ogTitle: 'Hydraulic Diagnostic SaaS - AI-Powered Industrial Monitoring',
-  ogDescription: 'Next-generation predictive maintenance for hydraulic systems. Real-time monitoring, intelligent diagnostics, and proactive maintenance scheduling.',
+  ogDescription:
+    'Next-generation predictive maintenance for hydraulic systems. Real-time monitoring, intelligent diagnostics, and proactive maintenance scheduling.',
   ogImage: '/og-image.jpg',
-  twitterCard: 'summary_large_image'
-})
+  twitterCard: 'summary_large_image',
+});
 
 // Optimized error handling for smooth demo
 const handleError = (error: unknown) => {
-  console.error('Application error:', error)
+  console.error('Application error:', error);
   // Silent handling for investor presentation
-  return false
-}
+  return false;
+};
 
-onErrorCaptured(handleError)
+onErrorCaptured(handleError);
 
 // Demo readiness indicator
 onMounted(() => {
-  console.log('🚀 Hydraulic Diagnostic SaaS - Ready for investor demo!')
-})
+  console.log('🚀 Hydraulic Diagnostic SaaS - Ready for investor demo!');
+});
 </script>
 
 <template>
-  <div id="app" class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200">
+  <div
+    id="app"
+    class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200"
+  >
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
@@ -39,7 +44,8 @@ onMounted(() => {
 }
 
 html {
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue',
+    Arial, sans-serif;
   scroll-behavior: smooth;
   line-height: 1.6;
 }
@@ -91,23 +97,44 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scaleIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Fast dark mode transitions */
 .dark * {
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 /* Fixed print styles (no deprecated properties) */

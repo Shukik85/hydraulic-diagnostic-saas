@@ -19,7 +19,12 @@
       <div
         v-if="isOpen"
         ref="contentRef"
-        :class="cn('absolute z-50 bg-popover text-popover-foreground rounded-md border shadow-md p-1 min-w-32', contentClass)"
+        :class="
+          cn(
+            'absolute z-50 bg-popover text-popover-foreground rounded-md border shadow-md p-1 min-w-32',
+            contentClass
+          )
+        "
         :style="{ top: position.top + 'px', left: position.left + 'px' }"
       >
         <slot />
@@ -30,7 +35,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { cn } from "./utils";
+import { cn } from './utils';
 
 interface Props {
   triggerClass?: string;

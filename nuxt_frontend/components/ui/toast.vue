@@ -1,9 +1,5 @@
 <template>
-  <TransitionGroup
-    name="toast"
-    tag="div"
-    class="fixed top-4 right-4 z-50 space-y-2 max-w-sm"
-  >
+  <TransitionGroup name="toast" tag="div" class="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
     <div
       v-for="toast in toasts"
       :key="toast.id"
@@ -12,14 +8,11 @@
         toast.type === 'success' && 'bg-green-50 border-green-200 text-green-800',
         toast.type === 'error' && 'bg-red-50 border-red-200 text-red-800',
         toast.type === 'warning' && 'bg-yellow-50 border-yellow-200 text-yellow-800',
-        toast.type === 'info' && 'bg-blue-50 border-blue-200 text-blue-800'
+        toast.type === 'info' && 'bg-blue-50 border-blue-200 text-blue-800',
       ]"
     >
       <div class="flex items-start gap-3">
-        <Icon
-          :name="getIcon(toast.type)"
-          class="h-5 w-5 mt-0.5 flex-shrink-0"
-        />
+        <Icon :name="getIcon(toast.type)" class="h-5 w-5 mt-0.5 flex-shrink-0" />
         <div class="flex-1">
           <p class="text-sm font-medium">{{ toast.title }}</p>
           <p v-if="toast.description" class="text-sm opacity-90 mt-1">
@@ -40,67 +33,69 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue';
 
 interface Toast {
-  id: string
-  title: string
-  description?: string
-  type: 'success' | 'error' | 'warning' | 'info'
-  duration?: number
+  id: string;
+  title: string;
+  description?: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  duration?: number;
 }
 
-const toasts = ref<Toast[]>([])
-let toastCounter = 0
+const toasts = ref<Toast[]>([]);
+let toastCounter = 0;
 
 const getIcon = (type: string) => {
   const icons = {
     success: 'lucide:check-circle',
     error: 'lucide:x-circle',
     warning: 'lucide:alert-triangle',
-    info: 'lucide:info'
-  }
-  return icons[type as keyof typeof icons] || 'lucide:info'
-}
+    info: 'lucide:info',
+  };
+  return icons[type as keyof typeof icons] || 'lucide:info';
+};
 
 const addToast = (toast: Omit<Toast, 'id'>) => {
-  const id = `toast-${++toastCounter}`
+  const id = `toast-${++toastCounter}`;
   const newToast: Toast = {
     id,
     duration: 5000,
-    ...toast
-  }
+    ...toast,
+  };
 
-  toasts.value.push(newToast)
+  toasts.value.push(newToast);
 
   if (newToast.duration && newToast.duration > 0) {
     setTimeout(() => {
-      removeToast(id)
-    }, newToast.duration)
+      removeToast(id);
+    }, newToast.duration);
   }
-}
+};
 
 const removeToast = (id: string) => {
-  const index = toasts.value.findIndex(t => t.id === id)
+  const index = toasts.value.findIndex(t => t.id === id);
   if (index > -1) {
-    toasts.value.splice(index, 1)
+    toasts.value.splice(index, 1);
   }
-}
+};
 
 // Expose methods for global use
 defineExpose({
   addToast,
-  removeToast
-})
+  removeToast,
+});
 
 // Global toast function
 if (typeof window !== 'undefined') {
   (window as any).$toast = {
-    success: (title: string, description?: string) => addToast({ title, description, type: 'success' }),
+    success: (title: string, description?: string) =>
+      addToast({ title, description, type: 'success' }),
     error: (title: string, description?: string) => addToast({ title, description, type: 'error' }),
-    warning: (title: string, description?: string) => addToast({ title, description, type: 'warning' }),
-    info: (title: string, description?: string) => addToast({ title, description, type: 'info' })
-  }
+    warning: (title: string, description?: string) =>
+      addToast({ title, description, type: 'warning' }),
+    info: (title: string, description?: string) => addToast({ title, description, type: 'info' }),
+  };
 }
 </script>
 

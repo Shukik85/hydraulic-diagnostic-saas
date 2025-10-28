@@ -1,14 +1,12 @@
-import { defineNuxtConfig } from 'nuxt/config'
+import { defineNuxtConfig } from 'nuxt/config';
 
 export default defineNuxtConfig({
   // Укажите базовые настройки вашего приложения
   app: {
     head: {
       title: 'My Nuxt App',
-      meta: [
-        { name: 'description', content: 'Описание вашего приложения' }
-      ]
-    }
+      meta: [{ name: 'description', content: 'Описание вашего приложения' }],
+    },
   },
   // Настройки для серверной части
   // Настройки для плагинов
@@ -20,4 +18,4 @@ export default defineNuxtConfig({
     // Укажите ваши модули здесь
   ],
   // Если нужны настройки сервера/статики, настроите через Nitro / public dir
-})
+});

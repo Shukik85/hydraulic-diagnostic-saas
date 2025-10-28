@@ -1,11 +1,11 @@
 <script setup lang="ts">
-const route = useRoute()
-const systemId = route.params.systemId
-const equipmentId = route.params.equipmentId
+const route = useRoute();
+const systemId = route.params.systemId;
+const equipmentId = route.params.equipmentId;
 
 definePageMeta({
-  layout: 'dashboard'
-})
+  layout: 'dashboard',
+});
 </script>
 
 <template>
@@ -21,7 +21,9 @@ definePageMeta({
 
     <!-- Статус оборудования -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Состояние</p>
@@ -33,7 +35,9 @@ definePageMeta({
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Нагрузка</p>
@@ -45,7 +49,9 @@ definePageMeta({
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Вибрация</p>
@@ -57,7 +63,9 @@ definePageMeta({
         </div>
       </div>
 
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+      >
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Время работы</p>
@@ -73,9 +81,13 @@ definePageMeta({
     <!-- Основные блоки -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Технические характеристики -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
+      >
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Технические характеристики</h3>
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+            Технические характеристики
+          </h3>
         </div>
         <div class="p-6">
           <dl class="space-y-4">
@@ -88,11 +100,15 @@ definePageMeta({
               <dd class="text-sm text-gray-900 dark:text-white">SYS-{{ systemId }}</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Максимальное давление</dt>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Максимальное давление
+              </dt>
               <dd class="text-sm text-gray-900 dark:text-white">200 bar</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">Рабочая температура</dt>
+              <dt class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Рабочая температура
+              </dt>
               <dd class="text-sm text-gray-900 dark:text-white">-20°C до +80°C</dd>
             </div>
           </dl>
@@ -100,27 +116,35 @@ definePageMeta({
       </div>
 
       <!-- Действия -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+      <div
+        class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
+      >
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Действия</h3>
         </div>
         <div class="p-6 space-y-4">
-          <button class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center">
+          <button
+            class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+          >
             <Icon name="heroicons:cpu-chip" class="w-5 h-5 mr-2" />
             Запустить диагностику
           </button>
-          
-          <button class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center">
+
+          <button
+            class="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center"
+          >
             <Icon name="heroicons:arrow-path" class="w-5 h-5 mr-2" />
             Обновить данные
           </button>
-          
-          <button class="w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center">
+
+          <button
+            class="w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
+          >
             <Icon name="heroicons:document-arrow-down" class="w-5 h-5 mr-2" />
             Скачать отчёт
           </button>
-          
-          <NuxtLink 
+
+          <NuxtLink
             :to="`/systems/${systemId}/equipments`"
             class="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center"
           >

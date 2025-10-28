@@ -2,33 +2,34 @@
 // Enhanced registration with proper TypeScript and null safety
 definePageMeta({
   layout: 'auth',
-  middleware: 'guest'
-})
+  middleware: 'guest',
+});
 
 useSeoMeta({
   title: 'Регистрация | Hydraulic Diagnostic SaaS',
-  description: 'Create your enterprise account for hydraulic systems monitoring and diagnostics platform.',
-  robots: 'noindex, nofollow'
-})
+  description:
+    'Create your enterprise account for hydraulic systems monitoring and diagnostics platform.',
+  robots: 'noindex, nofollow',
+});
 
 interface RegisterForm {
-  email: string
-  password: string
-  confirmPassword: string
-  firstName: string
-  lastName: string
-  company: string
-  jobTitle: string
-  phone: string
-  subscribeUpdates: boolean
-  termsAccepted: boolean
+  email: string;
+  password: string;
+  confirmPassword: string;
+  firstName: string;
+  lastName: string;
+  company: string;
+  jobTitle: string;
+  phone: string;
+  subscribeUpdates: boolean;
+  termsAccepted: boolean;
 }
 
-const authStore = useAuthStore()
-const router = useRouter()
+const authStore = useAuthStore();
+const router = useRouter();
 
 // Form state with proper initial values
-const currentStep = ref<number>(1)
+const currentStep = ref<number>(1);
 const form = reactive<RegisterForm>({
   email: '',
   password: '',
@@ -39,16 +40,16 @@ const form = reactive<RegisterForm>({
   jobTitle: '',
   phone: '',
   subscribeUpdates: true,
-  termsAccepted: false
-})
+  termsAccepted: false,
+});
 
-const isLoading = ref<boolean>(false)
-const error = ref<string>('')
-const showPassword = ref<boolean>(false)
-const showConfirmPassword = ref<boolean>(false)
+const isLoading = ref<boolean>(false);
+const error = ref<string>('');
+const showPassword = ref<boolean>(false);
+const showConfirmPassword = ref<boolean>(false);
 
 // Password strength with guaranteed non-null return
-const passwordStrength = usePasswordStrength(toRef(form, 'password'))
+const passwordStrength = usePasswordStrength(toRef(form, 'password'));
 
 // Form validation with null safety
 const validation = computed(() => ({
@@ -58,42 +59,48 @@ const validation = computed(() => ({
   firstName: !form.firstName ? 'Обязательное поле' : '',
   lastName: !form.lastName ? 'Обязательное поле' : '',
   company: !form.company ? 'Обязательное поле' : '',
-  terms: !form.termsAccepted ? 'Необходимо принять условия' : ''
-}))
+  terms: !form.termsAccepted ? 'Необходимо принять условия' : '',
+}));
 
 const isStep1Valid = computed(() => {
-  return !validation.value.email && !validation.value.firstName && !validation.value.lastName
-})
+  return !validation.value.email && !validation.value.firstName && !validation.value.lastName;
+});
 
 const isStep2Valid = computed(() => {
-  return form.password && form.confirmPassword && form.company &&
-         passwordStrength.value.score >= 3 && !validation.value.password && 
-         !validation.value.confirmPassword && !validation.value.company
-})
+  return (
+    form.password &&
+    form.confirmPassword &&
+    form.company &&
+    passwordStrength.value.score >= 3 &&
+    !validation.value.password &&
+    !validation.value.confirmPassword &&
+    !validation.value.company
+  );
+});
 
 const isStep3Valid = computed(() => {
-  return form.termsAccepted && !validation.value.terms
-})
+  return form.termsAccepted && !validation.value.terms;
+});
 
 // Navigation
 const nextStep = () => {
   if (currentStep.value < 3) {
-    currentStep.value++
+    currentStep.value++;
   }
-}
+};
 
 const prevStep = () => {
   if (currentStep.value > 1) {
-    currentStep.value--
+    currentStep.value--;
   }
-}
+};
 
 // Submit handler
 const handleRegister = async () => {
-  if (!isStep3Valid.value) return
+  if (!isStep3Valid.value) return;
 
-  isLoading.value = true
-  error.value = ''
+  isLoading.value = true;
+  error.value = '';
 
   try {
     await authStore.register({
@@ -104,25 +111,24 @@ const handleRegister = async () => {
       company: form.company,
       job_title: form.jobTitle,
       phone: form.phone,
-      subscribe_updates: form.subscribeUpdates
-    })
-    
-    await navigateTo('/dashboard')
-    
+      subscribe_updates: form.subscribeUpdates,
+    });
+
+    await navigateTo('/dashboard');
   } catch (err: any) {
-    console.error('Registration error:', err)
-    error.value = err.message || 'Ошибка регистрации. Попробуйте позже.'
+    console.error('Registration error:', err);
+    error.value = err.message || 'Ошибка регистрации. Попробуйте позже.';
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
 // Auto-focus first input
-const emailInput = ref<HTMLInputElement>()
+const emailInput = ref<HTMLInputElement>();
 
 onMounted(() => {
-  emailInput.value?.focus()
-})
+  emailInput.value?.focus();
+});
 </script>
 
 <template>
@@ -132,13 +138,13 @@ onMounted(() => {
       <div class="mx-auto w-full max-w-sm lg:w-96 premium-fade-in">
         <!-- Logo and title -->
         <div class="text-center mb-8">
-          <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl">
+          <div
+            class="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl"
+          >
             <Icon name="heroicons:user-plus" class="w-10 h-10 text-white" />
           </div>
-          
-          <h1 class="premium-heading-md text-gray-900 dark:text-white mb-2">
-            Создайте аккаунт
-          </h1>
+
+          <h1 class="premium-heading-md text-gray-900 dark:text-white mb-2">Создайте аккаунт</h1>
           <p class="premium-body text-gray-600 dark:text-gray-300">
             Получите доступ к платформе мониторинга
           </p>
@@ -147,11 +153,15 @@ onMounted(() => {
         <!-- Progress indicator -->
         <div class="mb-8">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Шаг {{ currentStep }} из 3</span>
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ Math.round((currentStep / 3) * 100) }}%</span>
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400"
+              >Шаг {{ currentStep }} из 3</span
+            >
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400"
+              >{{ Math.round((currentStep / 3) * 100) }}%</span
+            >
           </div>
           <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div 
+            <div
               class="bg-blue-600 h-2 rounded-full transition-all duration-300"
               :style="`width: ${(currentStep / 3) * 100}%`"
             ></div>
@@ -159,9 +169,15 @@ onMounted(() => {
         </div>
 
         <!-- Error message -->
-        <div v-if="error" class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg premium-slide-up">
+        <div
+          v-if="error"
+          class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg premium-slide-up"
+        >
           <div class="flex items-center space-x-3">
-            <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
+            <Icon
+              name="heroicons:exclamation-triangle"
+              class="w-5 h-5 text-red-600 dark:text-red-400"
+            />
             <p class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
           </div>
         </div>
@@ -197,7 +213,9 @@ onMounted(() => {
                 :class="validation.firstName ? 'premium-input-error' : 'premium-input'"
                 placeholder="Иван"
               />
-              <p v-if="validation.firstName" class="premium-error-text">{{ validation.firstName }}</p>
+              <p v-if="validation.firstName" class="premium-error-text">
+                {{ validation.firstName }}
+              </p>
             </div>
             <div>
               <label for="lastName" class="premium-label">Фамилия</label>
@@ -238,10 +256,7 @@ onMounted(() => {
                 :type="showPassword ? 'text' : 'password'"
                 required
                 :disabled="isLoading"
-                :class="[
-                  validation.password ? 'premium-input-error' : 'premium-input',
-                  'pr-12'
-                ]"
+                :class="[validation.password ? 'premium-input-error' : 'premium-input', 'pr-12']"
                 placeholder="••••••••"
               />
               <button
@@ -249,21 +264,30 @@ onMounted(() => {
                 @click="showPassword = !showPassword"
                 class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                <Icon :name="showPassword ? 'heroicons:eye-slash' : 'heroicons:eye'" class="w-5 h-5" />
+                <Icon
+                  :name="showPassword ? 'heroicons:eye-slash' : 'heroicons:eye'"
+                  class="w-5 h-5"
+                />
               </button>
             </div>
             <p v-if="validation.password" class="premium-error-text">{{ validation.password }}</p>
-            
+
             <!-- Password strength indicator - Fixed null safety -->
             <div v-if="form.password" class="mt-2">
               <div class="flex items-center justify-between mb-1">
                 <span class="text-xs text-gray-500 dark:text-gray-400">Надёжность пароля</span>
-                <span :class="[
-                  'text-xs font-medium',
-                  passwordStrength.color === 'red' ? 'text-red-600 dark:text-red-400' :
-                  passwordStrength.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-400' :
-                  passwordStrength.color === 'green' ? 'text-green-600 dark:text-green-400' : 'text-gray-500'
-                ]">
+                <span
+                  :class="[
+                    'text-xs font-medium',
+                    passwordStrength.color === 'red'
+                      ? 'text-red-600 dark:text-red-400'
+                      : passwordStrength.color === 'yellow'
+                        ? 'text-yellow-600 dark:text-yellow-400'
+                        : passwordStrength.color === 'green'
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-gray-500',
+                  ]"
+                >
                   {{ passwordStrength.label }}
                 </span>
               </div>
@@ -271,9 +295,13 @@ onMounted(() => {
                 <div
                   :class="[
                     'h-2 rounded transition-all duration-300',
-                    passwordStrength.color === 'red' ? 'bg-red-500' :
-                    passwordStrength.color === 'yellow' ? 'bg-yellow-500' :
-                    passwordStrength.color === 'green' ? 'bg-green-500' : 'bg-gray-300'
+                    passwordStrength.color === 'red'
+                      ? 'bg-red-500'
+                      : passwordStrength.color === 'yellow'
+                        ? 'bg-yellow-500'
+                        : passwordStrength.color === 'green'
+                          ? 'bg-green-500'
+                          : 'bg-gray-300',
                   ]"
                   :style="`width: ${(passwordStrength.score / 5) * 100}%`"
                 ></div>
@@ -293,7 +321,7 @@ onMounted(() => {
                 :disabled="isLoading"
                 :class="[
                   validation.confirmPassword ? 'premium-input-error' : 'premium-input',
-                  'pr-12'
+                  'pr-12',
                 ]"
                 placeholder="••••••••"
               />
@@ -302,10 +330,15 @@ onMounted(() => {
                 @click="showConfirmPassword = !showConfirmPassword"
                 class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
-                <Icon :name="showConfirmPassword ? 'heroicons:eye-slash' : 'heroicons:eye'" class="w-5 h-5" />
+                <Icon
+                  :name="showConfirmPassword ? 'heroicons:eye-slash' : 'heroicons:eye'"
+                  class="w-5 h-5"
+                />
               </button>
             </div>
-            <p v-if="validation.confirmPassword" class="premium-error-text">{{ validation.confirmPassword }}</p>
+            <p v-if="validation.confirmPassword" class="premium-error-text">
+              {{ validation.confirmPassword }}
+            </p>
           </div>
 
           <!-- Company -->
@@ -390,7 +423,7 @@ onMounted(() => {
                 Получать обновления по электронной почте
               </label>
             </div>
-            
+
             <div class="flex items-start">
               <input
                 id="terms"
@@ -401,9 +434,14 @@ onMounted(() => {
                 class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded mt-1"
               />
               <label for="terms" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                Я соглашаюсь с 
-                <a href="/terms" class="text-blue-600 hover:text-blue-500 dark:text-blue-400">условиями использования</a> и
-                <a href="/privacy" class="text-blue-600 hover:text-blue-500 dark:text-blue-400">политикой конфиденциальности</a>
+                Я соглашаюсь с
+                <a href="/terms" class="text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                  >условиями использования</a
+                >
+                и
+                <a href="/privacy" class="text-blue-600 hover:text-blue-500 dark:text-blue-400"
+                  >политикой конфиденциальности</a
+                >
               </label>
               <p v-if="validation.terms" class="premium-error-text">{{ validation.terms }}</p>
             </div>
@@ -456,24 +494,29 @@ onMounted(() => {
       <div class="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-700 to-blue-800">
         <!-- Animated background -->
         <div class="absolute inset-0">
-          <div class="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse"></div>
-          <div class="absolute bottom-32 left-32 w-48 h-48 bg-white/5 rounded-full blur-2xl animate-pulse animation-delay-1000"></div>
-          <div class="absolute top-1/2 left-20 w-24 h-24 bg-white/10 rounded-full blur-lg animate-pulse animation-delay-500"></div>
+          <div
+            class="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse"
+          ></div>
+          <div
+            class="absolute bottom-32 left-32 w-48 h-48 bg-white/5 rounded-full blur-2xl animate-pulse animation-delay-1000"
+          ></div>
+          <div
+            class="absolute top-1/2 left-20 w-24 h-24 bg-white/10 rounded-full blur-lg animate-pulse animation-delay-500"
+          ></div>
         </div>
-        
+
         <!-- Content -->
         <div class="relative h-full flex items-center justify-center p-12">
           <div class="text-center text-white max-w-lg premium-fade-in">
             <Icon name="heroicons:rocket-launch" class="w-20 h-20 mx-auto mb-8 text-purple-200" />
-            
-            <h2 class="premium-heading-lg mb-6">
-              Присоединяйтесь к инновациям
-            </h2>
-            
+
+            <h2 class="premium-heading-lg mb-6">Присоединяйтесь к инновациям</h2>
+
             <p class="premium-body-lg text-purple-100 mb-8">
-              Оптимизируйте работу гидравлических систем с помощью ИИ-аналитики и предикативного обслуживания.
+              Оптимизируйте работу гидравлических систем с помощью ИИ-аналитики и предикативного
+              обслуживания.
             </p>
-            
+
             <!-- Features -->
             <div class="space-y-4">
               <div class="flex items-center justify-center space-x-3 text-purple-200">

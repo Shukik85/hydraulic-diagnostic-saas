@@ -1,10 +1,12 @@
 <template>
   <label
-    :class="cn(
-      'relative flex items-center justify-center w-4 h-4 rounded border border-input bg-input-background transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-      modelValue && 'bg-primary border-primary',
-      className
-    )"
+    :class="
+      cn(
+        'relative flex items-center justify-center w-4 h-4 rounded border border-input bg-input-background transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+        modelValue && 'bg-primary border-primary',
+        className
+      )
+    "
   >
     <input
       type="checkbox"
@@ -18,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from "./utils";
+import { cn } from './utils';
 
 interface Props {
   modelValue?: boolean;

@@ -85,9 +85,7 @@ def add_docstrings_to_functions(file_content: str) -> str | None:
             insert_line = node.body[0].lineno - 1
 
             if insert_line < len(lines):
-                base_indent = len(lines[insert_line]) - len(
-                    lines[insert_line].lstrip()
-                )
+                base_indent = len(lines[insert_line]) - len(lines[insert_line].lstrip())
                 docstring = generate_google_docstring(node, base_indent)
                 lines.insert(insert_line, docstring)
                 modified = True

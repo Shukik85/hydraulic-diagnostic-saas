@@ -23,6 +23,7 @@ We follow the **Testing Pyramid** strategy:
 ### Test Environment Setup
 
 **conftest.py** (crucial for real-world testing):
+
 ```python
 # backend/conftest.py
 import pytest
@@ -57,6 +58,7 @@ def sample_hydraulic_system():
 ### Realistic Test Examples
 
 **Model Tests with Business Logic:**
+
 ```python
 # tests/test_models.py
 @pytest.mark.django_db
@@ -85,6 +87,7 @@ class TestDiagnosticReport:
 ```
 
 **API Integration Tests with Mocking:**
+
 ```python
 # tests/test_viewsets.py
 @pytest.mark.django_db
@@ -130,103 +133,107 @@ class TestDiagnosticViewSet:
 ### Test Utilities Setup
 
 **Custom test utilities:**
+
 ```javascript
 // frontend/tests/setup.js
-import { config } from '@vue/test-utils'
-import { vi } from 'vitest'
+import { config } from '@vue/test-utils';
+import { vi } from 'vitest';
 
 // Global mocks
-vi.mock('@/services/api')
-vi.mock('@/services/websockets')
+vi.mock('@/services/api');
+vi.mock('@/services/websockets');
 
 // Custom data-testid plugin
 config.global.plugins.push({
   install(app) {
-    app.config.globalProperties.$testId = (id) => `[data-testid="${id}"]`
-  }
-})
+    app.config.globalProperties.$testId = id => `[data-testid="${id}"]`;
+  },
+});
 ```
 
 ### Realistic Component Tests
 
 **EquipmentDashboard.vue Test:**
+
 ```javascript
 // tests/components/EquipmentDashboard.test.js
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount, flushPromises } from '@vue/test-utils'
-import EquipmentDashboard from '@/components/EquipmentDashboard.vue'
-import api from '@/services/api'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mount, flushPromises } from '@vue/test-utils';
+import EquipmentDashboard from '@/components/EquipmentDashboard.vue';
+import api from '@/services/api';
 
 describe('EquipmentDashboard.vue', () => {
-  let mockEquipmentData
+  let mockEquipmentData;
 
   beforeEach(() => {
     mockEquipmentData = [
       { id: 1, name: 'Hydraulic Pump A', status: 'online', pressure: 350 },
-      { id: 2, name: 'Control Valve B', status: 'offline', pressure: 0 }
-    ]
+      { id: 2, name: 'Control Valve B', status: 'offline', pressure: 0 },
+    ];
 
-    vi.clearAllMocks()
-    api.getEquipment.mockResolvedValue({ data: mockEquipmentData })
-  })
+    vi.clearAllMocks();
+    api.getEquipment.mockResolvedValue({ data: mockEquipmentData });
+  });
 
   it('loads and displays equipment list with real-time data', async () => {
-    const wrapper = mount(EquipmentDashboard)
+    const wrapper = mount(EquipmentDashboard);
 
     // Initial loading state
-    expect(wrapper.find('[data-testid="loading"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="loading"]').exists()).toBe(true);
 
-    await flushPromises()
+    await flushPromises();
 
     // Verify data is displayed
-    expect(wrapper.text()).toContain('Hydraulic Pump A')
-    expect(wrapper.text()).toContain('350 psi')
-    expect(wrapper.text()).toContain('offline')
-  })
+    expect(wrapper.text()).toContain('Hydraulic Pump A');
+    expect(wrapper.text()).toContain('350 psi');
+    expect(wrapper.text()).toContain('offline');
+  });
 
   it('filters equipment by status', async () => {
-    const wrapper = mount(EquipmentDashboard)
-    await flushPromises()
+    const wrapper = mount(EquipmentDashboard);
+    await flushPromises();
 
     // Test filter functionality
-    await wrapper.find('[data-testid="filter-online"]').setValue(true)
+    await wrapper.find('[data-testid="filter-online"]').setValue(true);
 
-    expect(wrapper.findAll('[data-testid="equipment-card"]')).toHaveLength(1)
-    expect(wrapper.text()).not.toContain('Control Valve B')
-  })
+    expect(wrapper.findAll('[data-testid="equipment-card"]')).toHaveLength(1);
+    expect(wrapper.text()).not.toContain('Control Valve B');
+  });
 
   it('handles real-time data updates via WebSocket', async () => {
-    const wrapper = mount(EquipmentDashboard)
-    await flushPromises()
+    const wrapper = mount(EquipmentDashboard);
+    await flushPromises();
 
     // Simulate WebSocket message
     const mockWebSocketMessage = {
       equipment_id: 1,
       pressure: 375,
-      status: 'warning'
-    }
+      status: 'warning',
+    };
 
-    window.dispatchEvent(new MessageEvent('message', {
-      data: JSON.stringify(mockWebSocketMessage)
-    }))
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        data: JSON.stringify(mockWebSocketMessage),
+      })
+    );
 
-    await flushPromises()
+    await flushPromises();
 
     // Verify UI updates
-    expect(wrapper.text()).toContain('375 psi')
-    expect(wrapper.find('[data-testid="status-warning"]').exists()).toBe(true)
-  })
+    expect(wrapper.text()).toContain('375 psi');
+    expect(wrapper.find('[data-testid="status-warning"]').exists()).toBe(true);
+  });
 
   it('shows error state when API fails', async () => {
-    api.getEquipment.mockRejectedValue(new Error('Network error'))
+    api.getEquipment.mockRejectedValue(new Error('Network error'));
 
-    const wrapper = mount(EquipmentDashboard)
-    await flushPromises()
+    const wrapper = mount(EquipmentDashboard);
+    await flushPromises();
 
-    expect(wrapper.find('[data-testid="error-message"]').exists()).toBe(true)
-    expect(wrapper.text()).toContain('Failed to load equipment')
-  })
-})
+    expect(wrapper.find('[data-testid="error-message"]').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Failed to load equipment');
+  });
+});
 ```
 
 ---
@@ -236,66 +243,68 @@ describe('EquipmentDashboard.vue', () => {
 ### Playwright Setup
 
 **playwright.config.js:**
+
 ```javascript
 // frontend/playwright.config.js
 module.exports = {
   use: {
     baseURL: process.env.TEST_URL || 'http://localhost:3000',
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure'
+    trace: 'retain-on-failure',
   },
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] }
-    }
-  ]
-}
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+};
 ```
 
 ### Critical User Journey Tests
 
 **diagnostic-workflow.spec.js:**
+
 ```javascript
 // tests/e2e/diagnostic-workflow.spec.js
-import { test, expect } from '@playwright/test'
+import { test, expect } from '@playwright/test';
 
 test.describe('Diagnostic Workflow', () => {
   test('complete diagnostic analysis flow', async ({ page }) => {
     // 1. Authentication
-    await page.goto('/login')
-    await page.fill('[data-testid="email"]', 'engineer@company.com')
-    await page.fill('[data-testid="password"]', 'test123')
-    await page.click('[data-testid="login-btn"]')
+    await page.goto('/login');
+    await page.fill('[data-testid="email"]', 'engineer@company.com');
+    await page.fill('[data-testid="password"]', 'test123');
+    await page.click('[data-testid="login-btn"]');
 
-    await expect(page).toHaveURL(/\/dashboard/)
+    await expect(page).toHaveURL(/\/dashboard/);
 
     // 2. Navigate to equipment
-    await page.click('[data-testid="equipment-link"]')
-    await expect(page.locator('[data-testid="equipment-list"]')).toBeVisible()
+    await page.click('[data-testid="equipment-link"]');
+    await expect(page.locator('[data-testid="equipment-list"]')).toBeVisible();
 
     // 3. Select equipment and run diagnostic
-    await page.click('[data-testid="equipment-card"]:first-child')
-    await page.click('[data-testid="run-diagnostic"]')
+    await page.click('[data-testid="equipment-card"]:first-child');
+    await page.click('[data-testid="run-diagnostic"]');
 
     // 4. Configure parameters
-    await page.fill('[data-testid="pressure-input"]', '350')
-    await page.selectOption('[data-testid="test-type"]', 'comprehensive')
-    await page.click('[data-testid="start-analysis"]')
+    await page.fill('[data-testid="pressure-input"]', '350');
+    await page.selectOption('[data-testid="test-type"]', 'comprehensive');
+    await page.click('[data-testid="start-analysis"]');
 
     // 5. Wait for results and verify
-    await expect(page.locator('[data-testid="results-section"]')).toBeVisible({ timeout: 30000 })
-    await expect(page.locator('text=Analysis Complete')).toBeVisible()
+    await expect(page.locator('[data-testid="results-section"]')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('text=Analysis Complete')).toBeVisible();
 
     // 6. Generate report
-    await page.click('[data-testid="generate-report"]')
-    await expect(page).toHaveURL(/\/report\/.*/)
+    await page.click('[data-testid="generate-report"]');
+    await expect(page).toHaveURL(/\/report\/.*/);
 
     // 7. Validate report content
-    await expect(page.locator('text=Diagnostic Report')).toBeVisible()
-    await expect(page.locator('text=Recommendations')).toBeVisible()
-  })
-})
+    await expect(page.locator('text=Diagnostic Report')).toBeVisible();
+    await expect(page.locator('text=Recommendations')).toBeVisible();
+  });
+});
 ```
 
 ---
@@ -419,18 +428,21 @@ jobs:
 ## Best Practices (Enhanced)
 
 ### Backend Testing
+
 - **Factory Pattern**: Use factory_boy for test data creation
 - **Mock External Services**: Always mock APIs, email services, payment gateways
 - **Database Isolation**: Use transaction rollbacks for test isolation
 - **Performance Monitoring**: Benchmark critical paths regularly
 
 ### Frontend Testing
+
 - **Test User Behavior**: Focus on what users do, not implementation details
 - **Mock API Responses**: Use MSW (Mock Service Worker) for realistic API mocking
 - **Accessibility Testing**: Include a11y checks in component tests
 - **Visual Testing**: Use Percy or similar for UI regression testing
 
 ### E2E Testing
+
 - **Test Critical Paths Only**: Focus on key user journeys
 - **Use Realistic Data**: Mimic production data scenarios
 - **Parallel Execution**: Run tests in parallel for speed
@@ -443,6 +455,7 @@ jobs:
 ### Common Issues & Solutions
 
 **Backend Database Conflicts:**
+
 ```bash
 # Clear test database
 python manage.py flush --settings=core.settings.test
@@ -451,28 +464,30 @@ pytest --create-db
 ```
 
 **Frontend Test Timeouts:**
+
 ```javascript
 // Increase timeout for complex components
 it('loads complex data', { timeout: 10000 }, async () => {
   // test implementation
-})
+});
 
 // Use waitFor for async updates
 await waitFor(() => {
-  expect(wrapper.find('[data-testid="result"]').exists()).toBe(true)
-})
+  expect(wrapper.find('[data-testid="result"]').exists()).toBe(true);
+});
 ```
 
 **E2E Test Flakiness:**
+
 ```javascript
 // Use reliable selectors
-await page.click('data-testid=submit-button')
+await page.click('data-testid=submit-button');
 
 // Add intelligent waiting
 await page.waitForSelector('[data-testid="results"]', {
   state: 'visible',
-  timeout: 15000
-})
+  timeout: 15000,
+});
 ```
 
 This revised guide provides comprehensive, practical testing strategies that reflect real-world SaaS application requirements.

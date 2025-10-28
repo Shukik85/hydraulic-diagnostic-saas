@@ -34,26 +34,18 @@ repos:
         exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
       - id: ruff-format
         exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
-
-  # Keeping isort as backup (can be removed if ruff works well)
-  - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
-    hooks:
-      - id: isort
-        args: ["--profile=black", "--line-length=88"]
-        exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
-
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
-    hooks:
-      - id: mypy
-        exclude: '^(frontend/|nuxt_frontend/|.*migrations/|.*tests/)'
-        args: [--ignore-missing-imports, --check-untyped-defs]
-        additional_dependencies:
-          - django-stubs[compatible-mypy]>=5.1.0
-          - types-requests>=2.32.0
-          - types-PyYAML>=6.0.12
-          - types-redis>=4.6.0
+# Временно отключён до решения проблемы с плагином
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.18.2
+  #   hooks:
+  #     - id: mypy
+  #       exclude: '^(frontend/|nuxt_frontend/|.*migrations/|.*tests/)'
+  #       args: [--ignore-missing-imports, --check-untyped-defs]
+  #       additional_dependencies:
+  #         - django-stubs[compatible-mypy]>=5.2.7
+  #         - types-requests>=2.32.0
+  #         - types-PyYAML>=6.0.12
+  #         - types-redis>=4.6.0
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.8.6  # Updated version
@@ -63,13 +55,16 @@ repos:
         exclude: '^(frontend/|nuxt_frontend/|.*tests/)'
         additional_dependencies: ["bandit[toml]"]
 
-  # Fixed Safety repository URL
-  - repo: https://github.com/pyupio/safety
-    rev: 3.6.2
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.9.0  # укажи актуальный релиз
     hooks:
-      - id: safety
-        args: [--ignore=70612]
-        exclude: '^(frontend/|nuxt_frontend/)'
+      - id: pip-audit
+        args:
+          - --strict            # fail on vulns
+          - --requirement
+          - backend/requirements.txt
+          - --requirement
+          - backend/requirements-dev.txt
 
   # Docker and infrastructure
   - repo: https://github.com/hadolint/hadolint

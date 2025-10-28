@@ -4,7 +4,9 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-3xl font-bold tracking-tight">Sensor Data</h1>
-        <p class="text-muted-foreground">Upload and analyze sensor data from your hydraulic systems</p>
+        <p class="text-muted-foreground">
+          Upload and analyze sensor data from your hydraulic systems
+        </p>
       </div>
       <div class="flex items-center gap-2">
         <UiButton variant="outline">
@@ -75,13 +77,27 @@
           <table class="w-full">
             <thead>
               <tr class="border-b">
-                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Timestamp</th>
-                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Equipment</th>
-                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Pressure (PSI)</th>
-                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Temperature (°C)</th>
-                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Flow Rate (L/min)</th>
-                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Vibration (mm/s)</th>
-                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Timestamp
+                </th>
+                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Equipment
+                </th>
+                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Pressure (PSI)
+                </th>
+                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Temperature (°C)
+                </th>
+                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Flow Rate (L/min)
+                </th>
+                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Vibration (mm/s)
+                </th>
+                <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -95,9 +111,11 @@
                 <td class="p-4 align-middle">
                   <span
                     :class="`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      reading.status === 'normal' ? 'bg-status-success/10 text-status-success' :
-                      reading.status === 'warning' ? 'bg-status-warning/10 text-status-warning' :
-                      'bg-status-error/10 text-status-error'
+                      reading.status === 'normal'
+                        ? 'bg-status-success/10 text-status-success'
+                        : reading.status === 'warning'
+                          ? 'bg-status-warning/10 text-status-warning'
+                          : 'bg-status-error/10 text-status-error'
                     }`"
                   >
                     {{ reading.status }}
@@ -120,7 +138,10 @@
         <UiCardContent>
           <div class="h-[300px] w-full bg-muted/20 rounded-md flex items-center justify-center">
             <div class="text-center">
-              <Icon name="lucide:trending-up" class="mx-auto h-12 w-12 text-muted-foreground mb-2" />
+              <Icon
+                name="lucide:trending-up"
+                class="mx-auto h-12 w-12 text-muted-foreground mb-2"
+              />
               <p class="text-sm text-muted-foreground">Pressure chart will be rendered here</p>
             </div>
           </div>
@@ -136,7 +157,9 @@
           <div class="h-[300px] w-full bg-muted/20 rounded-md flex items-center justify-center">
             <div class="text-center">
               <Icon name="lucide:activity" class="mx-auto h-12 w-12 text-muted-foreground mb-2" />
-              <p class="text-sm text-muted-foreground">Temperature & flow chart will be rendered here</p>
+              <p class="text-sm text-muted-foreground">
+                Temperature & flow chart will be rendered here
+              </p>
             </div>
           </div>
         </UiCardContent>
@@ -169,12 +192,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue';
 
-const viewMode = ref('table')
-const timeRange = ref('24h')
-const equipmentFilter = ref('all')
-const currentTime = ref('')
+const viewMode = ref('table');
+const timeRange = ref('24h');
+const equipmentFilter = ref('all');
+const currentTime = ref('');
 
 const sensorData = ref([
   {
@@ -185,7 +208,7 @@ const sensorData = ref([
     temperature: 68,
     flowRate: 22,
     vibration: 2.1,
-    status: 'normal'
+    status: 'normal',
   },
   {
     id: 2,
@@ -195,7 +218,7 @@ const sensorData = ref([
     temperature: 71,
     flowRate: 24,
     vibration: 2.3,
-    status: 'normal'
+    status: 'normal',
   },
   {
     id: 3,
@@ -205,7 +228,7 @@ const sensorData = ref([
     temperature: 74,
     flowRate: 26,
     vibration: 3.1,
-    status: 'warning'
+    status: 'warning',
   },
   {
     id: 4,
@@ -215,24 +238,24 @@ const sensorData = ref([
     temperature: 73,
     flowRate: 25,
     vibration: 2.2,
-    status: 'normal'
-  }
-])
+    status: 'normal',
+  },
+]);
 
 const updateTime = () => {
-  currentTime.value = new Date().toLocaleTimeString()
-}
+  currentTime.value = new Date().toLocaleTimeString();
+};
 
-let timeInterval: NodeJS.Timeout
+let timeInterval: NodeJS.Timeout;
 
 onMounted(() => {
-  updateTime()
-  timeInterval = setInterval(updateTime, 1000)
-})
+  updateTime();
+  timeInterval = setInterval(updateTime, 1000);
+});
 
 onUnmounted(() => {
   if (timeInterval) {
-    clearInterval(timeInterval)
+    clearInterval(timeInterval);
   }
-})
+});
 </script>

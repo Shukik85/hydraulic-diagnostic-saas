@@ -1,9 +1,6 @@
 <template>
   <div
-    :class="cn(
-      'relative h-2 w-full overflow-hidden rounded-full bg-primary/20',
-      className
-    )"
+    :class="cn('relative h-2 w-full overflow-hidden rounded-full bg-primary/20', className)"
     v-bind="$attrs"
   >
     <div
@@ -14,7 +11,7 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from "./utils";
+import { cn } from './utils';
 
 interface Props {
   value?: number;

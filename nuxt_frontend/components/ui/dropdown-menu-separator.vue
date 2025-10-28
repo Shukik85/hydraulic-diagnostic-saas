@@ -1,12 +1,9 @@
 <template>
-  <hr
-    :class="cn('border-border -mx-1 my-1', className)"
-    v-bind="$attrs"
-  />
+  <hr :class="cn('border-border -mx-1 my-1', className)" v-bind="$attrs" />
 </template>
 
 <script setup lang="ts">
-import { cn } from "./utils";
+import { cn } from './utils';
 
 interface Props {
   className?: string;

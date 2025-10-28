@@ -1,5 +1,5 @@
 /* Tailwind CSS v4 Base Styles - Fixed @apply cascade */
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Premium Design System for Hydraulic Diagnostic SaaS */
 
@@ -10,15 +10,16 @@
     --color-primary: #2563eb;
     --color-primary-hover: #1d4ed8;
     --color-primary-light: #dbeafe;
-    
+
     /* Semantic colors */
     --color-success: #059669;
     --color-warning: #d97706;
     --color-error: #dc2626;
     --color-info: #0284c7;
-    
+
     /* Typography */
-    --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue',
+      Arial, sans-serif;
     --font-mono: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
   }
 }
@@ -28,14 +29,14 @@
   .premium-card {
     @apply bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 transition-all duration-200;
   }
-  
+
   .premium-input {
     @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg;
     @apply focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50;
     @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
     @apply placeholder:text-gray-500 dark:placeholder:text-gray-400;
   }
-  
+
   .premium-input-error {
     @apply w-full px-4 py-3 border rounded-lg;
     @apply focus:ring-2 disabled:opacity-50;
@@ -43,41 +44,41 @@
     @apply placeholder:text-gray-500 dark:placeholder:text-gray-400;
     @apply border-red-300 dark:border-red-600 focus:ring-red-500 focus:border-red-500;
   }
-  
+
   .premium-label {
     @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
   }
-  
+
   .premium-error-text {
     @apply text-sm text-red-600 dark:text-red-400 mt-1;
   }
-  
+
   .premium-button-base {
     @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200;
     @apply focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  
+
   .premium-button-primary {
     @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200;
     @apply focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
     @apply bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500;
   }
-  
+
   .premium-button-secondary {
     @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200;
     @apply focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
     @apply border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800;
     @apply text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700;
   }
-  
+
   .premium-button-sm {
     @apply px-3 py-2 text-sm;
   }
-  
+
   .premium-button-md {
     @apply px-4 py-2 text-sm;
   }
-  
+
   .premium-button-lg {
     @apply px-6 py-3 text-base;
   }
@@ -88,66 +89,78 @@
   .premium-heading-xs {
     @apply text-sm font-semibold tracking-wide uppercase;
   }
-  
+
   .premium-heading-sm {
     @apply text-lg font-semibold;
   }
-  
+
   .premium-heading-md {
     @apply text-xl font-bold;
   }
-  
+
   .premium-heading-lg {
     @apply text-2xl font-bold;
   }
-  
+
   .premium-heading-xl {
     @apply text-3xl font-bold;
   }
-  
+
   .premium-body {
     @apply text-sm leading-relaxed;
   }
-  
+
   .premium-body-lg {
     @apply text-base leading-relaxed;
   }
-  
+
   /* Utility Classes */
   .premium-focus {
     @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
   }
-  
+
   .premium-transition {
     @apply transition-all duration-200 ease-out;
   }
-  
+
   /* Animation Classes */
   .premium-fade-in {
     animation: fade-in 0.4s ease-out;
   }
-  
+
   .premium-slide-up {
     animation: slide-up 0.3s ease-out;
   }
-  
+
   .premium-scale-in {
     animation: scale-in 0.2s ease-out;
   }
-  
+
   /* Status Colors */
-  .text-status-success { @apply text-green-600 dark:text-green-400; }
-  .text-status-warning { @apply text-yellow-600 dark:text-yellow-400; }
-  .text-status-error { @apply text-red-600 dark:text-red-400; }
-  .bg-status-success { @apply bg-green-500; }
-  .bg-status-warning { @apply bg-yellow-500; }
-  .bg-status-error { @apply bg-red-500; }
-  
+  .text-status-success {
+    @apply text-green-600 dark:text-green-400;
+  }
+  .text-status-warning {
+    @apply text-yellow-600 dark:text-yellow-400;
+  }
+  .text-status-error {
+    @apply text-red-600 dark:text-red-400;
+  }
+  .bg-status-success {
+    @apply bg-green-500;
+  }
+  .bg-status-warning {
+    @apply bg-yellow-500;
+  }
+  .bg-status-error {
+    @apply bg-red-500;
+  }
+
   /* Loading States */
   .loading-shimmer {
     @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
   }
-  
+
   .loading-spinner {
     @apply animate-spin border-2 border-current border-t-transparent rounded-full;
   }
@@ -155,22 +168,44 @@
 
 /* Custom animations (outside @layer) */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slide-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes scale-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .premium-heading-lg { @apply text-xl; }
-  .premium-heading-xl { @apply text-2xl; }
+  .premium-heading-lg {
+    @apply text-xl;
+  }
+  .premium-heading-xl {
+    @apply text-2xl;
+  }
 }

@@ -1,23 +1,23 @@
 <script setup lang="ts">
 // Professional section header component with type-safe color schemes
 interface Props {
-  title: string
-  description?: string
-  icon?: string
-  iconColor?: 'blue' | 'green' | 'purple' | 'orange' | 'teal' | 'red' | 'indigo'
-  actionText?: string
-  actionHref?: string
-  badge?: string
-  badgeColor?: 'blue' | 'green' | 'purple' | 'orange' | 'teal' | 'red' | 'indigo'
+  title: string;
+  description?: string;
+  icon?: string;
+  iconColor?: 'blue' | 'green' | 'purple' | 'orange' | 'teal' | 'red' | 'indigo';
+  actionText?: string;
+  actionHref?: string;
+  badge?: string;
+  badgeColor?: 'blue' | 'green' | 'purple' | 'orange' | 'teal' | 'red' | 'indigo';
 }
 
 const props = withDefaults(defineProps<Props>(), {
   iconColor: 'blue',
-  badgeColor: 'blue'
-})
+  badgeColor: 'blue',
+});
 
 // Type-safe color mappings
-type ColorKey = NonNullable<Props['iconColor']>
+type ColorKey = NonNullable<Props['iconColor']>;
 
 const getIconColorClass = (color: ColorKey): string => {
   const colorMap: Record<ColorKey, string> = {
@@ -27,10 +27,10 @@ const getIconColorClass = (color: ColorKey): string => {
     orange: 'text-orange-600 dark:text-orange-400',
     teal: 'text-teal-600 dark:text-teal-400',
     red: 'text-red-600 dark:text-red-400',
-    indigo: 'text-indigo-600 dark:text-indigo-400'
-  }
-  return colorMap[color]
-}
+    indigo: 'text-indigo-600 dark:text-indigo-400',
+  };
+  return colorMap[color];
+};
 
 const getBadgeColorClass = (color: ColorKey): string => {
   const colorMap: Record<ColorKey, string> = {
@@ -40,10 +40,10 @@ const getBadgeColorClass = (color: ColorKey): string => {
     orange: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
     teal: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
     red: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
-    indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300'
-  }
-  return colorMap[color]
-}
+    indigo: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300',
+  };
+  return colorMap[color];
+};
 </script>
 
 <template>
@@ -51,32 +51,32 @@ const getBadgeColorClass = (color: ColorKey): string => {
     <div class="flex-1">
       <div class="flex items-center space-x-4 mb-2">
         <!-- Icon -->
-        <Icon 
-          v-if="icon" 
-          :name="icon" 
-          :class="`w-6 h-6 ${getIconColorClass(iconColor || 'blue')}`" 
+        <Icon
+          v-if="icon"
+          :name="icon"
+          :class="`w-6 h-6 ${getIconColorClass(iconColor || 'blue')}`"
         />
-        
+
         <!-- Title -->
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">
           {{ title }}
         </h2>
-        
+
         <!-- Badge -->
-        <span 
+        <span
           v-if="badge"
           :class="`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getBadgeColorClass(badgeColor || 'blue')}`"
         >
           {{ badge }}
         </span>
       </div>
-      
+
       <!-- Description -->
       <p v-if="description" class="text-gray-600 dark:text-gray-300">
         {{ description }}
       </p>
     </div>
-    
+
     <!-- Action button -->
     <div v-if="actionText && actionHref">
       <NuxtLink

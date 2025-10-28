@@ -13,7 +13,7 @@
           v-else
           :class="[
             'text-sm',
-            index === items.length - 1 ? 'text-foreground font-medium' : 'text-muted-foreground'
+            index === items.length - 1 ? 'text-foreground font-medium' : 'text-muted-foreground',
           ]"
         >
           {{ item.label }}
@@ -30,13 +30,13 @@
 
 <script setup lang="ts">
 interface BreadcrumbItem {
-  label: string
-  href?: string
+  label: string;
+  href?: string;
 }
 
 interface Props {
-  items: BreadcrumbItem[]
+  items: BreadcrumbItem[];
 }
 
-defineProps<Props>()
+defineProps<Props>();
 </script>

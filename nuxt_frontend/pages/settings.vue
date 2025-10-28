@@ -23,7 +23,9 @@
         <UiCard>
           <UiCardHeader>
             <UiCardTitle>Personal Information</UiCardTitle>
-            <UiCardDescription>Update your personal details and contact information</UiCardDescription>
+            <UiCardDescription
+              >Update your personal details and contact information</UiCardDescription
+            >
           </UiCardHeader>
           <UiCardContent class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
@@ -86,7 +88,9 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="font-medium">System Alerts</p>
-                <p class="text-sm text-muted-foreground">Critical system failures and emergencies</p>
+                <p class="text-sm text-muted-foreground">
+                  Critical system failures and emergencies
+                </p>
               </div>
               <UiCheckbox v-model="notifications.systemAlerts" />
             </div>
@@ -238,7 +242,9 @@
             <div class="divide-y">
               <div class="flex items-center justify-between p-4">
                 <div class="flex items-center space-x-3">
-                  <div class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <div
+                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
+                  >
                     <Icon name="lucide:user" class="h-5 w-5" />
                   </div>
                   <div>
@@ -254,7 +260,9 @@
 
               <div class="flex items-center justify-between p-4">
                 <div class="flex items-center space-x-3">
-                  <div class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <div
+                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
+                  >
                     <Icon name="lucide:user" class="h-5 w-5" />
                   </div>
                   <div>
@@ -270,7 +278,9 @@
 
               <div class="flex items-center justify-between p-4">
                 <div class="flex items-center space-x-3">
-                  <div class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                  <div
+                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
+                  >
                     <Icon name="lucide:user" class="h-5 w-5" />
                   </div>
                   <div>
@@ -371,17 +381,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
-const activeTab = ref('profile')
+const activeTab = ref('profile');
 
 const profile = ref({
   firstName: 'John',
   lastName: 'Doe',
   email: 'john.doe@company.com',
   company: 'ABC Manufacturing',
-  phone: '+1 (555) 123-4567'
-})
+  phone: '+1 (555) 123-4567',
+});
 
 const notifications = ref({
   systemAlerts: true,
@@ -389,6 +399,6 @@ const notifications = ref({
   diagnosticReports: true,
   weeklySummary: false,
   browserNotifications: true,
-  mobileAlerts: false
-})
+  mobileAlerts: false,
+});
 </script>

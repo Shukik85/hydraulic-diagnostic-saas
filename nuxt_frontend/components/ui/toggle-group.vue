@@ -1,9 +1,6 @@
 <template>
   <div
-    :class="cn(
-      'group/toggle-group flex w-fit items-center rounded-md shadow-xs',
-      className
-    )"
+    :class="cn('group/toggle-group flex w-fit items-center rounded-md shadow-xs', className)"
     v-bind="$attrs"
   >
     <slot />
@@ -11,8 +8,8 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from "./utils";
-import { provide } from "vue";
+import { cn } from './utils';
+import { provide } from 'vue';
 
 interface Props {
   variant?: 'default' | 'outline';

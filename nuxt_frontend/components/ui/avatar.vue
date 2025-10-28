@@ -1,9 +1,6 @@
 <template>
   <div
-    :class="cn(
-      'relative flex size-10 shrink-0 overflow-hidden rounded-full',
-      className
-    )"
+    :class="cn('relative flex size-10 shrink-0 overflow-hidden rounded-full', className)"
     v-bind="$attrs"
   >
     <slot />
@@ -11,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from "./utils";
+import { cn } from './utils';
 
 interface Props {
   className?: string;

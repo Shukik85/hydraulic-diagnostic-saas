@@ -1,0 +1,2 @@
+Error constructing plugin instance of NewSemanalDjangoPlugin
+

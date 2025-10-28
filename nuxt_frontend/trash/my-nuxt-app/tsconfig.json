@@ -18,12 +18,6 @@
     },
     "types": ["node", "@nuxt/schema"]
   },
-  "include": [
-    "**/*.ts",
-    "**/*.js",
-    "**/*.vue",
-    "nuxt.config.ts",
-    ".nuxt.config.ts"
-  ],
+  "include": ["**/*.ts", "**/*.js", "**/*.vue", "nuxt.config.ts", ".nuxt.config.ts"],
   "exclude": ["node_modules", ".nuxt", "dist"]
 }

@@ -2,11 +2,13 @@
   <div class="relative">
     <button
       ref="triggerRef"
-      :class="cn(
-        'flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-        size === 'sm' ? 'h-8' : 'h-9',
-        className
-      )"
+      :class="
+        cn(
+          'flex w-full items-center justify-between gap-2 rounded-md border bg-input-background px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+          size === 'sm' ? 'h-8' : 'h-9',
+          className
+        )
+      "
       @click="toggle"
       v-bind="$attrs"
     >
@@ -29,7 +31,12 @@
       <div
         v-if="isOpen"
         ref="contentRef"
-        :class="cn('absolute z-50 bg-popover text-popover-foreground rounded-md border shadow-md p-1 min-w-32 max-h-60 overflow-y-auto', contentClass)"
+        :class="
+          cn(
+            'absolute z-50 bg-popover text-popover-foreground rounded-md border shadow-md p-1 min-w-32 max-h-60 overflow-y-auto',
+            contentClass
+          )
+        "
         :style="{ top: position.top + 'px', left: position.left + 'px' }"
       >
         <slot />
@@ -40,7 +47,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { cn } from "./utils";
+import { cn } from './utils';
 
 interface Props {
   modelValue?: string;

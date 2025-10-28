@@ -1,115 +1,115 @@
 // Fixed auth store with proper nullable types
-import type { User } from '~/types/api'
+import type { User } from '~/types/api';
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
-  const loading = ref<boolean>(false)
-  const error = ref<string | null>(null)
+  const user = ref<User | null>(null);
+  const loading = ref<boolean>(false);
+  const error = ref<string | null>(null);
 
-  const api = useApi()
+  const api = useApi();
 
   // Getters with null safety
-  const isAuthenticated = computed(() => !!user.value)
+  const isAuthenticated = computed(() => !!user.value);
   const userName = computed(() => {
-    if (!user.value) return ''
+    if (!user.value) return '';
     if (user.value.first_name || user.value.last_name) {
-      return `${user.value.first_name || ''} ${user.value.last_name || ''}`.trim()
+      return `${user.value.first_name || ''} ${user.value.last_name || ''}`.trim();
     }
-    return user.value.username || user.value.name || user.value.email
-  })
+    return user.value.username || user.value.name || user.value.email;
+  });
 
   // Actions with proper error handling
   const login = async (credentials: { email: string; password: string }) => {
-    loading.value = true
-    error.value = null
+    loading.value = true;
+    error.value = null;
 
     try {
-      const userData = await api.login(credentials)
-      user.value = userData
-      return userData
+      const userData = await api.login(credentials);
+      user.value = userData;
+      return userData;
     } catch (err: any) {
-      error.value = err?.data?.detail || 'Ошибка входа'
-      throw err
+      error.value = err?.data?.detail || 'Ошибка входа';
+      throw err;
     } finally {
-      loading.value = false
+      loading.value = false;
     }
-  }
+  };
 
   const register = async (userData: any) => {
-    loading.value = true
-    error.value = null
+    loading.value = true;
+    error.value = null;
 
     try {
-      const newUser = await api.register(userData)
-      user.value = newUser
-      return newUser
+      const newUser = await api.register(userData);
+      user.value = newUser;
+      return newUser;
     } catch (err: any) {
-      error.value = err?.data?.detail || 'Ошибка регистрации'
-      throw err
+      error.value = err?.data?.detail || 'Ошибка регистрации';
+      throw err;
     } finally {
-      loading.value = false
+      loading.value = false;
     }
-  }
+  };
 
   const logout = async () => {
-    loading.value = true
+    loading.value = true;
     try {
-      await api.logout()
+      await api.logout();
     } finally {
-      user.value = null
-      loading.value = false
-      error.value = null
+      user.value = null;
+      loading.value = false;
+      error.value = null;
     }
-  }
+  };
 
   const fetchCurrentUser = async () => {
-    if (!api.isAuthenticated.value) return null
+    if (!api.isAuthenticated.value) return null;
 
-    loading.value = true
+    loading.value = true;
     try {
-      const userData = await api.getCurrentUser()
-      user.value = userData
-      return userData
+      const userData = await api.getCurrentUser();
+      user.value = userData;
+      return userData;
     } catch (err: any) {
       if (err.status === 401) {
-        user.value = null
-        await navigateTo('/auth/login')
+        user.value = null;
+        await navigateTo('/auth/login');
       }
-      throw err
+      throw err;
     } finally {
-      loading.value = false
+      loading.value = false;
     }
-  }
+  };
 
   const updateProfile = async (profileData: Partial<User>) => {
-    if (!user.value) throw new Error('User not logged in')
+    if (!user.value) throw new Error('User not logged in');
 
-    loading.value = true
+    loading.value = true;
     try {
-      const updated = await api.updateUser(profileData)
+      const updated = await api.updateUser(profileData);
       if (updated) {
-        user.value = { ...user.value, ...updated }
+        user.value = { ...user.value, ...updated };
       }
-      return updated
+      return updated;
     } catch (err: any) {
-      error.value = err?.data?.detail || 'Ошибка обновления профиля'
-      throw err
+      error.value = err?.data?.detail || 'Ошибка обновления профиля';
+      throw err;
     } finally {
-      loading.value = false
+      loading.value = false;
     }
-  }
+  };
 
   const initialize = async () => {
-    if (process.server) return
+    if (process.server) return;
 
     if (api.isAuthenticated.value) {
       try {
-        await fetchCurrentUser()
+        await fetchCurrentUser();
       } catch {
         // Silent fail - user will need to login again
       }
     }
-  }
+  };
 
   return {
     // State (not readonly for mutability)
@@ -127,6 +127,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchCurrentUser,
     updateProfile,
-    initialize
-  }
-})
+    initialize,
+  };
+});

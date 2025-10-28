@@ -1,9 +1,11 @@
 <template>
   <button
-    :class="cn(
-      'flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
-      className
-    )"
+    :class="
+      cn(
+        'flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
+        className
+      )
+    "
     @click="$emit('select', value)"
     v-bind="$attrs"
   >
@@ -13,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from "./utils";
+import { cn } from './utils';
 
 interface Props {
   value: string;

@@ -4,7 +4,7 @@
     <aside
       :class="[
         'bg-card border-r border-border transition-all duration-300 ease-in-out flex flex-col',
-        isCollapsed ? 'w-16' : 'w-70'
+        isCollapsed ? 'w-16' : 'w-70',
       ]"
     >
       <!-- Header -->
@@ -12,7 +12,7 @@
         <div
           :class="[
             'flex items-center gap-3 transition-opacity duration-200',
-            isCollapsed ? 'opacity-0' : 'opacity-100'
+            isCollapsed ? 'opacity-0' : 'opacity-100',
           ]"
         >
           <div class="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
@@ -23,12 +23,7 @@
             <p class="text-xs text-muted-foreground">Диагностика</p>
           </div>
         </div>
-        <UiButton
-          variant="ghost"
-          size="icon"
-          @click="toggleSidebar"
-          class="h-8 w-8 shrink-0"
-        >
+        <UiButton variant="ghost" size="icon" @click="toggleSidebar" class="h-8 w-8 shrink-0">
           <Icon
             :name="isCollapsed ? 'lucide:chevron-right' : 'lucide:chevron-left'"
             class="h-4 w-4"
@@ -44,7 +39,7 @@
           :variant="activeItem === item.key ? 'secondary' : 'ghost'"
           :class="[
             'w-full justify-start gap-3 h-10 px-3 transition-all duration-200',
-            isCollapsed ? 'px-2' : 'px-3'
+            isCollapsed ? 'px-2' : 'px-3',
           ]"
           @click="setActiveItem(item.key)"
         >
@@ -52,7 +47,7 @@
           <span
             :class="[
               'transition-opacity duration-200 truncate',
-              isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+              isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
             ]"
           >
             {{ item.label }}
@@ -66,7 +61,7 @@
           variant="ghost"
           :class="[
             'w-full justify-start gap-3 h-10 px-3 transition-all duration-200',
-            isCollapsed ? 'px-2' : 'px-3'
+            isCollapsed ? 'px-2' : 'px-3',
           ]"
           @click="handleLogout"
         >
@@ -74,7 +69,7 @@
           <span
             :class="[
               'transition-opacity duration-200 truncate',
-              isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+              isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
             ]"
           >
             Выход
@@ -91,25 +86,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed } from 'vue';
 
 interface NavigationItem {
-  key: string
-  label: string
-  icon: string
+  key: string;
+  label: string;
+  icon: string;
 }
 
 const props = defineProps<{
-  defaultCollapsed?: boolean
-}>()
+  defaultCollapsed?: boolean;
+}>();
 
 const emit = defineEmits<{
-  'item-click': [key: string]
-  'logout': []
-}>()
+  'item-click': [key: string];
+  logout: [];
+}>();
 
-const isCollapsed = ref(props.defaultCollapsed || false)
-const activeItem = ref('dashboard')
+const isCollapsed = ref(props.defaultCollapsed || false);
+const activeItem = ref('dashboard');
 
 const navigationItems: NavigationItem[] = [
   { key: 'dashboard', label: 'Dashboard', icon: 'lucide:layout-dashboard' },
@@ -119,25 +114,25 @@ const navigationItems: NavigationItem[] = [
   { key: 'chat', label: 'AI Chat', icon: 'lucide:message-square' },
   { key: 'reports', label: 'Reports', icon: 'lucide:file-text' },
   { key: 'settings', label: 'Settings', icon: 'lucide:settings' },
-]
+];
 
 const toggleSidebar = () => {
-  isCollapsed.value = !isCollapsed.value
-}
+  isCollapsed.value = !isCollapsed.value;
+};
 
 const setActiveItem = (key: string) => {
-  activeItem.value = key
-  emit('item-click', key)
-}
+  activeItem.value = key;
+  emit('item-click', key);
+};
 
 const handleLogout = () => {
-  emit('logout')
-}
+  emit('logout');
+};
 
 // Expose methods for parent components
 defineExpose({
   toggle: toggleSidebar,
-  collapse: () => isCollapsed.value = true,
-  expand: () => isCollapsed.value = false,
-})
+  collapse: () => (isCollapsed.value = true),
+  expand: () => (isCollapsed.value = false),
+});
 </script>

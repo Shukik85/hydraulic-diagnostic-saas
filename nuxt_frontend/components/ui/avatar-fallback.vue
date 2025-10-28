@@ -1,9 +1,6 @@
 <template>
   <div
-    :class="cn(
-      'bg-muted flex size-full items-center justify-center rounded-full',
-      className
-    )"
+    :class="cn('bg-muted flex size-full items-center justify-center rounded-full', className)"
     v-bind="$attrs"
   >
     <slot />
@@ -11,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from "./utils";
+import { cn } from './utils';
 
 interface Props {
   className?: string;

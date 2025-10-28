@@ -7,29 +7,32 @@
 ### Обязательные инструменты
 
 1. **Python 3.11+**
+
    ```powershell
    # Проверка версии
    python --version
-   
+
    # Если Python не установлен, скачайте с python.org
    # Убедитесь, что добавили Python в PATH
    ```
 
 2. **Node.js 18+**
+
    ```powershell
    # Проверка версии
    node --version
    npm --version
-   
+
    # Установка через winget (рекомендуется)
    winget install OpenJS.NodeJS
    ```
 
 3. **Git**
+
    ```powershell
    # Проверка
    git --version
-   
+
    # Установка через winget
    winget install Git.Git
    ```
@@ -43,15 +46,17 @@
 ### Рекомендуемые инструменты
 
 1. **uv** - быстрый Python package manager
+
    ```powershell
    # Установка через pip
    pip install uv
-   
+
    # Или через PowerShell
    irm https://astral.sh/uv/install.ps1 | iex
    ```
 
 2. **Windows Terminal** - современный терминал
+
    ```powershell
    # Установка из Microsoft Store или
    winget install Microsoft.WindowsTerminal
@@ -65,6 +70,7 @@
 ## 🚀 Быстрый старт
 
 ### 1. Клонирование репозитория
+
 ```powershell
 git clone https://github.com/Shukik85/hydraulic-diagnostic-saas.git
 cd hydraulic-diagnostic-saas
@@ -73,6 +79,7 @@ cd hydraulic-diagnostic-saas
 ### 2. Настройка среды разработки
 
 #### Вариант А: С использованием PowerShell скрипта (рекомендуется)
+
 ```powershell
 # Установка зависимостей
 .\make.ps1 install-dev
@@ -84,6 +91,7 @@ cd hydraulic-diagnostic-saas
 #### Вариант Б: Ручная настройка
 
 **Backend:**
+
 ```powershell
 # Создание виртуальной среды
 cd backend
@@ -105,6 +113,7 @@ python manage.py runserver
 ```
 
 **Frontend:**
+
 ```powershell
 cd nuxt_frontend
 npm install
@@ -147,6 +156,7 @@ npm run dev
 ## 🛠️ Настройка инструментов разработки
 
 ### Pre-commit hooks
+
 ```powershell
 # Установка pre-commit
 pip install pre-commit
@@ -159,6 +169,7 @@ pre-commit run --all-files
 ```
 
 ### Ruff (современный линтер)
+
 ```powershell
 # Установка
 pip install ruff
@@ -171,7 +182,9 @@ ruff format backend/
 ### Настройка IDE
 
 #### VS Code
+
 1. Установите расширения:
+
    - Python
    - Pylance
    - Ruff
@@ -180,20 +193,22 @@ ruff format backend/
    - Prettier
 
 2. Настройка settings.json:
+
 ```json
 {
-    "python.defaultInterpreterPath": "./backend/.venv/Scripts/python.exe",
-    "python.linting.enabled": true,
-    "python.linting.ruffEnabled": true,
-    "python.formatting.provider": "black",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-        "source.organizeImports": true
-    }
+  "python.defaultInterpreterPath": "./backend/.venv/Scripts/python.exe",
+  "python.linting.enabled": true,
+  "python.linting.ruffEnabled": true,
+  "python.formatting.provider": "black",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": true
+  }
 }
 ```
 
 #### PyCharm
+
 1. Настройте интерпретатор Python: `backend\.venv\Scripts\python.exe`
 2. Включите Ruff в Settings > Tools > External Tools
 3. Настройте форматирование с Black
@@ -203,25 +218,30 @@ ruff format backend/
 ### Локальная разработка
 
 #### SQLite (по умолчанию)
+
 Никакой дополнительной настройки не требуется.
 
 #### PostgreSQL + TimescaleDB (рекомендуется)
 
 **Вариант 1: Docker (рекомендуется)**
+
 ```powershell
 # Запуск через docker-compose
 docker-compose -f docker-compose.dev.yml up -d postgres
 ```
 
 **Вариант 2: Локальная установка**
+
 1. Установите PostgreSQL 16+
 2. Установите TimescaleDB extension
 3. Обновите настройки в `.env`:
+
 ```env
 DATABASE_URL=postgresql://postgres:password@localhost:5432/hydraulic_diagnostic
 ```
 
 ### Миграции
+
 ```powershell
 cd backend
 
@@ -238,6 +258,7 @@ python manage.py migrate app_name 0001
 ## 🧪 Тестирование
 
 ### Backend тесты
+
 ```powershell
 cd backend
 
@@ -258,6 +279,7 @@ pytest -m "not slow"
 ```
 
 ### Frontend тесты
+
 ```powershell
 cd nuxt_frontend
 
@@ -282,12 +304,14 @@ npm run test:ui
 Включен в development режиме по умолчанию.
 
 **iPDB отладчик:**
+
 ```python
 # В коде
 import ipdb; ipdb.set_trace()
 ```
 
 **Логирование:**
+
 ```python
 import logging
 logger = logging.getLogger(__name__)
@@ -300,9 +324,10 @@ logger.debug("Debug message")
 Установите браузерное расширение Vue.js devtools.
 
 **Console logging:**
+
 ```javascript
-console.log('Debug info:', data)
-console.table(arrayData)
+console.log('Debug info:', data);
+console.table(arrayData);
 ```
 
 ## ❗ Решение проблем
@@ -310,6 +335,7 @@ console.table(arrayData)
 ### Частые проблемы и решения
 
 #### 1. Python/pip проблемы
+
 ```powershell
 # Обновление pip
 python -m pip install --upgrade pip
@@ -323,6 +349,7 @@ pip cache purge
 ```
 
 #### 2. Node.js/npm проблемы
+
 ```powershell
 # Очистка npm кэша
 npm cache clean --force
@@ -334,6 +361,7 @@ npm install
 ```
 
 #### 3. Проблемы с правами доступа
+
 ```powershell
 # Запуск PowerShell от имени администратора
 # Или изменение политики выполнения скриптов
@@ -341,6 +369,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 #### 4. Ошибки кодировки
+
 ```powershell
 # Установка UTF-8 по умолчанию
 [Environment]::SetEnvironmentVariable("PYTHONIOENCODING", "utf-8", "User")
@@ -350,7 +379,9 @@ $env:PYTHONIOENCODING="utf-8"
 ```
 
 #### 5. Django settings проблемы
+
 Убедитесь, что используется правильный путь:
+
 ```python
 # В pytest.ini или pyproject.toml
 DJANGO_SETTINGS_MODULE = "core.settings"
@@ -358,6 +389,7 @@ DJANGO_SETTINGS_MODULE = "core.settings"
 ```
 
 #### 6. Import ошибки
+
 ```powershell
 # Проверьте PYTHONPATH
 $env:PYTHONPATH=".;./backend"
@@ -393,6 +425,7 @@ netstat -ano | findstr :3000
 ## 🚀 Продвинутые возможности
 
 ### Docker Development
+
 ```powershell
 # Сборка образов
 docker-compose -f docker-compose.dev.yml build
@@ -408,6 +441,7 @@ docker-compose -f docker-compose.dev.yml exec backend python manage.py shell
 ```
 
 ### Performance Monitoring
+
 ```powershell
 # Установка и запуск профайлера
 pip install py-spy
@@ -418,6 +452,7 @@ py-spy top --pid $(Get-Process python).Id
 ```
 
 ### CI/CD локально
+
 ```powershell
 # Запуск act (локальный GitHub Actions)
 winget install nektos.act

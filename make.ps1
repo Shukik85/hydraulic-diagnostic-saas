@@ -33,7 +33,7 @@ function Test-CommandExists {
 
 function Install-Dev {
     Write-ColorText "Installing development dependencies..." "Cyan"
-    
+
     if (Test-CommandExists "uv") {
         Write-ColorText "Using uv for Python dependencies" "Green"
         Set-Location "backend"
@@ -45,21 +45,21 @@ function Install-Dev {
         pip install -r requirements.txt -r requirements-dev.txt
         Set-Location ".."
     }
-    
+
     Write-ColorText "Installing frontend dependencies..." "Green"
     Set-Location "nuxt_frontend"
     npm ci
     Set-Location ".."
-    
+
     Write-ColorText "Installing pre-commit hooks..." "Green"
     pre-commit install
-    
+
     Write-ColorText "✅ Development environment ready!" "Green"
 }
 
 function Start-Dev {
     Write-ColorText "Starting development environment..." "Cyan"
-    
+
     if (Test-CommandExists "docker-compose") {
         docker-compose -f docker-compose.dev.yml up -d
         Write-ColorText "✅ Services started!" "Green"
@@ -74,19 +74,19 @@ function Start-Dev {
 
 function Start-DevLocal {
     Write-ColorText "Starting local development..." "Cyan"
-    
+
     # Start backend in background
     Start-Job -ScriptBlock {
         Set-Location "backend"
         python manage.py runserver 8000
     } -Name "Backend"
-    
-    # Start frontend in background  
+
+    # Start frontend in background
     Start-Job -ScriptBlock {
         Set-Location "nuxt_frontend"
         npm run dev
     } -Name "Frontend"
-    
+
     Write-ColorText "✅ Local development started!" "Green"
     Write-ColorText "Use 'Get-Job' to check status" "Yellow"
     Write-ColorText "Use 'Stop-Job -Name Backend,Frontend; Remove-Job -Name Backend,Frontend' to stop" "Yellow"
@@ -94,14 +94,14 @@ function Start-DevLocal {
 
 function Stop-Dev {
     Write-ColorText "Stopping development services..." "Cyan"
-    
+
     # Stop Docker services
     docker-compose -f docker-compose.dev.yml down 2>$null
-    
+
     # Stop PowerShell jobs
     Get-Job -Name "Backend", "Frontend" -ErrorAction SilentlyContinue | Stop-Job
     Get-Job -Name "Backend", "Frontend" -ErrorAction SilentlyContinue | Remove-Job
-    
+
     Write-ColorText "✅ All services stopped" "Green"
 }
 
@@ -129,11 +129,11 @@ function Test-Coverage {
     Set-Location "backend"
     pytest --cov=apps --cov-report=html --cov-report=term-missing
     Set-Location ".."
-    
+
     Set-Location "nuxt_frontend"
     npm run test:coverage
     Set-Location ".."
-    
+
     Write-ColorText "✅ Coverage reports generated" "Green"
     Write-ColorText "Backend coverage: backend/htmlcov/index.html" "Blue"
     Write-ColorText "Frontend coverage: nuxt_frontend/coverage/index.html" "Blue"
@@ -141,7 +141,7 @@ function Test-Coverage {
 
 function Lint-Backend {
     Write-ColorText "Linting backend code..." "Cyan"
-    
+
     if (Test-CommandExists "ruff") {
         ruff check backend/ --output-format=github
     } else {
@@ -150,7 +150,7 @@ function Lint-Backend {
         flake8 .
         Set-Location ".."
     }
-    
+
     Write-ColorText "✅ Backend linting completed" "Green"
 }
 
@@ -164,7 +164,7 @@ function Lint-Frontend {
 
 function Format-Backend {
     Write-ColorText "Formatting backend code..." "Cyan"
-    
+
     if (Test-CommandExists "ruff") {
         ruff format backend/
         ruff check backend/ --fix
@@ -175,7 +175,7 @@ function Format-Backend {
         isort .
         Set-Location ".."
     }
-    
+
     Write-ColorText "✅ Backend formatting completed" "Green"
 }
 
@@ -197,18 +197,18 @@ function Show-Status {
     Write-ColorText "Project Status:" "Cyan"
     Write-ColorText "=== Docker Services ===" "Blue"
     docker-compose -f docker-compose.dev.yml ps 2>$null
-    
+
     Write-ColorText "`n=== Database Status ===" "Blue"
     Set-Location "backend"
     python manage.py showmigrations | Select-Object -First 20
     Set-Location ".."
-    
+
     Write-ColorText "`n=== Dependencies ===" "Blue"
     $pythonVersion = python --version 2>$null
     $nodeVersion = node --version 2>$null
     $dockerVersion = docker --version 2>$null
     $uvVersion = uv --version 2>$null
-    
+
     Write-Host "Python: $($pythonVersion -replace 'Python ', '')"
     Write-Host "Node.js: $nodeVersion"
     Write-Host "Docker: $($dockerVersion -split ' ')[2]"
@@ -230,22 +230,22 @@ function Show-URLs {
 
 function Clean-Artifacts {
     Write-ColorText "Cleaning build artifacts..." "Cyan"
-    
+
     # Python artifacts
     Get-ChildItem -Recurse -Name "*.pyc" | Remove-Item -Force
     Get-ChildItem -Recurse -Directory -Name "__pycache__" | Remove-Item -Recurse -Force
     Get-ChildItem -Recurse -Directory -Name "*.egg-info" | Remove-Item -Recurse -Force
-    
+
     # Coverage and test artifacts
     Remove-Item "backend/htmlcov" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item "backend/.coverage" -Force -ErrorAction SilentlyContinue
     Remove-Item "backend/.pytest_cache" -Recurse -Force -ErrorAction SilentlyContinue
-    
+
     # Frontend artifacts
     Remove-Item "nuxt_frontend/coverage" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item "nuxt_frontend/.nuxt" -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item "nuxt_frontend/.output" -Recurse -Force -ErrorAction SilentlyContinue
-    
+
     Write-ColorText "✅ Cleanup completed" "Green"
 }
 
@@ -254,7 +254,7 @@ function Show-Help {
     Write-Host ""
     Write-ColorText "Usage: .\make.ps1 <command>" "Yellow"
     Write-Host ""
-    
+
     $commands = @(
         @{"Command" = "install-dev"; "Description" = "Install development dependencies"},
         @{"Command" = "dev"; "Description" = "Start development environment with Docker"},
@@ -274,7 +274,7 @@ function Show-Help {
         @{"Command" = "clean"; "Description" = "Clean build artifacts"},
         @{"Command" = "help"; "Description" = "Show this help message"}
     )
-    
+
     foreach ($cmd in $commands) {
         Write-Host ("  {0,-20} {1}" -f $cmd.Command, $cmd.Description)
     }
@@ -299,7 +299,7 @@ switch ($Command.ToLower()) {
     "urls" { Show-URLs }
     "clean" { Clean-Artifacts }
     "help" { Show-Help }
-    default { 
+    default {
         Write-ColorText "Unknown command: $Command" "Red"
         Write-ColorText "Use '.\make.ps1 help' for available commands" "Yellow"
         exit 1

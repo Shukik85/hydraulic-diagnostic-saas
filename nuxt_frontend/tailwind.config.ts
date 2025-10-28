@@ -1,4 +1,4 @@
-import type { Config } from 'tailwindcss'
+import type { Config } from 'tailwindcss';
 
 // Tailwind CSS v4 configuration
 export default {
@@ -8,7 +8,7 @@ export default {
     './pages/**/*.vue',
     './plugins/**/*.{js,ts}',
     './app.vue',
-    './error.vue'
+    './error.vue',
   ],
   darkMode: 'class',
   theme: {
@@ -25,39 +25,48 @@ export default {
           700: '#1d4ed8',
           800: '#1e40af',
           900: '#1e3a8a',
-          950: '#172554'
+          950: '#172554',
         },
         status: {
           success: '#059669',
           warning: '#d97706',
           error: '#dc2626',
-          info: '#0284c7'
-        }
+          info: '#0284c7',
+        },
       },
       fontFamily: {
-        sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Monaco', 'Menlo', 'monospace']
+        sans: [
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Inter',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+        ],
+        mono: ['JetBrains Mono', 'Monaco', 'Menlo', 'monospace'],
       },
       animation: {
         'fade-in': 'fade-in 0.4s ease-out',
         'slide-up': 'slide-up 0.3s ease-out',
-        'scale-in': 'scale-in 0.2s ease-out'
+        'scale-in': 'scale-in 0.2s ease-out',
       },
       keyframes: {
         'fade-in': {
           '0%': { opacity: '0', transform: 'translateY(5px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' }
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         'slide-up': {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' }
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
         'scale-in': {
           '0%': { opacity: '0', transform: 'scale(0.98)' },
-          '100%': { opacity: '1', transform: 'scale(1)' }
-        }
-      }
-    }
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+      },
+    },
   },
-  plugins: []
-} satisfies Config
+  plugins: [],
+} satisfies Config;

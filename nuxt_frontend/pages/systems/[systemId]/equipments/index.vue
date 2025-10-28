@@ -1,10 +1,10 @@
 <script setup lang="ts">
-const route = useRoute()
-const systemId = route.params.systemId
+const route = useRoute();
+const systemId = route.params.systemId;
 
 definePageMeta({
-  layout: 'dashboard'
-})
+  layout: 'dashboard',
+});
 </script>
 
 <template>
@@ -18,19 +18,21 @@ definePageMeta({
       </p>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+    <div
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
+    >
       <!-- Заголовок с действиями -->
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between">
           <div class="flex items-center space-x-4">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-              Список оборудования
-            </h2>
+            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Список оборудования</h2>
             <span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
               Система #{{ systemId }}
             </span>
           </div>
-          <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
             <Icon name="heroicons:plus" class="w-4 h-4 mr-2 inline" />
             Добавить оборудование
           </button>
@@ -48,13 +50,15 @@ definePageMeta({
             Добавьте оборудование для мониторинга состояния системы
           </p>
           <div class="flex items-center justify-center space-x-3">
-            <NuxtLink 
+            <NuxtLink
               :to="`/systems/${systemId}`"
               class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Назад к системе
             </NuxtLink>
-            <button class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Добавить оборудование
             </button>
           </div>

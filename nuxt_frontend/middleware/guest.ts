@@ -1,9 +1,9 @@
 // Fixed guest middleware with proper type checking
 export default defineNuxtRouteMiddleware((to, from) => {
-  const authStore = useAuthStore()
-  
+  const authStore = useAuthStore();
+
   // Fixed: use proper isAuthenticated getter
   if (authStore.isAuthenticated) {
-    return navigateTo('/dashboard')
+    return navigateTo('/dashboard');
   }
-})
+});
