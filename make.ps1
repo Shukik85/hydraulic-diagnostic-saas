@@ -37,7 +37,7 @@ function Install-Dev {
     if (Test-CommandExists "uv") {
         Write-ColorText "Using uv for Python dependencies" "Green"
         Set-Location "backend"
-        uv pip install --system -r requirements.txt -r requirements-dev.txt
+        uv pip install -r requirements.txt -r requirements-dev.txt
         Set-Location ".."
     } else {
         Write-ColorText "Using pip for Python dependencies" "Yellow"
