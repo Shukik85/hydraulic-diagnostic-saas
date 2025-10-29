@@ -17,9 +17,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ===== CRITICAL: Multi-layer requirements installation =====
+# Сначала устанавливаем стабильные Django зависимости
+COPY backend/requirements.txt ./backend/requirements.txt
+RUN python -m venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    pip install --upgrade pip==24.2 && \
+    pip install -r backend/requirements.txt
+
+# Наконец, проектные зависимости (меняются часто)
 COPY backend/requirements-dev.txt ./backend/requirements-dev.txt
 RUN . /opt/venv/bin/activate && \
-    pip install --upgrade pip==24.2 && \
     pip install -r backend/requirements-dev.txt
 
 # ===== Final runtime image =====
