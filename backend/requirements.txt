@@ -14,3 +14,10 @@ django-redis>=5.4
 django-extensions>=3.2
 djangorestframework-simplejwt>=5.3
 gunicorn>=22.0
+
+# Обязательные для ImageField и ML
+Pillow>=10.4,<11.0
+sentence-transformers>=3.0
+scikit-learn>=1.5
+numpy>=2.0
+pandas>=2.2
