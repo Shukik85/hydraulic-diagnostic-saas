@@ -16,13 +16,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential libpq-dev gcc curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
-COPY backend/requirements.txt ./backend/requirements.txt
-# hadolint ignore=SC1091
+# ===== CRITICAL: Multi-layer requirements installation =====
+# Сначала устанавливаем стабильные Django зависимости
+COPY backend/requirements-base.txt ./backend/requirements-base.txt
 RUN python -m venv /opt/venv && \
     . /opt/venv/bin/activate && \
     pip install --upgrade pip==24.2 && \
-    pip install -r backend/requirements.txt
+    pip install -r backend/requirements-base.txt
+
+# Затем ML зависимости (меняются реже)
+COPY backend/requirements-ml.txt ./backend/requirements-ml.txt  
+RUN . /opt/venv/bin/activate && \
+    pip install -r backend/requirements-ml.txt
+
+# Наконец, проектные зависимости (меняются часто)
+COPY backend/requirements-dev.txt ./backend/requirements-dev.txt
+RUN . /opt/venv/bin/activate && \
+    pip install -r backend/requirements-dev.txt
 
 # ===== Final runtime image =====
 FROM python:3.11-slim
@@ -38,10 +48,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy venv from builder
+# Copy venv from builder (all layers cached!)
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy project
+# Copy project (изменения в коде не затрагивают зависимости)
 COPY backend /app/backend
 
 # Static files dir
