@@ -1,0 +1,3 @@
+# This directory stores application logs
+# Django, Celery, and other service logs
+# Keep this file to ensure the directory exists in git
