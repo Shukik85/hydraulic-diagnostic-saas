@@ -26,7 +26,7 @@
         />
         <template #fallback>
           <div class="flex items-center justify-center h-full">
-            <div class="loading-spinner w-6 h-6 text-blue-600"></div>
+            <div class="inline-block w-6 h-6 rounded-full border-2 border-solid border-current border-r-transparent text-blue-600" style="animation: spin 1s linear infinite;"></div>
             <span class="ml-2 premium-body text-gray-500 dark:text-gray-400">Loading chart...</span>
           </div>
         </template>
@@ -197,7 +197,5 @@ const updateChart = () => {
 </script>
 
 <style scoped>
-.loading-spinner {
-  @apply inline-block animate-spin rounded-full border-2 border-solid border-current border-r-transparent;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
