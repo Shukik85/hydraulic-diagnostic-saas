@@ -52,7 +52,7 @@
               :disabled="authStore.isLoading"
               class="w-full premium-button-primary premium-button-lg"
             >
-              <span v-if="authStore.isLoading" class="loading-spinner w-4 h-4 mr-2"></span>
+              <span v-if="authStore.isLoading" class="inline-block w-4 h-4 mr-2 rounded-full border-2 border-solid border-current border-r-transparent" style="animation: spin 1s linear infinite;"></span>
               <Icon v-else name="heroicons:lock-closed" class="w-4 h-4 mr-2" />
               Sign in
             </button>
@@ -91,7 +91,5 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.loading-spinner {
-  @apply inline-block animate-spin rounded-full border-2 border-solid border-current border-r-transparent;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
