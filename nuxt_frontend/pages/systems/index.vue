@@ -11,7 +11,7 @@
           <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-2" :class="{ 'animate-spin': loading }" />
           Refresh
         </button>
-        <button class="u-btn u-btn-secondary u-btn-md" @click="openCreateModal = true">
+        <button class="u-btn u-btn-primary u-btn-md" @click="openCreateModal = true">
           <Icon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
           Add System
         </button>
@@ -115,12 +115,12 @@ const openCreateModal = ref(false)
 
 const getStatusClass = (status: string) => {
   const classes = {
-    'online': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    'warning': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-    'error': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    'offline': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+    'active': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+    'maintenance': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+    'emergency': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+    'inactive': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
   }
-  return classes[status] || classes['offline']
+  return classes[status] || classes['inactive']
 }
 
 const onRefresh = async () => {
@@ -136,7 +136,8 @@ const onRefresh = async () => {
   }
 }
 
-const onCreate = async (data: { name: string; status: string }) => {
+// Updated to match new form structure with type and description
+const onCreate = async (data: { name: string; type: string; status: string; description: string }) => {
   createLoading.value = true
   try {
     // Check if store has createSystem method
@@ -155,11 +156,10 @@ const onCreate = async (data: { name: string; status: string }) => {
     
     // Close modal and show success
     openCreateModal.value = false
-    // TODO: Show success toast notification
+    alert(`System "${data.name}" created successfully!`)
     
   } catch (error: any) {
     console.error('Failed to create system:', error)
-    // TODO: Show error toast notification
     alert(`Failed to create system: ${error?.message || 'Unknown error'}`)
   } finally {
     createLoading.value = false
