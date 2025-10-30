@@ -2,16 +2,17 @@
   <UModal
     :model-value="modelValue"
     @update:model-value="$emit('update:modelValue', $event)"
-    title="Run New Diagnostic"
-    description="Select equipment and diagnostic parameters"
+    :title="$t('diagnostics.runModal.title')"
+    :description="$t('diagnostics.runModal.description')"
     size="md"
     :loading="loading"
+    :close-on-backdrop="!loading"
   >
     <div class="space-y-5">
       <!-- Equipment Selection -->
       <div>
         <label class="u-label" for="equipment">
-          Equipment *
+          {{ $t('diagnostics.runModal.equipment') }} *
         </label>
         <div class="relative">
           <select 
@@ -20,11 +21,11 @@
             class="u-input appearance-none cursor-pointer"
             :disabled="loading"
           >
-            <option value="">Select equipment...</option>
-            <option value="hyd-001">HYD-001 - Pump Station A</option>
-            <option value="hyd-002">HYD-002 - Hydraulic Motor B</option>
-            <option value="hyd-003">HYD-003 - Control Valve C</option>
-            <option value="hyd-004">HYD-004 - Cooling System D</option>
+            <option value="">{{ $t('diagnostics.runModal.selectEquipment') }}</option>
+            <option value="hyd-001">HYD-001 - {{ $t('diagnostics.runModal.pumpStationA') }}</option>
+            <option value="hyd-002">HYD-002 - {{ $t('diagnostics.runModal.hydraulicMotorB') }}</option>
+            <option value="hyd-003">HYD-003 - {{ $t('diagnostics.runModal.controlValveC') }}</option>
+            <option value="hyd-004">HYD-004 - {{ $t('diagnostics.runModal.coolingSystemD') }}</option>
           </select>
           <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -39,7 +40,7 @@
       <!-- Diagnostic Type -->
       <div>
         <label class="u-label" for="diagnostic-type">
-          Diagnostic Type
+          {{ $t('diagnostics.runModal.diagnosticType') }}
         </label>
         <div class="relative">
           <select 
@@ -48,11 +49,11 @@
             class="u-input appearance-none cursor-pointer"
             :disabled="loading"
           >
-            <option value="full">Full System Analysis - Comprehensive check</option>
-            <option value="pressure">Pressure System Check - Focus on pressure</option>
-            <option value="temperature">Temperature Analysis - Thermal monitoring</option>
-            <option value="vibration">Vibration Analysis - Mechanical health</option>
-            <option value="flow">Flow Analysis - Fluid dynamics</option>
+            <option value="full">{{ $t('diagnostics.runModal.fullAnalysis') }}</option>
+            <option value="pressure">{{ $t('diagnostics.runModal.pressureCheck') }}</option>
+            <option value="temperature">{{ $t('diagnostics.runModal.temperatureAnalysis') }}</option>
+            <option value="vibration">{{ $t('diagnostics.runModal.vibrationAnalysis') }}</option>
+            <option value="flow">{{ $t('diagnostics.runModal.flowAnalysis') }}</option>
           </select>
           <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -68,7 +69,7 @@
             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
           />
           <label for="email-notification" class="text-sm text-gray-700">
-            Send email notification when complete
+            {{ $t('diagnostics.runModal.emailNotification') }}
           </label>
         </div>
         
@@ -80,7 +81,7 @@
             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
           />
           <label for="priority-analysis" class="text-sm text-gray-700">
-            Priority analysis (faster processing)
+            {{ $t('diagnostics.runModal.priorityAnalysis') }}
           </label>
         </div>
       </div>
@@ -91,10 +92,10 @@
           <Icon name="heroicons:clock" class="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
           <div>
             <p class="text-sm font-medium text-green-900">
-              Estimated Duration
+              {{ $t('diagnostics.runModal.estimatedDuration') }}
             </p>
             <p class="text-sm text-green-700 mt-1">
-              {{ getEstimatedDuration() }} - Results will be available in real-time
+              {{ getEstimatedDuration() }} - {{ $t('diagnostics.runModal.realTimeResults') }}
             </p>
           </div>
         </div>
@@ -108,7 +109,7 @@
         :disabled="loading"
         type="button"
       >
-        Cancel
+        {{ $t('ui.cancel') }}
       </button>
       <button 
         class="u-btn u-btn-primary min-w-[140px]"
@@ -126,7 +127,7 @@
           name="heroicons:play" 
           class="h-4 w-4 mr-2" 
         />
-        {{ loading ? 'Starting...' : 'Start Diagnostic' }}
+        {{ loading ? $t('diagnostics.runModal.starting') : $t('diagnostics.runModal.startDiagnostic') }}
       </button>
     </template>
   </UModal>
@@ -159,6 +160,8 @@ const emit = defineEmits<{
   'cancel': []
 }>()
 
+const { $t } = useI18n()
+
 // Form state
 const form = reactive<DiagnosticFormData>({
   equipment: '',
@@ -172,13 +175,13 @@ const errors = reactive<FormErrors>({})
 // Helper methods
 const getEstimatedDuration = (): string => {
   const durations = {
-    'full': '5-8 minutes',
-    'pressure': '2-3 minutes',
-    'temperature': '2-4 minutes', 
-    'vibration': '3-5 minutes',
-    'flow': '2-4 minutes'
+    'full': '5-8 ' + $t('ui.minutes'),
+    'pressure': '2-3 ' + $t('ui.minutes'),
+    'temperature': '2-4 ' + $t('ui.minutes'), 
+    'vibration': '3-5 ' + $t('ui.minutes'),
+    'flow': '2-4 ' + $t('ui.minutes')
   }
-  return durations[form.type] || '2-8 minutes'
+  return durations[form.type] || '2-8 ' + $t('ui.minutes')
 }
 
 // Validation
@@ -188,7 +191,7 @@ const validate = (): boolean => {
   
   // Equipment validation
   if (!form.equipment) {
-    errors.equipment = 'Please select equipment to diagnose'
+    errors.equipment = $t('diagnostics.runModal.equipmentRequired')
   }
   
   return !errors.equipment
