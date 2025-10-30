@@ -8,7 +8,7 @@
       </div>
       <div class="flex items-center gap-3">
         <button class="u-btn u-btn-secondary u-btn-md" @click="onRefresh" :disabled="loading">
-          <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-2" />
+          <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-2" :class="{ 'animate-spin': loading }" />
           Refresh
         </button>
         <button class="u-btn u-btn-secondary u-btn-md" @click="openCreateModal = true">
@@ -24,7 +24,22 @@
         <h3 class="u-h4 text-gray-900 dark:text-white">All Systems</h3>
       </div>
 
-      <div class="overflow-x-auto">
+      <div v-if="loading && systemsStore.systems.length === 0" class="p-12 text-center">
+        <Icon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-gray-400 animate-spin mb-4" />
+        <p class="text-gray-500 dark:text-gray-400">Loading systems...</p>
+      </div>
+
+      <div v-else-if="!loading && systemsStore.systems.length === 0" class="p-12 text-center">
+        <Icon name="i-heroicons-cpu-chip" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No systems yet</h3>
+        <p class="text-gray-500 dark:text-gray-400 mb-6">Create your first hydraulic system to start monitoring</p>
+        <button class="u-btn u-btn-primary u-btn-md" @click="openCreateModal = true">
+          <Icon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
+          Add System
+        </button>
+      </div>
+
+      <div v-else class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
@@ -71,64 +86,18 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="!loading && systemsStore.systems.length === 0">
-              <td colspan="5" class="px-6 py-10">
-                <div class="u-empty">
-                  <Icon name="i-heroicons-cpu-chip" class="u-empty-icon" />
-                  <div class="u-empty-title">No systems yet</div>
-                  <div class="u-empty-desc">Create your first hydraulic system to start monitoring</div>
-                  <button class="u-btn u-btn-secondary u-btn-md" @click="openCreateModal = true">
-                    <Icon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
-                    Add System
-                  </button>
-                </div>
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Create System Modal -->
-    <Transition name="fade">
-      <div v-if="openCreateModal" class="fixed inset-0 z-50" aria-modal="true" role="dialog" aria-labelledby="create-system-title">
-        <div class="fixed inset-0 bg-black/60" @click="closeModal" />
-        <div class="relative z-10 mx-auto mt-24 w-full max-w-lg px-4">
-          <div class="u-card">
-            <div class="u-card-header">
-              <h3 id="create-system-title" class="u-h4">Create System</h3>
-              <button class="u-icon-btn" @click="closeModal" aria-label="Close">
-                <Icon name="i-heroicons-x-mark" class="w-5 h-5" />
-              </button>
-            </div>
-            <div class="u-card-body space-y-4">
-              <div>
-                <label class="u-label" for="name">Name</label>
-                <input id="name" v-model.trim="form.name" type="text" class="u-input w-full" placeholder="e.g. Press Line A" />
-                <p v-if="errors.name" class="u-error mt-1">{{ errors.name }}</p>
-              </div>
-              <div>
-                <label class="u-label" for="status">Status</label>
-                <select id="status" v-model="form.status" class="u-input w-full">
-                  <option value="online">online</option>
-                  <option value="offline">offline</option>
-                  <option value="warning">warning</option>
-                  <option value="error">error</option>
-                </select>
-                <p v-if="errors.status" class="u-error mt-1">{{ errors.status }}</p>
-              </div>
-            </div>
-            <div class="u-card-footer flex justify-end gap-3">
-              <button class="u-btn u-btn-secondary" @click="closeModal" :disabled="loading">Cancel</button>
-              <button class="u-btn u-btn-primary" @click="onCreate" :disabled="!isValid || loading">
-                <Icon v-if="loading" name="i-heroicons-arrow-path" class="w-4 h-4 mr-2 animate-spin" />
-                Create
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <!-- Create System Modal Component -->
+    <UCreateSystemModal 
+      v-model="openCreateModal" 
+      :loading="createLoading"
+      @submit="onCreate"
+      @cancel="onCancelCreate"
+    />
   </div>
 </template>
 
@@ -141,22 +110,8 @@ definePageMeta({
 
 const systemsStore = useSystemsStore()
 const loading = ref(false)
+const createLoading = ref(false)
 const openCreateModal = ref(false)
-
-const form = reactive({
-  name: '',
-  status: 'online' as 'online' | 'offline' | 'warning' | 'error'
-})
-
-const errors = reactive<{ name?: string; status?: string }>({})
-
-const validate = () => {
-  errors.name = !form.name ? 'Name is required' : undefined
-  errors.status = !['online','offline','warning','error'].includes(form.status) ? 'Invalid status' : undefined
-  return !errors.name && !errors.status
-}
-
-const isValid = computed(() => validate())
 
 const getStatusClass = (status: string) => {
   const classes = {
@@ -168,37 +123,54 @@ const getStatusClass = (status: string) => {
   return classes[status] || classes['offline']
 }
 
-const closeModal = () => {
-  if (loading.value) return
-  openCreateModal.value = false
-}
-
 const onRefresh = async () => {
-  loading.value = true
-  try { await systemsStore.fetchSystems() } finally { loading.value = false }
-}
-
-const onCreate = async () => {
-  if (!validate()) return
+  if (loading.value) return
   loading.value = true
   try {
-    if (typeof systemsStore.createSystem !== 'function') {
-      // Graceful fallback if API not implemented yet
-      alert('Create System API is not available yet (will be implemented in Stage 2/3).')
-      return
-    }
-    await systemsStore.createSystem({ name: form.name, status: form.status })
     await systemsStore.fetchSystems()
-    openCreateModal.value = false
-    form.name = ''
-    form.status = 'online'
-  } catch (e: any) {
-    alert(e?.message || 'Failed to create system')
+  } catch (error) {
+    console.error('Failed to refresh systems:', error)
+    // TODO: Show toast notification
   } finally {
     loading.value = false
   }
 }
 
+const onCreate = async (data: { name: string; status: string }) => {
+  createLoading.value = true
+  try {
+    // Check if store has createSystem method
+    if (typeof systemsStore.createSystem !== 'function') {
+      // Graceful fallback for MVP - show friendly message
+      alert('Создание систем будет реализовано на этапе 2-3. Пока используйте Admin Panel: http://localhost:8000/admin/')
+      openCreateModal.value = false
+      return
+    }
+    
+    // Call real API through store
+    await systemsStore.createSystem(data)
+    
+    // Refresh the systems list
+    await systemsStore.fetchSystems()
+    
+    // Close modal and show success
+    openCreateModal.value = false
+    // TODO: Show success toast notification
+    
+  } catch (error: any) {
+    console.error('Failed to create system:', error)
+    // TODO: Show error toast notification
+    alert(`Failed to create system: ${error?.message || 'Unknown error'}`)
+  } finally {
+    createLoading.value = false
+  }
+}
+
+const onCancelCreate = () => {
+  openCreateModal.value = false
+}
+
+// Load systems on mount
 onMounted(() => {
   systemsStore.fetchSystems()
 })
