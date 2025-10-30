@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
-    def with_owner(self) -> HydraulicSystemQuerySet:
+    def with_owner(self) -> "HydraulicSystemQuerySet":
         """Выполняет with owner.
 
         Returns:
@@ -30,7 +30,7 @@ class HydraulicSystemQuerySet(models.QuerySet["HydraulicSystem"]):
         """
         return self.select_related("owner")
 
-    def active(self) -> HydraulicSystemQuerySet:
+    def active(self) -> "HydraulicSystemQuerySet":
         """Выполняет active.
 
         Returns:
@@ -92,12 +92,12 @@ class HydraulicSystem(models.Model):
     )
 
     objects = models.Manager()
-    qs: HydraulicSystemQuerySet = HydraulicSystemQuerySet.as_manager()  # type: ignore[assignment]
+    qs: "HydraulicSystemQuerySet" = HydraulicSystemQuerySet.as_manager()  # type: ignore[assignment]
 
     if TYPE_CHECKING:
-        components: RelatedManager[SystemComponent]
-        sensor_data: RelatedManager[SensorData]
-        diagnostic_reports: RelatedManager[DiagnosticReport]
+        components: RelatedManager["SystemComponent"]
+        sensor_data: RelatedManager["SensorData"]
+        diagnostic_reports: RelatedManager["DiagnosticReport"]
 
     class Meta:
         db_table = "diagnostics_hydraulicsystem"
@@ -128,7 +128,7 @@ class HydraulicSystem(models.Model):
 
 
 class SystemComponentQuerySet(models.QuerySet["SystemComponent"]):
-    def for_system(self, system_id: uuid.UUID) -> SystemComponentQuerySet:
+    def for_system(self, system_id: uuid.UUID) -> "SystemComponentQuerySet":
         """Выполняет for system.
 
         Args:
@@ -152,6 +152,12 @@ class SystemComponent(models.Model):
         db_index=True,
     )
     name: models.CharField = models.CharField(max_length=255)
+    # Optional free-form specification for component
+    specification: models.TextField = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Free-form component specification",
+    )
 
     created_at: models.DateTimeField = models.DateTimeField(
         default=timezone.now, db_index=True
@@ -159,10 +165,10 @@ class SystemComponent(models.Model):
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     objects = models.Manager()
-    qs: SystemComponentQuerySet = SystemComponentQuerySet.as_manager()  # type: ignore[assignment]
+    qs: "SystemComponentQuerySet" = SystemComponentQuerySet.as_manager()  # type: ignore[assignment]
 
     if TYPE_CHECKING:
-        sensor_data: RelatedManager[SensorData]
+        sensor_data: RelatedManager["SensorData"]
 
     class Meta:
         db_table = "diagnostics_systemcomponent"
@@ -185,7 +191,7 @@ class SystemComponent(models.Model):
 
 
 class SensorDataQuerySet(models.QuerySet["SensorData"]):
-    def for_system(self, system_id: uuid.UUID) -> SensorDataQuerySet:
+    def for_system(self, system_id: uuid.UUID) -> "SensorDataQuerySet":
         """Выполняет for system.
 
         Args:
@@ -197,7 +203,7 @@ class SensorDataQuerySet(models.QuerySet["SensorData"]):
         """
         return self.filter(system_id=system_id).select_related("component")
 
-    def time_range(self, start: datetime, end: datetime) -> SensorDataQuerySet:
+    def time_range(self, start: datetime, end: datetime) -> "SensorDataQuerySet":
         """Выполняет time range.
 
         Args:
@@ -263,7 +269,7 @@ class SensorData(models.Model):
     )
 
     objects = models.Manager()
-    qs: SensorDataQuerySet = SensorDataQuerySet.as_manager()  # type: ignore[assignment]
+    qs: "SensorDataQuerySet" = SensorDataQuerySet.as_manager()  # type: ignore[assignment]
 
     class Meta:
         db_table = "diagnostics_sensordata"
@@ -319,7 +325,7 @@ class SensorData(models.Model):
 class DiagnosticReportQuerySet(models.QuerySet["DiagnosticReport"]):
     def recent_for_system(
         self, system_id: uuid.UUID, limit: int = 100
-    ) -> DiagnosticReportQuerySet:
+    ) -> "DiagnosticReportQuerySet":
         """Выполняет recent for system.
 
         Args:
@@ -379,7 +385,7 @@ class DiagnosticReport(models.Model):
     updated_at: models.DateTimeField = models.DateTimeField(auto_now=True)
 
     objects = models.Manager()
-    qs: DiagnosticReportQuerySet = DiagnosticReportQuerySet.as_manager()  # type: ignore[assignment]
+    qs: "DiagnosticReportQuerySet" = DiagnosticReportQuerySet.as_manager()  # type: ignore[assignment]
 
     class Meta:
         db_table = "diagnostics_diagnosticreport"
@@ -415,10 +421,10 @@ class DiagnosticReport(models.Model):
 
 
 class MathematicalModelResultQuerySet(models.QuerySet["MathematicalModelResult"]):
-    def for_system(self, system_id: uuid.UUID) -> MathematicalModelResultQuerySet:
+    def for_system(self, system_id: uuid.UUID) -> "MathematicalModelResultQuerySet":
         return self.filter(system_id=system_id)
 
-    def recent(self, limit: int = 100) -> MathematicalModelResultQuerySet:
+    def recent(self, limit: int = 100) -> "MathematicalModelResultQuerySet":
         return self.order_by("-timestamp")[:limit]
 
 
@@ -502,7 +508,7 @@ class MathematicalModelResult(models.Model):
     )
 
     objects = models.Manager()
-    qs: MathematicalModelResultQuerySet = MathematicalModelResultQuerySet.as_manager()  # type: ignore[assignment]
+    qs: "MathematicalModelResultQuerySet" = MathematicalModelResultQuerySet.as_manager()  # type: ignore[assignment]
 
     class Meta:
         db_table = "diagnostics_mathmodelresult"
@@ -519,7 +525,7 @@ class MathematicalModelResult(models.Model):
 
 
 class PhasePortraitResultQuerySet(models.QuerySet["PhasePortraitResult"]):
-    def for_system(self, system_id: uuid.UUID) -> PhasePortraitResultQuerySet:
+    def for_system(self, system_id: uuid.UUID) -> "PhasePortraitResultQuerySet":
         return self.filter(system_id=system_id)
 
 
@@ -588,7 +594,7 @@ class PhasePortraitResult(models.Model):
     )
 
     objects = models.Manager()
-    qs: PhasePortraitResultQuerySet = PhasePortraitResultQuerySet.as_manager()  # type: ignore[assignment]
+    qs: "PhasePortraitResultQuerySet" = PhasePortraitResultQuerySet.as_manager()  # type: ignore[assignment]
 
     class Meta:
         db_table = "diagnostics_phaseportraitresult"
@@ -605,7 +611,7 @@ class PhasePortraitResult(models.Model):
 
 
 class TribodiagnosticResultQuerySet(models.QuerySet["TribodiagnosticResult"]):
-    def for_system(self, system_id: uuid.UUID) -> TribodiagnosticResultQuerySet:
+    def for_system(self, system_id: uuid.UUID) -> "TribodiagnosticResultQuerySet":
         return self.filter(system_id=system_id)
 
 
@@ -647,7 +653,7 @@ class TribodiagnosticResult(models.Model):
     copper_ppm: models.FloatField = models.FloatField(default=0.0)
     aluminum_ppm: models.FloatField = models.FloatField(default=0.0)
     chromium_ppm: models.FloatField = models.FloatField(default=0.0)
-    silicon_ppm: models.FloatField = models.FloatField(default=0.0)
+    silicon_ppm: models.FloatField = models.FloatField = models.FloatField(default=0.0)
 
     # Физ.-хим. свойства
     viscosity_cst: models.FloatField = models.FloatField(default=0.0)
@@ -682,7 +688,7 @@ class TribodiagnosticResult(models.Model):
     analysis_date: models.DateTimeField = models.DateTimeField(db_index=True)
 
     objects = models.Manager()
-    qs: TribodiagnosticResultQuerySet = TribodiagnosticResultQuerySet.as_manager()  # type: ignore[assignment]
+    qs: "TribodiagnosticResultQuerySet" = TribodiagnosticResultQuerySet.as_manager()  # type: ignore[assignment]
 
     class Meta:
         db_table = "diagnostics_tribodiagnosticresult"
@@ -701,10 +707,10 @@ class TribodiagnosticResult(models.Model):
 
 
 class IntegratedDiagnosticResultQuerySet(models.QuerySet["IntegratedDiagnosticResult"]):
-    def for_system(self, system_id: uuid.UUID) -> IntegratedDiagnosticResultQuerySet:
+    def for_system(self, system_id: uuid.UUID) -> "IntegratedDiagnosticResultQuerySet":
         return self.filter(system_id=system_id)
 
-    def recent_summary(self, limit: int = 50) -> IntegratedDiagnosticResultQuerySet:
+    def recent_summary(self, limit: int = 50) -> "IntegratedDiagnosticResultQuerySet":
         return (
             self.select_related("system")
             .only(
@@ -751,7 +757,7 @@ class IntegratedDiagnosticResult(models.Model):
     )
     phase_result: models.ForeignKey = models.ForeignKey(
         PhasePortraitResult,
-        on_delete=models.SET_NULL,
+        ondelete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="integrated_results",
@@ -802,7 +808,7 @@ class IntegratedDiagnosticResult(models.Model):
     )
 
     objects = models.Manager()
-    qs: IntegratedDiagnosticResultQuerySet = (
+    qs: "IntegratedDiagnosticResultQuerySet" = (
         IntegratedDiagnosticResultQuerySet.as_manager()
     )  # type: ignore[assignment]
 
