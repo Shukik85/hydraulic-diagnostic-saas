@@ -1,4 +1,8 @@
 {
+  "app": {
+    "name": "Гидравлика ИИ",
+    "subtitle": "Диагностическая платформа"
+  },
   "ui": {
     "create": "Создать",
     "cancel": "Отмена",
@@ -22,7 +26,7 @@
     "name": "Название",
     "description": "Описание",
     "settings": "Настройки",
-    "help": "Справка",
+    "help": "Помощь",
     "logout": "Выйти",
     "profile": "Профиль",
     "minutes": "мин",
@@ -30,7 +34,10 @@
     "days": "дн",
     "weeks": "нед",
     "months": "мес",
-    "years": "лет"
+    "years": "лет",
+    "toggleTheme": "Переключить тему",
+    "lightTheme": "Светлая тема",
+    "darkTheme": "Тёмная тема"
   },
   "nav": {
     "dashboard": "Панель управления",
@@ -40,7 +47,9 @@
     "reports": "Отчёты",
     "chat": "AI Консультант",
     "settings": "Настройки",
-    "documentation": "Документация"
+    "documentation": "Документация",
+    "notifications": "Уведомления",
+    "openDashboard": "Открыть дашборд"
   },
   "dashboard": {
     "title": "Панель управления",
