@@ -36,6 +36,15 @@ export default defineNuxtConfig({
     {
       path: '~/components',
       pathPrefix: false,
+      // Explicitly enable global registration for UI components
+      global: true,
+      // Ensure components are scanned properly
+      extensions: ['.vue'],
+      // Include all subdirectories
+      dirs: [
+        '~/components/ui',
+        '~/components/dashboard'
+      ]
     }
   ],
   
@@ -57,5 +66,15 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
     }
+  },
+  
+  // Explicit component transpilation for better compatibility
+  build: {
+    transpile: []
+  },
+  
+  // Client-side rendering optimization
+  experimental: {
+    payloadExtraction: false
   }
 })
