@@ -1,4 +1,8 @@
 {
+  "app": {
+    "name": "Hydraulic AI",
+    "subtitle": "Diagnostic Platform"
+  },
   "ui": {
     "create": "Create",
     "cancel": "Cancel",
@@ -30,7 +34,10 @@
     "days": "d",
     "weeks": "w",
     "months": "m",
-    "years": "y"
+    "years": "y",
+    "toggleTheme": "Toggle theme",
+    "lightTheme": "Light theme",
+    "darkTheme": "Dark theme"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -40,7 +47,9 @@
     "reports": "Reports",
     "chat": "AI Chat",
     "settings": "Settings",
-    "documentation": "Documentation"
+    "documentation": "Documentation",
+    "notifications": "Notifications",
+    "openDashboard": "Open Dashboard"
   },
   "dashboard": {
     "title": "Dashboard",
