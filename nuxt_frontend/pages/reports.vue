@@ -8,8 +8,8 @@
           Comprehensive analysis and recommendations for hydraulic systems
         </p>
       </div>
-      <button class="u-btn u-btn-primary u-btn-md">
-        <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
+      <button class="u-btn u-btn-primary u-btn-md" @click="openGenerateModal = true">
+        <Icon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
         Generate Report
       </button>
     </div>
@@ -20,12 +20,12 @@
         <div class="u-metric-header">
           <h3 class="u-metric-label">Total Reports</h3>
           <div class="u-metric-icon bg-blue-100 dark:bg-blue-900/30">
-            <Icon name="heroicons:document-text" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <Icon name="i-heroicons-document-text" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
         </div>
         <div class="u-metric-value">{{ reports.length }}</div>
         <div class="u-metric-change text-gray-600 dark:text-gray-400 mt-2">
-          <Icon name="heroicons:arrow-trending-up" class="w-4 h-4" />
+          <Icon name="i-heroicons-arrow-trending-up" class="w-4 h-4" />
           <span>This month</span>
         </div>
       </div>
@@ -34,12 +34,12 @@
         <div class="u-metric-header">
           <h3 class="u-metric-label">Critical Issues</h3>
           <div class="u-metric-icon bg-red-100 dark:bg-red-900/30">
-            <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
+            <Icon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
           </div>
         </div>
         <div class="u-metric-value">{{ reports.filter(r => r.severity === 'critical' || r.severity === 'high').length }}</div>
         <div class="u-metric-change u-metric-change-negative mt-2">
-          <Icon name="heroicons:arrow-trending-up" class="w-4 h-4" />
+          <Icon name="i-heroicons-arrow-trending-up" class="w-4 h-4" />
           <span>Requires attention</span>
         </div>
       </div>
@@ -48,12 +48,12 @@
         <div class="u-metric-header">
           <h3 class="u-metric-label">Avg Resolution</h3>
           <div class="u-metric-icon bg-green-100 dark:bg-green-900/30">
-            <Icon name="heroicons:clock" class="w-5 h-5 text-green-600 dark:text-green-400" />
+            <Icon name="i-heroicons-clock" class="w-5 h-5 text-green-600 dark:text-green-400" />
           </div>
         </div>
         <div class="u-metric-value">2.4<span class="text-lg text-gray-500">h</span></div>
         <div class="u-metric-change u-metric-change-positive mt-2">
-          <Icon name="heroicons:arrow-trending-down" class="w-4 h-4" />
+          <Icon name="i-heroicons-arrow-trending-down" class="w-4 h-4" />
           <span>-30min faster</span>
         </div>
       </div>
@@ -62,12 +62,12 @@
         <div class="u-metric-header">
           <h3 class="u-metric-label">Success Rate</h3>
           <div class="u-metric-icon bg-purple-100 dark:bg-purple-900/30">
-            <Icon name="heroicons:check-badge" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <Icon name="i-heroicons-check-badge" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
           </div>
         </div>
         <div class="u-metric-value">94.7%</div>
         <div class="u-metric-change u-metric-change-positive mt-2">
-          <Icon name="heroicons:arrow-trending-up" class="w-4 h-4" />
+          <Icon name="i-heroicons-arrow-trending-up" class="w-4 h-4" />
           <span>Quality improved</span>
         </div>
       </div>
@@ -79,7 +79,7 @@
         <div class="md:col-span-2">
           <label class="u-label">Search Reports</label>
           <div class="relative">
-            <Icon name="heroicons:magnifying-glass" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Icon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               v-model="searchQuery"
               type="text"
@@ -120,17 +120,17 @@
           <h3 class="u-h4">Reports ({{ filteredReports.length }})</h3>
           <div class="flex items-center gap-2">
             <button class="u-btn u-btn-ghost u-btn-sm">
-              <Icon name="heroicons:funnel" class="w-4 h-4" />
+              <Icon name="i-heroicons-funnel" class="w-4 h-4" />
             </button>
             <button class="u-btn u-btn-ghost u-btn-sm">
-              <Icon name="heroicons:arrow-down-tray" class="w-4 h-4" />
+              <Icon name="i-heroicons-arrow-down-tray" class="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
 
       <div v-if="filteredReports.length === 0" class="p-12 text-center">
-        <Icon name="heroicons:document-text" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
+        <Icon name="i-heroicons-document-text" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
         <h3 class="u-h5 text-gray-500 dark:text-gray-400 mb-2">No Reports Found</h3>
         <p class="u-body text-gray-400 dark:text-gray-500">Try adjusting your search filters</p>
       </div>
@@ -158,7 +158,7 @@
               </td>
               <td>
                 <div class="flex items-center gap-2">
-                  <Icon name="heroicons:server" class="w-4 h-4 text-gray-400" />
+                  <Icon name="i-heroicons-server" class="w-4 h-4 text-gray-400" />
                   <span class="u-body-sm">{{ report.system_name }}</span>
                 </div>
               </td>
@@ -182,13 +182,13 @@
               <td>
                 <div class="flex items-center gap-1">
                   <button @click="openReportModal(report)" class="u-btn u-btn-ghost u-btn-sm">
-                    <Icon name="heroicons:eye" class="w-4 h-4" />
+                    <Icon name="i-heroicons-eye" class="w-4 h-4" />
                   </button>
                   <button class="u-btn u-btn-ghost u-btn-sm">
-                    <Icon name="heroicons:arrow-down-tray" class="w-4 h-4" />
+                    <Icon name="i-heroicons-arrow-down-tray" class="w-4 h-4" />
                   </button>
                   <button class="u-btn u-btn-ghost u-btn-sm">
-                    <Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" />
+                    <Icon name="i-heroicons-ellipsis-horizontal" class="w-4 h-4" />
                   </button>
                 </div>
               </td>
@@ -198,8 +198,61 @@
       </div>
     </div>
 
+    <!-- Generate Report Modal -->
+    <Transition name="fade">
+      <div v-if="openGenerateModal" class="fixed inset-0 z-50" aria-modal="true" role="dialog" aria-labelledby="generate-report-title">
+        <div class="fixed inset-0 bg-black/60" @click="closeGenerateModal" />
+        <div class="relative z-10 mx-auto mt-24 w-full max-w-lg px-4">
+          <div class="u-card">
+            <div class="u-card-header">
+              <h3 id="generate-report-title" class="u-h4">Generate Report</h3>
+              <button class="u-icon-btn" @click="closeGenerateModal" aria-label="Close">
+                <Icon name="i-heroicons-x-mark" class="w-5 h-5" />
+              </button>
+            </div>
+            <div class="u-card-body space-y-4">
+              <div>
+                <label class="u-label" for="template">Template</label>
+                <select id="template" v-model="form.template" class="u-input w-full">
+                  <option value="executive">Executive</option>
+                  <option value="technical">Technical</option>
+                  <option value="compliance">Compliance</option>
+                </select>
+              </div>
+              <div>
+                <label class="u-label" for="range">Date Range</label>
+                <select id="range" v-model="form.range" class="u-input w-full">
+                  <option value="last_24h">Last 24 Hours</option>
+                  <option value="last_7d">Last 7 Days</option>
+                  <option value="last_30d">Last 30 Days</option>
+                </select>
+              </div>
+              <div>
+                <label class="u-label" for="locale">Locale</label>
+                <select id="locale" v-model="form.locale" class="u-input w-full">
+                  <option value="en-US">English (US)</option>
+                  <option value="ru-RU">Русский</option>
+                </select>
+              </div>
+              <div>
+                <label class="u-label" for="title">Title</label>
+                <input id="title" v-model.trim="form.title" type="text" class="u-input w-full" placeholder="Weekly System Health Report" />
+              </div>
+            </div>
+            <div class="u-card-footer flex justify-end gap-3">
+              <button class="u-btn u-btn-secondary" @click="closeGenerateModal" :disabled="submitting">Cancel</button>
+              <button class="u-btn u-btn-primary" @click="onGenerate" :disabled="submitting">
+                <Icon v-if="submitting" name="i-heroicons-arrow-path" class="w-4 h-4 mr-2 animate-spin" />
+                Generate
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <!-- Report Details Modal -->
-    <div v-if="showReportModal && selectedReport" class="fixed inset-0 bg-black/50 z-50 u-flex-center p-4" @click="closeReportModal">
+    <div v-if="showReportModal && selectedReport" class="fixed inset-0 bg-black/60 z-50 u-flex-center p-4" @click="closeReportModal">
       <div class="u-card max-w-4xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="p-6 border-b border-gray-200 dark:border-gray-700">
           <div class="u-flex-between">
@@ -219,7 +272,7 @@
               </p>
             </div>
             <button @click="closeReportModal" class="u-btn u-btn-ghost u-btn-sm">
-              <Icon name="heroicons:x-mark" class="w-5 h-5" />
+              <Icon name="i-heroicons-x-mark" class="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -243,7 +296,7 @@
                 class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
               >
                 <div class="flex items-start gap-3">
-                  <Icon name="heroicons:light-bulb" class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+                  <Icon name="i-heroicons-light-bulb" class="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                   <p class="u-body text-gray-700 dark:text-gray-300">{{ recommendation }}</p>
                 </div>
               </div>
@@ -281,7 +334,7 @@
             Close
           </button>
           <button class="u-btn u-btn-primary flex-1">
-            <Icon name="heroicons:arrow-down-tray" class="w-4 h-4 mr-2" />
+            <Icon name="i-heroicons-arrow-down-tray" class="w-4 h-4 mr-2" />
             Download PDF
           </button>
         </div>
@@ -293,7 +346,7 @@
 <script setup lang="ts">
 definePageMeta({
   title: 'Reports Center',
-  layout: 'default',
+  layout: 'dashboard',
   middleware: ['auth']
 })
 
@@ -312,6 +365,8 @@ interface Report {
 // State
 const selectedReport = ref<Report | null>(null)
 const showReportModal = ref(false)
+const openGenerateModal = ref(false)
+const submitting = ref(false)
 const selectedSeverity = ref('all')
 const selectedStatus = ref('all')
 const searchQuery = ref('')
@@ -369,6 +424,14 @@ const reports = ref<Report[]>([
   }
 ])
 
+// Form for generation
+const form = reactive({
+  template: 'executive',
+  range: 'last_7d',
+  locale: 'en-US',
+  title: ''
+})
+
 // Computed
 const filteredReports = computed(() => {
   return reports.value.filter(report => {
@@ -406,12 +469,12 @@ const getStatusBadgeClass = (status: string) => {
 
 const getStatusIcon = (status: string) => {
   const icons = {
-    'completed': 'heroicons:check-circle',
-    'in_progress': 'heroicons:clock', 
-    'pending': 'heroicons:pause-circle',
-    'failed': 'heroicons:x-circle'
+    'completed': 'i-heroicons-check-circle',
+    'in_progress': 'i-heroicons-clock', 
+    'pending': 'i-heroicons-pause-circle',
+    'failed': 'i-heroicons-x-circle'
   }
-  return icons[status] || 'heroicons:question-mark-circle'
+  return icons[status] || 'i-heroicons-question-mark-circle'
 }
 
 const formatDateTime = (dateString: string) => {
@@ -434,11 +497,28 @@ const closeReportModal = () => {
   showReportModal.value = false
 }
 
+const closeGenerateModal = () => {
+  if (submitting.value) return
+  openGenerateModal.value = false
+}
+
+const onGenerate = async () => {
+  submitting.value = true
+  try {
+    // TODO: Hook real API when backend is ready
+    await new Promise(r => setTimeout(r, 1000))
+    openGenerateModal.value = false
+  } finally {
+    submitting.value = false
+  }
+}
+
 // ESC key handler
 onMounted(() => {
   const handleEsc = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
-      closeReportModal()
+      if (openGenerateModal.value) closeGenerateModal()
+      if (showReportModal.value) closeReportModal()
     }
   }
   document.addEventListener('keydown', handleEsc)
