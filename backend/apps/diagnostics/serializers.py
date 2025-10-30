@@ -72,6 +72,8 @@ class SensorDataSerializer(serializers.ModelSerializer):
 class SystemComponentSerializer(serializers.ModelSerializer):
     """Сериализатор компонентов системы."""
 
+    specification = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
     class Meta:
         model = SystemComponent
         fields = ["id", "system", "name", "specification", "created_at", "updated_at"]
