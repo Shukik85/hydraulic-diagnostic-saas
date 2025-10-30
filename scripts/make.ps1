@@ -28,7 +28,7 @@ function Write-ColorText {
 
 function Test-CommandExists {
     param([string]$Command)
-    return (Get-Command $Command -ErrorAction SilentlyContinue) -ne $null
+    return $null -ne (Get-Command $Command -ErrorAction SilentlyContinue)
 }
 
 function Install-Dev {
