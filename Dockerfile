@@ -38,9 +38,9 @@ ENV PATH="/opt/venv/bin:$PATH" \
 
 WORKDIR /app
 
-# System deps (runtime) + dos2unix for Windows compatibility
+# System deps (runtime) + postgresql-client for pg_isready + dos2unix for Windows compatibility
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq5 curl dos2unix && \
+    libpq5 curl dos2unix postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy venv from builder (all layers cached!)
