@@ -1,50 +1,78 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/bash
+set -e
 
-# Default settings module if not provided
-export DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-core.settings}
+# ==============================================================================
+# Hydraulic Diagnostic SaaS - Docker Entrypoint
+# ==============================================================================
+# Ensures proper Django initialization with health checks and logging
 
-# Wait for Postgres
-if [[ -n "${DATABASE_URL:-}" ]]; then
-  echo "Waiting for database..."
-  python - <<'PY'
-import os, time
-import urllib.parse as up
-import psycopg2
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting Hydraulic Diagnostic SaaS Backend..."
 
-url = os.environ['DATABASE_URL']
-up.uses_netloc.append("postgres")
-parts = up.urlparse(url)
+# Change to backend directory
+cd /app/backend
 
-for i in range(30):
-    try:
-        conn = psycopg2.connect(
-            database=parts.path[1:], user=parts.username, password=parts.password,
-            host=parts.hostname, port=parts.port or 5432
-        )
-        conn.close()
-        print("Database is ready")
-        break
-    except Exception as e:
-        print(f"DB not ready yet: {e}")
-        time.sleep(2)
-else:
-    raise SystemExit("Database not reachable")
-PY
+# Wait for database to be ready
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Waiting for database..."
+while ! pg_isready -h "${DATABASE_HOST:-db}" -p "${DATABASE_PORT:-5432}" -U "${DATABASE_USER:-hdx_user}" -q; do
+    sleep 1
+    echo -n "."
+done
+echo ""
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Database is ready!"
+
+# Wait for Redis to be ready
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Waiting for Redis..."
+redis_host=$(echo "${REDIS_URL:-redis://redis:6379/0}" | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
+while ! timeout 1 bash -c "</dev/tcp/${redis_host}/6379"; do
+    sleep 1
+    echo -n "."
+done
+echo ""
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Redis is ready!"
+
+# Check Django settings
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Validating Django configuration..."
+python manage.py check --deploy --fail-level WARNING
+
+# Run database migrations
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Running database migrations..."
+python manage.py migrate --noinput
+
+# Collect static files (for production)
+if [ "${DJANGO_ENV:-dev}" = "production" ]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Collecting static files..."
+    python manage.py collectstatic --noinput --clear
 fi
 
-# Apply migrations
-python backend/manage.py migrate --noinput
+# Create superuser if in development and doesn't exist
+if [ "${DEBUG:-True}" = "True" ] && [ "${DJANGO_ENV:-dev}" = "dev" ]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Creating development superuser if needed..."
+    python manage.py shell << 'EOF'
+from django.contrib.auth import get_user_model
+User = get_user_model()
+if not User.objects.filter(username='admin').exists():
+    User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+    print('Superuser created: admin/admin123')
+else:
+    print('Superuser already exists')
+EOF
+fi
 
-# Collect static files
-python backend/manage.py collectstatic --noinput
+# Load sample data if requested
+if [ "${LOAD_SAMPLE_DATA:-False}" = "True" ] && [ "${DEBUG:-True}" = "True" ]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Loading sample data..."
+    # Add sample data loading command here when ready
+    # python manage.py loaddata fixtures/sample_data.json
+fi
 
-# Start Gunicorn
-exec gunicorn core.wsgi:application \
-  --chdir backend \
-  --bind 0.0.0.0:8000 \
-  --workers ${GUNICORN_WORKERS:-4} \
-  --timeout ${GUNICORN_TIMEOUT:-30} \
-  --access-logfile - \
-  --error-logfile - \
-  --log-level ${GUNICORN_LOG_LEVEL:-info}
+# Run smoke tests if requested
+if [ "${RUN_SMOKE_TESTS:-False}" = "True" ]; then
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] Running smoke tests..."
+    python smoke_diagnostics.py
+fi
+
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Backend initialization completed!"
+
+# Execute the main command
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting: $*"
+exec "$@"
