@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed, ref, watch, onMounted } from 'vue'
+
 const route = useRoute()
 const { locale, setLocale, t: $t } = useI18n()
 
@@ -20,6 +22,14 @@ onMounted(() => {
       isAuthenticated: true,
     }
   }
+  
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (event: Event) => {
+    const target = event.target as HTMLElement
+    if (!target.closest('.language-dropdown')) {
+      showLanguageDropdown.value = false
+    }
+  })
 })
 
 // Available languages
@@ -63,16 +73,6 @@ const closeMobileMenu = () => {
 // Close mobile menu on route change
 watch(() => route.path, () => {
   closeMobileMenu()
-})
-
-// Close dropdowns when clicking outside
-onMounted(() => {
-  document.addEventListener('click', (event: Event) => {
-    const target = event.target as HTMLElement
-    if (!target.closest('.language-dropdown')) {
-      showLanguageDropdown.value = false
-    }
-  })
 })
 
 // Breadcrumbs only for deep navigation
@@ -151,7 +151,7 @@ const isActiveLink = (linkPath: string): boolean => {
           <!-- Logo section -->
           <div class="flex items-center space-x-3" style="min-width: 220px">
             <NuxtLink to="/" class="flex items-center space-x-2 group" @click="closeMobileMenu">
-              <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+              <div class="w-8 h-8 bg-linear-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
                 <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white" />
               </div>
               <div class="hidden sm:block">
@@ -245,7 +245,7 @@ const isActiveLink = (linkPath: string): boolean => {
             </div>
 
             <!-- User profile -->
-            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md cursor-pointer hover:shadow-lg transition-shadow">
+            <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md cursor-pointer hover:shadow-lg transition-shadow">
               {{ userInitials }}
             </div>
 
