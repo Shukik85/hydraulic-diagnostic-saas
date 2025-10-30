@@ -122,6 +122,29 @@
       "pressureMaintenanceDesc": "Schedule filter replacement within 2 weeks to prevent pressure fluctuations.",
       "temperatureMonitoring": "Temperature Monitoring",
       "temperatureMonitoringDesc": "Temperature readings are within optimal range. Continue monitoring."
+    },
+    "runModal": {
+      "title": "Run New Diagnostic",
+      "description": "Select equipment and diagnostic parameters",
+      "equipment": "Equipment",
+      "selectEquipment": "Select equipment...",
+      "pumpStationA": "Pump Station A",
+      "hydraulicMotorB": "Hydraulic Motor B",
+      "controlValveC": "Control Valve C",
+      "coolingSystemD": "Cooling System D",
+      "diagnosticType": "Diagnostic Type",
+      "fullAnalysis": "Full System Analysis - Comprehensive check",
+      "pressureCheck": "Pressure System Check - Focus on pressure",
+      "temperatureAnalysis": "Temperature Analysis - Thermal monitoring",
+      "vibrationAnalysis": "Vibration Analysis - Mechanical health",
+      "flowAnalysis": "Flow Analysis - Fluid dynamics",
+      "emailNotification": "Send email notification when complete",
+      "priorityAnalysis": "Priority analysis (faster processing)",
+      "estimatedDuration": "Estimated Duration",
+      "realTimeResults": "Results will be available in real-time",
+      "starting": "Starting...",
+      "startDiagnostic": "Start Diagnostic",
+      "equipmentRequired": "Please select equipment to diagnose"
     }
   },
   "chat": {
