@@ -11,7 +11,7 @@
         @keydown.esc="handleEscape"
       >
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-black/60 transition-opacity" />
+        <div class="fixed inset-0 bg-black/50 transition-opacity" />
         
         <!-- Modal Container -->
         <div class="relative flex min-h-screen items-center justify-center p-4">
@@ -22,9 +22,14 @@
           >
             <!-- Header -->
             <div class="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
-              <h3 id="create-system-title" class="text-lg font-semibold text-gray-900 dark:text-white">
-                Create Hydraulic System
-              </h3>
+              <div>
+                <h3 id="create-system-title" class="text-lg font-semibold text-gray-900 dark:text-white">
+                  Add Hydraulic System
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Create and configure new system
+                </p>
+              </div>
               <button 
                 class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
                 @click="handleCancel"
@@ -48,7 +53,7 @@
                     v-model.trim="form.name"
                     type="text" 
                     class="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400"
-                    placeholder="e.g. Press Line A, Hydraulic Motor #1"
+                    placeholder="e.g. Pump Station A, Hydraulic Motor #1"
                     :disabled="loading"
                     maxlength="200"
                     ref="nameInputRef"
@@ -61,7 +66,30 @@
                   </Transition>
                 </div>
 
-                <!-- System Status -->
+                <!-- System Type -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="system-type">
+                    System Type
+                  </label>
+                  <div class="relative">
+                    <select 
+                      id="system-type"
+                      v-model="form.type"
+                      class="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400 appearance-none cursor-pointer"
+                      :disabled="loading"
+                    >
+                      <option value="industrial">Industrial - Factory equipment</option>
+                      <option value="mobile">Mobile - Vehicles and machinery</option>
+                      <option value="marine">Marine - Ships and offshore</option>
+                      <option value="construction">Construction - Heavy machinery</option>
+                      <option value="mining">Mining - Extraction equipment</option>
+                      <option value="agricultural">Agricultural - Farm machinery</option>
+                    </select>
+                    <Icon name="i-heroicons-chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                <!-- Initial Status -->
                 <div>
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="system-status">
                     Initial Status
@@ -73,31 +101,40 @@
                       class="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400 appearance-none cursor-pointer"
                       :disabled="loading"
                     >
-                      <option value="online">🟢 Online - System operating normally</option>
-                      <option value="offline">⚫ Offline - System not operational</option>
-                      <option value="warning">🟡 Warning - Requires attention</option>
-                      <option value="error">🔴 Error - Critical issue detected</option>
+                      <option value="active">Active - System operational</option>
+                      <option value="maintenance">Maintenance - Under service</option>
+                      <option value="inactive">Inactive - Not operational</option>
                     </select>
                     <Icon name="i-heroicons-chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
-                  <Transition name="fade">
-                    <p v-if="errors.status" class="mt-2 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                      <Icon name="i-heroicons-exclamation-circle" class="h-4 w-4 flex-shrink-0" />
-                      {{ errors.status }}
-                    </p>
-                  </Transition>
                 </div>
 
-                <!-- Helper Text -->
+                <!-- Description -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" for="system-description">
+                    Description <span class="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea 
+                    id="system-description"
+                    v-model.trim="form.description"
+                    class="block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:focus:border-blue-400 resize-none"
+                    placeholder="System location, purpose, or additional notes..."
+                    :disabled="loading"
+                    rows="3"
+                    maxlength="500"
+                  />
+                </div>
+
+                <!-- Setup Info -->
                 <div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4">
                   <div class="flex items-start gap-3">
                     <Icon name="i-heroicons-information-circle" class="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                     <div>
                       <p class="text-sm font-medium text-blue-900 dark:text-blue-100">
-                        Quick Setup
+                        Next Steps After Creation
                       </p>
                       <p class="text-sm text-blue-700 dark:text-blue-200 mt-1">
-                        You can add sensors, components, and detailed configurations after creating the system.
+                        Add sensors, components, and configure diagnostic parameters in the system details page.
                       </p>
                     </div>
                   </div>
@@ -116,7 +153,7 @@
                 Cancel
               </button>
               <button 
-                class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[100px]"
+                class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-w-[120px]"
                 @click="handleSubmit"
                 :disabled="!isValid || loading"
                 type="button"
@@ -149,11 +186,14 @@ interface Props {
 
 interface SystemFormData {
   name: string
-  status: 'online' | 'offline' | 'warning' | 'error'
+  type: 'industrial' | 'mobile' | 'marine' | 'construction' | 'mining' | 'agricultural'
+  status: 'active' | 'maintenance' | 'inactive'
+  description: string
 }
 
 interface FormErrors {
   name?: string
+  type?: string
   status?: string
 }
 
@@ -170,7 +210,9 @@ const emit = defineEmits<{
 // Form state
 const form = reactive<SystemFormData>({
   name: '',
-  status: 'online'
+  type: 'industrial',
+  status: 'active',
+  description: ''
 })
 
 const errors = reactive<FormErrors>({})
@@ -193,12 +235,7 @@ const validate = (): boolean => {
     errors.name = 'System name must be less than 200 characters'
   }
   
-  // Status validation
-  if (!['online', 'offline', 'warning', 'error'].includes(form.status)) {
-    errors.status = 'Please select a valid status'
-  }
-  
-  return !errors.name && !errors.status
+  return !errors.name && !errors.type && !errors.status
 }
 
 const isValid = computed(() => validate())
@@ -209,7 +246,9 @@ const handleSubmit = async () => {
   
   emit('submit', {
     name: form.name.trim(),
-    status: form.status
+    type: form.type,
+    status: form.status,
+    description: form.description.trim()
   })
 }
 
@@ -246,7 +285,9 @@ watch(() => props.modelValue, (isOpen) => {
     // Reset form after transition
     setTimeout(() => {
       form.name = ''
-      form.status = 'online'
+      form.type = 'industrial'
+      form.status = 'active'
+      form.description = ''
       Object.keys(errors).forEach(key => delete errors[key as keyof FormErrors])
     }, 300)
   }
