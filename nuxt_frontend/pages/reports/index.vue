@@ -1,5 +1,27 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'dashboard' });
+
+const showGenerateModal = ref(false)
+const reportLoading = ref(false)
+
+const onGenerateReport = async (data: any) => {
+  reportLoading.value = true
+  try {
+    console.log('Generating report with data:', data)
+    // TODO: Implement actual report generation
+    alert('Генерация отчётов будет реализована в следующих спринтах')
+    showGenerateModal.value = false
+  } catch (error) {
+    console.error('Failed to generate report:', error)
+    alert('Ошибка генерации отчёта')
+  } finally {
+    reportLoading.value = false
+  }
+}
+
+const onCancelGenerate = () => {
+  showGenerateModal.value = false
+}
 </script>
 
 <template>
@@ -19,6 +41,7 @@ definePageMeta({ layout: 'dashboard' });
       >
         <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Список отчётов</h2>
         <button
+          @click="showGenerateModal = true"
           class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           <Icon name="heroicons:plus" class="w-4 h-4 inline mr-2" />Новый отчёт
@@ -33,5 +56,13 @@ definePageMeta({ layout: 'dashboard' });
         </div>
       </div>
     </div>
+
+    <!-- Report Generate Modal -->
+    <UReportGenerateModal 
+      v-model="showGenerateModal" 
+      :loading="reportLoading"
+      @submit="onGenerateReport"
+      @cancel="onCancelGenerate"
+    />
   </div>
 </template>
