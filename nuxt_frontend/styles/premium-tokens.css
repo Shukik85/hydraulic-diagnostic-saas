@@ -1,17 +1,12 @@
-/* ============================================================================
-   PREMIUM DESIGN SYSTEM v2 - ENTERPRISE EDITION
-   Updated: 2025-10-30
-   Modern, professional CSS foundation for Hydraulic Diagnostic SaaS
-   ============================================================================ */
+/* =========================================================================
+   PREMIUM DESIGN SYSTEM v2 - ENTERPRISE EDITION (Tailwind v4 compliant)
+   ========================================================================= */
 
 @import "tailwindcss";
 
-/* ============================================================================
-   DESIGN TOKENS - Color Palette
-   ============================================================================ */
+/* ================================ BASE ==================================== */
 @layer base {
   :root {
-    /* Primary Colors - Blue spectrum */
     --color-primary-50: #eff6ff;
     --color-primary-100: #dbeafe;
     --color-primary-200: #bfdbfe;
@@ -22,18 +17,10 @@
     --color-primary-700: #1d4ed8;
     --color-primary-800: #1e40af;
     --color-primary-900: #1e3a8a;
-
-    /* Semantic Status Colors */
     --color-success: #10b981;
-    --color-success-light: #d1fae5;
     --color-warning: #f59e0b;
-    --color-warning-light: #fef3c7;
     --color-error: #ef4444;
-    --color-error-light: #fee2e2;
     --color-info: #0284c7;
-    --color-info-light: #cffafe;
-
-    /* Neutral Scale */
     --color-gray-50: #f9fafb;
     --color-gray-100: #f3f4f6;
     --color-gray-200: #e5e7eb;
@@ -44,46 +31,9 @@
     --color-gray-700: #374151;
     --color-gray-800: #1f2937;
     --color-gray-900: #111827;
-
-    /* Surface Colors */
-    --color-surface: #ffffff;
-    --color-surface-secondary: #f9fafb;
-    --color-surface-tertiary: #f3f4f6;
-    --color-border: #e5e7eb;
-    --color-divider: #f3f4f6;
-
-    /* Typography */
     --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'JetBrains Mono', 'Monaco', 'Menlo', monospace;
-
-    /* Shadows */
-    --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-
-    /* Spacing */
-    --spacing-xs: 0.25rem;
-    --spacing-sm: 0.5rem;
-    --spacing-md: 1rem;
-    --spacing-lg: 1.5rem;
-    --spacing-xl: 2rem;
-    --spacing-2xl: 3rem;
-
-    /* Border Radius */
-    --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
-    --radius-xl: 1rem;
-
-    /* Transitions */
-    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  /* Dark Mode */
   .dark {
     --color-surface: #111827;
     --color-surface-secondary: #1f2937;
@@ -93,342 +43,107 @@
   }
 }
 
-/* ============================================================================
-   COMPONENT LAYER - Pre-built components
-   ============================================================================ */
+/* ============================= COMPONENTS ================================= */
 @layer components {
   /* Cards */
   .u-card {
     @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-200;
   }
+  .u-card-hover { @apply hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600; }
+  .u-card-interactive { @apply u-card u-card-hover cursor-pointer; }
 
-  .u-card-hover {
-    @apply hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600;
+  /* Charts & Graphs (remove @apply u-card to avoid v4 circular resolution) */
+  .u-chart-wrapper {
+    @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-200 p-6;
   }
+  .u-chart-header { @apply flex items-center justify-between mb-6; }
+  .u-chart-title { @apply text-lg font-semibold text-gray-900 dark:text-white; }
+  .u-chart-controls { @apply flex items-center gap-2; }
+  .u-chart-container { @apply w-full h-80 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-md p-4; }
 
-  .u-card-interactive {
-    @apply u-card u-card-hover cursor-pointer;
+  /* Metrics (remove @apply u-card) */
+  .u-metric-card {
+    @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-200 p-6 flex flex-col;
   }
+  .u-metric-header { @apply flex items-center justify-between mb-4; }
+  .u-metric-icon { @apply w-10 h-10 rounded-lg flex items-center justify-center; }
+  .u-metric-value { @apply text-3xl font-bold text-gray-900 dark:text-white; }
+  .u-metric-label { @apply text-sm text-gray-600 dark:text-gray-400; }
+  .u-metric-change { @apply text-xs font-medium flex items-center gap-1; }
+  .u-metric-change-positive { @apply text-green-600 dark:text-green-400; }
+  .u-metric-change-negative { @apply text-red-600 dark:text-red-400; }
 
   /* Buttons */
-  .u-btn {
-    @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .u-btn-primary {
-    @apply u-btn bg-blue-600 hover:bg-blue-700 text-white;
-  }
-
-  .u-btn-secondary {
-    @apply u-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white;
-  }
-
-  .u-btn-ghost {
-    @apply u-btn text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800;
-  }
-
-  .u-btn-danger {
-    @apply u-btn bg-red-600 hover:bg-red-700 text-white;
-  }
-
-  .u-btn-success {
-    @apply u-btn bg-green-600 hover:bg-green-700 text-white;
-  }
-
-  .u-btn-sm {
-    @apply px-3 py-1.5 text-sm;
-  }
-
-  .u-btn-md {
-    @apply px-4 py-2 text-sm;
-  }
-
-  .u-btn-lg {
-    @apply px-6 py-3 text-base;
-  }
+  .u-btn { @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed; }
+  .u-btn-primary { @apply u-btn bg-blue-600 hover:bg-blue-700 text-white; }
+  .u-btn-secondary { @apply u-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white; }
+  .u-btn-ghost { @apply u-btn text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800; }
+  .u-btn-danger { @apply u-btn bg-red-600 hover:bg-red-700 text-white; }
+  .u-btn-success { @apply u-btn bg-green-600 hover:bg-green-700 text-white; }
+  .u-btn-sm { @apply px-3 py-1.5 text-sm; }
+  .u-btn-md { @apply px-4 py-2 text-sm; }
+  .u-btn-lg { @apply px-6 py-3 text-base; }
 
   /* Inputs */
-  .u-input {
-    @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150;
-  }
-
-  .u-input-error {
-    @apply border-red-300 dark:border-red-600 focus:ring-red-500;
-  }
-
-  .u-input-disabled {
-    @apply opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-700;
-  }
+  .u-input { @apply w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150; }
+  .u-input-error { @apply border-red-300 dark:border-red-600 focus:ring-red-500; }
+  .u-input-disabled { @apply opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-700; }
 
   /* Labels */
-  .u-label {
-    @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2;
-  }
+  .u-label { @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2; }
+  .u-label-required::after { @apply content-['*'] ml-1 text-red-500; }
 
-  .u-label-required::after {
-    @apply content-['*'] ml-1 text-red-500;
-  }
+  /* Badges */
+  .u-badge { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium; }
+  .u-badge-success { @apply bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300; }
+  .u-badge-warning { @apply bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300; }
+  .u-badge-error { @apply bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300; }
+  .u-badge-info { @apply bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300; }
+  .u-badge-processing { @apply bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 animate-pulse; }
 
-  /* Badges & Status */
-  .u-badge {
-    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium;
-  }
+  /* Table */
+  .u-table { @apply w-full border-collapse; }
+  .u-table thead { @apply bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700; }
+  .u-table th { @apply px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300; }
+  .u-table tbody tr { @apply border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors; }
+  .u-table td { @apply px-4 py-3 text-sm text-gray-900 dark:text-gray-100; }
 
-  .u-badge-success {
-    @apply bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300;
-  }
-
-  .u-badge-warning {
-    @apply bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300;
-  }
-
-  .u-badge-error {
-    @apply bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300;
-  }
-
-  .u-badge-info {
-    @apply bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300;
-  }
-
-  .u-badge-processing {
-    @apply bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 animate-pulse;
-  }
-
-  /* Charts & Graphs */
-  .u-chart-wrapper {
-    @apply u-card p-6;
-  }
-
-  .u-chart-header {
-    @apply flex items-center justify-between mb-6;
-  }
-
-  .u-chart-title {
-    @apply text-lg font-semibold text-gray-900 dark:text-white;
-  }
-
-  .u-chart-controls {
-    @apply flex items-center gap-2;
-  }
-
-  .u-chart-container {
-    @apply w-full h-80 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-md p-4;
-  }
-
-  /* Metrics */
-  .u-metric-card {
-    @apply u-card p-6 flex flex-col;
-  }
-
-  .u-metric-header {
-    @apply flex items-center justify-between mb-4;
-  }
-
-  .u-metric-icon {
-    @apply w-10 h-10 rounded-lg flex items-center justify-center;
-  }
-
-  .u-metric-value {
-    @apply text-3xl font-bold text-gray-900 dark:text-white;
-  }
-
-  .u-metric-label {
-    @apply text-sm text-gray-600 dark:text-gray-400;
-  }
-
-  .u-metric-change {
-    @apply text-xs font-medium flex items-center gap-1;
-  }
-
-  .u-metric-change-positive {
-    @apply text-green-600 dark:text-green-400;
-  }
-
-  .u-metric-change-negative {
-    @apply text-red-600 dark:text-red-400;
-  }
-
-  /* Tables */
-  .u-table {
-    @apply w-full border-collapse;
-  }
-
-  .u-table thead {
-    @apply bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700;
-  }
-
-  .u-table th {
-    @apply px-4 py-3 text-left text-sm font-semibold text-gray-700 dark:text-gray-300;
-  }
-
-  .u-table tbody tr {
-    @apply border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors;
-  }
-
-  .u-table td {
-    @apply px-4 py-3 text-sm text-gray-900 dark:text-gray-100;
-  }
-
-  /* Loading States */
-  .u-skeleton {
-    @apply bg-gray-200 dark:bg-gray-700 animate-pulse rounded;
-  }
-
-  .u-spinner {
-    @apply inline-block rounded-full border-2 border-gray-300 border-t-blue-600 dark:border-gray-600 dark:border-t-blue-400;
-    animation: spin 1s linear infinite;
-  }
+  /* Loading */
+  .u-skeleton { @apply bg-gray-200 dark:bg-gray-700 animate-pulse rounded; }
+  .u-spinner { @apply inline-block rounded-full border-2 border-gray-300 border-t-blue-600 dark:border-gray-600 dark:border-t-blue-400; animation: spin 1s linear infinite; }
 }
 
-/* ============================================================================
-   UTILITY LAYER - Additional utilities
-   ============================================================================ */
+/* ============================== UTILITIES ================================= */
 @layer utilities {
-  /* Typography Hierarchy */
-  .u-h1 {
-    @apply text-4xl font-bold text-gray-900 dark:text-white;
-  }
-
-  .u-h2 {
-    @apply text-3xl font-bold text-gray-900 dark:text-white;
-  }
-
-  .u-h3 {
-    @apply text-2xl font-bold text-gray-900 dark:text-white;
-  }
-
-  .u-h4 {
-    @apply text-xl font-semibold text-gray-900 dark:text-white;
-  }
-
-  .u-h5 {
-    @apply text-lg font-semibold text-gray-900 dark:text-white;
-  }
-
-  .u-h6 {
-    @apply text-base font-semibold text-gray-900 dark:text-white;
-  }
-
-  .u-body-lg {
-    @apply text-base leading-relaxed text-gray-700 dark:text-gray-300;
-  }
-
-  .u-body {
-    @apply text-sm leading-relaxed text-gray-700 dark:text-gray-300;
-  }
-
-  .u-body-sm {
-    @apply text-xs leading-relaxed text-gray-600 dark:text-gray-400;
-  }
-
-  /* Focus & Interaction */
-  .u-focus {
-    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
-  }
-
-  /* Transitions & Animations */
-  .u-transition-fast {
-    @apply transition-all duration-150 ease-out;
-  }
-
-  .u-transition-base {
-    @apply transition-all duration-200 ease-out;
-  }
-
-  .u-transition-slow {
-    @apply transition-all duration-300 ease-out;
-  }
-
-  /* Gradients */
-  .u-gradient-primary {
-    @apply bg-gradient-to-r from-blue-600 to-blue-400;
-  }
-
-  .u-gradient-success {
-    @apply bg-gradient-to-r from-green-600 to-green-400;
-  }
-
-  /* Responsive Grid */
-  .u-grid-responsive {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6;
-  }
-
-  /* Container */
-  .u-container {
-    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
-  }
-
-  /* Flex Utilities */
-  .u-flex-center {
-    @apply flex items-center justify-center;
-  }
-
-  .u-flex-between {
-    @apply flex items-center justify-between;
-  }
-
-  /* Dividers */
-  .u-divider {
-    @apply border-t border-gray-200 dark:border-gray-700;
-  }
-
-  /* Sections */
-  .u-section {
-    @apply py-8 px-6;
-  }
-
-  .u-section-title {
-    @apply text-2xl font-bold text-gray-900 dark:text-white mb-6;
-  }
-
-  .u-section-subtitle {
-    @apply text-base text-gray-600 dark:text-gray-400 mb-4;
-  }
+  .u-h1 { @apply text-4xl font-bold text-gray-900 dark:text-white; }
+  .u-h2 { @apply text-3xl font-bold text-gray-900 dark:text-white; }
+  .u-h3 { @apply text-2xl font-bold text-gray-900 dark:text-white; }
+  .u-h4 { @apply text-xl font-semibold text-gray-900 dark:text-white; }
+  .u-h5 { @apply text-lg font-semibold text-gray-900 dark:text-white; }
+  .u-h6 { @apply text-base font-semibold text-gray-900 dark:text-white; }
+  .u-body-lg { @apply text-base leading-relaxed text-gray-700 dark:text-gray-300; }
+  .u-body { @apply text-sm leading-relaxed text-gray-700 dark:text-gray-300; }
+  .u-body-sm { @apply text-xs leading-relaxed text-gray-600 dark:text-gray-400; }
+  .u-focus { @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900; }
+  .u-transition-fast { @apply transition-all duration-150 ease-out; }
+  .u-transition-base { @apply transition-all duration-200 ease-out; }
+  .u-transition-slow { @apply transition-all duration-300 ease-out; }
+  .u-gradient-primary { @apply bg-gradient-to-r from-blue-600 to-blue-400; }
+  .u-gradient-success { @apply bg-gradient-to-r from-green-600 to-green-400; }
+  .u-grid-responsive { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6; }
+  .u-container { @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8; }
+  .u-flex-center { @apply flex items-center justify-center; }
+  .u-flex-between { @apply flex items-center justify-between; }
+  .u-divider { @apply border-t border-gray-200 dark:border-gray-700; }
+  .u-section { @apply py-8 px-6; }
+  .u-section-title { @apply text-2xl font-bold text-gray-900 dark:text-white mb-6; }
+  .u-section-subtitle { @apply text-base text-gray-600 dark:text-gray-400 mb-4; }
 }
 
-/* ============================================================================
-   ANIMATIONS
-   ============================================================================ */
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+/* =============================== ANIMS ==================================== */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slide-in-from-left { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes slide-in-from-right { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: translateX(0); } }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-in-from-left {
-  from {
-    opacity: 0;
-    transform: translateX(-16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-in-from-right {
-  from {
-    opacity: 0;
-    transform: translateX(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Dark Mode Specific Overrides */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-  }
-}
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; } }
