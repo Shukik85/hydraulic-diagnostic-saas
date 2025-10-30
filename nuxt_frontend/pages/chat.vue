@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="flex h-[calc(100vh-8rem)] bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden">
     <!-- Sidebar: Chat Sessions -->
     <div class="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
       <!-- Sidebar Header -->
@@ -54,9 +54,9 @@
     </div>
 
     <!-- Main Chat Area -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col bg-white dark:bg-gray-800">
       <!-- Chat Header -->
-      <div v-if="activeSession" class="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div v-if="activeSession" class="p-6 border-b border-gray-200 dark:border-gray-700">
         <div class="u-flex-between">
           <div>
             <h1 class="u-h4">{{ activeSession.title }}</h1>
@@ -174,7 +174,7 @@
       </div>
 
       <!-- Message Input -->
-      <div v-if="activeSession" class="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6">
+      <div v-if="activeSession" class="border-t border-gray-200 dark:border-gray-700 p-6">
         <form @submit.prevent="sendMessage" class="flex items-end gap-4">
           <div class="flex-1">
             <textarea
@@ -252,7 +252,7 @@
 <script setup lang="ts">
 definePageMeta({
   title: 'AI Chat',
-  layout: 'default',
+  layout: 'dashboard', // FIXED: changed from 'default' to 'dashboard'
   middleware: ['auth']
 })
 
