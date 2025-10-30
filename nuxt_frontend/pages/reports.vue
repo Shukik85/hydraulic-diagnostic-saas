@@ -132,7 +132,7 @@
       <div v-if="filteredReports.length === 0" class="p-12 text-center">
         <Icon name="i-heroicons-document-text" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
         <h3 class="u-h5 text-gray-500 dark:text-gray-400 mb-2">No Reports Found</h3>
-        <p class="u-body text-gray-400 dark:text-gray-500">Try adjusting your search filters</p>
+        <p class="u-body text-gray-400 dark:text-gray-500">Try adjusting your search filters or generate a new report</p>
       </div>
 
       <div v-else class="overflow-x-auto">
@@ -198,58 +198,13 @@
       </div>
     </div>
 
-    <!-- Generate Report Modal -->
-    <Transition name="fade">
-      <div v-if="openGenerateModal" class="fixed inset-0 z-50" aria-modal="true" role="dialog" aria-labelledby="generate-report-title">
-        <div class="fixed inset-0 bg-black/60" @click="closeGenerateModal" />
-        <div class="relative z-10 mx-auto mt-24 w-full max-w-lg px-4">
-          <div class="u-card">
-            <div class="u-card-header">
-              <h3 id="generate-report-title" class="u-h4">Generate Report</h3>
-              <button class="u-icon-btn" @click="closeGenerateModal" aria-label="Close">
-                <Icon name="i-heroicons-x-mark" class="w-5 h-5" />
-              </button>
-            </div>
-            <div class="u-card-body space-y-4">
-              <div>
-                <label class="u-label" for="template">Template</label>
-                <select id="template" v-model="form.template" class="u-input w-full">
-                  <option value="executive">Executive</option>
-                  <option value="technical">Technical</option>
-                  <option value="compliance">Compliance</option>
-                </select>
-              </div>
-              <div>
-                <label class="u-label" for="range">Date Range</label>
-                <select id="range" v-model="form.range" class="u-input w-full">
-                  <option value="last_24h">Last 24 Hours</option>
-                  <option value="last_7d">Last 7 Days</option>
-                  <option value="last_30d">Last 30 Days</option>
-                </select>
-              </div>
-              <div>
-                <label class="u-label" for="locale">Locale</label>
-                <select id="locale" v-model="form.locale" class="u-input w-full">
-                  <option value="en-US">English (US)</option>
-                  <option value="ru-RU">Русский</option>
-                </select>
-              </div>
-              <div>
-                <label class="u-label" for="title">Title</label>
-                <input id="title" v-model.trim="form.title" type="text" class="u-input w-full" placeholder="Weekly System Health Report" />
-              </div>
-            </div>
-            <div class="u-card-footer flex justify-end gap-3">
-              <button class="u-btn u-btn-secondary" @click="closeGenerateModal" :disabled="submitting">Cancel</button>
-              <button class="u-btn u-btn-primary" @click="onGenerate" :disabled="submitting">
-                <Icon v-if="submitting" name="i-heroicons-arrow-path" class="w-4 h-4 mr-2 animate-spin" />
-                Generate
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <!-- Generate Report Modal Component -->
+    <UReportGenerateModal 
+      v-model="openGenerateModal" 
+      :loading="generateLoading"
+      @submit="onGenerate"
+      @cancel="onCancelGenerate"
+    />
 
     <!-- Report Details Modal -->
     <div v-if="showReportModal && selectedReport" class="fixed inset-0 bg-black/60 z-50 u-flex-center p-4" @click="closeReportModal">
@@ -366,12 +321,12 @@ interface Report {
 const selectedReport = ref<Report | null>(null)
 const showReportModal = ref(false)
 const openGenerateModal = ref(false)
-const submitting = ref(false)
+const generateLoading = ref(false)
 const selectedSeverity = ref('all')
 const selectedStatus = ref('all')
 const searchQuery = ref('')
 
-// Demo data
+// Demo data (removed all emojis)
 const reports = ref<Report[]>([
   {
     id: 1,
@@ -423,14 +378,6 @@ const reports = ref<Report[]>([
     recommendations: ['Continue regular monitoring', 'Schedule next check in 7 days']
   }
 ])
-
-// Form for generation
-const form = reactive({
-  template: 'executive',
-  range: 'last_7d',
-  locale: 'en-US',
-  title: ''
-})
 
 // Computed
 const filteredReports = computed(() => {
@@ -497,28 +444,38 @@ const closeReportModal = () => {
   showReportModal.value = false
 }
 
-const closeGenerateModal = () => {
-  if (submitting.value) return
-  openGenerateModal.value = false
-}
-
-const onGenerate = async () => {
-  submitting.value = true
+const onGenerate = async (data: any) => {
+  generateLoading.value = true
   try {
     // TODO: Hook real API when backend is ready
-    await new Promise(r => setTimeout(r, 1000))
+    // await reportsStore.generateReport(data)
+    console.log('Generating report with data:', data)
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    
     openGenerateModal.value = false
+    
+    // TODO: Show success notification and refresh reports list
+    alert('Report generation started! You will be notified when it is ready.')
+    
+  } catch (error: any) {
+    console.error('Failed to generate report:', error)
+    alert(`Failed to generate report: ${error?.message || 'Unknown error'}`)
   } finally {
-    submitting.value = false
+    generateLoading.value = false
   }
 }
 
-// ESC key handler
+const onCancelGenerate = () => {
+  openGenerateModal.value = false
+}
+
+// ESC key handler for report details modal
 onMounted(() => {
   const handleEsc = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      if (openGenerateModal.value) closeGenerateModal()
-      if (showReportModal.value) closeReportModal()
+    if (e.key === 'Escape' && showReportModal.value) {
+      closeReportModal()
     }
   }
   document.addEventListener('keydown', handleEsc)
