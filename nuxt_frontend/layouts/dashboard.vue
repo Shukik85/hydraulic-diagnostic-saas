@@ -1,9 +1,9 @@
 <script setup lang="ts">
-const route = useRoute();
-const { locale, setLocale } = useI18n()
+const route = useRoute()
+const { locale, setLocale, t: $t } = useI18n()
 
 // Safe store initialization
-let authStore: any = null;
+let authStore: any = null
 
 // Mobile menu state
 const isMobileMenuOpen = ref(false)
@@ -13,14 +13,14 @@ const showLanguageDropdown = ref(false)
 
 onMounted(() => {
   try {
-    authStore = useAuthStore();
+    authStore = useAuthStore()
   } catch (e) {
     authStore = {
       user: { name: 'Пользователь', email: 'user@example.com' },
       isAuthenticated: true,
-    };
+    }
   }
-});
+})
 
 // Available languages
 const availableLocales = [
@@ -40,16 +40,16 @@ const switchLanguage = async (code: string) => {
 }
 
 // Computed for user
-const userName = computed(() => authStore?.user?.name || 'Пользователь');
+const userName = computed(() => authStore?.user?.name || 'Пользователь')
 const userInitials = computed(() => {
-  const name = userName.value;
+  const name = userName.value
   return name
     .split(' ')
     .map((word: string) => word[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
-});
+    .slice(0, 2)
+})
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
@@ -77,55 +77,53 @@ onMounted(() => {
 
 // Breadcrumbs only for deep navigation
 const showBreadcrumbs = computed(() => {
-  const depth = route.path.split('/').filter(Boolean).length;
-  return depth > 1; // Only show if deeper than /dashboard
-});
+  const depth = route.path.split('/').filter(Boolean).length
+  return depth > 1 // Only show if deeper than /dashboard
+})
 
 const mapName = (path: string): string => {
-  const { t } = useI18n()
   const mapping: Record<string, string> = {
-    '/dashboard': t('nav.dashboard'),
-    '/systems': t('nav.systems'),
-    '/diagnostics': t('nav.diagnostics'),
-    '/reports': t('nav.reports'),
-    '/chat': t('nav.chat'),
-    '/settings': t('nav.settings'),
-    '/equipments': t('nav.equipments'),
+    '/dashboard': $t('nav.dashboard'),
+    '/systems': $t('nav.systems'),
+    '/diagnostics': $t('nav.diagnostics'),
+    '/reports': $t('nav.reports'),
+    '/chat': $t('nav.chat'),
+    '/settings': $t('nav.settings'),
+    '/equipments': $t('nav.equipments'),
   }
-  return mapping[path] || t('breadcrumbs.page')
-};
+  return mapping[path] || $t('breadcrumbs.page')
+}
 
 const breadcrumbs = computed(() => {
-  const { t } = useI18n()
-  const parts = route.path.split('/').filter(Boolean);
-  const acc: { name: string; href: string }[] = [{ name: t('breadcrumbs.home'), href: '/' }];
-  let current = '';
+  const parts = route.path.split('/').filter(Boolean)
+  const acc: { name: string; href: string }[] = [{ name: $t('breadcrumbs.home'), href: '/' }]
+  let current = ''
 
   for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    current += `/${part}`;
+    const part = parts[i]
+    current += `/${part}`
 
     // Handle dynamic routes
     if (part === 'systems') {
-      acc.push({ name: t('nav.systems'), href: current });
+      acc.push({ name: $t('nav.systems'), href: current })
     } else if (part === 'equipments') {
-      acc.push({ name: t('nav.equipments'), href: current });
+      acc.push({ name: $t('nav.equipments'), href: current })
     } else if (/^\d+$/.test(part)) {
       // Numeric ID - show as dynamic name
-      const prevPart = parts[i - 1];
+      const prevPart = parts[i - 1]
       if (prevPart === 'systems') {
-        acc.push({ name: `${t('breadcrumbs.system')} #${part}`, href: current });
+        acc.push({ name: `${$t('breadcrumbs.system')} #${part}`, href: current })
       } else if (prevPart === 'equipments') {
-        acc.push({ name: `${t('breadcrumbs.equipment')} #${part}`, href: current });
+        acc.push({ name: `${$t('breadcrumbs.equipment')} #${part}`, href: current })
       } else {
-        acc.push({ name: `#${part}`, href: current });
+        acc.push({ name: `#${part}`, href: current })
       }
     } else {
-      acc.push({ name: mapName(current), href: current });
+      acc.push({ name: mapName(current), href: current })
     }
   }
-  return acc;
-});
+  return acc
+})
 
 // Navigation links - with i18n
 const navigationLinks = computed(() => [
@@ -423,5 +421,5 @@ const isActiveLink = (linkPath: string): boolean => {
   z-index: 40;
 }
 
-/* Remove dark theme styles completely - keep only light theme */
+/* Clean light theme only - no dark mode classes */
 </style>
