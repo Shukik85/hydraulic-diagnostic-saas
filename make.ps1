@@ -172,7 +172,6 @@ function Format-Backend {
         Write-ColorText "Ruff not found, using black + isort" "Yellow"
         Set-Location "backend"
         black .
-        isort .
         Set-Location ".."
     }
 
