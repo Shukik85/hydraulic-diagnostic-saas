@@ -5,7 +5,6 @@
     :title="$t('diagnostics.runModal.title')"
     :description="$t('diagnostics.runModal.description')"
     size="md"
-    :loading="loading"
     :close-on-backdrop="!loading"
   >
     <div class="space-y-5">
