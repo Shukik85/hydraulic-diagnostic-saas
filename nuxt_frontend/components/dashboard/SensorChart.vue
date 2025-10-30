@@ -1,11 +1,11 @@
 <template>
-  <div class="premium-card p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="premium-heading-md text-gray-900 dark:text-white">{{ title }}</h3>
-      <div class="flex items-center space-x-2">
+  <div class="u-chart-wrapper">
+    <div class="u-chart-header">
+      <h3 class="u-chart-title">{{ title }}</h3>
+      <div class="u-chart-controls">
         <select 
           v-model="timeRange"
-          class="premium-input !py-2"
+          class="u-input text-sm py-1 px-2 w-32"
           @change="updateChart"
         >
           <option value="1h">Last Hour</option>
@@ -15,7 +15,7 @@
       </div>
     </div>
     
-    <div class="h-80">
+    <div class="u-chart-container">
       <ClientOnly>
         <component 
           :is="VChart"
@@ -25,9 +25,9 @@
           class="w-full h-full"
         />
         <template #fallback>
-          <div class="flex items-center justify-center h-full">
-            <div class="inline-block w-6 h-6 rounded-full border-2 border-solid border-current border-r-transparent text-blue-600" style="animation: spin 1s linear infinite;"></div>
-            <span class="ml-2 premium-body text-gray-500 dark:text-gray-400">Loading chart...</span>
+          <div class="u-flex-center h-full">
+            <div class="u-spinner w-8 h-8"></div>
+            <span class="ml-2 u-body text-gray-500 dark:text-gray-400">Loading chart...</span>
           </div>
         </template>
       </ClientOnly>
@@ -56,7 +56,8 @@ const chartOptions = computed(() => {
   const baseOptions = {
     backgroundColor: 'transparent',
     textStyle: {
-      fontFamily: 'var(--font-sans)'
+      fontFamily: 'var(--font-sans)',
+      fontSize: 12
     }
   }
   
@@ -68,41 +69,47 @@ const chartOptions = computed(() => {
           trigger: 'axis',
           backgroundColor: 'rgba(255, 255, 255, 0.95)',
           borderColor: '#e5e7eb',
-          textStyle: { color: '#374151' }
+          borderRadius: 8,
+          textStyle: { color: '#374151', fontSize: 13 }
         },
         grid: {
           left: '3%',
           right: '4%', 
-          bottom: '10%',
+          bottom: '15%',
+          top: '15%',
           containLabel: true
         },
         xAxis: {
           type: 'category',
           data: props.data.map(item => item.time),
           axisLine: { lineStyle: { color: '#e5e7eb' } },
-          axisTick: { lineStyle: { color: '#e5e7eb' } },
-          axisLabel: { color: '#6b7280' }
+          axisTick: { show: false },
+          axisLabel: { color: '#6b7280', fontSize: 11 }
         },
         yAxis: {
           type: 'value',
           name: props.unit,
-          axisLine: { lineStyle: { color: '#e5e7eb' } },
-          splitLine: { lineStyle: { color: '#f3f4f6' } },
-          axisLabel: { color: '#6b7280' }
+          axisLine: { show: false },
+          splitLine: { lineStyle: { color: '#f3f4f6', type: 'dashed' } },
+          axisLabel: { color: '#6b7280', fontSize: 11 }
         },
         series: [{
           type: 'line',
           data: props.data.map(item => item.value),
           smooth: true,
-          lineStyle: { color: 'var(--color-primary)', width: 2 },
-          itemStyle: { color: 'var(--color-primary)' },
+          lineStyle: { color: '#2563eb', width: 3 },
+          itemStyle: { 
+            color: '#2563eb', 
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          },
           areaStyle: {
             color: {
               type: 'linear',
               x: 0, y: 0, x2: 0, y2: 1,
               colorStops: [
-                { offset: 0, color: 'var(--color-primary-light)' },
-                { offset: 1, color: 'rgba(37, 99, 235, 0.05)' }
+                { offset: 0, color: 'rgba(37, 99, 235, 0.15)' },
+                { offset: 1, color: 'rgba(37, 99, 235, 0.02)' }
               ]
             }
           }
@@ -119,42 +126,43 @@ const chartOptions = computed(() => {
           endAngle: -40,
           min: 0,
           max: props.data[0]?.max || 100,
-          splitNumber: 12,
+          splitNumber: 10,
           itemStyle: {
-            color: 'var(--color-primary)'
+            color: '#2563eb'
           },
           progress: {
             show: true,
-            width: 30
+            width: 25
           },
           pointer: {
             show: false
           },
           axisLine: {
             lineStyle: {
-              width: 30
+              width: 25,
+              color: [[1, '#e5e7eb']]
             }
           },
           axisTick: {
-            distance: -45,
-            splitNumber: 5,
+            distance: -40,
+            splitNumber: 2,
             lineStyle: {
               width: 2,
-              color: '#999'
+              color: '#9ca3af'
             }
           },
           splitLine: {
-            distance: -52,
-            length: 14,
+            distance: -45,
+            length: 12,
             lineStyle: {
-              width: 3,
-              color: '#999'
+              width: 2,
+              color: '#9ca3af'
             }
           },
           axisLabel: {
             distance: -20,
-            color: '#999',
-            fontSize: 12
+            color: '#6b7280',
+            fontSize: 11
           },
           anchor: {
             show: false
@@ -167,11 +175,11 @@ const chartOptions = computed(() => {
             width: '60%',
             lineHeight: 40,
             borderRadius: 8,
-            offsetCenter: [0, '-15%'],
-            fontSize: 20,
+            offsetCenter: [0, '-10%'],
+            fontSize: 22,
             fontWeight: 'bold',
             formatter: `{value} ${props.unit}`,
-            color: 'inherit'
+            color: '#2563eb'
           },
           data: [{
             value: props.data[0]?.value || 0
@@ -195,7 +203,3 @@ const updateChart = () => {
   console.log('Update chart for timeRange:', timeRange.value)
 }
 </script>
-
-<style scoped>
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
