@@ -1,404 +1,438 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8">
     <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-3xl font-bold tracking-tight">Settings</h1>
-        <p class="text-muted-foreground">Manage your account and system preferences</p>
+    <div>
+      <h1 class="u-h2">Settings</h1>
+      <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
+        Manage your account and system preferences
+      </p>
+    </div>
+
+    <!-- Settings Navigation -->
+    <div class="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        @click="activeTab = tab.id"
+        class="px-4 py-2 text-sm font-medium rounded-md u-transition-fast"
+        :class="activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
+      >
+        <Icon :name="tab.icon" class="w-4 h-4 mr-2 inline" />
+        {{ tab.name }}
+      </button>
+    </div>
+
+    <!-- Profile Settings -->
+    <div v-if="activeTab === 'profile'" class="space-y-6">
+      <div class="u-card p-6">
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+          <h3 class="u-h4">Personal Information</h3>
+          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
+            Update your personal details and contact information
+          </p>
+        </div>
+        
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="u-label">First Name</label>
+              <input v-model="profile.firstName" class="u-input" />
+            </div>
+            <div>
+              <label class="u-label">Last Name</label>
+              <input v-model="profile.lastName" class="u-input" />
+            </div>
+          </div>
+          
+          <div>
+            <label class="u-label">Email Address</label>
+            <input v-model="profile.email" type="email" class="u-input" />
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="u-label">Company</label>
+              <input v-model="profile.company" class="u-input" />
+            </div>
+            <div>
+              <label class="u-label">Phone</label>
+              <input v-model="profile.phone" type="tel" class="u-input" />
+            </div>
+          </div>
+          
+          <div class="pt-4">
+            <button class="u-btn u-btn-primary u-btn-md">
+              <Icon name="heroicons:check" class="w-4 h-4 mr-2" />
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="u-card p-6">
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+          <h3 class="u-h4">Change Password</h3>
+          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
+            Update your account password for security
+          </p>
+        </div>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="u-label">Current Password</label>
+            <input type="password" class="u-input" placeholder="Enter current password" />
+          </div>
+          <div>
+            <label class="u-label">New Password</label>
+            <input type="password" class="u-input" placeholder="Enter new password" />
+          </div>
+          <div>
+            <label class="u-label">Confirm New Password</label>
+            <input type="password" class="u-input" placeholder="Confirm new password" />
+          </div>
+          
+          <div class="pt-4">
+            <button class="u-btn u-btn-primary u-btn-md">
+              <Icon name="heroicons:key" class="w-4 h-4 mr-2" />
+              Update Password
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <!-- Settings Tabs -->
-    <UiTabs v-model="activeTab" class="w-full">
-      <UiTabsList class="grid w-full grid-cols-5">
-        <UiTabsTrigger value="profile">Profile</UiTabsTrigger>
-        <UiTabsTrigger value="notifications">Notifications</UiTabsTrigger>
-        <UiTabsTrigger value="integrations">Integrations</UiTabsTrigger>
-        <UiTabsTrigger value="users">Users</UiTabsTrigger>
-        <UiTabsTrigger value="billing">Billing</UiTabsTrigger>
-      </UiTabsList>
-
-      <!-- Profile Tab -->
-      <UiTabsContent value="profile" class="space-y-6">
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>Personal Information</UiCardTitle>
-            <UiCardDescription
-              >Update your personal details and contact information</UiCardDescription
-            >
-          </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-2">
-                <label class="text-sm font-medium">First Name</label>
-                <UiInput v-model="profile.firstName" />
-              </div>
-              <div class="space-y-2">
-                <label class="text-sm font-medium">Last Name</label>
-                <UiInput v-model="profile.lastName" />
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">Email</label>
-              <UiInput v-model="profile.email" type="email" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">Company</label>
-              <UiInput v-model="profile.company" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">Phone</label>
-              <UiInput v-model="profile.phone" type="tel" />
-            </div>
-            <UiButton>Save Changes</UiButton>
-          </UiCardContent>
-        </UiCard>
-
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>Change Password</UiCardTitle>
-            <UiCardDescription>Update your account password</UiCardDescription>
-          </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="space-y-2">
-              <label class="text-sm font-medium">Current Password</label>
-              <UiInput type="password" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">New Password</label>
-              <UiInput type="password" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">Confirm New Password</label>
-              <UiInput type="password" />
-            </div>
-            <UiButton>Update Password</UiButton>
-          </UiCardContent>
-        </UiCard>
-      </UiTabsContent>
-
-      <!-- Notifications Tab -->
-      <UiTabsContent value="notifications" class="space-y-6">
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>Email Notifications</UiCardTitle>
-            <UiCardDescription>Configure when you receive email alerts</UiCardDescription>
-          </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium">System Alerts</p>
-                <p class="text-sm text-muted-foreground">
-                  Critical system failures and emergencies
-                </p>
-              </div>
-              <UiCheckbox v-model="notifications.systemAlerts" />
-            </div>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium">Maintenance Reminders</p>
-                <p class="text-sm text-muted-foreground">Upcoming service and maintenance tasks</p>
-              </div>
-              <UiCheckbox v-model="notifications.maintenanceReminders" />
-            </div>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium">Diagnostic Reports</p>
-                <p class="text-sm text-muted-foreground">When diagnostic reports are ready</p>
-              </div>
-              <UiCheckbox v-model="notifications.diagnosticReports" />
-            </div>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium">Weekly Summary</p>
-                <p class="text-sm text-muted-foreground">Weekly system health overview</p>
-              </div>
-              <UiCheckbox v-model="notifications.weeklySummary" />
-            </div>
-          </UiCardContent>
-        </UiCard>
-
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>Push Notifications</UiCardTitle>
-            <UiCardDescription>Mobile and browser notifications</UiCardDescription>
-          </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium">Browser Notifications</p>
-                <p class="text-sm text-muted-foreground">Real-time alerts in your browser</p>
-              </div>
-              <UiCheckbox v-model="notifications.browserNotifications" />
-            </div>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium">Mobile Alerts</p>
-                <p class="text-sm text-muted-foreground">Push notifications to mobile devices</p>
-              </div>
-              <UiCheckbox v-model="notifications.mobileAlerts" />
-            </div>
-          </UiCardContent>
-        </UiCard>
-      </UiTabsContent>
-
-      <!-- Integrations Tab -->
-      <UiTabsContent value="integrations" class="space-y-6">
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>API Integrations</UiCardTitle>
-            <UiCardDescription>Connect with external systems and services</UiCardDescription>
-          </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="flex items-center justify-between p-4 border rounded-lg">
-              <div class="flex items-center space-x-3">
-                <div class="h-10 w-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Icon name="lucide:cloud" class="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p class="font-medium">SCADA System</p>
-                  <p class="text-sm text-muted-foreground">Real-time data integration</p>
-                </div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="text-sm text-status-success">Connected</span>
-                <UiButton variant="outline" size="sm">Configure</UiButton>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between p-4 border rounded-lg">
-              <div class="flex items-center space-x-3">
-                <div class="h-10 w-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Icon name="lucide:database" class="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p class="font-medium">ERP System</p>
-                  <p class="text-sm text-muted-foreground">Maintenance and inventory sync</p>
-                </div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="text-sm text-muted-foreground">Not Connected</span>
-                <UiButton variant="outline" size="sm">Connect</UiButton>
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between p-4 border rounded-lg">
-              <div class="flex items-center space-x-3">
-                <div class="h-10 w-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Icon name="lucide:slack" class="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p class="font-medium">Slack</p>
-                  <p class="text-sm text-muted-foreground">Team notifications and alerts</p>
-                </div>
-              </div>
-              <div class="flex items-center space-x-2">
-                <span class="text-sm text-muted-foreground">Not Connected</span>
-                <UiButton variant="outline" size="sm">Connect</UiButton>
-              </div>
-            </div>
-          </UiCardContent>
-        </UiCard>
-
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>API Keys</UiCardTitle>
-            <UiCardDescription>Manage API access tokens</UiCardDescription>
-          </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium">Primary API Key</p>
-                <p class="text-sm text-muted-foreground font-mono">sk-...aBcD</p>
-              </div>
-              <div class="flex items-center space-x-2">
-                <UiButton variant="outline" size="sm">Regenerate</UiButton>
-                <UiButton variant="outline" size="sm">Copy</UiButton>
-              </div>
-            </div>
-            <UiButton variant="outline">
-              <Icon name="lucide:plus" class="mr-2 h-4 w-4" />
-              Generate New Key
-            </UiButton>
-          </UiCardContent>
-        </UiCard>
-      </UiTabsContent>
-
-      <!-- Users Tab -->
-      <UiTabsContent value="users" class="space-y-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-lg font-medium">Team Members</h3>
-            <p class="text-sm text-muted-foreground">Manage user access and permissions</p>
-          </div>
-          <UiButton>
-            <Icon name="lucide:user-plus" class="mr-2 h-4 w-4" />
-            Invite User
-          </UiButton>
+    <!-- Notifications Settings -->
+    <div v-if="activeTab === 'notifications'" class="space-y-6">
+      <div class="u-card p-6">
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+          <h3 class="u-h4">Email Notifications</h3>
+          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
+            Configure when you receive email alerts
+          </p>
         </div>
-
-        <UiCard>
-          <UiCardContent class="p-0">
-            <div class="divide-y">
-              <div class="flex items-center justify-between p-4">
-                <div class="flex items-center space-x-3">
-                  <div
-                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
-                  >
-                    <Icon name="lucide:user" class="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p class="font-medium">John Doe</p>
-                    <p class="text-sm text-muted-foreground">john.doe@company.com</p>
-                  </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-sm text-muted-foreground">Admin</span>
-                  <UiButton variant="outline" size="sm">Edit</UiButton>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between p-4">
-                <div class="flex items-center space-x-3">
-                  <div
-                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
-                  >
-                    <Icon name="lucide:user" class="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p class="font-medium">Jane Smith</p>
-                    <p class="text-sm text-muted-foreground">jane.smith@company.com</p>
-                  </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-sm text-muted-foreground">Engineer</span>
-                  <UiButton variant="outline" size="sm">Edit</UiButton>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between p-4">
-                <div class="flex items-center space-x-3">
-                  <div
-                    class="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center"
-                  >
-                    <Icon name="lucide:user" class="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p class="font-medium">Mike Johnson</p>
-                    <p class="text-sm text-muted-foreground">mike.johnson@company.com</p>
-                  </div>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-sm text-muted-foreground">Viewer</span>
-                  <UiButton variant="outline" size="sm">Edit</UiButton>
-                </div>
-              </div>
+        
+        <div class="space-y-6">
+          <div class="u-flex-between">
+            <div>
+              <p class="font-medium text-gray-900 dark:text-white">System Alerts</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">
+                Critical system failures and emergencies
+              </p>
             </div>
-          </UiCardContent>
-        </UiCard>
-      </UiTabsContent>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input v-model="notifications.systemAlerts" type="checkbox" class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          
+          <div class="u-flex-between">
+            <div>
+              <p class="font-medium text-gray-900 dark:text-white">Maintenance Reminders</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">
+                Upcoming service and maintenance tasks
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input v-model="notifications.maintenanceReminders" type="checkbox" class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          
+          <div class="u-flex-between">
+            <div>
+              <p class="font-medium text-gray-900 dark:text-white">Diagnostic Reports</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">
+                When diagnostic reports are ready
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input v-model="notifications.diagnosticReports" type="checkbox" class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          
+          <div class="u-flex-between">
+            <div>
+              <p class="font-medium text-gray-900 dark:text-white">Weekly Summary</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">
+                Weekly system health overview
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input v-model="notifications.weeklySummary" type="checkbox" class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      <!-- Billing Tab -->
-      <UiTabsContent value="billing" class="space-y-6">
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>Current Plan</UiCardTitle>
-            <UiCardDescription>Your subscription and usage details</UiCardDescription>
-          </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="flex items-center justify-between">
+    <!-- Integrations Settings -->
+    <div v-if="activeTab === 'integrations'" class="space-y-6">
+      <div class="u-card p-6">
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+          <h3 class="u-h4">System Integrations</h3>
+          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
+            Connect with external systems and services
+          </p>
+        </div>
+        
+        <div class="space-y-4">
+          <div class="u-flex-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg u-flex-center">
+                <Icon name="heroicons:cloud" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
               <div>
-                <p class="font-medium">Enterprise Plan</p>
-                <p class="text-sm text-muted-foreground">$299/month • 50 equipment units</p>
-              </div>
-              <UiButton variant="outline">Change Plan</UiButton>
-            </div>
-            <div class="space-y-2">
-              <div class="flex justify-between text-sm">
-                <span>Equipment Used</span>
-                <span>24 / 50</span>
-              </div>
-              <div class="w-full bg-muted rounded-full h-2">
-                <div class="bg-primary h-2 rounded-full" style="width: 48%"></div>
+                <p class="font-medium text-gray-900 dark:text-white">SCADA System</p>
+                <p class="u-body-sm text-gray-500 dark:text-gray-400">Real-time data integration</p>
               </div>
             </div>
-          </UiCardContent>
-        </UiCard>
+            <div class="flex items-center gap-2">
+              <span class="u-badge u-badge-success">Connected</span>
+              <button class="u-btn u-btn-secondary u-btn-sm">Configure</button>
+            </div>
+          </div>
 
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>Payment Method</UiCardTitle>
-            <UiCardDescription>Manage your billing information</UiCardDescription>
-          </UiCardHeader>
-          <UiCardContent class="space-y-4">
-            <div class="flex items-center justify-between p-4 border rounded-lg">
-              <div class="flex items-center space-x-3">
-                <Icon name="lucide:credit-card" class="h-5 w-5" />
-                <div>
-                  <p class="font-medium">•••• •••• •••• 4242</p>
-                  <p class="text-sm text-muted-foreground">Expires 12/25</p>
-                </div>
+          <div class="u-flex-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg u-flex-center">
+                <Icon name="heroicons:circle-stack" class="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
-              <UiButton variant="outline" size="sm">Update</UiButton>
-            </div>
-          </UiCardContent>
-        </UiCard>
-
-        <UiCard>
-          <UiCardHeader>
-            <UiCardTitle>Billing History</UiCardTitle>
-            <UiCardDescription>View past invoices and payments</UiCardDescription>
-          </UiCardHeader>
-          <UiCardContent>
-            <div class="space-y-3">
-              <div class="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p class="font-medium">January 2024</p>
-                  <p class="text-sm text-muted-foreground">Invoice #INV-001</p>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-sm font-medium">$299.00</span>
-                  <UiButton variant="outline" size="sm">Download</UiButton>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p class="font-medium">December 2023</p>
-                  <p class="text-sm text-muted-foreground">Invoice #INV-002</p>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <span class="text-sm font-medium">$299.00</span>
-                  <UiButton variant="outline" size="sm">Download</UiButton>
-                </div>
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white">ERP System</p>
+                <p class="u-body-sm text-gray-500 dark:text-gray-400">Maintenance and inventory sync</p>
               </div>
             </div>
-          </UiCardContent>
-        </UiCard>
-      </UiTabsContent>
-    </UiTabs>
+            <div class="flex items-center gap-2">
+              <span class="u-badge u-badge-warning">Not Connected</span>
+              <button class="u-btn u-btn-primary u-btn-sm">Connect</button>
+            </div>
+          </div>
+
+          <div class="u-flex-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg u-flex-center">
+                <Icon name="heroicons:chat-bubble-left-right" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white">Slack Integration</p>
+                <p class="u-body-sm text-gray-500 dark:text-gray-400">Team notifications and alerts</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="u-badge u-badge-warning">Not Connected</span>
+              <button class="u-btn u-btn-primary u-btn-sm">Connect</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="u-card p-6">
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+          <h3 class="u-h4">API Keys</h3>
+          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
+            Manage API access tokens for external integrations
+          </p>
+        </div>
+        
+        <div class="space-y-4">
+          <div class="u-flex-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <div>
+              <p class="font-medium text-gray-900 dark:text-white">Primary API Key</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400 font-mono">hds_sk_...aBcD1234</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="u-btn u-btn-secondary u-btn-sm">
+                <Icon name="heroicons:clipboard" class="w-4 h-4 mr-1" />
+                Copy
+              </button>
+              <button class="u-btn u-btn-ghost u-btn-sm">
+                <Icon name="heroicons:arrow-path" class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          <button class="u-btn u-btn-ghost u-btn-md">
+            <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
+            Generate New Key
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Settings -->
+    <div v-if="activeTab === 'team'" class="space-y-6">
+      <div class="u-flex-between">
+        <div>
+          <h3 class="u-h4">Team Members</h3>
+          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
+            Manage user access and permissions
+          </p>
+        </div>
+        <button class="u-btn u-btn-primary u-btn-md">
+          <Icon name="heroicons:user-plus" class="w-4 h-4 mr-2" />
+          Invite User
+        </button>
+      </div>
+
+      <div class="u-card">
+        <div class="overflow-x-auto">
+          <table class="u-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Role</th>
+                <th>Last Active</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full u-flex-center">
+                      <Icon name="heroicons:user" class="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">John Doe</p>
+                      <p class="u-body-sm text-gray-500 dark:text-gray-400">john.doe@company.com</p>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="u-badge u-badge-info">Admin</span></td>
+                <td class="u-body-sm text-gray-500 dark:text-gray-400">2 hours ago</td>
+                <td><span class="u-badge u-badge-success">Active</span></td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <button class="u-btn u-btn-ghost u-btn-sm">
+                      <Icon name="heroicons:pencil" class="w-4 h-4" />
+                    </button>
+                    <button class="u-btn u-btn-ghost u-btn-sm">
+                      <Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              
+              <tr>
+                <td>
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-500 rounded-full u-flex-center">
+                      <Icon name="heroicons:user" class="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p class="font-medium text-gray-900 dark:text-white">Jane Smith</p>
+                      <p class="u-body-sm text-gray-500 dark:text-gray-400">jane.smith@company.com</p>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="u-badge u-badge-warning">Engineer</span></td>
+                <td class="u-body-sm text-gray-500 dark:text-gray-400">1 day ago</td>
+                <td><span class="u-badge u-badge-success">Active</span></td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <button class="u-btn u-btn-ghost u-btn-sm">
+                      <Icon name="heroicons:pencil" class="w-4 h-4" />
+                    </button>
+                    <button class="u-btn u-btn-ghost u-btn-sm">
+                      <Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Settings -->
+    <div v-if="activeTab === 'system'" class="space-y-6">
+      <div class="u-card p-6">
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+          <h3 class="u-h4">System Configuration</h3>
+          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
+            Configure system-wide settings and preferences
+          </p>
+        </div>
+        
+        <div class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="u-label">Default Alert Threshold</label>
+              <select class="u-input">
+                <option>Warning at 75%</option>
+                <option>Warning at 80%</option>
+                <option>Warning at 90%</option>
+              </select>
+            </div>
+            <div>
+              <label class="u-label">Data Retention Period</label>
+              <select class="u-input">
+                <option>3 months</option>
+                <option>6 months</option>
+                <option>1 year</option>
+                <option>2 years</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="u-flex-between">
+            <div>
+              <p class="font-medium text-gray-900 dark:text-white">Auto-Backup</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">
+                Automatically backup diagnostic data daily
+              </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked class="sr-only peer" />
+              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          
+          <div class="pt-4">
+            <button class="u-btn u-btn-primary u-btn-md">
+              <Icon name="heroicons:check" class="w-4 h-4 mr-2" />
+              Save System Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+definePageMeta({
+  title: 'Settings',
+  layout: 'default',
+  middleware: ['auth']
+})
 
-const activeTab = ref('profile');
+const activeTab = ref('profile')
+
+const tabs = [
+  { id: 'profile', name: 'Profile', icon: 'heroicons:user' },
+  { id: 'notifications', name: 'Notifications', icon: 'heroicons:bell' },
+  { id: 'integrations', name: 'Integrations', icon: 'heroicons:puzzle-piece' },
+  { id: 'team', name: 'Team', icon: 'heroicons:users' },
+  { id: 'system', name: 'System', icon: 'heroicons:cog-6-tooth' }
+]
 
 const profile = ref({
   firstName: 'John',
-  lastName: 'Doe',
+  lastName: 'Doe', 
   email: 'john.doe@company.com',
   company: 'ABC Manufacturing',
-  phone: '+1 (555) 123-4567',
-});
+  phone: '+1 (555) 123-4567'
+})
 
 const notifications = ref({
   systemAlerts: true,
   maintenanceReminders: true,
   diagnosticReports: true,
-  weeklySummary: false,
-  browserNotifications: true,
-  mobileAlerts: false,
-});
+  weeklySummary: false
+})
 </script>
