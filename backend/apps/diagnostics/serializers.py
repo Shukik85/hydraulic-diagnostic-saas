@@ -85,7 +85,6 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
 
     system_type_display = serializers.SerializerMethodField()
     status_display = serializers.SerializerMethodField()
-    criticality_display = serializers.SerializerMethodField()
     latest_activity = serializers.SerializerMethodField()
 
     class Meta:
@@ -98,8 +97,6 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
             "system_type_display",
             "status",
             "status_display",
-            "criticality",
-            "criticality_display",
             "created_at",
             "updated_at",
             "latest_activity",
@@ -128,15 +125,6 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
 
         """
         return self.get_choice_display(obj, "status")
-
-    def get_criticality_display(self, obj):
-        """Получает criticality display.
-
-        Args:
-            obj (Any): Параметр obj
-
-        """
-        return self.get_choice_display(obj, "criticality")
 
     def get_latest_activity(self, obj):
         """Получает latest activity.
