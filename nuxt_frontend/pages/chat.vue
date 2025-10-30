@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-[calc(100vh-8rem)] bg-gray-50 rounded-lg overflow-hidden">
+  <div class="flex h-[calc(100vh-8rem)] bg-gray-50 rounded-lg overflow-hidden relative">
     <!-- Desktop: Fixed Sidebar -->
     <div class="hidden lg:flex w-80 bg-white border-r border-gray-200 flex-col">
       <!-- Sidebar Header -->
@@ -121,18 +121,27 @@
       class="lg:hidden fixed inset-0 bg-black/50 z-30"
     ></div>
 
+    <!-- Mobile: Swipe Indicator (only when sidebar is closed) -->
+    <div 
+      v-if="!showSidebar"
+      @click="showSidebar = true"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove" 
+      @touchend="handleTouchEnd"
+      class="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 cursor-pointer touch-pan-x"
+    >
+      <!-- Swipe handle with vertical lines -->
+      <div class="bg-white border border-gray-300 rounded-r-lg px-1 py-4 shadow-md hover:bg-gray-50 transition-colors">
+        <div class="flex flex-col gap-1 items-center">
+          <div class="w-0.5 h-3 bg-gray-400 rounded-full"></div>
+          <div class="w-0.5 h-3 bg-gray-400 rounded-full"></div>
+          <div class="w-0.5 h-3 bg-gray-400 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Chat Area -->
     <div class="flex-1 lg:flex-none lg:flex-grow flex flex-col bg-white min-h-0">
-      <!-- Mobile: Slide Toggle Button -->
-      <button 
-        @click="showSidebar = true"
-        class="lg:hidden fixed top-4 left-4 z-50 u-btn u-btn-primary u-btn-sm shadow-lg"
-        v-show="!showSidebar"
-      >
-        <Icon name="heroicons:bars-3" class="w-4 h-4 mr-1" />
-        {{ $t('chat.chats') }}
-      </button>
-
       <!-- Chat Header -->
       <div v-if="activeSession" class="p-6 border-b border-gray-200">
         <div class="u-flex-between">
@@ -247,10 +256,13 @@
               <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
               {{ $t('chat.newSession.button') }}
             </button>
-            <button @click="showSidebar = true" class="lg:hidden u-btn u-btn-secondary u-btn-md ml-3">
-              <Icon name="heroicons:bars-3" class="w-4 h-4 mr-2" />
-              {{ $t('chat.newSession.browse') }}
-            </button>
+            <!-- Show swipe hint on mobile -->
+            <div class="lg:hidden mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p class="text-sm text-blue-700 flex items-center gap-2">
+                <Icon name="heroicons:hand-raised" class="w-4 h-4" />
+                Swipe from left edge to browse chats
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -362,6 +374,34 @@ const isLoading = ref(false)
 const showNewSessionModal = ref(false)
 const newSessionTitle = ref('')
 const showSidebar = ref(false)
+
+// Touch handling for swipe gesture
+let touchStartX = 0
+let touchStartY = 0
+const SWIPE_THRESHOLD = 50
+
+const handleTouchStart = (event: TouchEvent) => {
+  touchStartX = event.touches[0].clientX
+  touchStartY = event.touches[0].clientY
+}
+
+const handleTouchMove = (event: TouchEvent) => {
+  // Prevent default to enable custom swipe handling
+  event.preventDefault()
+}
+
+const handleTouchEnd = (event: TouchEvent) => {
+  const touchEndX = event.changedTouches[0].clientX
+  const touchEndY = event.changedTouches[0].clientY
+  
+  const deltaX = touchEndX - touchStartX
+  const deltaY = touchEndY - touchStartY
+  
+  // Check if it's a horizontal swipe to the right and not too vertical
+  if (deltaX > SWIPE_THRESHOLD && Math.abs(deltaY) < SWIPE_THRESHOLD) {
+    showSidebar.value = true
+  }
+}
 
 // Demo chat sessions
 const chatSessions = ref<ChatSession[]>([
@@ -528,5 +568,10 @@ onMounted(() => {
   .mobile-sidebar-open {
     overflow: hidden;
   }
+}
+
+/* Touch optimization for swipe */
+.touch-pan-x {
+  touch-action: pan-x;
 }
 </style>
