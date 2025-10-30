@@ -1,0 +1,145 @@
+{
+  "app": {
+    "title": "Hydraulic Diagnostic",
+    "tagline": "Industrial Solutions",
+    "subtitle": "Diagnostic Platform",
+    "version": "version"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "systems": "Systems",
+    "diagnostics": "Diagnostics",
+    "reports": "Reports", 
+    "chat": "AI Assistant",
+    "settings": "Settings",
+    "equipments": "Equipment"
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "page": "Page",
+    "system": "System",
+    "equipment": "Equipment"
+  },
+  "ui": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "search": "Search",
+    "optional": "optional",
+    "required": "required",
+    "actions": "Actions",
+    "status": "Status",
+    "name": "Name",
+    "type": "Type",
+    "description": "Description",
+    "created": "Created",
+    "updated": "Updated",
+    "language": {
+      "switch": "Change Language",
+      "current": "Current Language"
+    }
+  },
+  "systems": {
+    "title": "Hydraulic Systems",
+    "create": {
+      "title": "Add Hydraulic System",
+      "subtitle": "Create and configure new system",
+      "nextSteps": "Next Steps After Creation",
+      "nextStepsDesc": "Add sensors, components, and configure diagnostic parameters in the system details page.",
+      "button": "Create System",
+      "creating": "Creating..."
+    },
+    "fields": {
+      "name": "System Name",
+      "type": "System Type",
+      "status": "Initial Status",
+      "description": "Description"
+    },
+    "placeholders": {
+      "name": "e.g. Pump Station A, Hydraulic Motor #1",
+      "description": "System location, purpose, or additional notes..."
+    },
+    "types": {
+      "industrial": "Industrial - Factory equipment",
+      "mobile": "Mobile - Vehicles and machinery",
+      "marine": "Marine - Ships and offshore",
+      "construction": "Construction - Heavy machinery",
+      "mining": "Mining - Extraction equipment",
+      "agricultural": "Agricultural - Farm machinery"
+    },
+    "status": {
+      "active": "Active - System operational",
+      "maintenance": "Maintenance - Under service",
+      "inactive": "Inactive - Not operational"
+    }
+  },
+  "diagnostics": {
+    "title": "Diagnostics Center",
+    "subtitle": "Run automated diagnostics and analyze system health",
+    "run": {
+      "title": "Run New Diagnostic",
+      "button": "Start Diagnostic",
+      "running": "Running..."
+    },
+    "fields": {
+      "equipment": "Equipment",
+      "type": "Diagnostic Type"
+    }
+  },
+  "reports": {
+    "title": "Reports Center",
+    "subtitle": "Comprehensive analysis and recommendations for hydraulic systems",
+    "generate": {
+      "title": "Generate Report",
+      "button": "Generate Report",
+      "generating": "Generating..."
+    },
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In Progress",
+      "completed": "Completed",
+      "failed": "Failed"
+    }
+  },
+  "chat": {
+    "title": "AI Assistant",
+    "subtitle": "Intelligent diagnostic support and analysis",
+    "chats": "Chats",
+    "newSession": {
+      "title": "New Consultation", 
+      "button": "Start New Chat",
+      "browse": "Browse Chats"
+    },
+    "placeholder": "Ask about diagnostics, maintenance, or system optimization...",
+    "send": "Send",
+    "sending": "Sending...",
+    "thinking": "AI is thinking...",
+    "poweredBy": "Powered by AI"
+  },
+  "dashboard": {
+    "title": "Enterprise Dashboard",
+    "subtitle": "Real-time hydraulic systems monitoring & analytics",
+    "quickActions": "Quick Actions",
+    "metrics": {
+      "activeSystems": "Active Systems",
+      "systemHealth": "System Health", 
+      "preventedFailures": "Prevented Failures",
+      "costSavings": "Cost Savings"
+    }
+  },
+  "footer": {
+    "copyright": "All rights reserved",
+    "settings": "Settings",
+    "help": "Help"
+  }
+}
