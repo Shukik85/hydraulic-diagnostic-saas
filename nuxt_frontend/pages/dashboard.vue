@@ -146,27 +146,27 @@
       <div class="u-card p-6">
         <h3 class="u-h4 mb-6">Quick Actions</h3>
         <div class="space-y-3">
-          <NuxtLink
-            to="/diagnostics"
-            class="flex items-center gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 u-transition-fast"
+          <button
+            @click="openDiagnosticModal = true"
+            class="w-full flex items-center gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 u-transition-fast text-left"
           >
             <Icon name="heroicons:play" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <span class="text-sm font-medium text-gray-900 dark:text-white">Run Diagnostics</span>
-          </NuxtLink>
-          <NuxtLink
-            to="/reports"
-            class="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 u-transition-fast"
+          </button>
+          <button
+            @click="openReportModal = true"
+            class="w-full flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 u-transition-fast text-left"
           >
             <Icon name="heroicons:document-text" class="w-5 h-5 text-green-600 dark:text-green-400" />
             <span class="text-sm font-medium text-gray-900 dark:text-white">Generate Report</span>
-          </NuxtLink>
-          <NuxtLink
-            to="/systems"
-            class="flex items-center gap-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 u-transition-fast"
+          </button>
+          <button
+            @click="openSystemModal = true"
+            class="w-full flex items-center gap-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 u-transition-fast text-left"
           >
             <Icon name="heroicons:plus" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
             <span class="text-sm font-medium text-gray-900 dark:text-white">Add System</span>
-          </NuxtLink>
+          </button>
         </div>
       </div>
 
@@ -234,6 +234,28 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Components -->
+    <URunDiagnosticModal 
+      v-model="openDiagnosticModal" 
+      :loading="diagnosticLoading"
+      @submit="onRunDiagnostic"
+      @cancel="onCancelDiagnostic"
+    />
+
+    <UReportGenerateModal 
+      v-model="openReportModal" 
+      :loading="reportLoading"
+      @submit="onGenerateReport"
+      @cancel="onCancelReport"
+    />
+
+    <UCreateSystemModal 
+      v-model="openSystemModal" 
+      :loading="systemLoading"
+      @submit="onCreateSystem"
+      @cancel="onCancelSystem"
+    />
   </div>
 </template>
 
@@ -245,6 +267,72 @@ definePageMeta({
 })
 
 const { $VChart: VChart } = useNuxtApp()
+
+// Modal states
+const openDiagnosticModal = ref(false)
+const openReportModal = ref(false)
+const openSystemModal = ref(false)
+const diagnosticLoading = ref(false)
+const reportLoading = ref(false)
+const systemLoading = ref(false)
+
+// Modal handlers
+const onRunDiagnostic = async (data: any) => {
+  diagnosticLoading.value = true
+  try {
+    console.log('Starting diagnostic with data:', data)
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    openDiagnosticModal.value = false
+    alert('Diagnostic started successfully! Check /diagnostics for progress.')
+  } catch (error: any) {
+    alert(`Failed to start diagnostic: ${error?.message || 'Unknown error'}`)
+  } finally {
+    diagnosticLoading.value = false
+  }
+}
+
+const onCancelDiagnostic = () => {
+  openDiagnosticModal.value = false
+}
+
+const onGenerateReport = async (data: any) => {
+  reportLoading.value = true
+  try {
+    console.log('Generating report with data:', data)
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    openReportModal.value = false
+    alert('Report generation started! Check /reports when complete.')
+  } catch (error: any) {
+    alert(`Failed to generate report: ${error?.message || 'Unknown error'}`)
+  } finally {
+    reportLoading.value = false
+  }
+}
+
+const onCancelReport = () => {
+  openReportModal.value = false
+}
+
+const onCreateSystem = async (data: any) => {
+  systemLoading.value = true
+  try {
+    console.log('Creating system with data:', data)
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    openSystemModal.value = false
+    alert('System created successfully! Check /systems to configure.')
+  } catch (error: any) {
+    alert(`Failed to create system: ${error?.message || 'Unknown error'}`)
+  } finally {
+    systemLoading.value = false
+  }
+}
+
+const onCancelSystem = () => {
+  openSystemModal.value = false
+}
 
 // Performance Chart with Enterprise styling
 const performanceChartOption = ref({
