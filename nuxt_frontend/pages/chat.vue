@@ -297,49 +297,46 @@
       </div>
     </div>
 
-    <!-- New Session Modal -->
-    <div v-if="showNewSessionModal" class="fixed inset-0 bg-black/50 z-50 u-flex-center p-4" @click="showNewSessionModal = false">
-      <div class="u-card max-w-md w-full mx-4" @click.stop>
-        <div class="p-6 border-b border-gray-200">
-          <h3 class="u-h4">{{ $t('chat.newSession.title') }}</h3>
-          <p class="u-body text-gray-600 mt-1">
-            Describe your diagnostic task or question
-          </p>
+    <!-- New Session Modal - Using UModal Component -->
+    <UModal
+      v-model="showNewSessionModal"
+      :title="$t('chat.newSession.title')"
+      description="Describe your diagnostic task or question"
+      size="md"
+    >
+      <form @submit.prevent="createNewSession" class="space-y-4">
+        <div>
+          <label class="u-label">Session Title</label>
+          <input
+            v-model="newSessionTitle"
+            type="text"
+            required
+            class="u-input"
+            placeholder="e.g. HYD-002 Optimization Analysis"
+            autofocus
+          />
         </div>
-
-        <form @submit.prevent="createNewSession" class="p-6 space-y-4">
-          <div>
-            <label class="u-label">Session Title</label>
-            <input
-              v-model="newSessionTitle"
-              type="text"
-              required
-              class="u-input"
-              placeholder="e.g. HYD-002 Optimization Analysis"
-              autofocus
-            />
-          </div>
-
-          <div class="flex gap-3">
-            <button
-              type="button"
-              @click="showNewSessionModal = false"
-              class="u-btn u-btn-secondary flex-1"
-            >
-              {{ $t('ui.cancel') }}
-            </button>
-            <button
-              type="submit"
-              :disabled="!newSessionTitle.trim()"
-              class="u-btn u-btn-primary flex-1"
-            >
-              <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
-              {{ $t('ui.create') }} Session
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+      
+      <template #footer>
+        <button
+          type="button"
+          @click="showNewSessionModal = false"
+          class="u-btn u-btn-secondary flex-1"
+        >
+          {{ $t('ui.cancel') }}
+        </button>
+        <button
+          type="button"
+          @click="createNewSession"
+          :disabled="!newSessionTitle.trim()"
+          class="u-btn u-btn-primary flex-1"
+        >
+          <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
+          {{ $t('ui.create') }} Session
+        </button>
+      </template>
+    </UModal>
   </div>
 </template>
 
