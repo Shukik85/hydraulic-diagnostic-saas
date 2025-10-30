@@ -31,7 +31,7 @@ const userInitials = computed(() => {
   const name = userName.value;
   return name
     .split(' ')
-    .map(word => word[0])
+    .map((word: string) => word[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
@@ -62,7 +62,7 @@ const showBreadcrumbs = computed(() => {
   return depth > 1; // Only show if deeper than /dashboard
 });
 
-const mapName = (path: string) =>
+const mapName = (path: string): string =>
   ({
     '/dashboard': 'Дашборд',
     '/systems': 'Системы',
@@ -71,7 +71,7 @@ const mapName = (path: string) =>
     '/chat': 'ИИ Чат',
     '/settings': 'Настройки',
     '/equipments': 'Оборудование',
-  })[path] || 'Страница';
+  }[path] || 'Страница');
 
 const breadcrumbs = computed(() => {
   const parts = route.path.split('/').filter(Boolean);
@@ -113,7 +113,7 @@ const navigationLinks = [
 ]
 
 // Check if link is active
-const isActiveLink = (linkPath: string) => {
+const isActiveLink = (linkPath: string): boolean => {
   if (linkPath === '/dashboard') {
     return route.path === '/dashboard'
   }
@@ -235,10 +235,10 @@ const isActiveLink = (linkPath: string) => {
                 :to="link.to"
                 @click="closeMobileMenu"
                 :class="[
-                  'flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors',
+                  'flex items-center gap-3 border-l-4 px-3 py-3 text-base font-medium transition-colors',
                   isActiveLink(link.to)
-                    ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
-                    : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800',
+                    ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30 border-blue-500'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-800 dark:hover:text-gray-200',
                 ]"
               >
                 <Icon :name="link.icon" class="w-5 h-5" />
@@ -265,7 +265,7 @@ const isActiveLink = (linkPath: string) => {
                 </NuxtLink>
                 <div class="flex items-center gap-3 px-4 py-2 text-xs text-gray-500 dark:text-gray-500">
                   <Icon name="i-heroicons-cpu-chip" class="w-4 h-4" />
-                  <span>v{{ $config?.public?.version || '1.0.0' }}</span>
+                  <span>v1.0.0</span>
                 </div>
               </div>
             </div>
@@ -343,12 +343,17 @@ const isActiveLink = (linkPath: string) => {
               ИИ Помощь
             </NuxtLink>
             <span class="text-xs">
-              v{{ $config?.public?.version || '1.0.0' }}
+              v1.0.0
             </span>
           </div>
         </div>
       </div>
     </footer>
+
+    <!-- Global Modals Portal -->
+    <Teleport to="body">
+      <div id="modal-portal"></div>
+    </Teleport>
   </div>
 </template>
 
