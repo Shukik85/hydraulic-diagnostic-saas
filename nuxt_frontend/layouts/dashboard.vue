@@ -91,7 +91,7 @@ const breadcrumbs = computed(() => {
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-    <!-- Compact Dashboard Navbar -->
+    <!-- Unified Dashboard Navbar -->
     <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm">
       <div class="container mx-auto flex items-center justify-between h-16 px-4">
         <!-- Fixed width logo section -->
@@ -115,59 +115,59 @@ const breadcrumbs = computed(() => {
           </NuxtLink>
         </div>
 
-        <!-- Core navigation - only essential items -->
+        <!-- Core navigation - unified across all pages -->
         <div class="hidden lg:flex items-center space-x-6">
           <NuxtLink
             to="/dashboard"
             :class="[
-              'px-4 py-2 rounded-lg font-medium transition-colors',
+              'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2',
               route.path === '/dashboard'
                 ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
                 : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800',
             ]"
           >
-            <Icon name="heroicons:squares-2x2" class="w-4 h-4 inline mr-2" />
+            <Icon name="heroicons:squares-2x2" class="w-4 h-4" />
             Обзор
           </NuxtLink>
           <NuxtLink
             to="/systems"
             :class="[
-              'px-4 py-2 rounded-lg font-medium transition-colors',
+              'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2',
               route.path.startsWith('/systems')
                 ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
                 : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800',
             ]"
           >
-            <Icon name="heroicons:server-stack" class="w-4 h-4 inline mr-2" />
+            <Icon name="heroicons:server-stack" class="w-4 h-4" />
             Системы
           </NuxtLink>
           <NuxtLink
             to="/diagnostics"
             :class="[
-              'px-4 py-2 rounded-lg font-medium transition-colors',
+              'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2',
               route.path === '/diagnostics'
                 ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
                 : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800',
             ]"
           >
-            <Icon name="heroicons:cpu-chip" class="w-4 h-4 inline mr-2" />
+            <Icon name="heroicons:cpu-chip" class="w-4 h-4" />
             Диагностика
           </NuxtLink>
           <NuxtLink
             to="/reports"
             :class="[
-              'px-4 py-2 rounded-lg font-medium transition-colors',
+              'px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2',
               route.path === '/reports'
                 ? 'text-blue-700 bg-blue-50 dark:text-blue-300 dark:bg-blue-900/30'
                 : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800',
             ]"
           >
-            <Icon name="heroicons:document-text" class="w-4 h-4 inline mr-2" />
+            <Icon name="heroicons:document-text" class="w-4 h-4" />
             Отчёты
           </NuxtLink>
         </div>
 
-        <!-- Right actions -->
+        <!-- Right actions - consistent across all pages -->
         <div class="flex items-center space-x-3">
           <!-- Search -->
           <button
@@ -197,21 +197,14 @@ const breadcrumbs = computed(() => {
             />
           </button>
 
-          <!-- User profile -->
+          <!-- User profile - consistent height with other buttons -->
           <div
             class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md cursor-pointer hover:shadow-lg transition-shadow"
           >
             {{ userInitials }}
           </div>
 
-          <!-- Primary CTA -->
-          <NuxtLink
-            to="/diagnostics"
-            class="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg hover:from-green-700 hover:to-emerald-700 shadow-lg hover:shadow-xl transition-all duration-200"
-          >
-            <Icon name="heroicons:plus" class="w-4 h-4 mr-2 inline" />
-            Новая диагностика
-          </NuxtLink>
+          <!-- Green button REMOVED per requirements -->
         </div>
       </div>
     </nav>
@@ -247,7 +240,32 @@ const breadcrumbs = computed(() => {
 
     <!-- Main Content -->
     <main class="py-6">
-      <slot />
+      <div class="container mx-auto px-4">
+        <slot />
+      </div>
     </main>
+
+    <!-- Unified Footer - simple and consistent -->
+    <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 mt-16">
+      <div class="container mx-auto px-4 py-6">
+        <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+          <div class="flex items-center gap-2">
+            <Icon name="heroicons:cpu-chip" class="w-4 h-4" />
+            <span>&copy; 2025 Hydraulic Diagnostic SaaS. All rights reserved.</span>
+          </div>
+          <div class="flex items-center gap-6">
+            <NuxtLink to="/settings" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              Настройки
+            </NuxtLink>
+            <NuxtLink to="/chat" class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              ИИ Помощь
+            </NuxtLink>
+            <span class="text-xs">
+              v{{ $config?.public?.version || '1.0.0' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </footer>
   </div>
 </template>
