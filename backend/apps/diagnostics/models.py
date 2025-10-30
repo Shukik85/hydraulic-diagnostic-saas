@@ -653,7 +653,7 @@ class TribodiagnosticResult(models.Model):
     copper_ppm: models.FloatField = models.FloatField(default=0.0)
     aluminum_ppm: models.FloatField = models.FloatField(default=0.0)
     chromium_ppm: models.FloatField = models.FloatField(default=0.0)
-    silicon_ppm: models.FloatField = models.FloatField = models.FloatField(default=0.0)
+    silicon_ppm: models.FloatField = models.FloatField(default=0.0)
 
     # Физ.-хим. свойства
     viscosity_cst: models.FloatField = models.FloatField(default=0.0)
@@ -757,7 +757,7 @@ class IntegratedDiagnosticResult(models.Model):
     )
     phase_result: models.ForeignKey = models.ForeignKey(
         PhasePortraitResult,
-        ondelete=models.SET_NULL,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="integrated_results",
