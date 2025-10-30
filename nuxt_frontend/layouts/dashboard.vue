@@ -104,14 +104,12 @@ const breadcrumbs = computed(() => {
   return acc;
 });
 
-// Navigation links
+// Navigation links - removed duplicates
 const navigationLinks = [
   { to: '/dashboard', label: 'Обзор', icon: 'i-heroicons-squares-2x2' },
   { to: '/systems', label: 'Системы', icon: 'i-heroicons-server-stack' },
   { to: '/diagnostics', label: 'Диагностика', icon: 'i-heroicons-cpu-chip' },
-  { to: '/reports', label: 'Отчёты', icon: 'i-heroicons-document-text' },
-  { to: '/chat', label: 'ИИ Чат', icon: 'i-heroicons-chat-bubble-left-right' },
-  { to: '/settings', label: 'Настройки', icon: 'i-heroicons-cog-6-tooth' }
+  { to: '/reports', label: 'Отчёты', icon: 'i-heroicons-document-text' }
 ]
 
 // Check if link is active
@@ -193,10 +191,10 @@ const isActiveLink = (linkPath: string) => {
               {{ userInitials }}
             </div>
 
-            <!-- Mobile menu button (shown only on mobile) -->
+            <!-- Mobile menu button (shown only on mobile) - FIXED z-index -->
             <button
               @click="toggleMobileMenu"
-              class="lg:hidden p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              class="lg:hidden p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors relative z-50"
               aria-label="Toggle mobile menu"
             >
               <Icon 
@@ -207,7 +205,7 @@ const isActiveLink = (linkPath: string) => {
           </div>
         </div>
 
-        <!-- Mobile Navigation Menu -->
+        <!-- Mobile Navigation Menu - FIXED positioning -->
         <Transition
           enter-active-class="transition-all duration-200 ease-out"
           enter-from-class="opacity-0 -translate-y-2"
@@ -216,7 +214,7 @@ const isActiveLink = (linkPath: string) => {
           leave-from-class="opacity-100 translate-y-0"
           leave-to-class="opacity-0 -translate-y-2"
         >
-          <div v-if="isMobileMenuOpen" class="lg:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div v-if="isMobileMenuOpen" class="absolute top-16 left-0 right-0 lg:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg z-40">
             <div class="px-4 py-4 space-y-2">
               <!-- Mobile Search -->
               <div class="sm:hidden mb-4">
@@ -247,7 +245,7 @@ const isActiveLink = (linkPath: string) => {
                 {{ link.label }}
               </NuxtLink>
 
-              <!-- Mobile Footer Links -->
+              <!-- Mobile Footer Links (separate section) -->
               <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4 space-y-2">
                 <NuxtLink
                   to="/settings"
@@ -257,7 +255,15 @@ const isActiveLink = (linkPath: string) => {
                   <Icon name="i-heroicons-cog-6-tooth" class="w-5 h-5" />
                   Настройки
                 </NuxtLink>
-                <div class="flex items-center gap-3 px-4 py-2 text-xs text-gray-500 dark:text-gray-400">
+                <NuxtLink
+                  to="/chat"
+                  @click="closeMobileMenu"
+                  class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <Icon name="i-heroicons-chat-bubble-left-right" class="w-5 h-5" />
+                  ИИ Помощь
+                </NuxtLink>
+                <div class="flex items-center gap-3 px-4 py-2 text-xs text-gray-500 dark:text-gray-500">
                   <Icon name="i-heroicons-cpu-chip" class="w-4 h-4" />
                   <span>v{{ $config?.public?.version || '1.0.0' }}</span>
                 </div>
@@ -279,7 +285,7 @@ const isActiveLink = (linkPath: string) => {
     >
       <div 
         v-if="isMobileMenuOpen" 
-        class="fixed inset-0 bg-black/20 z-10 lg:hidden" 
+        class="fixed inset-0 bg-black/20 z-30 lg:hidden" 
         @click="closeMobileMenu"
       ></div>
     </Transition>
@@ -347,8 +353,8 @@ const isActiveLink = (linkPath: string) => {
 </template>
 
 <style scoped>
-/* Ensure mobile menu has higher z-index than other elements */
+/* Mobile menu proper positioning and z-index */
 .mobile-menu {
-  z-index: 50;
+  z-index: 40;
 }
 </style>
