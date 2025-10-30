@@ -1,0 +1,159 @@
+{
+  "ui": {
+    "create": "Create",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "submit": "Submit",
+    "loading": "Loading...",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "view": "View",
+    "download": "Download",
+    "upload": "Upload",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "confirm": "Confirm",
+    "name": "Name",
+    "description": "Description",
+    "settings": "Settings",
+    "help": "Help",
+    "logout": "Logout",
+    "profile": "Profile",
+    "minutes": "min",
+    "hours": "h",
+    "days": "d",
+    "weeks": "w",
+    "months": "m",
+    "years": "y"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "systems": "Systems",
+    "diagnostics": "Diagnostics",
+    "analytics": "Analytics",
+    "reports": "Reports",
+    "chat": "AI Chat",
+    "settings": "Settings",
+    "documentation": "Documentation"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Overview of hydraulic systems status and key metrics",
+    "kpi": {
+      "systemsOnline": "Systems Online",
+      "avgHealth": "Average Health",
+      "activeAlerts": "Active Alerts",
+      "efficiency": "Efficiency"
+    },
+    "sections": {
+      "quickActions": "Quick Actions",
+      "systemOverview": "System Overview",
+      "recentActivity": "Recent Activity",
+      "alertsNotifications": "Alerts & Notifications"
+    },
+    "actions": {
+      "runDiagnostic": "Run Diagnostic",
+      "generateReport": "Generate Report",
+      "addSystem": "Add System",
+      "viewAll": "View All"
+    }
+  },
+  "diagnostics": {
+    "title": "Diagnostics Center",
+    "subtitle": "Run automated diagnostics and analyze system health",
+    "runNew": "Run New Diagnostic",
+    "kpi": {
+      "activeSessions": "Active Sessions",
+      "successRate": "Success Rate",
+      "avgDuration": "Avg Duration",
+      "issuesFound": "Issues Found",
+      "runningNow": "Running now",
+      "thisWeek": "{0} this week",
+      "faster": "{0}min faster",
+      "needsAttention": "Needs attention"
+    },
+    "activeSessions": "Active Diagnostic Sessions",
+    "started": "Started",
+    "recentResults": {
+      "title": "Recent Diagnostic Results",
+      "subtitle": "Completed diagnostic sessions and their findings"
+    },
+    "filters": {
+      "allEquipment": "All Equipment"
+    },
+    "table": {
+      "name": "Diagnostic Name",
+      "equipment": "Equipment",
+      "healthScore": "Health Score",
+      "issues": "Issues",
+      "completed": "Completed",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "healthScore": "Overall Health Score",
+    "issues": "Issues",
+    "issuesCount": "issues",
+    "issuesFound": "Issues Found",
+    "analysisDuration": "Analysis Duration",
+    "status": {
+      "completed": "completed",
+      "warning": "warning",
+      "error": "error",
+      "processing": "processing"
+    },
+    "results": {
+      "title": "Diagnostic Results",
+      "subtitle": "Detailed analysis and recommendations"
+    },
+    "recommendations": "Recommendations",
+    "priority": "Priority",
+    "priorityMedium": "Medium",
+    "statusLabel": "Status",
+    "statusNormal": "Normal",
+    "exportPDF": "Export PDF",
+    "recommendations": {
+      "pressureMaintenance": "Pressure System Maintenance",
+      "pressureMaintenanceDesc": "Schedule filter replacement within 2 weeks to prevent pressure fluctuations.",
+      "temperatureMonitoring": "Temperature Monitoring",
+      "temperatureMonitoringDesc": "Temperature readings are within optimal range. Continue monitoring."
+    }
+  },
+  "chat": {
+    "title": "AI Chat",
+    "subtitle": "Intelligent assistance for hydraulic system diagnostics",
+    "placeholder": "Describe the problem or ask a question...",
+    "send": "Send",
+    "sending": "Sending...",
+    "thinking": "Analyzing...",
+    "poweredBy": "Powered by AI",
+    "newSession": {
+      "title": "New Consultation",
+      "button": "New Consultation"
+    }
+  },
+  "systems": {
+    "title": "Hydraulic Systems",
+    "subtitle": "Equipment management and monitoring",
+    "addNew": "Add System",
+    "noSystems": "No systems found",
+    "noSystemsDesc": "Add your first hydraulic system to start monitoring"
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Deep performance analysis and trends"
+  },
+  "reports": {
+    "title": "Reports",
+    "subtitle": "Generate and manage diagnostic reports"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "System configuration and user preferences"
+  }
+}
