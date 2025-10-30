@@ -297,46 +297,11 @@
       </div>
     </div>
 
-    <!-- New Session Modal - Using UModal Component -->
-    <UModal
+    <!-- New Session Modal - UI Component -->
+    <UChatNewSessionModal
       v-model="showNewSessionModal"
-      :title="$t('chat.newSession.title')"
-      description="Describe your diagnostic task or question"
-      size="md"
-    >
-      <form @submit.prevent="createNewSession" class="space-y-4">
-        <div>
-          <label class="u-label">Session Title</label>
-          <input
-            v-model="newSessionTitle"
-            type="text"
-            required
-            class="u-input"
-            placeholder="e.g. HYD-002 Optimization Analysis"
-            autofocus
-          />
-        </div>
-      </form>
-      
-      <template #footer>
-        <button
-          type="button"
-          @click="showNewSessionModal = false"
-          class="u-btn u-btn-secondary flex-1"
-        >
-          {{ $t('ui.cancel') }}
-        </button>
-        <button
-          type="button"
-          @click="createNewSession"
-          :disabled="!newSessionTitle.trim()"
-          class="u-btn u-btn-primary flex-1"
-        >
-          <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
-          {{ $t('ui.create') }} Session
-        </button>
-      </template>
-    </UModal>
+      @submit="createNewSessionFromModal"
+    />
   </div>
 </template>
 
@@ -369,7 +334,6 @@ const activeSession = ref<ChatSession | null>(null)
 const newMessage = ref('')
 const isLoading = ref(false)
 const showNewSessionModal = ref(false)
-const newSessionTitle = ref('')
 const showSidebar = ref(false)
 
 // Touch handling for swipe gesture
@@ -462,6 +426,20 @@ const selectSession = (session: ChatSession) => {
   }
 }
 
+const createNewSessionFromModal = ({ title }: { title: string }) => {
+  const newSession: ChatSession = {
+    id: Date.now(),
+    title,
+    description: 'New diagnostic consultation',
+    lastMessage: '',
+    timestamp: new Date().toISOString(),
+    messages: []
+  }
+  chatSessions.value.unshift(newSession)
+  activeSession.value = newSession
+  showNewSessionModal.value = false
+}
+
 const sendMessage = async () => {
   if (!newMessage.value.trim() || !activeSession.value || isLoading.value) return
 
@@ -504,29 +482,6 @@ const sendMessage = async () => {
     console.error('Chat error:', error)
   } finally {
     isLoading.value = false
-  }
-}
-
-const createNewSession = () => {
-  if (!newSessionTitle.value.trim()) return
-
-  const newSession: ChatSession = {
-    id: Date.now(),
-    title: newSessionTitle.value.trim(),
-    description: 'New diagnostic consultation',
-    lastMessage: '',
-    timestamp: new Date().toISOString(),
-    messages: []
-  }
-
-  chatSessions.value.unshift(newSession)
-  activeSession.value = newSession
-  newSessionTitle.value = ''
-  showNewSessionModal.value = false
-  
-  // Auto-close sidebar on mobile after creating
-  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-    showSidebar.value = false
   }
 }
 
