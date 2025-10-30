@@ -50,7 +50,7 @@
     @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-200;
   }
   .u-card-hover { @apply hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600; }
-  .u-card-interactive { @apply u-card u-card-hover cursor-pointer; }
+  .u-card-interactive { @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-200 hover:shadow-md hover:border-gray-300 dark:hover:border-gray-600  cursor-pointer; }
 
   /* Charts & Graphs (remove @apply u-card to avoid v4 circular resolution) */
   .u-chart-wrapper {
@@ -75,11 +75,11 @@
 
   /* Buttons */
   .u-btn { @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed; }
-  .u-btn-primary { @apply u-btn bg-blue-600 hover:bg-blue-700 text-white; }
-  .u-btn-secondary { @apply u-btn bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white; }
-  .u-btn-ghost { @apply u-btn text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800; }
-  .u-btn-danger { @apply u-btn bg-red-600 hover:bg-red-700 text-white; }
-  .u-btn-success { @apply u-btn bg-green-600 hover:bg-green-700 text-white; }
+  .u-btn-primary { @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-700 text-white; }
+  .u-btn-secondary { @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white; }
+  .u-btn-ghost { @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800; }
+  .u-btn-danger { @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed bg-red-600 hover:bg-red-700 text-white; }
+  .u-btn-success { @apply inline-flex items-center justify-center rounded-md font-medium transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed bg-green-600 hover:bg-green-700 text-white; }
   .u-btn-sm { @apply px-3 py-1.5 text-sm; }
   .u-btn-md { @apply px-4 py-2 text-sm; }
   .u-btn-lg { @apply px-6 py-3 text-base; }
