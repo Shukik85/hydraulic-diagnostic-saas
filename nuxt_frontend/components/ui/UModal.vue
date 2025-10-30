@@ -9,6 +9,8 @@
         :aria-labelledby="titleId"
         @click="onBackdropClick"
         @keydown.esc="handleEscape"
+        tabindex="0"
+        ref="modalRef"
       >
         <!-- Backdrop -->
         <div class="fixed inset-0 bg-black/50 transition-opacity" />
@@ -19,30 +21,22 @@
             class="relative w-full transform rounded-xl bg-white shadow-2xl transition-all"
             :class="sizeClasses"
             @click.stop
-            ref="modalRef"
+            role="dialog"
+            :aria-labelledby="titleId"
+            :aria-describedby="description ? descriptionId : undefined"
           >
             <!-- Header -->
-            <div v-if="$slots.header || title" class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div v-if="$slots.header || title" class="border-b border-gray-200 px-6 py-4">
               <slot name="header">
                 <div>
                   <h3 :id="titleId" class="text-lg font-semibold text-gray-900">
                     {{ title }}
                   </h3>
-                  <p v-if="description" class="text-sm text-gray-500 mt-1">
+                  <p v-if="description" :id="descriptionId" class="text-sm text-gray-500 mt-1">
                     {{ description }}
                   </p>
                 </div>
               </slot>
-              
-              <button 
-                v-if="showCloseButton"
-                class="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                @click="handleClose"
-                :disabled="loading"
-                :aria-label="$t('ui.close')"
-              >
-                <Icon name="heroicons:x-mark" class="h-5 w-5" />
-              </button>
             </div>
 
             <!-- Body -->
@@ -69,14 +63,12 @@ interface Props {
   title?: string
   description?: string
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
-  showCloseButton?: boolean
   closeOnBackdrop?: boolean
   loading?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: 'md',
-  showCloseButton: true,
   closeOnBackdrop: true,
   loading: false
 })
@@ -88,8 +80,9 @@ const emit = defineEmits<{
 
 const modalRef = ref<HTMLElement>()
 
-// Generate unique ID for accessibility
+// Generate unique IDs for accessibility
 const titleId = `modal-title-${Math.random().toString(36).substr(2, 9)}`
+const descriptionId = `modal-description-${Math.random().toString(36).substr(2, 9)}`
 
 // Size classes mapping
 const sizeClasses = computed(() => {
