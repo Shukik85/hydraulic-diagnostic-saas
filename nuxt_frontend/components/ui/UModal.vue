@@ -64,13 +64,11 @@ interface Props {
   description?: string
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   closeOnBackdrop?: boolean
-  loading?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: 'md',
-  closeOnBackdrop: true,
-  loading: false
+  closeOnBackdrop: true
 })
 
 const emit = defineEmits<{
@@ -98,7 +96,6 @@ const sizeClasses = computed(() => {
 
 // Event handlers
 const handleClose = () => {
-  if (props.loading) return
   emit('update:modelValue', false)
   emit('close')
 }
