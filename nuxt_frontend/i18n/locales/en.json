@@ -54,6 +54,136 @@
       "minAgo": "{0} min ago"
     }
   },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account and system preferences",
+    "tabs": {
+      "profile": "Profile",
+      "notifications": "Notifications",
+      "integrations": "Integrations",
+      "team": "Team",
+      "system": "System"
+    },
+    "profile": {
+      "title": "Personal Information",
+      "subtitle": "Update your personal details and contact information",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "emailAddress": "Email Address",
+      "company": "Company",
+      "phone": "Phone",
+      "saveChanges": "Save Changes",
+      "changePassword": "Change Password",
+      "changePasswordSubtitle": "Update your account password for security",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "currentPasswordPlaceholder": "Enter current password",
+      "newPasswordPlaceholder": "Enter new password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "updatePassword": "Update Password"
+    },
+    "notifications": {
+      "title": "Email Notifications",
+      "subtitle": "Configure when you receive email alerts",
+      "systemAlerts": "System Alerts",
+      "systemAlertsDesc": "Critical system failures and emergencies",
+      "maintenanceReminders": "Maintenance Reminders",
+      "maintenanceRemindersDesc": "Upcoming service and maintenance tasks",
+      "diagnosticReports": "Diagnostic Reports",
+      "diagnosticReportsDesc": "When diagnostic reports are ready",
+      "weeklySummary": "Weekly Summary",
+      "weeklySummaryDesc": "Weekly system health overview"
+    },
+    "integrations": {
+      "title": "System Integrations",
+      "subtitle": "Connect with external systems and services",
+      "scadaSystem": "SCADA System",
+      "scadaSystemDesc": "Real-time data integration",
+      "erpSystem": "ERP System",
+      "erpSystemDesc": "Maintenance and inventory sync",
+      "slackIntegration": "Slack Integration",
+      "slackIntegrationDesc": "Team notifications and alerts",
+      "connected": "Connected",
+      "notConnected": "Not Connected",
+      "configure": "Configure",
+      "connect": "Connect",
+      "apiKeys": "API Keys",
+      "apiKeysSubtitle": "Manage API access tokens for external integrations",
+      "primaryApiKey": "Primary API Key",
+      "copy": "Copy",
+      "generateNewKey": "Generate New Key"
+    },
+    "team": {
+      "title": "Team Members",
+      "subtitle": "Manage user access and permissions",
+      "inviteUser": "Invite User",
+      "user": "User",
+      "role": "Role",
+      "lastActive": "Last Active",
+      "status": "Status",
+      "actions": "Actions",
+      "admin": "Admin",
+      "engineer": "Engineer",
+      "active": "Active",
+      "hoursAgo": "{0} hours ago",
+      "dayAgo": "{0} day ago"
+    },
+    "system": {
+      "title": "System Configuration",
+      "subtitle": "Configure system-wide settings and preferences",
+      "defaultAlertThreshold": "Default Alert Threshold",
+      "dataRetentionPeriod": "Data Retention Period",
+      "warningAt75": "Warning at 75%",
+      "warningAt80": "Warning at 80%",
+      "warningAt90": "Warning at 90%",
+      "months3": "3 months",
+      "months6": "6 months",
+      "year1": "1 year",
+      "years2": "2 years",
+      "autoBackup": "Auto-Backup",
+      "autoBackupDesc": "Automatically backup diagnostic data daily",
+      "saveSystemSettings": "Save System Settings"
+    }
+  },
+  "sensors": {
+    "title": "Sensors",
+    "subtitle": "Monitor and manage system sensors",
+    "addSensor": "Add Sensor",
+    "noSensors": "No sensors configured",
+    "noSensorsDesc": "Add sensors to start monitoring this system",
+    "table": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "lastValue": "Last Value",
+      "updatedAt": "Updated",
+      "actions": "Actions"
+    },
+    "detail": {
+      "title": "Sensor Details",
+      "overview": "Overview",
+      "dataStream": "Data Stream",
+      "thresholds": "Thresholds",
+      "eventLog": "Event Log",
+      "metadata": "Metadata",
+      "currentReadings": "Current Readings",
+      "lastUpdate": "Last Update"
+    }
+  },
+  "equipments": {
+    "detail": {
+      "title": "Equipment Details",
+      "overview": "Overview",
+      "sensors": "Sensors",
+      "diagnostics": "Diagnostics",
+      "maintenance": "Maintenance",
+      "specifications": "Specifications",
+      "attachedSensors": "Attached Sensors",
+      "recentDiagnostics": "Recent Diagnostics",
+      "lastMaintenance": "Last Maintenance"
+    }
+  },
   "landing": {
     "hero": {"title":"Advanced Hydraulic Systems Diagnostics","subtitle":"Real-time monitoring, AI-powered analysis, and predictive maintenance for hydraulic systems. Keep your operations running at peak efficiency."},
     "features": {"title":"Powerful Features","subtitle":"Everything you need to monitor and optimize hydraulic systems","monitoring":{"title":"Real-Time Monitoring","description":"Live data streaming from all connected systems with instant alerts for anomalies."},"analytics":{"title":"AI-Powered Analytics","description":"Machine learning algorithms detect patterns and predict maintenance needs before failures occur."},"alerts":{"title":"Smart Alerts","description":"Customizable notifications via email, SMS, or in-app alerts for critical system events."},"reports":{"title":"Detailed Reports","description":"Comprehensive performance reports with historical trends and recommendations."},"security":{"title":"Enterprise Security","description":"Bank-level encryption and compliance with industrial security standards."},"integration":{"title":"API Integration","description":"RESTful API and webhooks for seamless integration with your existing systems."}},
