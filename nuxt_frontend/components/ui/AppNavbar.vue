@@ -32,15 +32,17 @@ const props = withDefaults(defineProps<Props>(), {
 // Emits
 const emit = defineEmits(['toggle-theme', 'open-notifications', 'open-profile']);
 
+// Composables
+const route = useRoute();
+const { t } = useI18n();
+const colorMode = useColorMode();
+
 // Reactive state
 const isMobileMenuOpen = ref(false);
 const isProfileMenuOpen = ref(false);
-const route = useRoute();
-const { $t } = useI18n();
 
 // Safe store initialization
 let authStore: any = null;
-let colorMode: any = { preference: 'light' };
 
 onMounted(() => {
   try {
@@ -51,12 +53,6 @@ onMounted(() => {
       isAuthenticated: true,
     };
   }
-
-  try {
-    colorMode = useColorMode();
-  } catch (e) {
-    colorMode = { preference: 'light' };
-  }
 });
 
 // Computed
@@ -66,7 +62,7 @@ const userInitials = computed(() => {
   const name = userName.value;
   return name
     .split(' ')
-    .map(word => word[0])
+    .map((word: string) => word[0])
     .join('')
     .toUpperCase()
     .slice(0, 2);
@@ -105,8 +101,9 @@ watch(
 
 // Close profile menu when clicking outside
 onMounted(() => {
-  document.addEventListener('click', e => {
-    if (!e.target?.closest('.profile-menu')) {
+  document.addEventListener('click', (e: Event) => {
+    const target = e.target as Element;
+    if (!target?.closest('.profile-menu')) {
       isProfileMenuOpen.value = false;
     }
   });
@@ -136,12 +133,12 @@ onMounted(() => {
             <span
               class="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors duration-200 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)] select-none"
             >
-              {{ $t('app.name', 'Гидравлика ИИ') }}
+              {{ t('app.name', 'Гидравлика ИИ') }}
             </span>
             <span
               class="block text-xs leading-tight text-gray-600 tracking-wide group-hover:text-blue-600 transition-colors drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]"
             >
-              {{ $t('app.subtitle', 'Диагностическая платформа') }}
+              {{ t('app.subtitle', 'Диагностическая платформа') }}
             </span>
           </div>
         </NuxtLink>
@@ -161,7 +158,7 @@ onMounted(() => {
             ]"
           >
             <Icon v-if="item.icon" :name="item.icon" class="w-4 h-4" />
-            <span>{{ $t(`nav.${item.label}`) }}</span>
+            <span>{{ t(`nav.${item.label}`) }}</span>
             <Icon
               v-if="item.external"
               name="heroicons:arrow-top-right-on-square"
@@ -177,7 +174,7 @@ onMounted(() => {
         <NuxtLink
           to="/chat"
           class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-          :title="$t('ui.help')"
+          :title="t('ui.help')"
         >
           <Icon name="heroicons:question-mark-circle" class="w-5 h-5" />
         </NuxtLink>
@@ -187,7 +184,7 @@ onMounted(() => {
           v-if="props.showNotifications"
           @click="openNotifications"
           class="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-          :title="$t('nav.notifications', 'Уведомления')"
+          :title="t('nav.notifications', 'Уведомления')"
         >
           <Icon name="heroicons:bell" class="w-5 h-5" />
           <span
@@ -204,7 +201,7 @@ onMounted(() => {
         <button
           @click="toggleTheme"
           class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-          :title="$t('ui.toggleTheme', 'Переключить тему')"
+          :title="t('ui.toggleTheme', 'Переключить тему')"
         >
           <Icon
             :name="colorMode?.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'"
@@ -256,21 +253,21 @@ onMounted(() => {
                 class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Icon name="heroicons:user" class="w-4 h-4 mr-3" />
-                {{ $t('ui.profile') }}
+                {{ t('ui.profile') }}
               </NuxtLink>
               <NuxtLink
                 to="/settings"
                 class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <Icon name="heroicons:cog-6-tooth" class="w-4 h-4 mr-3" />
-                {{ $t('ui.settings') }}
+                {{ t('ui.settings') }}
               </NuxtLink>
               <button
                 @click="handleLogout"
                 class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
               >
                 <Icon name="heroicons:arrow-right-on-rectangle" class="w-4 h-4 mr-3" />
-                {{ $t('ui.logout') }}
+                {{ t('ui.logout') }}
               </button>
             </div>
           </div>
@@ -282,7 +279,7 @@ onMounted(() => {
             to="/dashboard"
             class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl transition-all duration-200"
           >
-            {{ $t('nav.openDashboard', 'Открыть дашборд') }}
+            {{ t('nav.openDashboard', 'Открыть дашборд') }}
           </NuxtLink>
         </slot>
       </div>
@@ -315,7 +312,7 @@ onMounted(() => {
           ]"
         >
           <Icon v-if="item.icon" :name="item.icon" class="w-5 h-5" />
-          <span>{{ $t(`nav.${item.label}`) }}</span>
+          <span>{{ t(`nav.${item.label}`) }}</span>
           <Icon
             v-if="item.external"
             name="heroicons:arrow-top-right-on-square"
@@ -329,7 +326,7 @@ onMounted(() => {
           class="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors text-base font-medium text-gray-700 hover:text-blue-700 hover:bg-blue-50"
         >
           <Icon name="heroicons:question-mark-circle" class="w-5 h-5" />
-          <span>{{ $t('ui.help') }}</span>
+          <span>{{ t('ui.help') }}</span>
         </NuxtLink>
 
         <div class="border-t border-gray-200 pt-4 mt-4">
@@ -343,7 +340,7 @@ onMounted(() => {
                 class="w-4 h-4"
               />
               <span class="text-sm">{{ 
-                colorMode?.preference === 'dark' ? $t('ui.lightTheme', 'Светлая') : $t('ui.darkTheme', 'Тёмная')
+                colorMode?.preference === 'dark' ? t('ui.lightTheme', 'Светлая') : t('ui.darkTheme', 'Тёмная')
               }}</span>
             </button>
             <button
