@@ -27,6 +27,7 @@
     "view": "View",
     "optional": "optional",
     "minutes": "min",
+    "description": "Description",
     "toggleTheme": "Toggle Theme",
     "lightTheme": "Light",
     "darkTheme": "Dark",
@@ -133,6 +134,29 @@
     "addNew": "Add System",
     "noSystems": "No Systems",
     "noSystemsDesc": "Add your first hydraulic system for monitoring",
+    "create": {
+      "title": "Create System",
+      "subtitle": "Fill in the system parameters",
+      "name": "System Name",
+      "namePlaceholder": "e.g., HYD-001 - Pump Station A",
+      "type": "System Type",
+      "initialStatus": "Initial Status",
+      "descriptionPlaceholder": "Brief description of the system (optional)",
+      "nextStepsTitle": "Next Steps",
+      "nextStepsDesc": "After creation, configure sensors and thresholds.",
+      "createBtn": "Create System",
+      "errors": {
+        "nameRequired": "System name is required"
+      }
+    },
+    "types": {
+      "industrial": "Industrial",
+      "mobile": "Mobile",
+      "marine": "Marine",
+      "construction": "Construction",
+      "mining": "Mining",
+      "agricultural": "Agricultural"
+    },
     "status": {
       "active": "Active",
       "maintenance": "Maintenance",

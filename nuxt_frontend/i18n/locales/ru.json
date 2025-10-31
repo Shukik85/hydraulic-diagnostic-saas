@@ -27,6 +27,7 @@
     "view": "Просмотр",
     "optional": "опционально",
     "minutes": "мин",
+    "description": "Описание",
     "toggleTheme": "Переключить тему",
     "lightTheme": "Светлая",
     "darkTheme": "Тёмная",
@@ -133,6 +134,29 @@
     "addNew": "Добавить систему",
     "noSystems": "Нет систем",
     "noSystemsDesc": "Добавьте первую гидравлическую систему для мониторинга",
+    "create": {
+      "title": "Создать систему",
+      "subtitle": "Заполните параметры системы",
+      "name": "Название системы",
+      "namePlaceholder": "Например: HYD-001 — Насосная станция A",
+      "type": "Тип системы",
+      "initialStatus": "Начальный статус",
+      "descriptionPlaceholder": "Краткое описание системы (опционально)",
+      "nextStepsTitle": "Следующие шаги",
+      "nextStepsDesc": "После создания настройте датчики и пороги.",
+      "createBtn": "Создать систему",
+      "errors": {
+        "nameRequired": "Укажите название системы"
+      }
+    },
+    "types": {
+      "industrial": "Промышленная",
+      "mobile": "Мобильная",
+      "marine": "Судовая",
+      "construction": "Строительная",
+      "mining": "Горнодобывающая",
+      "agricultural": "Сельскохозяйственная"
+    },
     "status": {
       "active": "Активна",
       "maintenance": "Обслуживание",
