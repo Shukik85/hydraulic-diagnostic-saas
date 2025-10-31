@@ -1,4 +1,3 @@
-
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   ssr: false, // SPA режим для дэшборда
@@ -38,7 +37,9 @@ export default defineNuxtConfig({
       cookieKey: 'i18n_redirected',
       redirectOn: 'root',
       fallbackLocale: 'ru'
-    }
+    },
+    // Для @nuxtjs/i18n v10 - ссылка на отдельный конфиг
+    vueI18n: './i18n.config.ts'
   },
   
   runtimeConfig: {
@@ -54,11 +55,11 @@ export default defineNuxtConfig({
   ],
 
   postcss: {
-    plugins:{
-    '@tailwindcss/postcss': {},
-    autoprefixer: {}
+    plugins: {
+      '@tailwindcss/postcss': {},
+      autoprefixer: {}
+    }
   },
-},
   
   components: [
     {

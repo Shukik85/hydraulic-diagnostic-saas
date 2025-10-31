@@ -328,12 +328,13 @@
 </template>
 
 <script setup lang="ts">
-const { t } = useI18n()
-
 // Page setup
 definePageMeta({
   middleware: ['auth']
 })
+
+// Composables - правильный порядок!
+const { t } = useI18n()
 
 // State
 const showRunModal = ref(false)
