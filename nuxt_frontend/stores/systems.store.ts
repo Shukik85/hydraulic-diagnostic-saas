@@ -1,51 +1,59 @@
-interface HydraulicSystem {
-    id: number
-    name: string
-    status: string
-    pressure: number
-    temperature: number
-    lastUpdate: Date
-}
+// Systems store with safe API integration
+import type { HydraulicSystem } from '~/types/api'
 
 export const useSystemsStore = defineStore('systems', () => {
-    const systems = ref<HydraulicSystem[]>([])
-    const isLoading = ref(false)
-    const error = ref<string | null>(null)
-
-    const fetchSystems = async () => {
-        isLoading.value = true
-        error.value = null
-
-        try {
-            const { $api } = useNuxtApp()
-            systems.value = await $api<HydraulicSystem[]>('/systems/')
-        } catch (err: any) {
-            error.value = err.data?.detail || 'Failed to fetch systems'
-        } finally {
-            isLoading.value = false
-        }
+  const systems = ref<HydraulicSystem[]>([])
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  
+  // Safe API access
+  const api = () => {
+    try {
+      return useApi().api
+    } catch {
+      return null
     }
-
-    const fetchSystemById = async (id: number) => {
-        try {
-            const { $api } = useNuxtApp()
-            return await $api<HydraulicSystem>(`/systems/${id}/`)
-        } catch (err: any) {
-            error.value = err.data?.detail || 'Failed to fetch system'
-            return null
-        }
+  }
+  
+  const fetchSystems = async () => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const $api = api()
+      if ($api) {
+        systems.value = await ($api as any)<HydraulicSystem[]>('/systems/')
+      }
+    } catch (err: any) {
+      error.value = err?.message || 'Ошибка загрузки систем'
+    } finally {
+      loading.value = false
     }
-
-    const getSystemById = (id: number) => {
-        return systems.value.find(s => s.id === id)
+  }
+  
+  const getSystemById = (id: number) => {
+    return systems.value.find(s => s.id === id) || null
+  }
+  
+  const addSystem = async (systemData: Partial<HydraulicSystem>) => {
+    const $api = api()
+    if ($api) {
+      const newSystem = await ($api as any)<HydraulicSystem>('/systems/', {
+        method: 'POST',
+        body: systemData
+      })
+      systems.value.push(newSystem)
+      return newSystem
     }
-
-    return {
-        systems: readonly(systems),
-        isLoading: readonly(isLoading),
-        error: readonly(error),
-        fetchSystems,
-        fetchSystemById,
-        getSystemById
-    }
+    return null
+  }
+  
+  return {
+    systems: readonly(systems),
+    loading: readonly(loading),
+    error: readonly(error),
+    fetchSystems,
+    getSystemById,
+    addSystem
+  }
 })

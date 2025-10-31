@@ -1,554 +1,256 @@
-<script setup lang="ts">
-// Enhanced registration with proper TypeScript and null safety
-definePageMeta({
-  layout: 'auth',
-  middleware: 'guest',
-});
-
-useSeoMeta({
-  title: 'Регистрация | Hydraulic Diagnostic SaaS',
-  description:
-    'Create your enterprise account for hydraulic systems monitoring and diagnostics platform.',
-  robots: 'noindex, nofollow',
-});
-
-interface RegisterForm {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  firstName: string;
-  lastName: string;
-  company: string;
-  jobTitle: string;
-  phone: string;
-  subscribeUpdates: boolean;
-  termsAccepted: boolean;
-}
-
-const authStore = useAuthStore();
-const router = useRouter();
-
-// Form state with proper initial values
-const currentStep = ref<number>(1);
-const form = reactive<RegisterForm>({
-  email: '',
-  password: '',
-  confirmPassword: '',
-  firstName: '',
-  lastName: '',
-  company: '',
-  jobTitle: '',
-  phone: '',
-  subscribeUpdates: true,
-  termsAccepted: false,
-});
-
-const isLoading = ref<boolean>(false);
-const error = ref<string>('');
-const showPassword = ref<boolean>(false);
-const showConfirmPassword = ref<boolean>(false);
-
-// Password strength with guaranteed non-null return
-const passwordStrength = usePasswordStrength(toRef(form, 'password'));
-
-// Form validation with null safety
-const validation = computed(() => ({
-  email: !form.email || !form.email.includes('@') ? 'Введите корректный email' : '',
-  password: !form.password || form.password.length < 8 ? 'Минимум 8 символов' : '',
-  confirmPassword: form.password !== form.confirmPassword ? 'Пароли не совпадают' : '',
-  firstName: !form.firstName ? 'Обязательное поле' : '',
-  lastName: !form.lastName ? 'Обязательное поле' : '',
-  company: !form.company ? 'Обязательное поле' : '',
-  terms: !form.termsAccepted ? 'Необходимо принять условия' : '',
-}));
-
-const isStep1Valid = computed(() => {
-  return !validation.value.email && !validation.value.firstName && !validation.value.lastName;
-});
-
-const isStep2Valid = computed(() => {
-  return (
-    form.password &&
-    form.confirmPassword &&
-    form.company &&
-    passwordStrength.value.score >= 3 &&
-    !validation.value.password &&
-    !validation.value.confirmPassword &&
-    !validation.value.company
-  );
-});
-
-const isStep3Valid = computed(() => {
-  return form.termsAccepted && !validation.value.terms;
-});
-
-// Navigation
-const nextStep = () => {
-  if (currentStep.value < 3) {
-    currentStep.value++;
-  }
-};
-
-const prevStep = () => {
-  if (currentStep.value > 1) {
-    currentStep.value--;
-  }
-};
-
-// Submit handler
-const handleRegister = async () => {
-  if (!isStep3Valid.value) return;
-
-  isLoading.value = true;
-  error.value = '';
-
-  try {
-    await authStore.register({
-      email: form.email,
-      password: form.password,
-      first_name: form.firstName,
-      last_name: form.lastName,
-      company: form.company,
-      job_title: form.jobTitle,
-      phone: form.phone,
-      subscribe_updates: form.subscribeUpdates,
-    });
-
-    await navigateTo('/dashboard');
-  } catch (err: any) {
-    console.error('Registration error:', err);
-    error.value = err.message || 'Ошибка регистрации. Попробуйте позже.';
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-// Auto-focus first input
-const emailInput = ref<HTMLInputElement>();
-
-onMounted(() => {
-  emailInput.value?.focus();
-});
-</script>
-
 <template>
-  <div class="min-h-screen flex">
-    <!-- Left side: Registration form -->
-    <div class="flex-1 flex flex-col justify-center px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
-      <div class="mx-auto w-full max-w-sm lg:w-96 premium-fade-in">
-        <!-- Logo and title -->
-        <div class="text-center mb-8">
-          <div
-            class="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl"
-          >
-            <Icon name="heroicons:user-plus" class="w-10 h-10 text-white" />
-          </div>
-
-          <h1 class="premium-heading-md text-gray-900 dark:text-white mb-2">Создайте аккаунт</h1>
-          <p class="premium-body text-gray-600 dark:text-gray-300">
-            Получите доступ к платформе мониторинга
-          </p>
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <div class="mx-auto w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+          <Icon name="heroicons:user-plus" class="w-6 h-6 text-white" />
         </div>
-
-        <!-- Progress indicator -->
-        <div class="mb-8">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400"
-              >Шаг {{ currentStep }} из 3</span
-            >
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400"
-              >{{ Math.round((currentStep / 3) * 100) }}%</span
-            >
-          </div>
-          <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div
-              class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              :style="`width: ${(currentStep / 3) * 100}%`"
-            ></div>
-          </div>
-        </div>
-
-        <!-- Error message -->
-        <div
-          v-if="error"
-          class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg premium-slide-up"
-        >
-          <div class="flex items-center space-x-3">
-            <Icon
-              name="heroicons:exclamation-triangle"
-              class="w-5 h-5 text-red-600 dark:text-red-400"
-            />
-            <p class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
-          </div>
-        </div>
-
-        <!-- Step 1: Personal Information -->
-        <form v-if="currentStep === 1" @submit.prevent="nextStep" class="space-y-6">
-          <!-- Email -->
-          <div>
-            <label for="email" class="premium-label">Электронная почта</label>
-            <input
-              id="email"
-              ref="emailInput"
-              v-model="form.email"
-              type="email"
-              required
-              :disabled="isLoading"
-              :class="validation.email ? 'premium-input-error' : 'premium-input'"
-              placeholder="your.email@company.com"
-            />
-            <p v-if="validation.email" class="premium-error-text">{{ validation.email }}</p>
-          </div>
-
-          <!-- Name fields -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="firstName" class="premium-label">Имя</label>
-              <input
-                id="firstName"
-                v-model="form.firstName"
-                type="text"
-                required
-                :disabled="isLoading"
-                :class="validation.firstName ? 'premium-input-error' : 'premium-input'"
-                placeholder="Иван"
-              />
-              <p v-if="validation.firstName" class="premium-error-text">
-                {{ validation.firstName }}
-              </p>
-            </div>
-            <div>
-              <label for="lastName" class="premium-label">Фамилия</label>
-              <input
-                id="lastName"
-                v-model="form.lastName"
-                type="text"
-                required
-                :disabled="isLoading"
-                :class="validation.lastName ? 'premium-input-error' : 'premium-input'"
-                placeholder="Иванов"
-              />
-              <p v-if="validation.lastName" class="premium-error-text">{{ validation.lastName }}</p>
-            </div>
-          </div>
-
-          <PremiumButton
-            type="submit"
-            full-width
-            size="lg"
-            gradient
-            :disabled="!isStep1Valid"
-            icon="heroicons:arrow-right"
-          >
-            Продолжить
-          </PremiumButton>
-        </form>
-
-        <!-- Step 2: Security -->
-        <form v-else-if="currentStep === 2" @submit.prevent="nextStep" class="space-y-6">
-          <!-- Password -->
-          <div>
-            <label for="password" class="premium-label">Пароль</label>
-            <div class="relative">
-              <input
-                id="password"
-                v-model="form.password"
-                :type="showPassword ? 'text' : 'password'"
-                required
-                :disabled="isLoading"
-                :class="[validation.password ? 'premium-input-error' : 'premium-input', 'pr-12']"
-                placeholder="••••••••"
-              />
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <Icon
-                  :name="showPassword ? 'heroicons:eye-slash' : 'heroicons:eye'"
-                  class="w-5 h-5"
-                />
-              </button>
-            </div>
-            <p v-if="validation.password" class="premium-error-text">{{ validation.password }}</p>
-
-            <!-- Password strength indicator - Fixed null safety -->
-            <div v-if="form.password" class="mt-2">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs text-gray-500 dark:text-gray-400">Надёжность пароля</span>
-                <span
-                  :class="[
-                    'text-xs font-medium',
-                    passwordStrength.color === 'red'
-                      ? 'text-red-600 dark:text-red-400'
-                      : passwordStrength.color === 'yellow'
-                        ? 'text-yellow-600 dark:text-yellow-400'
-                        : passwordStrength.color === 'green'
-                          ? 'text-green-600 dark:text-green-400'
-                          : 'text-gray-500',
-                  ]"
-                >
-                  {{ passwordStrength.label }}
-                </span>
-              </div>
-              <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  :class="[
-                    'h-2 rounded transition-all duration-300',
-                    passwordStrength.color === 'red'
-                      ? 'bg-red-500'
-                      : passwordStrength.color === 'yellow'
-                        ? 'bg-yellow-500'
-                        : passwordStrength.color === 'green'
-                          ? 'bg-green-500'
-                          : 'bg-gray-300',
-                  ]"
-                  :style="`width: ${(passwordStrength.score / 5) * 100}%`"
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Confirm Password -->
-          <div>
-            <label for="confirmPassword" class="premium-label">Подтвердите пароль</label>
-            <div class="relative">
-              <input
-                id="confirmPassword"
-                v-model="form.confirmPassword"
-                :type="showConfirmPassword ? 'text' : 'password'"
-                required
-                :disabled="isLoading"
-                :class="[
-                  validation.confirmPassword ? 'premium-input-error' : 'premium-input',
-                  'pr-12',
-                ]"
-                placeholder="••••••••"
-              />
-              <button
-                type="button"
-                @click="showConfirmPassword = !showConfirmPassword"
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <Icon
-                  :name="showConfirmPassword ? 'heroicons:eye-slash' : 'heroicons:eye'"
-                  class="w-5 h-5"
-                />
-              </button>
-            </div>
-            <p v-if="validation.confirmPassword" class="premium-error-text">
-              {{ validation.confirmPassword }}
-            </p>
-          </div>
-
-          <!-- Company -->
-          <div>
-            <label for="company" class="premium-label">Компания</label>
-            <input
-              id="company"
-              v-model="form.company"
-              type="text"
-              required
-              :disabled="isLoading"
-              :class="validation.company ? 'premium-input-error' : 'premium-input'"
-              placeholder="ООО Гидравлик Системс"
-            />
-            <p v-if="validation.company" class="premium-error-text">{{ validation.company }}</p>
-          </div>
-
-          <!-- Navigation buttons -->
-          <div class="flex space-x-4">
-            <PremiumButton
-              type="button"
-              variant="secondary"
-              size="lg"
-              :disabled="isLoading"
-              @click="prevStep"
-              icon="heroicons:arrow-left"
-              class="flex-1"
-            >
-              Назад
-            </PremiumButton>
-            <PremiumButton
-              type="submit"
-              size="lg"
-              gradient
-              :disabled="!isStep2Valid"
-              icon="heroicons:arrow-right"
-              class="flex-1"
-            >
-              Продолжить
-            </PremiumButton>
-          </div>
-        </form>
-
-        <!-- Step 3: Final Details -->
-        <form v-else @submit.prevent="handleRegister" class="space-y-6">
-          <!-- Optional fields -->
-          <div>
-            <label for="jobTitle" class="premium-label">Должность (необязательно)</label>
-            <input
-              id="jobTitle"
-              v-model="form.jobTitle"
-              type="text"
-              :disabled="isLoading"
-              class="premium-input"
-              placeholder="Начальник отдела обслуживания"
-            />
-          </div>
-
-          <div>
-            <label for="phone" class="premium-label">Телефон (необязательно)</label>
-            <input
-              id="phone"
-              v-model="form.phone"
-              type="tel"
-              :disabled="isLoading"
-              class="premium-input"
-              placeholder="+7 (999) 123-45-67"
-            />
-          </div>
-
-          <!-- Preferences -->
-          <div class="space-y-4">
-            <div class="flex items-center">
-              <input
-                id="subscribe"
-                v-model="form.subscribeUpdates"
-                type="checkbox"
-                :disabled="isLoading"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded"
-              />
-              <label for="subscribe" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                Получать обновления по электронной почте
-              </label>
-            </div>
-
-            <div class="flex items-start">
-              <input
-                id="terms"
-                v-model="form.termsAccepted"
-                type="checkbox"
-                required
-                :disabled="isLoading"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded mt-1"
-              />
-              <label for="terms" class="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                Я соглашаюсь с
-                <a href="/terms" class="text-blue-600 hover:text-blue-500 dark:text-blue-400"
-                  >условиями использования</a
-                >
-                и
-                <a href="/privacy" class="text-blue-600 hover:text-blue-500 dark:text-blue-400"
-                  >политикой конфиденциальности</a
-                >
-              </label>
-              <p v-if="validation.terms" class="premium-error-text">{{ validation.terms }}</p>
-            </div>
-          </div>
-
-          <!-- Navigation buttons -->
-          <div class="flex space-x-4">
-            <PremiumButton
-              type="button"
-              variant="secondary"
-              size="lg"
-              :disabled="isLoading"
-              @click="prevStep"
-              icon="heroicons:arrow-left"
-              class="flex-1"
-            >
-              Назад
-            </PremiumButton>
-            <PremiumButton
-              type="submit"
-              size="lg"
-              gradient
-              :loading="isLoading"
-              :disabled="!isStep3Valid"
-              icon="heroicons:user-plus"
-              class="flex-1"
-            >
-              Создать аккаунт
-            </PremiumButton>
-          </div>
-        </form>
-
-        <!-- Login link -->
-        <div class="mt-8 text-center">
-          <p class="text-sm text-gray-600 dark:text-gray-300">
-            Уже есть аккаунт?
-            <NuxtLink
-              to="/auth/login"
-              class="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors ml-1 premium-focus"
-            >
-              Войдите
-            </NuxtLink>
-          </p>
-        </div>
+        <h1 class="text-2xl font-bold text-gray-900">Регистрация</h1>
+        <p class="text-gray-600 mt-2">Создайте аккаунт для доступа к платформе</p>
       </div>
-    </div>
 
-    <!-- Right side: Benefits -->
-    <div class="hidden lg:block relative flex-1">
-      <div class="absolute inset-0 bg-gradient-to-br from-purple-600 via-indigo-700 to-blue-800">
-        <!-- Animated background -->
-        <div class="absolute inset-0">
-          <div
-            class="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full blur-xl animate-pulse"
-          ></div>
-          <div
-            class="absolute bottom-32 left-32 w-48 h-48 bg-white/5 rounded-full blur-2xl animate-pulse animation-delay-1000"
-          ></div>
-          <div
-            class="absolute top-1/2 left-20 w-24 h-24 bg-white/10 rounded-full blur-lg animate-pulse animation-delay-500"
-          ></div>
+      <!-- Registration Form -->
+      <form @submit.prevent="handleRegister" class="space-y-6">
+        <!-- Name Fields -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="firstName" class="block text-sm font-medium text-gray-700 mb-2">
+              Имя
+            </label>
+            <input
+              id="firstName"
+              v-model="form.firstName"
+              type="text"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="Иван"
+              :disabled="isLoading"
+            />
+          </div>
+          <div>
+            <label for="lastName" class="block text-sm font-medium text-gray-700 mb-2">
+              Фамилия
+            </label>
+            <input
+              id="lastName"
+              v-model="form.lastName"
+              type="text"
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="Петров"
+              :disabled="isLoading"
+            />
+          </div>
         </div>
 
-        <!-- Content -->
-        <div class="relative h-full flex items-center justify-center p-12">
-          <div class="text-center text-white max-w-lg premium-fade-in">
-            <Icon name="heroicons:rocket-launch" class="w-20 h-20 mx-auto mb-8 text-purple-200" />
+        <!-- Email -->
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+            Email адрес
+          </label>
+          <input
+            id="email"
+            v-model="form.email"
+            type="email"
+            required
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            placeholder="ivan.petrov@company.com"
+            :disabled="isLoading"
+          />
+        </div>
 
-            <h2 class="premium-heading-lg mb-6">Присоединяйтесь к инновациям</h2>
-
-            <p class="premium-body-lg text-purple-100 mb-8">
-              Оптимизируйте работу гидравлических систем с помощью ИИ-аналитики и предикативного
-              обслуживания.
-            </p>
-
-            <!-- Features -->
-            <div class="space-y-4">
-              <div class="flex items-center justify-center space-x-3 text-purple-200">
-                <Icon name="heroicons:chart-bar-square" class="w-5 h-5" />
-                <span class="font-medium">Реальное время мониторинг</span>
-              </div>
-              <div class="flex items-center justify-center space-x-3 text-purple-200">
-                <Icon name="heroicons:cpu-chip" class="w-5 h-5" />
-                <span class="font-medium">ИИ-диагностика</span>
-              </div>
-              <div class="flex items-center justify-center space-x-3 text-purple-200">
-                <Icon name="heroicons:wrench-screwdriver" class="w-5 h-5" />
-                <span class="font-medium">Предикативное обслуживание</span>
-              </div>
-              <div class="flex items-center justify-center space-x-3 text-purple-200">
-                <Icon name="heroicons:shield-check" class="w-5 h-5" />
-                <span class="font-medium">Enterprise безопасность</span>
-              </div>
+        <!-- Password -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+            Пароль
+          </label>
+          <div class="relative">
+            <input
+              id="password"
+              v-model="form.password"
+              :type="showPassword ? 'text' : 'password'"
+              required
+              class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="Создайте надёжный пароль"
+              :disabled="isLoading"
+            />
+            <button
+              type="button"
+              @click="showPassword = !showPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              :disabled="isLoading"
+            >
+              <Icon :name="showPassword ? 'heroicons:eye-slash' : 'heroicons:eye'" class="w-5 h-5" />
+            </button>
+          </div>
+          
+          <!-- Password Strength Indicator -->
+          <div v-if="form.password" class="mt-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-gray-600">Надёжность пароля</span>
+              <span 
+                class="text-xs px-2 py-1 rounded-full font-medium"
+                :class="
+                  passwordStrength.color === 'red'
+                    ? 'bg-red-100 text-red-800'
+                    : passwordStrength.color === 'yellow'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : passwordStrength.color === 'green'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-blue-100 text-blue-800'
+                "
+              >
+                {{ passwordStrength.label }}
+              </span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div
+                class="h-2 rounded-full transition-all duration-300"
+                :class="
+                  passwordStrength.color === 'red'
+                    ? 'bg-red-500'
+                    : passwordStrength.color === 'yellow'
+                    ? 'bg-yellow-500'
+                    : passwordStrength.color === 'green'
+                    ? 'bg-green-500'
+                    : 'bg-blue-500'
+                "
+                :style="{ width: passwordStrength.score + '%' }"
+              ></div>
             </div>
           </div>
         </div>
+
+        <!-- Confirm Password -->
+        <div>
+          <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">
+            Подтвердите пароль
+          </label>
+          <input
+            id="confirmPassword"
+            v-model="form.confirmPassword"
+            :type="showConfirmPassword ? 'text' : 'password'"
+            required
+            class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            :class="{ 'border-red-300': passwordMismatch && form.confirmPassword }"
+            placeholder="Повторите пароль"
+            :disabled="isLoading"
+          />
+          <button
+            type="button"
+            @click="showConfirmPassword = !showConfirmPassword"
+            class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            :disabled="isLoading"
+          >
+            <Icon :name="showConfirmPassword ? 'heroicons:eye-slash' : 'heroicons:eye'" class="w-5 h-5" />
+          </button>
+          
+          <!-- Password Match Indicator -->
+          <div v-if="form.confirmPassword && passwordMismatch" class="mt-2 flex items-center gap-2 text-sm text-red-600">
+            <Icon name="heroicons:x-circle" class="w-4 h-4" />
+            <span>Пароли не совпадают</span>
+          </div>
+          <div v-else-if="form.confirmPassword && !passwordMismatch" class="mt-2 flex items-center gap-2 text-sm text-green-600">
+            <Icon name="heroicons:check-circle" class="w-4 h-4" />
+            <span>Пароли совпадают</span>
+          </div>
+        </div>
+
+        <!-- Terms Agreement -->
+        <div class="flex items-start gap-3">
+          <input
+            id="agreeTerms"
+            v-model="form.agreeTerms"
+            type="checkbox"
+            required
+            class="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            :disabled="isLoading"
+          />
+          <label for="agreeTerms" class="text-sm text-gray-600">
+            Я соглашаюсь с
+            <a href="#" class="text-blue-600 hover:text-blue-500 hover:underline">пользовательским соглашением</a>
+            и
+            <a href="#" class="text-blue-600 hover:text-blue-500 hover:underline">политикой конфиденциальности</a>
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          :disabled="isLoading || passwordMismatch || !form.agreeTerms"
+        >
+          <div v-if="isLoading" class="flex items-center justify-center gap-2">
+            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Регистрация...
+          </div>
+          <span v-else>Создать аккаунт</span>
+        </button>
+      </form>
+
+      <!-- Login Link -->
+      <div class="mt-6 text-center">
+        <p class="text-sm text-gray-600">
+          Уже есть аккаунт?
+          <NuxtLink to="/auth/login" class="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+            Войти
+          </NuxtLink>
+        </p>
       </div>
     </div>
   </div>
 </template>
 
-<style scoped>
-.animation-delay-500 {
-  animation-delay: 500ms;
-}
+<script setup lang="ts">
+import type { UiPasswordStrength } from '~/types/api'
 
-.animation-delay-1000 {
-  animation-delay: 1000ms;
+// Redirect if already authenticated
+definePageMeta({
+  layout: 'auth',
+  middleware: ['guest']
+})
+
+const router = useRouter()
+
+const form = ref({
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  agreeTerms: false
+})
+
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const isLoading = ref(false)
+
+// Password strength
+const passwordStrength = usePasswordStrength(toRef(form.value, 'password'))
+
+// Password match validation
+const passwordMismatch = computed(() => {
+  return form.value.password !== form.value.confirmPassword
+})
+
+const handleRegister = async () => {
+  if (passwordMismatch.value || !form.value.agreeTerms) {
+    return
+  }
+  
+  isLoading.value = true
+  
+  try {
+    // Registration logic here
+    console.log('Registration data:', form.value)
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    // Success - redirect to dashboard
+    await router.push('/dashboard')
+  } catch (error) {
+    console.error('Registration failed:', error)
+  } finally {
+    isLoading.value = false
+  }
 }
-</style>
+</script>

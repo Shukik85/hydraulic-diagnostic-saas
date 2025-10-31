@@ -1,241 +1,178 @@
-<script setup lang="ts">
-// Fixed reset password with proper null safety
-definePageMeta({
-  layout: 'auth',
-  middleware: 'guest',
-});
-
-useSeoMeta({
-  title: 'Сброс пароля | Hydraulic Diagnostic SaaS',
-  robots: 'noindex, nofollow',
-});
-
-interface ResetForm {
-  password: string;
-  confirmPassword: string;
-}
-
-const route = useRoute();
-const router = useRouter();
-
-// Form state
-const form = reactive<ResetForm>({
-  password: '',
-  confirmPassword: '',
-});
-
-const isLoading = ref<boolean>(false);
-const error = ref<string>('');
-const success = ref<boolean>(false);
-const showPassword = ref<boolean>(false);
-const showConfirmPassword = ref<boolean>(false);
-
-// Reset token from URL
-const token = computed(() => (route.query.token as string) || '');
-
-// Password strength with guaranteed return
-const passwordStrength = usePasswordStrength(toRef(form, 'password'));
-
-// Validation
-const validation = computed(() => ({
-  password: !form.password || form.password.length < 8 ? 'Минимум 8 символов' : '',
-  confirmPassword: form.password !== form.confirmPassword ? 'Пароли не совпадают' : '',
-}));
-
-const isFormValid = computed(() => {
-  return (
-    form.password &&
-    form.confirmPassword &&
-    form.password === form.confirmPassword &&
-    form.password.length >= 8 &&
-    passwordStrength.value.score >= 3
-  );
-});
-
-const handlePasswordReset = async () => {
-  if (!isFormValid.value || !token.value) return;
-
-  isLoading.value = true;
-  error.value = '';
-
-  try {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    success.value = true;
-    setTimeout(() => {
-      router.push('/auth/login');
-    }, 2000);
-  } catch (err: any) {
-    error.value = err.message || 'Ошибка сброса пароля';
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-// Check if we have a valid token
-if (!token.value) {
-  throw createError({
-    statusCode: 400,
-    statusMessage: 'Неверная ссылка для сброса пароля',
-  });
-}
-</script>
-
 <template>
-  <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-      <div class="text-center">
-        <div
-          class="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl"
-        >
-          <Icon name="heroicons:key" class="w-10 h-10 text-white" />
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <div class="mx-auto w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+          <Icon name="heroicons:key" class="w-6 h-6 text-white" />
         </div>
-        <h1 class="premium-heading-md text-gray-900 dark:text-white mb-2">Новый пароль</h1>
-        <p class="premium-body text-gray-600 dark:text-gray-300">Введите новый надёжный пароль</p>
+        <h1 class="text-2xl font-bold text-gray-900">Смена пароля</h1>
+        <p class="text-gray-600 mt-2">Создайте новый надёжный пароль</p>
       </div>
 
-      <div v-if="success" class="premium-card p-6 text-center">
-        <Icon name="heroicons:check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          Пароль успешно сброшен!
-        </h2>
-        <p class="text-sm text-gray-600 dark:text-gray-300">Перенаправляем на страницу входа...</p>
-      </div>
-
-      <form v-else @submit.prevent="handlePasswordReset" class="premium-card p-8 space-y-6">
-        <!-- Error message -->
-        <div
-          v-if="error"
-          class="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-        >
-          <div class="flex items-center space-x-3">
-            <Icon
-              name="heroicons:exclamation-triangle"
-              class="w-5 h-5 text-red-600 dark:text-red-400"
-            />
-            <p class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
-          </div>
-        </div>
-
+      <!-- Reset Form -->
+      <form @submit.prevent="handleReset" class="space-y-6">
         <!-- New Password -->
         <div>
-          <label for="password" class="premium-label">Новый пароль</label>
+          <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">
+            Новый пароль
+          </label>
           <div class="relative">
             <input
-              id="password"
-              v-model="form.password"
+              id="newPassword"
+              v-model="form.newPassword"
               :type="showPassword ? 'text' : 'password'"
               required
+              class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="Создайте новый пароль"
               :disabled="isLoading"
-              :class="[validation.password ? 'premium-input-error' : 'premium-input', 'pr-12']"
-              placeholder="Введите новый пароль"
             />
             <button
               type="button"
               @click="showPassword = !showPassword"
-              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              :disabled="isLoading"
             >
-              <Icon
-                :name="showPassword ? 'heroicons:eye-slash' : 'heroicons:eye'"
-                class="w-5 h-5"
-              />
+              <Icon :name="showPassword ? 'heroicons:eye-slash' : 'heroicons:eye'" class="w-5 h-5" />
             </button>
           </div>
-          <p v-if="validation.password" class="premium-error-text">{{ validation.password }}</p>
-
-          <!-- Fixed password strength indicator -->
-          <div v-if="form.password" class="mt-2">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-xs text-gray-500 dark:text-gray-400">Надёжность</span>
+          
+          <!-- Password Strength Indicator -->
+          <div v-if="form.newPassword" class="mt-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-gray-600">Надёжность</span>
               <span
-                :class="[
-                  'text-xs font-medium',
+                class="text-xs px-2 py-1 rounded-full font-medium"
+                :class="
                   passwordStrength.color === 'red'
-                    ? 'text-red-600 dark:text-red-400'
+                    ? 'bg-red-100 text-red-800'
                     : passwordStrength.color === 'yellow'
-                      ? 'text-yellow-600 dark:text-yellow-400'
-                      : passwordStrength.color === 'green'
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-gray-500',
-                ]"
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : passwordStrength.color === 'green'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-blue-100 text-blue-800'
+                "
               >
                 {{ passwordStrength.label }}
               </span>
             </div>
-            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div class="w-full bg-gray-200 rounded-full h-2">
               <div
-                :class="[
-                  'h-2 rounded transition-all duration-300',
+                class="h-2 rounded-full transition-all duration-300"
+                :class="
                   passwordStrength.color === 'red'
                     ? 'bg-red-500'
                     : passwordStrength.color === 'yellow'
-                      ? 'bg-yellow-500'
-                      : passwordStrength.color === 'green'
-                        ? 'bg-green-500'
-                        : 'bg-gray-300',
-                ]"
-                :style="`width: ${(passwordStrength.score / 5) * 100}%`"
+                    ? 'bg-yellow-500'
+                    : passwordStrength.color === 'green'
+                    ? 'bg-green-500'
+                    : 'bg-blue-500'
+                "
+                :style="{ width: passwordStrength.score + '%' }"
               ></div>
             </div>
           </div>
         </div>
 
-        <!-- Confirm Password -->
-        <div>
-          <label for="confirmPassword" class="premium-label">Подтвердите пароль</label>
-          <div class="relative">
-            <input
-              id="confirmPassword"
-              v-model="form.confirmPassword"
-              :type="showConfirmPassword ? 'text' : 'password'"
-              required
-              :disabled="isLoading"
-              :class="[
-                validation.confirmPassword ? 'premium-input-error' : 'premium-input',
-                'pr-12',
-              ]"
-              placeholder="Повторите пароль"
-            />
-            <button
-              type="button"
-              @click="showConfirmPassword = !showConfirmPassword"
-              class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <Icon
-                :name="showConfirmPassword ? 'heroicons:eye-slash' : 'heroicons:eye'"
-                class="w-5 h-5"
-              />
-            </button>
+        <!-- Confirm New Password -->
+        <div class="relative">
+          <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">
+            Подтверждение пароля
+          </label>
+          <input
+            id="confirmPassword"
+            v-model="form.confirmPassword"
+            :type="showConfirmPassword ? 'text' : 'password'"
+            required
+            class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            :class="{ 'border-red-300': passwordMismatch && form.confirmPassword }"
+            placeholder="Повторите новый пароль"
+            :disabled="isLoading"
+          />
+          
+          <!-- Password Match Status -->
+          <div v-if="form.confirmPassword" class="mt-2">
+            <div v-if="passwordMismatch" class="flex items-center gap-2 text-sm text-red-600">
+              <Icon name="heroicons:x-circle" class="w-4 h-4" />
+              <span>Пароли не совпадают</span>
+            </div>
+            <div v-else class="flex items-center gap-2 text-sm text-green-600">
+              <Icon name="heroicons:check-circle" class="w-4 h-4" />
+              <span>Пароли совпадают</span>
+            </div>
           </div>
-          <p v-if="validation.confirmPassword" class="premium-error-text">
-            {{ validation.confirmPassword }}
-          </p>
         </div>
 
-        <!-- Submit button -->
-        <PremiumButton
+        <button
           type="submit"
-          full-width
-          size="lg"
-          gradient
-          :loading="isLoading"
-          :disabled="!isFormValid"
-          icon="heroicons:key"
+          class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          :disabled="isLoading || passwordMismatch || passwordStrength.score < 60"
         >
-          Обновить пароль
-        </PremiumButton>
-
-        <!-- Back to login -->
-        <div class="text-center">
-          <NuxtLink
-            to="/auth/login"
-            class="text-sm font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors premium-focus"
-          >
-            Вернуться ко входу
-          </NuxtLink>
-        </div>
+          <div v-if="isLoading" class="flex items-center justify-center gap-2">
+            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Смена пароля...
+          </div>
+          <span v-else>Обновить пароль</span>
+        </button>
       </form>
+
+      <!-- Back to Login -->
+      <div class="mt-6 text-center">
+        <NuxtLink to="/auth/login" class="text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors">
+          ← Назад ко входу
+        </NuxtLink>
+      </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import type { UiPasswordStrength } from '~/types/api'
+
+definePageMeta({
+  layout: 'auth',
+  middleware: ['guest']
+})
+
+const router = useRouter()
+
+const form = ref({
+  newPassword: '',
+  confirmPassword: ''
+})
+
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+const isLoading = ref(false)
+
+// Password strength
+const passwordStrength = usePasswordStrength(toRef(form.value, 'newPassword'))
+
+// Password match validation
+const passwordMismatch = computed(() => {
+  return form.value.newPassword !== form.value.confirmPassword
+})
+
+const handleReset = async () => {
+  if (passwordMismatch.value) {
+    return
+  }
+  
+  isLoading.value = true
+  
+  try {
+    // Password reset logic here
+    console.log('Password reset for:', form.value.newPassword)
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    
+    // Success - redirect to login
+    await router.push('/auth/login')
+  } catch (error) {
+    console.error('Password reset failed:', error)
+  } finally {
+    isLoading.value = false
+  }
+}
+</script>
