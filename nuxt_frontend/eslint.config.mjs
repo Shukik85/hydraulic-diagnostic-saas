@@ -1,7 +1,6 @@
-// @ts-check
+// Plain ESM JS (no TS assertions here)
 let withNuxt = () => []
 
-// Only try to import in non-typecheck environments
 try {
   if (
     typeof process !== 'undefined' &&
@@ -11,11 +10,13 @@ try {
     const { existsSync } = await import('fs')
     if (existsSync('./.nuxt/eslint.config.mjs')) {
       const nuxtEslint = await import('./.nuxt/eslint.config.mjs')
-      withNuxt = (nuxtEslint as any).default || (nuxtEslint as any)
+      // Support both default and named export without TS assertions
+      withNuxt = (nuxtEslint && nuxtEslint.default) ? nuxtEslint.default : nuxtEslint
+      if (typeof withNuxt !== 'function') withNuxt = () => []
     }
   }
 } catch {}
 
 export default withNuxt(
-  // Your custom configs here
+  // Custom rules can be added here
 )
