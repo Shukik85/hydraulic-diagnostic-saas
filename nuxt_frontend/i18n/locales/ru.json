@@ -61,6 +61,28 @@
     "priorityMedium": "Средний",
     "statusLabel": "Статус",
     "statusNormal": "Норма",
+    "runModal": {
+      "title": "Запустить диагностику",
+      "description": "Настройте параметры диагностики",
+      "equipment": "Оборудование",
+      "selectEquipment": "Выберите оборудование для диагностики",
+      "pumpStationA": "HYD-001 - Насосная станция A",
+      "hydraulicMotorB": "HYD-002 - Гидравлический мотор B",
+      "controlValveC": "HYD-003 - Управляющий клапан C",
+      "coolingSystemD": "HYD-004 - Система охлаждения D",
+      "diagnosticType": "Тип диагностики",
+      "fullAnalysis": "Полный анализ системы",
+      "pressureCheck": "Только проверка давления",
+      "temperatureAnalysis": "Анализ температуры",
+      "vibrationAnalysis": "Анализ вибрации",
+      "flowAnalysis": "Анализ расхода",
+      "emailNotification": "Email уведомления",
+      "realTimeResults": "Результаты в реальном времени",
+      "estimatedDuration": "Примерная продолжительность",
+      "priorityAnalysis": "Приоритетный анализ",
+      "startDiagnostic": "Запустить диагностику",
+      "equipmentRequired": "Пожалуйста, выберите оборудование"
+    },
     "kpi": {
       "activeSessions": "Активные сессии",
       "runningNow": "выполняется",
@@ -166,7 +188,7 @@
     },
     "severity": {
       "low": "Низкая",
-      "medium": "Средняя", 
+      "medium": "Средняя",
       "high": "Высокая",
       "critical": "Критичная"
     },
