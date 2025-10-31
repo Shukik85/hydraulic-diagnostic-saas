@@ -259,102 +259,106 @@
     </div>
 
     <!-- Run Diagnostic Modal -->
-    <URunDiagnosticModal
-      v-model="showRunModal"
-      :loading="isRunning"
-      @submit="startDiagnostic"
-      @cancel="showRunModal = false"
-    />
+    <ClientOnly>
+      <URunDiagnosticModal
+        v-model="showRunModal"
+        :loading="isRunning"
+        @submit="startDiagnostic"
+        @cancel="showRunModal = false"
+      />
+    </ClientOnly>
 
     <!-- Results Modal -->
-    <UModal
-      v-if="selectedResult"
-      v-model="showResultsModal"
-      :title="t('diagnostics.results.titleWithName', { title: t('diagnostics.results.title'), name: selectedResult.name })"
-      :description="t('diagnostics.results.subtitle')"
-      size="xl"
-    >
-      <div class="space-y-6">
-        <!-- Summary Cards -->
-        <div class="grid gap-4 sm:grid-cols-3">
-          <div class="u-card p-4 text-center">
-            <div class="text-2xl font-bold text-green-600">
-              {{ selectedResult.score }}/100
-            </div>
-            <p class="u-body-sm text-gray-500">{{ t('diagnostics.healthScore') }}</p>
-          </div>
-          <div class="u-card p-4 text-center">
-            <div class="text-2xl font-bold text-gray-900">
-              {{ selectedResult.issuesFound }}
-            </div>
-            <p class="u-body-sm text-gray-500">{{ t('diagnostics.issuesFound') }}</p>
-          </div>
-          <div class="u-card p-4 text-center">
-            <div class="text-2xl font-bold text-gray-900">
-              {{ selectedResult.duration }}
-            </div>
-            <p class="u-body-sm text-gray-500">{{ t('diagnostics.analysisDuration') }}</p>
-          </div>
-        </div>
-
-        <!-- Recommendations -->
-        <div class="u-card p-4 sm:p-6">
-          <h4 class="u-h5 mb-4">Рекомендации</h4>
-          <div class="space-y-4">
-            <div class="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
-              <div class="flex items-start gap-3">
-                <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div class="min-w-0">
-                  <p class="font-medium text-yellow-800">
-                    {{ t('diagnostics.recommendations.pressureMaintenance') }}
-                  </p>
-                  <p class="u-body-sm text-yellow-700 mt-1">
-                    {{ t('diagnostics.recommendations.pressureMaintenanceDesc') }}
-                  </p>
-                  <p class="text-xs text-yellow-600 mt-2">
-                    {{ t('diagnostics.priority') }}: {{ t('diagnostics.priorityMedium') }}
-                  </p>
+    <ClientOnly>
+      <UModal
+        v-model="showResultsModal"
+        :title="selectedResult ? t('diagnostics.results.titleWithName', { title: t('diagnostics.results.title'), name: selectedResult.name }) : t('diagnostics.results.title')"
+        :description="t('diagnostics.results.subtitle')"
+        size="xl"
+      >
+        <template v-if="selectedResult">
+          <div class="space-y-6">
+            <!-- Summary Cards -->
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div class="u-card p-4 text-center">
+                <div class="text-2xl font-bold text-green-600">
+                  {{ selectedResult.score }}/100
                 </div>
+                <p class="u-body-sm text-gray-500">{{ t('diagnostics.healthScore') }}</p>
+              </div>
+              <div class="u-card p-4 text-center">
+                <div class="text-2xl font-bold text-gray-900">
+                  {{ selectedResult.issuesFound }}
+                </div>
+                <p class="u-body-sm text-gray-500">{{ t('diagnostics.issuesFound') }}</p>
+              </div>
+              <div class="u-card p-4 text-center">
+                <div class="text-2xl font-bold text-gray-900">
+                  {{ selectedResult.duration }}
+                </div>
+                <p class="u-body-sm text-gray-500">{{ t('diagnostics.analysisDuration') }}</p>
               </div>
             </div>
 
-            <div class="p-4 border border-green-200 bg-green-50 rounded-lg">
-              <div class="flex items-start gap-3">
-                <Icon name="heroicons:check-circle" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                <div class="min-w-0">
-                  <p class="font-medium text-green-800">
-                    {{ t('diagnostics.recommendations.temperatureMonitoring') }}
-                  </p>
-                  <p class="u-body-sm text-green-700 mt-1">
-                    {{ t('diagnostics.recommendations.temperatureMonitoringDesc') }}
-                  </p>
-                  <p class="text-xs text-green-600 mt-2">
-                    {{ t('diagnostics.statusLabel') }}: {{ t('diagnostics.statusNormal') }}
-                  </p>
+            <!-- Recommendations -->
+            <div class="u-card p-4 sm:p-6">
+              <h4 class="u-h5 mb-4">Рекомендации</h4>
+              <div class="space-y-4">
+                <div class="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
+                  <div class="flex items-start gap-3">
+                    <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    <div class="min-w-0">
+                      <p class="font-medium text-yellow-800">
+                        {{ t('diagnostics.recommendations.pressureMaintenance') }}
+                      </p>
+                      <p class="u-body-sm text-yellow-700 mt-1">
+                        {{ t('diagnostics.recommendations.pressureMaintenanceDesc') }}
+                      </p>
+                      <p class="text-xs text-yellow-600 mt-2">
+                        {{ t('diagnostics.priority') }}: {{ t('diagnostics.priorityMedium') }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="p-4 border border-green-200 bg-green-50 rounded-lg">
+                  <div class="flex items-start gap-3">
+                    <Icon name="heroicons:check-circle" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div class="min-w-0">
+                      <p class="font-medium text-green-800">
+                        {{ t('diagnostics.recommendations.temperatureMonitoring') }}
+                      </p>
+                      <p class="u-body-sm text-green-700 mt-1">
+                        {{ t('diagnostics.recommendations.temperatureMonitoringDesc') }}
+                      </p>
+                      <p class="text-xs text-green-600 mt-2">
+                        {{ t('diagnostics.statusLabel') }}: {{ t('diagnostics.statusNormal') }}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <template #footer>
-        <button @click="showResultsModal = false" class="u-btn u-btn-secondary flex-1">
-          {{ t('ui.close') }}
-        </button>
-        <button class="u-btn u-btn-primary flex-1">
-          <Icon name="heroicons:arrow-down-tray" class="w-4 h-4 mr-2" />
-          {{ t('diagnostics.exportPDF') }}
-        </button>
-      </template>
-    </UModal>
+          <template #footer>
+            <button @click="showResultsModal = false" class="u-btn u-btn-secondary flex-1">
+              {{ t('ui.close') }}
+            </button>
+            <button class="u-btn u-btn-primary flex-1">
+              <Icon name="heroicons:arrow-down-tray" class="w-4 h-4 mr-2" />
+              {{ t('diagnostics.exportPDF') }}
+            </button>
+          </template>
+        </template>
+      </UModal>
+    </ClientOnly>
   </div>
 </template>
 
 <script setup lang="ts">
 import type { DiagnosticSession } from '~/types/api'
 
-// Extend types for UI display
 interface ActiveSession {
   id: number
   name: string
@@ -374,94 +378,36 @@ interface DiagnosticUIResult {
   duration: string
 }
 
-// Page setup
-definePageMeta({
-  middleware: ['auth']
-})
+definePageMeta({ middleware: ['auth'] })
 
-// Composables - правильный порядок!
 const { t } = useI18n()
 
-// State with proper typing
 const showRunModal = ref(false)
 const showResultsModal = ref(false)
 const isRunning = ref(false)
 const selectedResult = ref<DiagnosticUIResult | null>(null)
 
-// Mock data with proper typing
 const activeSessions = ref<ActiveSession[]>([])
 const recentResults = ref<DiagnosticUIResult[]>([
-  {
-    id: 1,
-    name: 'Full System Analysis - HYD-001',
-    equipment: 'HYD-001 - Pump Station A',
-    score: 92,
-    issuesFound: 1,
-    completedAt: '2 hours ago',
-    status: 'completed',
-    duration: '4.2 min'
-  },
-  {
-    id: 2,
-    name: 'Pressure Check - HYD-002',
-    equipment: 'HYD-002 - Hydraulic Motor B',
-    score: 78,
-    issuesFound: 3,
-    completedAt: '6 hours ago',
-    status: 'warning',
-    duration: '2.8 min'
-  },
-  {
-    id: 3,
-    name: 'Temperature Analysis - HYD-003',
-    equipment: 'HYD-003 - Control Valve C',
-    score: 95,
-    issuesFound: 0,
-    completedAt: '1 day ago',
-    status: 'completed',
-    duration: '3.1 min'
-  }
+  { id: 1, name: 'Full System Analysis - HYD-001', equipment: 'HYD-001 - Pump Station A', score: 92, issuesFound: 1, completedAt: '2 hours ago', status: 'completed', duration: '4.2 min' },
+  { id: 2, name: 'Pressure Check - HYD-002', equipment: 'HYD-002 - Hydraulic Motor B', score: 78, issuesFound: 3, completedAt: '6 hours ago', status: 'warning', duration: '2.8 min' },
+  { id: 3, name: 'Temperature Analysis - HYD-003', equipment: 'HYD-003 - Control Valve C', score: 95, issuesFound: 0, completedAt: '1 day ago', status: 'completed', duration: '3.1 min' }
 ])
 
-// Methods
 const startDiagnostic = async (data: any) => {
   isRunning.value = true
-  
-  // Add to active sessions
-  const session: ActiveSession = {
-    id: Date.now(),
-    name: `New Diagnostic - ${data.equipment}`,
-    equipment: data.equipment,
-    progress: 0,
-    startedAt: 'now'
-  }
-  
+  const session: ActiveSession = { id: Date.now(), name: `New Diagnostic - ${data.equipment}`, equipment: data.equipment, progress: 0, startedAt: 'now' }
   activeSessions.value.push(session)
   showRunModal.value = false
-  
-  // Simulate progress
   const interval = setInterval(() => {
     session.progress += Math.random() * 20
     if (session.progress >= 100) {
       session.progress = 100
       clearInterval(interval)
-      
-      // Remove from active and add to results after delay
       setTimeout(() => {
         activeSessions.value = activeSessions.value.filter(s => s.id !== session.id)
         isRunning.value = false
-        
-        // Add to recent results
-        const newResult: DiagnosticUIResult = {
-          id: session.id,
-          name: session.name,
-          equipment: session.equipment,
-          score: Math.floor(Math.random() * 30) + 70,
-          issuesFound: Math.floor(Math.random() * 4),
-          completedAt: 'just now',
-          status: 'completed',
-          duration: `${Math.floor(Math.random() * 3) + 2}.${Math.floor(Math.random() * 9)} min`
-        }
+        const newResult: DiagnosticUIResult = { id: session.id, name: session.name, equipment: session.equipment, score: Math.floor(Math.random() * 30) + 70, issuesFound: Math.floor(Math.random() * 4), completedAt: 'just now', status: 'completed', duration: `${Math.floor(Math.random() * 3) + 2}.${Math.floor(Math.random() * 9)} min` }
         recentResults.value.unshift(newResult)
       }, 1000)
     }
@@ -470,36 +416,14 @@ const startDiagnostic = async (data: any) => {
 
 const cancelSession = (sessionId: number) => {
   activeSessions.value = activeSessions.value.filter(s => s.id !== sessionId)
-  if (activeSessions.value.length === 0) {
-    isRunning.value = false
-  }
+  if (activeSessions.value.length === 0) isRunning.value = false
 }
 
 const viewResult = (resultId: number) => {
   const result = recentResults.value.find(r => r.id === resultId)
-  if (result) {
-    selectedResult.value = result
-    showResultsModal.value = true
-  }
+  if (result) { selectedResult.value = result; showResultsModal.value = true }
 }
 
-const getStatusBadgeClass = (status: string): string => {
-  const classes: Record<string, string> = {
-    completed: 'u-badge-success',
-    warning: 'u-badge-warning',
-    error: 'u-badge-error',
-    processing: 'u-badge-info'
-  }
-  return classes[status] || 'u-badge-gray'
-}
-
-const getStatusIcon = (status: string): string => {
-  const icons: Record<string, string> = {
-    completed: 'heroicons:check-circle',
-    warning: 'heroicons:exclamation-triangle',
-    error: 'heroicons:x-circle',
-    processing: 'heroicons:arrow-path'
-  }
-  return icons[status] || 'heroicons:question-mark-circle'
-}
+const getStatusBadgeClass = (status: string): string => ({ completed: 'u-badge-success', warning: 'u-badge-warning', error: 'u-badge-error', processing: 'u-badge-info' }[status] || 'u-badge-gray')
+const getStatusIcon = (status: string): string => ({ completed: 'heroicons:check-circle', warning: 'heroicons:exclamation-triangle', error: 'heroicons:x-circle', processing: 'heroicons:arrow-path' }[status] || 'heroicons:question-mark-circle')
 </script>
