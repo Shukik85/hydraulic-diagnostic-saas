@@ -54,6 +54,7 @@
       v-model="showGenerateModal"
       :title="t('reports.generate.title')"
       :description="t('reports.generate.subtitle')"
+      :teleport-to="'#modal-portal'"
       size="lg"
     >
       <form @submit.prevent="generateReport" class="space-y-6">
@@ -137,45 +138,18 @@
 </template>
 
 <script setup lang="ts">
-// Page metadata
-definePageMeta({
-  middleware: ['auth']
-})
+definePageMeta({ middleware: ['auth'] })
 
-// Composables
 const { t } = useI18n()
 
-// State
 const showGenerateModal = ref(false)
 const isGenerating = ref(false)
 
-const form = ref({
-  template: 'executive',
-  period: 'last_7d',
-  locale: 'ru',
-  customTitle: ''
-})
+const form = ref({ template: 'executive', period: 'last_7d', locale: 'ru', customTitle: '' })
 
-// Mock data
 const reports = ref([
-  {
-    id: 1,
-    title: 'Executive Summary - Weekly Report',
-    description: 'Краткий обзор состояния гидравлических систем',
-    createdAt: '2 часа назад',
-    period: 'Последние 7 дней',
-    severity: 'low' as const,
-    status: 'completed' as const
-  },
-  {
-    id: 2,
-    title: 'Technical Analysis - System HYD-001',
-    description: 'Детальный технический анализ насосной станции',
-    createdAt: '1 день назад',
-    period: 'Последние 30 дней',
-    severity: 'medium' as const,
-    status: 'completed' as const
-  }
+  { id: 1, title: 'Executive Summary - Weekly Report', description: 'Краткий обзор состояния гидравлических систем', createdAt: '2 часа назад', period: 'Последние 7 дней', severity: 'low' as const, status: 'completed' as const },
+  { id: 2, title: 'Technical Analysis - System HYD-001', description: 'Детальный технический анализ насосной станции', createdAt: '1 день назад', period: 'Последние 30 дней', severity: 'medium' as const, status: 'completed' as const }
 ])
 
 const reportTemplates = [
@@ -185,72 +159,18 @@ const reportTemplates = [
   { key: 'maintenance', name: t('reports.templates.maintShort'), description: t('reports.templates.maintenance') }
 ]
 
-// Helper functions with proper typing
-const getSeverityColor = (severity: string): string => {
-  const colors: Record<string, string> = {
-    low: 'bg-green-500',
-    medium: 'bg-yellow-500',
-    high: 'bg-orange-500',
-    critical: 'bg-red-500'
-  }
-  return colors[severity] || 'bg-gray-500'
-}
-
-const getSeverityText = (severity: string): string => {
-  const texts: Record<string, string> = {
-    low: t('reports.severity.low'),
-    medium: t('reports.severity.medium'), 
-    high: t('reports.severity.high'),
-    critical: t('reports.severity.critical')
-  }
-  return texts[severity] || severity
-}
-
-const getStatusBadgeClass = (status: string): string => {
-  const classes: Record<string, string> = {
-    completed: 'u-badge-success',
-    in_progress: 'u-badge-info',
-    pending: 'u-badge-warning',
-    failed: 'u-badge-error'
-  }
-  return classes[status] || 'u-badge-info'
-}
-
-const getStatusIcon = (status: string): string => {
-  const icons: Record<string, string> = {
-    completed: 'heroicons:check-circle',
-    in_progress: 'heroicons:arrow-path',
-    pending: 'heroicons:clock',
-    failed: 'heroicons:x-circle'
-  }
-  return icons[status] || 'heroicons:question-mark-circle'
-}
-
-const getStatusText = (status: string): string => {
-  const texts: Record<string, string> = {
-    completed: t('reports.status.completed'),
-    in_progress: t('reports.status.in_progress'),
-    pending: t('reports.status.pending'),
-    failed: t('reports.status.failed')
-  }
-  return texts[status] || status
-}
+const getSeverityColor = (severity: string): string => ({ low: 'bg-green-500', medium: 'bg-yellow-500', high: 'bg-orange-500', critical: 'bg-red-500' }[severity] || 'bg-gray-500')
+const getSeverityText = (severity: string): string => ({ low: t('reports.severity.low'), medium: t('reports.severity.medium'), high: t('reports.severity.high'), critical: t('reports.severity.critical') }[severity] || severity)
+const getStatusBadgeClass = (status: string): string => ({ completed: 'u-badge-success', in_progress: 'u-badge-info', pending: 'u-badge-warning', failed: 'u-badge-error' }[status] || 'u-badge-info')
+const getStatusIcon = (status: string): string => ({ completed: 'heroicons:check-circle', in_progress: 'heroicons:arrow-path', pending: 'heroicons:clock', failed: 'heroicons:x-circle' }[status] || 'heroicons:question-mark-circle')
+const getStatusText = (status: string): string => ({ completed: t('reports.status.completed'), in_progress: t('reports.status.in_progress'), pending: t('reports.status.pending'), failed: t('reports.status.failed') }[status] || status)
 
 const generateReport = async () => {
   isGenerating.value = true
-  
-  // Simulate report generation
   setTimeout(() => {
-    const newReport = {
-      id: Date.now(),
-      title: form.value.customTitle || `${reportTemplates.find(t => t.key === form.value.template)?.name} - ${new Date().toLocaleDateString()}`,
-      description: `Отчёт за ${t(`reports.periods.${form.value.period}`)}`,
-      createdAt: 'Только что',
-      period: t(`reports.periods.${form.value.period}`),
-      severity: 'low' as const,
-      status: 'completed' as const
-    }
-    
+    const templateName = reportTemplates.find(t => t.key === form.value.template)?.name || ''
+    const periodText = t(`reports.periods.${form.value.period}`)
+    const newReport = { id: Date.now(), title: form.value.customTitle || `${templateName} - ${new Date().toLocaleDateString()}`, description: `Отчёт за ${periodText}`, createdAt: 'Только что', period: periodText, severity: 'low' as const, status: 'completed' as const }
     reports.value.unshift(newReport)
     showGenerateModal.value = false
     isGenerating.value = false

@@ -80,10 +80,11 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
 
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- same template as before, using currentLocale safely -->
+    <!-- Desktop & Mobile Navbar -->
     <nav class="bg-white border-b border-gray-200 shadow-sm">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between h-16">
+          <!-- Logo section -->
           <div class="flex items-center space-x-3" style="min-width: 220px">
             <NuxtLink to="/" class="flex items-center space-x-2 group" @click="closeMobileMenu">
               <div class="w-8 h-8 bg-linear-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
@@ -96,6 +97,7 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
             </NuxtLink>
           </div>
 
+          <!-- Desktop navigation (hidden on mobile) -->
           <div class="hidden lg:flex items-center space-x-6">
             <NuxtLink v-for="link in navigationLinks" :key="link.to" :to="link.to" :class="['px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2', isActiveLink(link.to) ? 'text-blue-700 bg-blue-50' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50']">
               <Icon :name="link.icon" class="w-4 h-4" />
@@ -103,14 +105,20 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
             </NuxtLink>
           </div>
 
+          <!-- Right actions -->
           <div class="flex items-center space-x-3">
+            <!-- Search (hidden on small mobile) -->
             <button class="hidden sm:block p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
               <Icon name="heroicons:magnifying-glass" class="w-5 h-5" />
             </button>
+
+            <!-- Notifications -->
             <button class="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
               <Icon name="heroicons:bell" class="w-5 h-5" />
               <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
             </button>
+
+            <!-- Language Toggle -->
             <div class="relative language-dropdown">
               <button @click="showLanguageDropdown = !showLanguageDropdown" class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors flex items-center gap-1" :aria-label="t('ui.language.switch')">
                 <Icon name="heroicons:language" class="w-5 h-5" />
@@ -127,7 +135,11 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
                 </div>
               </transition>
             </div>
+
+            <!-- User profile -->
             <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md cursor-pointer hover:shadow-lg transition-shadow">{{ userInitials }}</div>
+
+            <!-- Mobile menu button (shown only on mobile) -->
             <button @click="toggleMobileMenu" class="lg:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors relative z-50" aria-label="Toggle mobile menu">
               <Icon :name="isMobileMenuOpen ? 'heroicons:x-mark' : 'heroicons:bars-3'" class="w-6 h-6" />
             </button>
@@ -159,6 +171,9 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
   </div>
 </template>
 
-<style scoped>
-.mobile-menu { z-index: 40; }
+<style>
+#modal-portal {
+  position: relative;
+  z-index: 60;
+}
 </style>
