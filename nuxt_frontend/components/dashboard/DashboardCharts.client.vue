@@ -1,82 +1,150 @@
-<script setup lang="ts">
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
-} from 'recharts';
-const isClient = ref(false);
-onMounted(() => {
-  isClient.value = true;
-});
-const trendData = ref([
-  { name: 'Пн', uptime: 99.7, alerts: 2 },
-  { name: 'Вт', uptime: 99.9, alerts: 1 },
-  { name: 'Ср', uptime: 99.8, alerts: 3 },
-  { name: 'Чт', uptime: 99.95, alerts: 1 },
-  { name: 'Пт', uptime: 99.92, alerts: 2 },
-  { name: 'Сб', uptime: 99.96, alerts: 1 },
-  { name: 'Вс', uptime: 99.94, alerts: 1 },
-]);
-const efficiencyData = ref([
-  { name: 'A', temp: 45.2, pressure: 151 },
-  { name: 'B', temp: 52.1, pressure: 145 },
-  { name: 'C', temp: 41.8, pressure: 140 },
-]);
-</script>
 <template>
-  <div class="premium-card p-6 mt-6">
-    <h3 class="premium-heading-sm text-gray-900 dark:text-white mb-4">📉 Тренды за неделю</h3>
-    <ClientOnly>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div
-          class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
-        >
-          <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Uptime (%)</div>
-          <ResponsiveContainer width="100%" :height="240">
-            <AreaChart :data="trendData">
-              <defs>
-                <linearGradient id="colorUptime" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stop-color="#3b82f6" stop-opacity="0.5" />
-                  <stop offset="95%" stop-color="#3b82f6" stop-opacity="0" />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke="#e5e7eb" stroke-dasharray="3 3" />
-              <XAxis dataKey="name" stroke="#9ca3af" />
-              <YAxis :domain="[99.6, 100]" stroke="#9ca3af" />
-              <Tooltip />
-              <Area
-                type="monotone"
-                dataKey="uptime"
-                stroke="#3b82f6"
-                fill="url(#colorUptime)"
-                :stroke-width="2"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <div
-          class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
-        >
-          <div class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Алерты (шт.)</div>
-          <ResponsiveContainer width="100%" :height="240">
-            <BarChart :data="trendData">
-              <CartesianGrid stroke="#e5e7eb" stroke-dasharray="3 3" />
-              <XAxis dataKey="name" stroke="#9ca3af" />
-              <YAxis :allowDecimals="false" stroke="#9ca3af" />
-              <Tooltip />
-              <Bar dataKey="alerts" fill="#ef4444" :radius="[8, 8, 0, 0]" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </ClientOnly>
+  <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <!-- Performance Chart -->
+    <div class="u-card p-6">
+      <h3 class="u-h5 mb-4">System Performance</h3>
+      <VChart :option="performanceOption" class="h-64 w-full" autoresize />
+    </div>
+    
+    <!-- Temperature Trends -->
+    <div class="u-card p-6">
+      <h3 class="u-h5 mb-4">Temperature Trends</h3>
+      <VChart :option="temperatureOption" class="h-64 w-full" autoresize />
+    </div>
+    
+    <!-- Pressure Analysis -->
+    <div class="u-card p-6">
+      <h3 class="u-h5 mb-4">Pressure Analysis</h3>
+      <VChart :option="pressureOption" class="h-64 w-full" autoresize />
+    </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { use } from 'echarts/core'
+import { LineChart, BarChart } from 'echarts/charts'
+import { 
+  GridComponent, 
+  TooltipComponent, 
+  LegendComponent 
+} from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import VChart from 'vue-echarts'
+import { computed } from 'vue'
+
+// Register ECharts components
+use([
+  LineChart,
+  BarChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  CanvasRenderer
+])
+
+// Mock data
+const performanceData = [
+  { time: '00:00', value: 85 },
+  { time: '04:00', value: 88 },
+  { time: '08:00', value: 92 },
+  { time: '12:00', value: 89 },
+  { time: '16:00', value: 94 },
+  { time: '20:00', value: 87 }
+]
+
+const temperatureData = [
+  { time: '00:00', value: 65 },
+  { time: '04:00', value: 62 },
+  { time: '08:00', value: 68 },
+  { time: '12:00', value: 72 },
+  { time: '16:00', value: 75 },
+  { time: '20:00', value: 69 }
+]
+
+const pressureData = [
+  { time: '00:00', value: 2.1 },
+  { time: '04:00', value: 2.3 },
+  { time: '08:00', value: 2.2 },
+  { time: '12:00', value: 2.4 },
+  { time: '16:00', value: 2.2 },
+  { time: '20:00', value: 2.1 }
+]
+
+// Chart options
+const performanceOption = computed(() => ({
+  grid: { left: 40, right: 20, top: 20, bottom: 40 },
+  tooltip: { trigger: 'axis' },
+  xAxis: {
+    type: 'category',
+    data: performanceData.map(d => d.time),
+    axisLabel: { color: '#6b7280' }
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: { color: '#6b7280' },
+    splitLine: { lineStyle: { color: '#f3f4f6' } }
+  },
+  series: [{
+    type: 'line',
+    data: performanceData.map(d => d.value),
+    smooth: true,
+    lineStyle: { color: '#10b981', width: 3 },
+    areaStyle: {
+      color: {
+        type: 'linear',
+        x: 0, y: 0, x2: 0, y2: 1,
+        colorStops: [
+          { offset: 0, color: '#10b98140' },
+          { offset: 1, color: '#10b98110' }
+        ]
+      }
+    }
+  }]
+}))
+
+const temperatureOption = computed(() => ({
+  grid: { left: 40, right: 20, top: 20, bottom: 40 },
+  tooltip: { trigger: 'axis' },
+  xAxis: {
+    type: 'category',
+    data: temperatureData.map(d => d.time),
+    axisLabel: { color: '#6b7280' }
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: { color: '#6b7280' },
+    splitLine: { lineStyle: { color: '#f3f4f6' } }
+  },
+  series: [{
+    type: 'line',
+    data: temperatureData.map(d => d.value),
+    smooth: true,
+    lineStyle: { color: '#f59e0b', width: 2 },
+    symbol: 'circle',
+    symbolSize: 6
+  }]
+}))
+
+const pressureOption = computed(() => ({
+  grid: { left: 40, right: 20, top: 20, bottom: 40 },
+  tooltip: { trigger: 'axis' },
+  xAxis: {
+    type: 'category',
+    data: pressureData.map(d => d.time),
+    axisLabel: { color: '#6b7280' }
+  },
+  yAxis: {
+    type: 'value',
+    axisLabel: { color: '#6b7280' },
+    splitLine: { lineStyle: { color: '#f3f4f6' } }
+  },
+  series: [{
+    type: 'bar',
+    data: pressureData.map(d => d.value),
+    itemStyle: {
+      color: '#8b5cf6',
+      borderRadius: [4, 4, 0, 0]
+    }
+  }]
+}))
+</script>
