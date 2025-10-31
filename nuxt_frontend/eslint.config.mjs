@@ -2,19 +2,19 @@
 let withNuxt = () => []
 
 // Only try to import in non-typecheck environments
-if (typeof process !== 'undefined' && 
-    process.env.NODE_ENV !== 'test' && 
-    !process.argv.includes('typecheck')) {
-  try {
+try {
+  if (
+    typeof process !== 'undefined' &&
+    process.env.NODE_ENV !== 'test' &&
+    !process.argv.some((a) => a.includes('typecheck'))
+  ) {
     const { existsSync } = await import('fs')
     if (existsSync('./.nuxt/eslint.config.mjs')) {
       const nuxtEslint = await import('./.nuxt/eslint.config.mjs')
-      withNuxt = nuxtEslint.default || nuxtEslint
+      withNuxt = (nuxtEslint as any).default || (nuxtEslint as any)
     }
-  } catch (error) {
-    // Silent fallback for typecheck/build environments
   }
-}
+} catch {}
 
 export default withNuxt(
   // Your custom configs here
