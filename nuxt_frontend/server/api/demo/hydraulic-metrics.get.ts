@@ -3,7 +3,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const source = (query.source as string) || 'btc'
   
-  // Mock data sources with proper typing
+  // Mock data sources
   const sources = {
     btc: {
       key: 'HYD-001',
@@ -37,13 +37,16 @@ export default defineEventHandler(async (event) => {
         vibration: { green: 0.8, red: 1.2 }
       }
     }
-  } as const
+  }
   
   // Safe selection with fallback
   const selected = sources[source as keyof typeof sources] || sources.btc
   
-  // Helper function with proper typing
-  const avg = (xs: number[]): number => Math.round((xs.reduce((a: number, b: number) => a + b, 0) / xs.length) * 100) / 100
+  // Helper function with readonly array handling
+  const avg = (xs: readonly number[]): number => {
+    const arr = [...xs] // Convert readonly to mutable
+    return Math.round((arr.reduce((a: number, b: number) => a + b, 0) / arr.length) * 100) / 100
+  }
   
   return {
     system: {
@@ -59,28 +62,28 @@ export default defineEventHandler(async (event) => {
         average: avg(selected.sparklines.temperature),
         threshold_green: selected.thresholds.temperature.green,
         threshold_red: selected.thresholds.temperature.red,
-        sparkline: selected.sparklines.temperature
+        sparkline: [...selected.sparklines.temperature]
       },
       pressure: {
         current: selected.sparklines.pressure[selected.sparklines.pressure.length - 1],
         average: avg(selected.sparklines.pressure),
         threshold_green: selected.thresholds.pressure.green,
         threshold_red: selected.thresholds.pressure.red,
-        sparkline: selected.sparklines.pressure
+        sparkline: [...selected.sparklines.pressure]
       },
       flow_rate: {
         current: selected.sparklines.flow_rate[selected.sparklines.flow_rate.length - 1],
         average: avg(selected.sparklines.flow_rate),
         threshold_green: selected.thresholds.flow_rate.green,
         threshold_red: selected.thresholds.flow_rate.red,
-        sparkline: selected.sparklines.flow_rate
+        sparkline: [...selected.sparklines.flow_rate]
       },
       vibration: {
         current: selected.sparklines.vibration[selected.sparklines.vibration.length - 1],
         average: avg(selected.sparklines.vibration),
         threshold_green: selected.thresholds.vibration.green,
         threshold_red: selected.thresholds.vibration.red,
-        sparkline: selected.sparklines.vibration
+        sparkline: [...selected.sparklines.vibration]
       }
     }
   }

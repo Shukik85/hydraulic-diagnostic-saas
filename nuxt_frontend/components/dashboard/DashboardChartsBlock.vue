@@ -51,18 +51,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-// Mock or API data
-const { data } = await $fetch('/api/demo/hydraulic-metrics')
+// Fetch API data correctly
+const response = await $fetch('/api/demo/hydraulic-metrics')
 
 // Extract sparkline data from metrics structure
-const temp = computed(() => data?.metrics?.temperature?.sparkline || [])
-const pressure = computed(() => data?.metrics?.pressure?.sparkline || [])
-const flow = computed(() => data?.metrics?.flow_rate?.sparkline || [])
-const vibration = computed(() => data?.metrics?.vibration?.sparkline || [])
+const temp = computed(() => [...(response?.metrics?.temperature?.sparkline || [])])
+const pressure = computed(() => [...(response?.metrics?.pressure?.sparkline || [])])
+const flow = computed(() => [...(response?.metrics?.flow_rate?.sparkline || [])])
+const vibration = computed(() => [...(response?.metrics?.vibration?.sparkline || [])])
 
 // Current values
-const currentTemp = computed(() => data?.metrics?.temperature?.current || 0)
-const currentPressure = computed(() => data?.metrics?.pressure?.current || 0)
+const currentTemp = computed(() => response?.metrics?.temperature?.current || 0)
+const currentPressure = computed(() => response?.metrics?.pressure?.current || 0)
 
 // Performance chart data (derived from metrics)
 const performanceData = computed(() => {

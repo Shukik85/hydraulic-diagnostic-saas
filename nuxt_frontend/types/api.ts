@@ -115,7 +115,14 @@ export interface TableColumn {
   align?: 'left' | 'center' | 'right'
 }
 
-// Password strength types  
+// Simplified UI Password Strength (not full zxcvbn)
+export interface UiPasswordStrength {
+  score: number
+  label: 'weak' | 'fair' | 'good' | 'strong'
+  color: 'red' | 'yellow' | 'green' | 'blue'
+}
+
+// Full zxcvbn-style password strength (for backend)
 export interface PasswordStrength {
   score: number
   feedback: {

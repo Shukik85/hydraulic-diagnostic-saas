@@ -38,7 +38,7 @@
           </div>
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-600">Обновлено</span>
-            <span class="text-sm text-gray-500">{{ formatDate(system.lastUpdate) }}</span>
+            <span class="text-sm text-gray-500">{{ formatDate(system.last_update) }}</span>
           </div>
         </div>
         
@@ -88,14 +88,13 @@ definePageMeta({
 
 // Composables
 const { t } = useI18n()
-const systemsStore = useSystemsStore()
 
 // State
 const showCreateModal = ref(false)
 const isCreating = ref(false)
 
 // Mock systems data
-const systems = ref<HydraulicSystem[]>([  
+const systems = ref<HydraulicSystem[]>([
   {
     id: 1,
     name: 'HYD-001 - Pump Station A',
@@ -112,7 +111,7 @@ const systems = ref<HydraulicSystem[]>([
     updated_at: new Date().toISOString()
   },
   {
-    id: 2, 
+    id: 2,
     name: 'HYD-002 - Hydraulic Motor B',
     type: 'mobile',
     status: 'maintenance',
@@ -133,29 +132,23 @@ const handleCreateSystem = async (data: any) => {
   isCreating.value = true
   
   try {
-    // Check if store has createSystem method
-    if (systemsStore && typeof systemsStore.addSystem === 'function') {
-      await systemsStore.addSystem(data)
-    } else {
-      // Fallback: add to local state
-      const newSystem: HydraulicSystem = {
-        id: Date.now(),
-        name: data.name,
-        type: data.type,
-        status: data.status || 'active',
-        description: data.description,
-        pressure: 0,
-        temperature: 0,
-        flow_rate: 0,
-        vibration: 0,
-        health_score: 100,
-        last_update: new Date().toISOString(),
-        created_at: new Date().toISOString(), 
-        updated_at: new Date().toISOString()
-      }
-      systems.value.push(newSystem)
+    // Local state fallback (no store integration yet)
+    const newSystem: HydraulicSystem = {
+      id: Date.now(),
+      name: data.name,
+      type: data.type,
+      status: data.status || 'active',
+      description: data.description,
+      pressure: 0,
+      temperature: 0,
+      flow_rate: 0,
+      vibration: 0,
+      health_score: 100,
+      last_update: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
-    
+    systems.value.push(newSystem)
     showCreateModal.value = false
   } catch (error) {
     console.error('Failed to create system:', error)
@@ -167,17 +160,17 @@ const handleCreateSystem = async (data: any) => {
 const getSystemStatusClass = (status: string): string => {
   const classes: Record<string, string> = {
     active: 'u-badge-success',
-    maintenance: 'u-badge-warning', 
+    maintenance: 'u-badge-warning',
     emergency: 'u-badge-error',
     inactive: 'u-badge-gray'
   }
-  return classes[status] || classes['inactive']
+  return classes[status] || 'u-badge-gray'
 }
 
 const formatDate = (dateString: string): string => {
   return new Date(dateString).toLocaleString('ru-RU', {
     day: '2-digit',
-    month: '2-digit', 
+    month: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
   })

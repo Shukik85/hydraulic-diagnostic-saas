@@ -82,12 +82,13 @@ const updateValue = (clientX: number) => {
   emit('update:modelValue', steppedValue)
 }
 
-// Drag handlers
+// Drag handlers with safe touch access
 const startDrag = (event: MouseEvent | TouchEvent) => {
   event.preventDefault()
   isDragging.value = true
   
-  const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX
+  const isTouch = 'touches' in event && event.touches && event.touches.length > 0
+  const clientX = isTouch ? event.touches[0]!.clientX : (event as MouseEvent).clientX
   updateValue(clientX)
 }
 
@@ -97,7 +98,7 @@ const onMouseMove = (event: MouseEvent) => {
 }
 
 const onTouchMove = (event: TouchEvent) => {
-  if (!isDragging.value) return
+  if (!isDragging.value || !event.touches || event.touches.length === 0) return
   event.preventDefault()
   updateValue(event.touches[0].clientX)
 }
