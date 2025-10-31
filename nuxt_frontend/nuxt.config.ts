@@ -38,7 +38,7 @@ export default defineNuxtConfig({
       redirectOn: 'root',
       fallbackLocale: 'ru'
     },
-    // Для @nuxtjs/i18n v10 - ссылка на отдельный конфиг
+    // Для @nuxtjs/i18n v10 - отдельная конфигурация
     vueI18n: './i18n.config.ts'
   },
   
@@ -61,21 +61,11 @@ export default defineNuxtConfig({
     }
   },
   
-  components: [
-    {
-      path: '~/components',
-      pathPrefix: false,
-      // Explicitly enable global registration for UI components
-      global: true,
-      // Ensure components are scanned properly
-      extensions: ['.vue'],
-      // Include all subdirectories
-      dirs: [
-        '~/components/ui',
-        '~/components/dashboard'
-      ]
-    }
-  ],
+  // Единый корневой путь компонентов, рекурсивное сканирование подпапок
+  components: {
+    global: true,
+    dirs: ['~/components']
+  },
   
   app: {
     head: {
