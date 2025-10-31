@@ -5,8 +5,8 @@ interface LoginCredentials {
 
 export const useApi = () => {
   const config = useRuntimeConfig()
-  const accessToken = useCookie<string>('access-token', { httpOnly: false })
-  const refreshToken = useCookie<string>('refresh-token', { httpOnly: true })
+  const accessToken = useCookie<string | null>('access-token', { httpOnly: false, default: () => null })
+  const refreshToken = useCookie<string | null>('refresh-token', { httpOnly: true, default: () => null })
   
   const isAuthenticated = computed(() => !!accessToken.value)
   

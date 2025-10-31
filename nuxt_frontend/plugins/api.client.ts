@@ -3,11 +3,23 @@ export default defineNuxtPlugin(() => {
   
   $fetch.create({
     onRequest({ request, options }) {
-      const headers: Record<string, string> = options.headers as Record<string, string> || {}
+      // Convert headers to proper type
+      const headers: Record<string, string> = {}
+      
+      // Copy existing headers if any
+      if (options.headers) {
+        if (options.headers instanceof Headers) {
+          options.headers.forEach((value, key) => {
+            headers[key] = value
+          })
+        } else {
+          Object.assign(headers, options.headers)
+        }
+      }
       
       if (authStore.isAuthenticated) {
         try {
-          // Note: accessing store properties safely
+          // Access token from cookie safely
           const token = useCookie('access-token').value
           if (token) {
             headers['Authorization'] = `Bearer ${token}`
@@ -17,6 +29,7 @@ export default defineNuxtPlugin(() => {
         }
       }
       
+      // Assign as Record, not Headers class
       options.headers = headers
     },
     
@@ -27,7 +40,6 @@ export default defineNuxtPlugin(() => {
         await navigateTo('/auth/login')
       }
       // Return void for proper typing
-      return
     }
   })
 })

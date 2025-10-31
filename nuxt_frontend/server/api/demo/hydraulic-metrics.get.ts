@@ -4,22 +4,7 @@ export default defineEventHandler(async (event) => {
   const source = (query.source as string) || 'btc'
   
   // Mock data sources with proper typing
-  const sources: Record<string, {
-    key: string
-    name: string
-    sparklines: {
-      temperature: number[]
-      pressure: number[]
-      flow_rate: number[]
-      vibration: number[]
-    }
-    thresholds: {
-      temperature: { green: number; red: number }
-      pressure: { green: number; red: number }
-      flow_rate: { green: number; red: number }
-      vibration: { green: number; red: number }
-    }
-  }> = {
+  const sources = {
     btc: {
       key: 'HYD-001',
       name: 'Pump Station A',
@@ -52,9 +37,10 @@ export default defineEventHandler(async (event) => {
         vibration: { green: 0.8, red: 1.2 }
       }
     }
-  }
+  } as const
   
-  const selected = sources[source] || sources.btc
+  // Safe selection with fallback
+  const selected = sources[source as keyof typeof sources] || sources.btc
   
   // Helper function with proper typing
   const avg = (xs: number[]): number => Math.round((xs.reduce((a: number, b: number) => a + b, 0) / xs.length) * 100) / 100
