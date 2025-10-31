@@ -1,11 +1,11 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   ssr: false, // SPA режим для дэшборда
-  
+
   compatibilityDate: '2025-10-30', // Убираем warning
-  
+
   devtools: { enabled: true },
-  
+
   modules: [
     '@pinia/nuxt',
     '@nuxtjs/i18n',
@@ -13,7 +13,7 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxtjs/color-mode'
   ],
-  
+
   i18n: {
     locales: [
       {
@@ -23,7 +23,7 @@ export default defineNuxtConfig({
         language: 'ru-RU'
       },
       {
-        code: 'en', 
+        code: 'en',
         name: 'English',
         file: 'en.json',
         language: 'en-US'
@@ -41,7 +41,7 @@ export default defineNuxtConfig({
     // Для @nuxtjs/i18n v10 - отдельная конфигурация
     vueI18n: './i18n.config.ts'
   },
-  
+
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
@@ -49,7 +49,7 @@ export default defineNuxtConfig({
       version: '1.0.0'
     }
   },
-  
+
   css: [
     '~/styles/premium-tokens.css'
   ],
@@ -60,13 +60,13 @@ export default defineNuxtConfig({
       autoprefixer: {}
     }
   },
-  
+
   // Единый корневой путь компонентов, рекурсивное сканирование подпапок
-  components: {
-    global: true,
-    dirs: ['~/components']
-  },
-  
+  components: [
+    { path: '~/components', global: true, pathPrefix: false },
+    { path: '~/components/ui', global: true, pathPrefix: false }
+  ],
+
   app: {
     head: {
       title: 'Гидравлик Диагностик - Промышленные Решения',
@@ -80,12 +80,12 @@ export default defineNuxtConfig({
       ]
     }
   },
-  
+
   // Explicit component transpilation for better compatibility
   build: {
     transpile: []
   },
-  
+
   // Client-side rendering optimization
   experimental: {
     payloadExtraction: false
