@@ -1,33 +1,33 @@
 export default defineNuxtPlugin(() => {
-    const config = useRuntimeConfig()
-
-    const $api = $fetch.create({
-        baseURL: config.public.apiBase as string,
-
-        onRequest({ options }) {
-            const authStore = useAuthStore()
-            if (authStore.accessToken) {
-                options.headers = {
-                    ...options.headers,
-                    Authorization: `Bearer ${authStore.accessToken}`
-                }
-            }
-        },
-
-        onResponseError({ response }) {
-            if (response.status === 401) {
-                const authStore = useAuthStore()
-                authStore.logout()
-                if (!String(response.url).includes('/token/')) {
-                    return navigateTo('/auth/login')
-                }
-            }
+  const authStore = useAuthStore()
+  
+  $fetch.create({
+    onRequest({ request, options }) {
+      const headers: Record<string, string> = options.headers as Record<string, string> || {}
+      
+      if (authStore.isAuthenticated) {
+        try {
+          // Note: accessing store properties safely
+          const token = useCookie('access-token').value
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`
+          }
+        } catch (error) {
+          console.warn('Failed to add auth header:', error)
         }
-    })
-
-    return {
-        provide: {
-            api: $api
-        }
+      }
+      
+      options.headers = headers
+    },
+    
+    async onResponseError({ response }) {
+      if (response.status === 401) {
+        // Clear auth and redirect to login
+        authStore.user = null
+        await navigateTo('/auth/login')
+      }
+      // Return void for proper typing
+      return
     }
+  })
 })

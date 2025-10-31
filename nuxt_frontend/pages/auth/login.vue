@@ -1,124 +1,126 @@
 <template>
-  <div class="min-h-screen u-flex-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full space-y-8">
-      <div class="text-center">
-        <div class="w-16 h-16 mx-auto rounded-xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center shadow-lg mb-6">
-          <Icon name="heroicons:lock-closed" class="w-8 h-8 text-white" />
+  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
+      <!-- Header -->
+      <div class="text-center mb-8">
+        <div class="mx-auto w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+          <Icon name="heroicons:cpu-chip" class="w-6 h-6 text-white" />
         </div>
-        <h2 class="u-h2 mb-2">
-          Sign in to your account
-        </h2>
-        <p class="u-body text-gray-600 dark:text-gray-400">
-          Access your Hydraulic Diagnostic dashboard
-        </p>
+        <h1 class="text-2xl font-bold text-gray-900">Вход в систему</h1>
+        <p class="text-gray-600 mt-2">Диагностика гидравлических систем</p>
       </div>
-      
-      <div class="u-card p-8">
-        <form class="space-y-6" @submit.prevent="handleLogin">
-          <div>
-            <label for="email" class="u-label">Email address</label>
-            <input
-              id="email"
-              v-model="form.email"
-              name="email"
-              type="email"
-              autocomplete="email"
-              required
-              class="u-input"
-              :class="{ 'u-input-error': authStore.error }"
-              placeholder="Enter your email address"
-            />
-          </div>
-          
-          <div>
-            <label for="password" class="u-label">Password</label>
+
+      <!-- Error Alert -->
+      <div v-if="authStore.error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div class="flex items-center gap-3">
+          <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 text-red-500 flex-shrink-0" />
+          <p class="text-red-800 text-sm">{{ authStore.error }}</p>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <form @submit.prevent="handleLogin" class="space-y-6">
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+            Email адрес
+          </label>
+          <input
+            id="email"
+            v-model="form.email"
+            type="email"
+            required
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            placeholder="user@company.com"
+            :disabled="authStore.loading"
+          />
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+            Пароль
+          </label>
+          <div class="relative">
             <input
               id="password"
               v-model="form.password"
-              name="password"
-              type="password"
-              autocomplete="current-password"
+              :type="showPassword ? 'text' : 'password'"
               required
-              class="u-input"
-              :class="{ 'u-input-error': authStore.error }"
-              placeholder="Enter your password"
+              class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              placeholder="Введите пароль"
+              :disabled="authStore.loading"
             />
-          </div>
-
-          <div v-if="authStore.error" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <div class="flex items-center gap-2">
-              <Icon name="heroicons:exclamation-circle" class="w-5 h-5 text-red-600 dark:text-red-400" />
-              <p class="text-sm text-red-800 dark:text-red-300">{{ authStore.error }}</p>
-            </div>
-          </div>
-
-          <div>
             <button
-              type="submit"
-              :disabled="authStore.isLoading"
-              class="w-full u-btn u-btn-primary u-btn-lg"
+              type="button"
+              @click="showPassword = !showPassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+              :disabled="authStore.loading"
             >
-              <span 
-                v-if="authStore.isLoading" 
-                class="inline-block w-4 h-4 mr-2 rounded-full border-2 border-solid border-current border-r-transparent" 
-                style="animation: spin 1s linear infinite;"
-              ></span>
-              <Icon v-else name="heroicons:arrow-right-on-rectangle" class="w-4 h-4 mr-2" />
-              Sign in
+              <Icon :name="showPassword ? 'heroicons:eye-slash' : 'heroicons:eye'" class="w-5 h-5" />
             </button>
           </div>
-          
-          <div class="u-divider"></div>
-          
-          <div class="text-center">
-            <p class="u-body-sm text-gray-500 dark:text-gray-400 mb-4">
-              Demo credentials for testing:
-            </p>
-            <div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-              <p class="u-body-sm font-mono text-gray-700 dark:text-gray-300">
-                Email: <span class="font-semibold">admin@example.com</span><br>
-                Password: <span class="font-semibold">password</span>
-              </p>
-            </div>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+          :disabled="authStore.loading"
+        >
+          <div
+            v-if="authStore.loading"
+            class="flex items-center justify-center gap-2"
+          >
+            <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            Вход...
           </div>
-          
-          <div class="text-center">
-            <p class="u-body-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?
-              <NuxtLink to="/auth/register" class="font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 u-transition-fast">
-                Sign up here
-              </NuxtLink>
-            </p>
-          </div>
-        </form>
+          <span v-else>Войти</span>
+        </button>
+      </form>
+
+      <!-- Demo credentials -->
+      <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+        <p class="text-sm font-medium text-gray-700 mb-2">Тестовые данные:</p>
+        <div class="text-xs text-gray-600 space-y-1">
+          <p><span class="font-mono">admin@hydraulic.ai</span> / <span class="font-mono">admin123</span></p>
+          <p><span class="font-mono">engineer@hydraulic.ai</span> / <span class="font-mono">eng123</span></p>
+        </div>
+      </div>
+
+      <!-- Register Link -->
+      <div class="mt-6 text-center">
+        <p class="text-sm text-gray-600">
+          Нет аккаунта?
+          <NuxtLink to="/auth/register" class="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+            Зарегистрироваться
+          </NuxtLink>
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+// Redirect if already authenticated
 definePageMeta({
-  layout: 'blank',
-  middleware: 'guest'
+  layout: 'auth',
+  middleware: ['guest']
 })
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 const form = ref({
   email: '',
   password: ''
 })
 
+const showPassword = ref(false)
+
 const handleLogin = async () => {
-  await authStore.login({
-    email: form.value.email,
-    password: form.value.password
-  })
+  try {
+    await authStore.login(form.value)
+    await router.push('/dashboard')
+  } catch (error) {
+    console.error('Login failed:', error)
+  }
 }
 </script>
-
-<style scoped>
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-</style>

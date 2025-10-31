@@ -1,123 +1,96 @@
-// Fixed API composable with proper TypeScript types
-import type { User, LoginCredentials, RegisterData, TokenResponse } from '~/types/api';
+interface LoginCredentials {
+  email: string
+  password: string
+}
 
 export const useApi = () => {
-  const config = useRuntimeConfig();
-  const apiBase = config.public.apiBase;
-
-  // Auth tokens with proper types
-  const accessToken = useCookie<string | null>('access_token', {
-    default: () => null,
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-  });
-
-  const refreshToken = useCookie<string | null>('refresh_token', {
-    default: () => null,
-    httpOnly: false,
-    secure: process.env.NODE_ENV === 'production',
-  });
-
-  const isAuthenticated = computed(() => !!accessToken.value);
-
-  // Fixed headers - use .value to get actual computed value
-  const $http = $fetch.create({
-    baseURL: apiBase,
-    // Fix: Don't pass computed ref directly to headers
-    onRequest({ request, options }) {
-      if (accessToken.value) {
-        options.headers = {
-          ...options.headers,
-          Authorization: `Bearer ${accessToken.value}`,
-        };
-      }
-      options.headers = {
-        ...options.headers,
-        'Content-Type': 'application/json',
-      };
-    },
-    onResponseError({ response }) {
-      if (response.status === 401) {
-        // Clear tokens on auth failure
-        accessToken.value = null;
-        refreshToken.value = null;
-        navigateTo('/auth/login');
-      }
-    },
-  });
-
-  // Auth methods with proper return types
-  const login = async (credentials: LoginCredentials): Promise<User | null> => {
-    const response = await $http<TokenResponse>('/auth/login', {
+  const config = useRuntimeConfig()
+  const accessToken = useCookie<string>('access-token', { httpOnly: false })
+  const refreshToken = useCookie<string>('refresh-token', { httpOnly: true })
+  
+  const isAuthenticated = computed(() => !!accessToken.value)
+  
+  const createHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    }
+    
+    if (accessToken.value) {
+      headers['Authorization'] = `Bearer ${accessToken.value}`
+    }
+    
+    return headers
+  }
+  
+  const api = $fetch.create({
+    baseURL: config.public.apiBase,
+    headers: createHeaders()
+  })
+  
+  const login = async (credentials: LoginCredentials) => {
+    const response = await api<any>('/auth/login/', {
       method: 'POST',
-      body: credentials,
-    });
-
-    accessToken.value = response.access;
-    refreshToken.value = response.refresh;
-
-    // Return user or null (not throwing on undefined)
-    return response.user || null;
-  };
-
-  const register = async (userData: RegisterData): Promise<User | null> => {
-    const response = await $http<TokenResponse>('/auth/register', {
+      body: credentials
+    })
+    
+    if (response.access && response.refresh) {
+      accessToken.value = response.access
+      refreshToken.value = response.refresh
+    }
+    
+    return response.user || response
+  }
+  
+  const register = async (userData: any) => {
+    return await api<any>('/auth/register/', {
       method: 'POST',
-      body: userData,
-    });
-
-    accessToken.value = response.access;
-    refreshToken.value = response.refresh;
-
-    return response.user || null;
-  };
-
-  const logout = async (): Promise<void> => {
+      body: userData
+    })
+  }
+  
+  const logout = async () => {
     try {
-      await $http('/auth/logout', {
-        method: 'POST',
-      });
-    } catch {
-      // Ignore logout errors
+      await api('/auth/logout/', { method: 'POST' })
     } finally {
-      accessToken.value = null;
-      refreshToken.value = null;
+      accessToken.value = null
+      refreshToken.value = null
     }
-  };
-
-  const getCurrentUser = async (): Promise<User | null> => {
-    try {
-      const user = await $http<User>('/auth/me');
-      return user || null;
-    } catch {
-      return null;
+  }
+  
+  const getCurrentUser = async () => {
+    return await api<any>('/auth/user/')
+  }
+  
+  const updateUser = async (userData: any) => {
+    return await api<any>('/auth/user/', {
+      method: 'PATCH',
+      body: userData
+    })
+  }
+  
+  const refreshAccessToken = async () => {
+    if (!refreshToken.value) throw new Error('No refresh token')
+    
+    const response = await api<any>('/auth/refresh/', {
+      method: 'POST',
+      body: { refresh: refreshToken.value }
+    })
+    
+    if (response.access) {
+      accessToken.value = response.access
     }
-  };
-
-  const updateUser = async (userData: Partial<User>): Promise<User | null> => {
-    try {
-      const user = await $http<User>('/auth/me', {
-        method: 'PATCH',
-        body: userData,
-      });
-      return user || null;
-    } catch {
-      return null;
-    }
-  };
-
+    
+    return response
+  }
+  
   return {
-    // State
     isAuthenticated,
-
-    // Methods
     login,
     register,
     logout,
     getCurrentUser,
     updateUser,
-
-    // Raw HTTP client for other operations
-    $http,
-  };
-};
+    refreshAccessToken,
+    api
+  }
+}
