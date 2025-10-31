@@ -3,6 +3,57 @@
   "nav": {"dashboard":"Dashboard","systems":"Systems","diagnostics":"Diagnostics","reports":"Reports","chat":"Chat","settings":"Settings","equipments":"Equipment","openDashboard":"Open Dashboard","notifications":"Notifications"},
   "ui": {"search":"Search","help":"Help","profile":"Profile","settings":"Settings","logout":"Logout","close":"Close","cancel":"Cancel","view":"View","optional":"optional","minutes":"min","description":"Description","toggleTheme":"Toggle Theme","lightTheme":"Light","darkTheme":"Dark","language":{"switch":"Switch Language"}},
   "auth": {"signIn":"Sign In","getStarted":"Get Started","startFreeTrial":"Start Free Trial","watchDemo":"Watch Demo","startTrialNow":"Start Your Free Trial Now"},
+  "dashboard": {
+    "title": "Enterprise Dashboard",
+    "subtitle": "Real-time hydraulic systems monitoring & analytics",
+    "liveStatus": "Live",
+    "refreshBtn": "Refresh",
+    "kpi": {
+      "activeSystems": "Active Systems",
+      "systemHealth": "System Health",
+      "preventedFailures": "Prevented Failures",
+      "costSavings": "Cost Savings",
+      "fromYesterday": "from yesterday",
+      "uptimeExcellence": "Uptime excellence",
+      "aiPredictions": "AI predictions",
+      "vsPreviousYear": "vs previous year"
+    },
+    "charts": {
+      "systemPerformance": "System Performance",
+      "aiPredictions": "AI Predictions",
+      "last24h": "Last 24 Hours",
+      "last7d": "Last 7 Days",
+      "last30d": "Last 30 Days",
+      "mlActive": "ML Active",
+      "normalOps": "Normal Operations",
+      "maintenanceSoon": "Maintenance Soon",
+      "criticalIssues": "Critical Issues"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "runDiagnostics": "Run Diagnostics",
+      "generateReport": "Generate Report",
+      "addSystem": "Add System"
+    },
+    "recentEvents": {
+      "title": "Recent Events",
+      "systemNormal": "System #{0} operating normally",
+      "anomalyDetected": "Anomaly detected in system #{0}",
+      "diagnosticsCompleted": "Diagnostics completed for system #{0}",
+      "minutesAgo": "{0} minutes ago",
+      "hourAgo": "{0} hour ago"
+    },
+    "aiStatus": {
+      "title": "AI Status",
+      "diagnosticModel": "Diagnostic Model",
+      "predictionAccuracy": "Prediction Accuracy",
+      "modelTraining": "Model Training",
+      "lastUpdate": "Last Update",
+      "active": "Active",
+      "complete": "Complete",
+      "minAgo": "{0} min ago"
+    }
+  },
   "landing": {
     "hero": {"title":"Advanced Hydraulic Systems Diagnostics","subtitle":"Real-time monitoring, AI-powered analysis, and predictive maintenance for hydraulic systems. Keep your operations running at peak efficiency."},
     "features": {"title":"Powerful Features","subtitle":"Everything you need to monitor and optimize hydraulic systems","monitoring":{"title":"Real-Time Monitoring","description":"Live data streaming from all connected systems with instant alerts for anomalies."},"analytics":{"title":"AI-Powered Analytics","description":"Machine learning algorithms detect patterns and predict maintenance needs before failures occur."},"alerts":{"title":"Smart Alerts","description":"Customizable notifications via email, SMS, or in-app alerts for critical system events."},"reports":{"title":"Detailed Reports","description":"Comprehensive performance reports with historical trends and recommendations."},"security":{"title":"Enterprise Security","description":"Bank-level encryption and compliance with industrial security standards."},"integration":{"title":"API Integration","description":"RESTful API and webhooks for seamless integration with your existing systems."}},
