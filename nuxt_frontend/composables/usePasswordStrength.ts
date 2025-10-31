@@ -1,48 +1,39 @@
-// Password strength composable with guaranteed return type
-import type { PasswordStrength } from '~/types/api';
+import type { UiPasswordStrength } from '~/types/api'
 
-export const usePasswordStrength = (password: Ref<string>): ComputedRef<PasswordStrength> => {
-  return computed(() => {
-    const pwd = password.value;
-
-    // Default return to prevent undefined
-    if (!pwd) {
-      return {
-        score: 0,
-        label: 'Введите пароль',
-        color: 'gray' as const,
-      };
+export const usePasswordStrength = (password: Ref<string>) => {
+  return computed<UiPasswordStrength>(() => {
+    const pwd = password.value
+    
+    if (!pwd || pwd.length === 0) {
+      return { score: 0, label: 'weak', color: 'red' }
     }
-
-    let score = 0;
-    let label = '';
-    let color: PasswordStrength['color'] = 'red';
-
+    
+    let score = 0
+    let label: UiPasswordStrength['label'] = 'weak'
+    let color: UiPasswordStrength['color'] = 'red'
+    
     // Length check
-    if (pwd.length >= 8) score += 1;
-    if (pwd.length >= 12) score += 1;
-
+    if (pwd.length >= 8) score += 25
+    if (pwd.length >= 12) score += 25
+    
     // Character variety
-    if (/[a-z]/.test(pwd)) score += 1;
-    if (/[A-Z]/.test(pwd)) score += 1;
-    if (/[0-9]/.test(pwd)) score += 1;
-    if (/[^a-zA-Z0-9]/.test(pwd)) score += 1;
-
-    // Determine strength
-    if (score <= 2) {
-      label = 'Слабый';
-      color = 'red';
-    } else if (score <= 3) {
-      label = 'Средний';
-      color = 'yellow';
-    } else if (score <= 4) {
-      label = 'Хороший';
-      color = 'green';
-    } else {
-      label = 'Отличный';
-      color = 'green';
+    if (/[a-z]/.test(pwd)) score += 10
+    if (/[A-Z]/.test(pwd)) score += 15
+    if (/[0-9]/.test(pwd)) score += 15
+    if (/[^A-Za-z0-9]/.test(pwd)) score += 10
+    
+    // Assign label and color
+    if (score >= 80) {
+      label = 'strong'
+      color = 'green'
+    } else if (score >= 60) {
+      label = 'good' 
+      color = 'blue'
+    } else if (score >= 40) {
+      label = 'fair'
+      color = 'yellow'
     }
-
-    return { score, label, color };
-  });
-};
+    
+    return { score, label, color }
+  })
+}

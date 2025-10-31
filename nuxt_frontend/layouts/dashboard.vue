@@ -103,14 +103,16 @@ const breadcrumbs = computed(() => {
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i]
+    if (!part) continue // Guard against undefined parts
+    
     current += `/${part}`
 
-    // Handle dynamic routes
+    // Handle dynamic routes with safe part access
     if (part === 'systems') {
       acc.push({ name: t('nav.systems'), href: current })
     } else if (part === 'equipments') {
       acc.push({ name: t('nav.equipments'), href: current })
-    } else if (/^\d+$/.test(part)) {
+    } else if (part && /^\d+$/.test(part)) {
       // Numeric ID - show as dynamic name
       const prevPart = parts[i - 1]
       if (prevPart === 'systems') {
@@ -206,7 +208,7 @@ const isActiveLink = (linkPath: string): boolean => {
                 :aria-label="t('ui.language.switch')"
               >
                 <Icon name="heroicons:language" class="w-5 h-5" />
-                <span class="text-sm font-medium">{{ currentLocale?.code?.toUpperCase() }}</span>
+                <span class="text-sm font-medium">{{ currentLocale.code.toUpperCase() }}</span>
                 <Icon 
                   name="heroicons:chevron-down" 
                   class="w-3 h-3 transition-transform" 
@@ -232,12 +234,12 @@ const isActiveLink = (linkPath: string): boolean => {
                     :key="langOption.code"
                     @click="switchLanguage(langOption.code)"
                     class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-                    :class="{ 'bg-blue-50 text-blue-600': currentLocale?.code === langOption.code }"
+                    :class="{ 'bg-blue-50 text-blue-600': currentLocale.code === langOption.code }"
                   >
                     <span class="text-base">{{ langOption.flag }}</span>
                     <span>{{ langOption.name }}</span>
                     <Icon 
-                      v-if="currentLocale?.code === langOption.code" 
+                      v-if="currentLocale.code === langOption.code" 
                       name="heroicons:check" 
                       class="w-4 h-4 ml-auto text-blue-600" 
                     />

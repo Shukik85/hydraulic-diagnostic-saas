@@ -3,33 +3,44 @@ export default defineNuxtPlugin(() => {
   
   $fetch.create({
     onRequest({ request, options }) {
-      // Convert headers to proper type
-      const headers: Record<string, string> = {}
+      // Create proper HeadersInit compatible object
+      const headers = new Headers()
       
-      // Copy existing headers if any
+      // Copy existing headers
       if (options.headers) {
         if (options.headers instanceof Headers) {
           options.headers.forEach((value, key) => {
-            headers[key] = value
+            headers.set(key, value)
+          })
+        } else if (Array.isArray(options.headers)) {
+          options.headers.forEach(([key, value]) => {
+            headers.set(key, String(value))
           })
         } else {
-          Object.assign(headers, options.headers)
+          Object.entries(options.headers).forEach(([key, value]) => {
+            headers.set(key, String(value))
+          })
         }
       }
       
+      // Add default Content-Type if not present
+      if (!headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json')
+      }
+      
+      // Add Authorization if authenticated
       if (authStore.isAuthenticated) {
         try {
-          // Access token from cookie safely
           const token = useCookie('access-token').value
           if (token) {
-            headers['Authorization'] = `Bearer ${token}`
+            headers.set('Authorization', `Bearer ${token}`)
           }
         } catch (error) {
           console.warn('Failed to add auth header:', error)
         }
       }
       
-      // Assign as Record, not Headers class
+      // Assign Headers object
       options.headers = headers
     },
     
@@ -39,7 +50,6 @@ export default defineNuxtPlugin(() => {
         authStore.user = null
         await navigateTo('/auth/login')
       }
-      // Return void for proper typing
     }
   })
 })
