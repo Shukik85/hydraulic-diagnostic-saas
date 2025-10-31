@@ -198,8 +198,8 @@ const chatSessions = ref<ChatSession[]>([
         ]
       }
     ]
-  }]
-)
+  }
+])
 
 // Methods
 const selectSession = (session: ChatSession) => {
@@ -253,8 +253,9 @@ const sendMessage = async () => {
   }, 1500)
 }
 
-// Initialize with first session if available
-if (chatSessions.value.length > 0) {
-  activeSession.value = chatSessions.value[0]
+// Initialize with first session if available - safe assignment
+const firstSession = chatSessions.value[0] || null
+if (firstSession) {
+  activeSession.value = firstSession
 }
 </script>
