@@ -1,12 +1,9 @@
 <template>
   <div class="space-y-8">
-    <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
       <div>
         <h1 class="u-h2">{{ t('reports.title') }}</h1>
-        <p class="u-body text-gray-600 mt-1">
-          {{ t('reports.subtitle') }}
-        </p>
+        <p class="u-body text-gray-600 mt-1">{{ t('reports.subtitle') }}</p>
       </div>
       <button @click="showGenerateModal = true" class="u-btn u-btn-primary u-btn-md w-full lg:w-auto">
         <Icon name="heroicons:document-plus" class="w-4 h-4 mr-2" />
@@ -14,7 +11,6 @@
       </button>
     </div>
 
-    <!-- Reports List -->
     <div class="u-card">
       <div class="p-6 space-y-4">
         <div v-for="report in reports" :key="report.id" class="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -38,39 +34,20 @@
               <Icon :name="getStatusIcon(report.status)" class="w-3 h-3" />
               {{ getStatusText(report.status) }}
             </span>
-            <button class="u-btn u-btn-ghost u-btn-sm">
-              <Icon name="heroicons:eye" class="w-4 h-4" />
-            </button>
-            <button class="u-btn u-btn-ghost u-btn-sm">
-              <Icon name="heroicons:arrow-down-tray" class="w-4 h-4" />
-            </button>
+            <button class="u-btn u-btn-ghost u-btn-sm"><Icon name="heroicons:eye" class="w-4 h-4" /></button>
+            <button class="u-btn u-btn-ghost u-btn-sm"><Icon name="heroicons:arrow-down-tray" class="w-4 h-4" /></button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Generate Report Modal -->
-    <UModal
-      v-model="showGenerateModal"
-      :title="t('reports.generate.title')"
-      :description="t('reports.generate.subtitle')"
-      :teleport-to="'#modal-portal'"
-      size="lg"
-    >
+    <UModal v-if="showGenerateModal" v-model="showGenerateModal" :title="t('reports.generate.title')" :description="t('reports.generate.subtitle')" size="lg">
       <form @submit.prevent="generateReport" class="space-y-6">
-        <!-- Report Template -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3">
-            {{ t('reports.generate.template') }}
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-3">{{ t('reports.generate.template') }}</label>
           <div class="grid gap-3 sm:grid-cols-2">
             <label v-for="template in reportTemplates" :key="template.key" class="relative">
-              <input
-                v-model="form.template"
-                :value="template.key"
-                type="radio"
-                class="sr-only peer"
-              />
+              <input v-model="form.template" :value="template.key" type="radio" class="sr-only peer" />
               <div class="p-4 border border-gray-200 rounded-lg cursor-pointer transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:border-gray-300">
                 <div class="font-medium text-gray-900">{{ template.name }}</div>
                 <div class="text-sm text-gray-600 mt-1">{{ template.description }}</div>
@@ -78,12 +55,8 @@
             </label>
           </div>
         </div>
-
-        <!-- Analysis Period -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3">
-            {{ t('reports.generate.period') }}
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-3">{{ t('reports.generate.period') }}</label>
           <select v-model="form.period" class="u-input">
             <option value="last_24h">{{ t('reports.periods.last_24h') }}</option>
             <option value="last_7d">{{ t('reports.periods.last_7d') }}</option>
@@ -91,42 +64,22 @@
             <option value="last_90d">{{ t('reports.periods.last_90d') }}</option>
           </select>
         </div>
-
-        <!-- Language -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3">
-            {{ t('reports.generate.language') }}
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-3">{{ t('reports.generate.language') }}</label>
           <select v-model="form.locale" class="u-input">
             <option value="ru">{{ t('reports.locales.ru') }}</option>
             <option value="en">{{ t('reports.locales.en') }}</option>
             <option value="de">{{ t('reports.locales.de') }}</option>
           </select>
         </div>
-
-        <!-- Custom Title -->
         <div>
-          <label for="customTitle" class="block text-sm font-medium text-gray-700 mb-2">
-            {{ t('reports.generate.customTitle') }}
-            <span class="text-gray-500 text-xs ml-1">({{ t('ui.optional') }})</span>
-          </label>
-          <input
-            id="customTitle"
-            v-model="form.customTitle"
-            type="text"
-            class="u-input"
-            :placeholder="t('reports.generate.customTitlePlaceholder')"
-          />
-          <p class="text-xs text-gray-500 mt-1">
-            {{ t('reports.generate.autoTitle') }}
-          </p>
+          <label for="customTitle" class="block text-sm font-medium text-gray-700 mb-2">{{ t('reports.generate.customTitle') }} <span class="text-gray-500 text-xs ml-1">({{ t('ui.optional') }})</span></label>
+          <input id="customTitle" v-model="form.customTitle" type="text" class="u-input" :placeholder="t('reports.generate.customTitlePlaceholder')" />
+          <p class="text-xs text-gray-500 mt-1">{{ t('reports.generate.autoTitle') }}</p>
         </div>
       </form>
-
       <template #footer>
-        <button @click="showGenerateModal = false" type="button" class="u-btn u-btn-secondary flex-1">
-          {{ t('ui.cancel') }}
-        </button>
+        <button @click="showGenerateModal = false" type="button" class="u-btn u-btn-secondary flex-1">{{ t('ui.cancel') }}</button>
         <button @click="generateReport" type="submit" class="u-btn u-btn-primary flex-1" :disabled="isGenerating">
           <Icon v-if="isGenerating" name="heroicons:arrow-path" class="w-4 h-4 mr-2 animate-spin" />
           <Icon v-else name="heroicons:document-plus" class="w-4 h-4 mr-2" />
@@ -139,7 +92,6 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'] })
-
 const { t } = useI18n()
 
 const showGenerateModal = ref(false)
@@ -159,11 +111,11 @@ const reportTemplates = [
   { key: 'maintenance', name: t('reports.templates.maintShort'), description: t('reports.templates.maintenance') }
 ]
 
-const getSeverityColor = (severity: string): string => ({ low: 'bg-green-500', medium: 'bg-yellow-500', high: 'bg-orange-500', critical: 'bg-red-500' }[severity] || 'bg-gray-500')
-const getSeverityText = (severity: string): string => ({ low: t('reports.severity.low'), medium: t('reports.severity.medium'), high: t('reports.severity.high'), critical: t('reports.severity.critical') }[severity] || severity)
-const getStatusBadgeClass = (status: string): string => ({ completed: 'u-badge-success', in_progress: 'u-badge-info', pending: 'u-badge-warning', failed: 'u-badge-error' }[status] || 'u-badge-info')
-const getStatusIcon = (status: string): string => ({ completed: 'heroicons:check-circle', in_progress: 'heroicons:arrow-path', pending: 'heroicons:clock', failed: 'heroicons:x-circle' }[status] || 'heroicons:question-mark-circle')
-const getStatusText = (status: string): string => ({ completed: t('reports.status.completed'), in_progress: t('reports.status.in_progress'), pending: t('reports.status.pending'), failed: t('reports.status.failed') }[status] || status)
+const getSeverityColor = (s: string) => ({ low: 'bg-green-500', medium: 'bg-yellow-500', high: 'bg-orange-500', critical: 'bg-red-500' }[s] || 'bg-gray-500')
+const getSeverityText = (s: string) => ({ low: t('reports.severity.low'), medium: t('reports.severity.medium'), high: t('reports.severity.high'), critical: t('reports.severity.critical') }[s] || s)
+const getStatusBadgeClass = (s: string) => ({ completed: 'u-badge-success', in_progress: 'u-badge-info', pending: 'u-badge-warning', failed: 'u-badge-error' }[s] || 'u-badge-info')
+const getStatusIcon = (s: string) => ({ completed: 'heroicons:check-circle', in_progress: 'heroicons:arrow-path', pending: 'heroicons:clock', failed: 'heroicons:x-circle' }[s] || 'heroicons:question-mark-circle')
+const getStatusText = (s: string) => ({ completed: t('reports.status.completed'), in_progress: t('reports.status.in_progress'), pending: t('reports.status.pending'), failed: t('reports.status.failed') }[s] || s)
 
 const generateReport = async () => {
   isGenerating.value = true

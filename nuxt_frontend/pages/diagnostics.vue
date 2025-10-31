@@ -4,9 +4,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h1 class="u-h2">{{ t('diagnostics.title') }}</h1>
-        <p class="u-body text-gray-600 mt-1">
-          {{ t('diagnostics.subtitle') }}
-        </p>
+        <p class="u-body text-gray-600 mt-1">{{ t('diagnostics.subtitle') }}</p>
       </div>
       <button @click="showRunModal = true" class="u-btn u-btn-primary u-btn-md w-full sm:w-auto">
         <Icon name="heroicons:play" class="w-4 h-4 mr-2" />
@@ -29,7 +27,6 @@
           <span>{{ t('diagnostics.kpi.runningNow') }}</span>
         </div>
       </div>
-
       <div class="u-metric-card">
         <div class="u-metric-header">
           <h3 class="u-metric-label">{{ t('diagnostics.kpi.successRate') }}</h3>
@@ -43,7 +40,6 @@
           <span>{{ t('diagnostics.kpi.thisWeek', ['+2.1%']) }}</span>
         </div>
       </div>
-
       <div class="u-metric-card">
         <div class="u-metric-header">
           <h3 class="u-metric-label">{{ t('diagnostics.kpi.avgDuration') }}</h3>
@@ -57,7 +53,6 @@
           <span>{{ t('diagnostics.kpi.faster', ['-0.8']) }}</span>
         </div>
       </div>
-
       <div class="u-metric-card">
         <div class="u-metric-header">
           <h3 class="u-metric-label">{{ t('diagnostics.kpi.issuesFound') }}</h3>
@@ -83,23 +78,16 @@
               <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse flex-shrink-0"></div>
               <div class="min-w-0">
                 <p class="font-medium text-gray-900 truncate">{{ session.name }}</p>
-                <p class="u-body-sm text-gray-500 truncate">
-                  {{ session.equipment }} • {{ t('diagnostics.started') }} {{ session.startedAt }}
-                </p>
+                <p class="u-body-sm text-gray-500 truncate">{{ session.equipment }} • {{ t('diagnostics.started') }} {{ session.startedAt }}</p>
               </div>
             </div>
             <div class="flex items-center gap-4 justify-between sm:justify-end">
               <div class="w-24 sm:w-32">
                 <div class="flex items-center gap-2">
                   <div class="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      class="bg-blue-500 h-2 rounded-full u-transition-fast"
-                      :style="{ width: session.progress + '%' }"
-                    ></div>
+                    <div class="bg-blue-500 h-2 rounded-full u-transition-fast" :style="{ width: session.progress + '%' }"></div>
                   </div>
-                  <span class="u-body-sm font-medium text-gray-700 text-xs sm:text-sm">
-                    {{ Math.round(session.progress) }}%
-                  </span>
+                  <span class="u-body-sm font-medium text-gray-700 text-xs sm:text-sm">{{ Math.round(session.progress) }}%</span>
                 </div>
               </div>
               <button @click="cancelSession(session.id)" class="u-btn u-btn-ghost u-btn-sm shrink-0">
@@ -118,9 +106,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 class="u-h4">{{ t('diagnostics.recentResults.title') }}</h3>
-            <p class="u-body text-gray-600 mt-1">
-              {{ t('diagnostics.recentResults.subtitle') }}
-            </p>
+            <p class="u-body text-gray-600 mt-1">{{ t('diagnostics.recentResults.subtitle') }}</p>
           </div>
           <div class="flex items-center gap-2">
             <select class="u-input text-sm py-2 px-3 w-full sm:w-40">
@@ -135,7 +121,6 @@
           </div>
         </div>
       </div>
-      
       <div class="p-0 sm:p-6">
         <!-- Mobile: Card Layout -->
         <div class="sm:hidden space-y-4 p-4">
@@ -145,40 +130,26 @@
                 <h4 class="font-medium text-gray-900 truncate">{{ result.name }}</h4>
                 <p class="u-body-sm text-gray-500">{{ result.equipment }}</p>
               </div>
-              <span 
-                class="u-badge flex-shrink-0"
-                :class="getStatusBadgeClass(result.status)"
-              >
+              <span class="u-badge flex-shrink-0" :class="getStatusBadgeClass(result.status)">
                 <Icon :name="getStatusIcon(result.status)" class="w-3 h-3" />
                 {{ t(`diagnostics.status.${result.status}`) }}
               </span>
             </div>
-            
             <div class="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p class="text-xs text-gray-500 mb-1">{{ t('diagnostics.healthScore') }}</p>
                 <div class="flex items-center gap-2">
                   <div class="w-8 h-2 bg-gray-200 rounded-full">
-                    <div 
-                      class="h-2 rounded-full"
-                      :class="result.score >= 90 ? 'bg-green-500' : result.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'"
-                      :style="{ width: result.score + '%' }"
-                    ></div>
+                    <div class="h-2 rounded-full" :class="result.score >= 90 ? 'bg-green-500' : result.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'" :style="{ width: result.score + '%' }"></div>
                   </div>
                   <span class="text-sm font-medium">{{ result.score }}/100</span>
                 </div>
               </div>
               <div>
                 <p class="text-xs text-gray-500 mb-1">{{ t('diagnostics.issues') }}</p>
-                <span 
-                  class="u-badge text-xs"
-                  :class="result.issuesFound === 0 ? 'u-badge-success' : result.issuesFound <= 2 ? 'u-badge-warning' : 'u-badge-error'"
-                >
-                  {{ result.issuesFound }} {{ t('diagnostics.issuesCount') }}
-                </span>
+                <span class="u-badge text-xs" :class="result.issuesFound === 0 ? 'u-badge-success' : result.issuesFound <= 2 ? 'u-badge-warning' : 'u-badge-error'">{{ result.issuesFound }} {{ t('diagnostics.issuesCount') }}</span>
               </div>
             </div>
-            
             <div class="flex items-center justify-between">
               <span class="u-body-sm text-gray-500">{{ result.completedAt }}</span>
               <div class="flex items-center gap-2">
@@ -192,7 +163,6 @@
             </div>
           </div>
         </div>
-
         <!-- Desktop: Table Layout -->
         <div class="hidden sm:block overflow-x-auto">
           <table class="u-table">
@@ -214,29 +184,17 @@
                 <td>
                   <div class="flex items-center gap-2">
                     <div class="w-12 h-2 bg-gray-200 rounded-full">
-                      <div 
-                        class="h-2 rounded-full"
-                        :class="result.score >= 90 ? 'bg-green-500' : result.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'"
-                        :style="{ width: result.score + '%' }"
-                      ></div>
+                      <div class="h-2 rounded-full" :class="result.score >= 90 ? 'bg-green-500' : result.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'" :style="{ width: result.score + '%' }"></div>
                     </div>
                     <span class="u-body-sm font-medium">{{ result.score }}/100</span>
                   </div>
                 </td>
                 <td>
-                  <span 
-                    class="u-badge"
-                    :class="result.issuesFound === 0 ? 'u-badge-success' : result.issuesFound <= 2 ? 'u-badge-warning' : 'u-badge-error'"
-                  >
-                    {{ result.issuesFound }} {{ t('diagnostics.issuesCount') }}
-                  </span>
+                  <span class="u-badge" :class="result.issuesFound === 0 ? 'u-badge-success' : result.issuesFound <= 2 ? 'u-badge-warning' : 'u-badge-error'">{{ result.issuesFound }} {{ t('diagnostics.issuesCount') }}</span>
                 </td>
                 <td class="u-body-sm text-gray-500">{{ result.completedAt }}</td>
                 <td>
-                  <span 
-                    class="u-badge"
-                    :class="getStatusBadgeClass(result.status)"
-                  >
+                  <span class="u-badge" :class="getStatusBadgeClass(result.status)">
                     <Icon :name="getStatusIcon(result.status)" class="w-3 h-3" />
                     {{ t(`diagnostics.status.${result.status}`) }}
                   </span>
@@ -259,46 +217,25 @@
     </div>
 
     <!-- Run Diagnostic Modal -->
-    <URunDiagnosticModal
-      v-model="showRunModal"
-      :loading="isRunning"
-      :teleport-to="'#modal-portal'"
-      @submit="startDiagnostic"
-      @cancel="showRunModal = false"
-    />
+    <URunDiagnosticModal v-if="showRunModal" v-model="showRunModal" :loading="isRunning" @submit="startDiagnostic" @cancel="showRunModal = false" />
 
     <!-- Results Modal -->
-    <UModal
-      v-model="showResultsModal"
-      :title="computedResultsTitle"
-      :description="t('diagnostics.results.subtitle')"
-      :teleport-to="'#modal-portal'"
-      size="xl"
-    >
-      <div v-if="selectedResult" class="space-y-6">
-        <!-- Summary Cards -->
-        <div class="grid gap-4 sm:grid-cols-3">
+    <UModal v-if="showResultsModal" v-model="showResultsModal" :title="computedResultsTitle" :description="t('diagnostics.results.subtitle')" size="xl">
+      <div class="space-y-6">
+        <div class="grid gap-4 sm:grid-cols-3" v-if="selectedResult">
           <div class="u-card p-4 text-center">
-            <div class="text-2xl font-bold text-green-600">
-              {{ selectedResult.score }}/100
-            </div>
+            <div class="text-2xl font-bold text-green-600">{{ selectedResult.score }}/100</div>
             <p class="u-body-sm text-gray-500">{{ t('diagnostics.healthScore') }}</p>
           </div>
           <div class="u-card p-4 text-center">
-            <div class="text-2xl font-bold text-gray-900">
-              {{ selectedResult.issuesFound }}
-            </div>
+            <div class="text-2xl font-bold text-gray-900">{{ selectedResult.issuesFound }}</div>
             <p class="u-body-sm text-gray-500">{{ t('diagnostics.issuesFound') }}</p>
           </div>
           <div class="u-card p-4 text-center">
-            <div class="text-2xl font-bold text-gray-900">
-              {{ selectedResult.duration }}
-            </div>
+            <div class="text-2xl font-bold text-gray-900">{{ selectedResult.duration }}</div>
             <p class="u-body-sm text-gray-500">{{ t('diagnostics.analysisDuration') }}</p>
           </div>
         </div>
-
-        <!-- Recommendations -->
         <div class="u-card p-4 sm:p-6">
           <h4 class="u-h5 mb-4">Рекомендации</h4>
           <div class="space-y-4">
@@ -306,79 +243,41 @@
               <div class="flex items-start gap-3">
                 <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                 <div class="min-w-0">
-                  <p class="font-medium text-yellow-800">
-                    {{ t('diagnostics.recommendations.pressureMaintenance') }}
-                  </p>
-                  <p class="u-body-sm text-yellow-700 mt-1">
-                    {{ t('diagnostics.recommendations.pressureMaintenanceDesc') }}
-                  </p>
-                  <p class="text-xs text-yellow-600 mt-2">
-                    {{ t('diagnostics.priority') }}: {{ t('diagnostics.priorityMedium') }}
-                  </p>
+                  <p class="font-medium text-yellow-800">{{ t('diagnostics.recommendations.pressureMaintenance') }}</p>
+                  <p class="u-body-sm text-yellow-700 mt-1">{{ t('diagnostics.recommendations.pressureMaintenanceDesc') }}</p>
+                  <p class="text-xs text-yellow-600 mt-2">{{ t('diagnostics.priority') }}: {{ t('diagnostics.priorityMedium') }}</p>
                 </div>
               </div>
             </div>
-
             <div class="p-4 border border-green-200 bg-green-50 rounded-lg">
               <div class="flex items-start gap-3">
                 <Icon name="heroicons:check-circle" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <div class="min-w-0">
-                  <p class="font-medium text-green-800">
-                    {{ t('diagnostics.recommendations.temperatureMonitoring') }}
-                  </p>
-                  <p class="u-body-sm text-green-700 mt-1">
-                    {{ t('diagnostics.recommendations.temperatureMonitoringDesc') }}
-                  </p>
-                  <p class="text-xs text-green-600 mt-2">
-                    {{ t('diagnostics.statusLabel') }}: {{ t('diagnostics.statusNormal') }}
-                  </p>
+                  <p class="font-medium text-green-800">{{ t('diagnostics.recommendations.temperatureMonitoring') }}</p>
+                  <p class="u-body-sm text-green-700 mt-1">{{ t('diagnostics.recommendations.temperatureMonitoringDesc') }}</p>
+                  <p class="text-xs text-green-600 mt-2">{{ t('diagnostics.statusLabel') }}: {{ t('diagnostics.statusNormal') }}</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
       <template #footer>
-        <button @click="showResultsModal = false" class="u-btn u-btn-secondary flex-1">
-          {{ t('ui.close') }}
-        </button>
-        <button class="u-btn u-btn-primary flex-1">
-          <Icon name="heroicons:arrow-down-tray" class="w-4 h-4 mr-2" />
-          {{ t('diagnostics.exportPDF') }}
-        </button>
+        <button @click="showResultsModal = false" class="u-btn u-btn-secondary flex-1">{{ t('ui.close') }}</button>
+        <button class="u-btn u-btn-primary flex-1"><Icon name="heroicons:arrow-down-tray" class="w-4 h-4 mr-2" />{{ t('diagnostics.exportPDF') }}</button>
       </template>
     </UModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { DiagnosticSession } from '~/types/api'
-
-interface ActiveSession {
-  id: number
-  name: string
-  equipment: string
-  progress: number
-  startedAt: string
-}
-
-interface DiagnosticUIResult {
-  id: number
-  name: string
-  equipment: string
-  score: number
-  issuesFound: number
-  completedAt: string
-  status: 'completed' | 'warning' | 'error' | 'processing'
-  duration: string
-}
+interface ActiveSession { id: number; name: string; equipment: string; progress: number; startedAt: string }
+interface DiagnosticUIResult { id: number; name: string; equipment: string; score: number; issuesFound: number; completedAt: string; status: 'completed' | 'warning' | 'error' | 'processing'; duration: string }
 
 definePageMeta({ middleware: ['auth'] })
-
 const { t } = useI18n()
 
-// Refs declared first
+// Refs first
 const showRunModal = ref(false)
 const showResultsModal = ref(false)
 const isRunning = ref(false)
@@ -391,14 +290,7 @@ const recentResults = ref<DiagnosticUIResult[]>([
   { id: 3, name: 'Temperature Analysis - HYD-003', equipment: 'HYD-003 - Control Valve C', score: 95, issuesFound: 0, completedAt: '1 day ago', status: 'completed', duration: '3.1 min' }
 ])
 
-// Computed after refs
-const computedResultsTitle = computed(() => {
-  if (!selectedResult.value) return t('diagnostics.results.title')
-  return t('diagnostics.results.titleWithName', { 
-    title: t('diagnostics.results.title'), 
-    name: selectedResult.value.name 
-  })
-})
+const computedResultsTitle = computed(() => selectedResult.value ? t('diagnostics.results.titleWithName', { title: t('diagnostics.results.title'), name: selectedResult.value.name }) : t('diagnostics.results.title'))
 
 const startDiagnostic = async (data: any) => {
   isRunning.value = true
