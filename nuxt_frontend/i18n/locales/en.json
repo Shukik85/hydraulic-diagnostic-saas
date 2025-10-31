@@ -35,6 +35,83 @@
       "switch": "Switch Language"
     }
   },
+  "auth": {
+    "signIn": "Sign In",
+    "getStarted": "Get Started",
+    "startFreeTrial": "Start Free Trial",
+    "watchDemo": "Watch Demo",
+    "startTrialNow": "Start Your Free Trial Now"
+  },
+  "landing": {
+    "hero": {
+      "title": "Advanced Hydraulic Systems Diagnostics",
+      "subtitle": "Real-time monitoring, AI-powered analysis, and predictive maintenance for hydraulic systems. Keep your operations running at peak efficiency."
+    },
+    "features": {
+      "title": "Powerful Features",
+      "subtitle": "Everything you need to monitor and optimize hydraulic systems",
+      "monitoring": {
+        "title": "Real-Time Monitoring",
+        "description": "Live data streaming from all connected systems with instant alerts for anomalies."
+      },
+      "analytics": {
+        "title": "AI-Powered Analytics",
+        "description": "Machine learning algorithms detect patterns and predict maintenance needs before failures occur."
+      },
+      "alerts": {
+        "title": "Smart Alerts",
+        "description": "Customizable notifications via email, SMS, or in-app alerts for critical system events."
+      },
+      "reports": {
+        "title": "Detailed Reports",
+        "description": "Comprehensive performance reports with historical trends and recommendations."
+      },
+      "security": {
+        "title": "Enterprise Security",
+        "description": "Bank-level encryption and compliance with industrial security standards."
+      },
+      "integration": {
+        "title": "API Integration",
+        "description": "RESTful API and webhooks for seamless integration with your existing systems."
+      }
+    },
+    "stats": {
+      "uptime": "System Uptime",
+      "users": "Active Users",
+      "support": "Support"
+    },
+    "cta": {
+      "title": "Ready to optimize your hydraulic systems?",
+      "subtitle": "Join hundreds of companies using Hydraulic Diagnostic to improve efficiency and reduce downtime."
+    },
+    "footer": {
+      "product": {
+        "title": "Product",
+        "features": "Features",
+        "pricing": "Pricing",
+        "documentation": "Documentation"
+      },
+      "company": {
+        "title": "Company",
+        "about": "About",
+        "blog": "Blog",
+        "careers": "Careers"
+      },
+      "legal": {
+        "title": "Legal",
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "security": "Security"
+      },
+      "contact": {
+        "title": "Contact",
+        "email": "Email: contact@hydraulic-diagnostic.com",
+        "phone": "Phone: +1 (555) 123-4567",
+        "chat": "Chat: Available 24/7"
+      },
+      "copyright": "© 2025 Hydraulic Diagnostic. All rights reserved."
+    }
+  },
   "breadcrumbs": {
     "home": "Home",
     "page": "Page",
