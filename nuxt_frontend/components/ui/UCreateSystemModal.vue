@@ -2,8 +2,8 @@
   <UModal
     :model-value="modelValue"
     @update:model-value="$emit('update:modelValue', $event)"
-    :title="$t('systems.create.title')"
-    :description="$t('systems.create.subtitle')"
+    :title="t('systems.create.title')"
+    :description="t('systems.create.subtitle')"
     size="md"
     :close-on-backdrop="true"
   >
@@ -11,14 +11,14 @@
       <!-- System Name -->
       <div>
         <label class="u-label" for="system-name">
-          {{ $t('systems.create.name') }} *
+          {{ t('systems.create.name') }} *
         </label>
         <input 
           id="system-name"
           v-model.trim="form.name"
           type="text" 
           class="u-input"
-          :placeholder="$t('systems.create.namePlaceholder')"
+          :placeholder="t('systems.create.namePlaceholder')"
           :disabled="loading"
           maxlength="200"
           ref="nameInputRef"
@@ -34,7 +34,7 @@
       <!-- System Type -->
       <div>
         <label class="u-label" for="system-type">
-          {{ $t('systems.create.type') }}
+          {{ t('systems.create.type') }}
         </label>
         <div class="relative">
           <select 
@@ -43,12 +43,12 @@
             class="u-input appearance-none cursor-pointer"
             :disabled="loading"
           >
-            <option value="industrial">{{ $t('systems.types.industrial') }}</option>
-            <option value="mobile">{{ $t('systems.types.mobile') }}</option>
-            <option value="marine">{{ $t('systems.types.marine') }}</option>
-            <option value="construction">{{ $t('systems.types.construction') }}</option>
-            <option value="mining">{{ $t('systems.types.mining') }}</option>
-            <option value="agricultural">{{ $t('systems.types.agricultural') }}</option>
+            <option value="industrial">{{ t('systems.types.industrial') }}</option>
+            <option value="mobile">{{ t('systems.types.mobile') }}</option>
+            <option value="marine">{{ t('systems.types.marine') }}</option>
+            <option value="construction">{{ t('systems.types.construction') }}</option>
+            <option value="mining">{{ t('systems.types.mining') }}</option>
+            <option value="agricultural">{{ t('systems.types.agricultural') }}</option>
           </select>
           <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -57,7 +57,7 @@
       <!-- Initial Status -->
       <div>
         <label class="u-label" for="system-status">
-          {{ $t('systems.create.initialStatus') }}
+          {{ t('systems.create.initialStatus') }}
         </label>
         <div class="relative">
           <select 
@@ -66,9 +66,9 @@
             class="u-input appearance-none cursor-pointer"
             :disabled="loading"
           >
-            <option value="active">{{ $t('systems.status.active') }}</option>
-            <option value="maintenance">{{ $t('systems.status.maintenance') }}</option>
-            <option value="inactive">{{ $t('systems.status.inactive') }}</option>
+            <option value="active">{{ t('systems.status.active') }}</option>
+            <option value="maintenance">{{ t('systems.status.maintenance') }}</option>
+            <option value="inactive">{{ t('systems.status.inactive') }}</option>
           </select>
           <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -77,13 +77,13 @@
       <!-- Description -->
       <div>
         <label class="u-label" for="system-description">
-          {{ $t('ui.description') }} <span class="text-gray-400 font-normal">({{ $t('ui.optional', 'optional') }})</span>
+          {{ t('ui.description') }} <span class="text-gray-400 font-normal">({{ t('ui.optional') }})</span>
         </label>
         <textarea 
           id="system-description"
           v-model.trim="form.description"
           class="u-input resize-none"
-          :placeholder="$t('systems.create.descriptionPlaceholder')"
+          :placeholder="t('systems.create.descriptionPlaceholder')"
           :disabled="loading"
           rows="3"
           maxlength="500"
@@ -96,10 +96,10 @@
           <Icon name="heroicons:information-circle" class="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <div>
             <p class="text-sm font-medium text-blue-900">
-              {{ $t('systems.create.nextStepsTitle') }}
+              {{ t('systems.create.nextStepsTitle') }}
             </p>
             <p class="text-sm text-blue-700 mt-1">
-              {{ $t('systems.create.nextStepsDesc') }}
+              {{ t('systems.create.nextStepsDesc') }}
             </p>
           </div>
         </div>
@@ -113,7 +113,7 @@
         :disabled="loading"
         type="button"
       >
-        {{ $t('ui.cancel') }}
+        {{ t('ui.cancel') }}
       </button>
       <button 
         class="u-btn u-btn-primary min-w-[120px]"
@@ -131,7 +131,7 @@
           name="heroicons:plus" 
           class="h-4 w-4 mr-2" 
         />
-        {{ loading ? $t('systems.create.creating') : $t('systems.create.createBtn') }}
+        {{ loading ? t('systems.create.creating') : t('systems.create.createBtn') }}
       </button>
     </template>
   </UModal>
@@ -164,7 +164,7 @@ const emit = defineEmits<{
   'cancel': []
 }>()
 
-const { $t } = useI18n()
+const { t } = useI18n()
 
 // Form state
 const form = reactive<SystemFormData>({
@@ -182,11 +182,11 @@ const nameInputRef = ref<HTMLInputElement>()
 const validate = (): boolean => {
   Object.keys(errors).forEach(key => delete errors[key as keyof FormErrors])
   if (!form.name.trim()) {
-    errors.name = $t('systems.create.errors.nameRequired')
+    errors.name = t('systems.create.errors.nameRequired')
   } else if (form.name.length < 3) {
-    errors.name = $t('systems.create.errors.nameMin')
+    errors.name = t('systems.create.errors.nameMin')
   } else if (form.name.length > 200) {
-    errors.name = $t('systems.create.errors.nameMax')
+    errors.name = t('systems.create.errors.nameMax')
   }
   return !errors.name
 }
