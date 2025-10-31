@@ -80,7 +80,7 @@
         <div v-for="session in activeSessions" :key="session.id" class="u-card p-4 sm:p-6">
           <div class="flex flex-col sm:flex-row sm:items-center gap-4">
             <div class="flex items-center gap-4 flex-1 min-w-0">
-              <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse flex-shrink-0"></div>
+              <div class="w-3 h-3 bg-blue-500 rounded-full animate-pulse shrink-0"></div>
               <div class="min-w-0">
                 <p class="font-medium text-gray-900 truncate">{{ session.name }}</p>
                 <p class="u-body-sm text-gray-500 truncate">
@@ -92,10 +92,8 @@
               <div class="w-24 sm:w-32">
                 <div class="flex items-center gap-2">
                   <div class="flex-1 bg-gray-200 rounded-full h-2">
-                    <div
-                      class="bg-blue-500 h-2 rounded-full u-transition-fast"
-                      :style="{ width: session.progress + '%' }"
-                    ></div>
+                    <div class="bg-blue-500 h-2 rounded-full u-transition-fast"
+                      :style="{ width: session.progress + '%' }"></div>
                   </div>
                   <span class="u-body-sm font-medium text-gray-700 text-xs sm:text-sm">
                     {{ Math.round(session.progress) }}%
@@ -129,13 +127,13 @@
               <option>HYD-002</option>
               <option>HYD-003</option>
             </select>
-            <button class="u-btn u-btn-secondary u-btn-sm flex-shrink-0">
+            <button class="u-btn u-btn-secondary u-btn-sm shrink-0">
               <Icon name="heroicons:funnel" class="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
-      
+
       <div class="p-0 sm:p-6">
         <!-- Mobile: Card Layout -->
         <div class="sm:hidden space-y-4 p-4">
@@ -145,40 +143,33 @@
                 <h4 class="font-medium text-gray-900 truncate">{{ result.name }}</h4>
                 <p class="u-body-sm text-gray-500">{{ result.equipment }}</p>
               </div>
-              <span 
-                class="u-badge flex-shrink-0"
-                :class="getStatusBadgeClass(result.status)"
-              >
+              <span class="u-badge shrink-0" :class="getStatusBadgeClass(result.status)">
                 <Icon :name="getStatusIcon(result.status)" class="w-3 h-3" />
                 {{ t(`diagnostics.status.${result.status}`) }}
               </span>
             </div>
-            
+
             <div class="grid grid-cols-2 gap-4 mb-4">
               <div>
                 <p class="text-xs text-gray-500 mb-1">{{ t('diagnostics.healthScore') }}</p>
                 <div class="flex items-center gap-2">
                   <div class="w-8 h-2 bg-gray-200 rounded-full">
-                    <div 
-                      class="h-2 rounded-full"
+                    <div class="h-2 rounded-full"
                       :class="result.score >= 90 ? 'bg-green-500' : result.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'"
-                      :style="{ width: result.score + '%' }"
-                    ></div>
+                      :style="{ width: result.score + '%' }"></div>
                   </div>
                   <span class="text-sm font-medium">{{ result.score }}/100</span>
                 </div>
               </div>
               <div>
                 <p class="text-xs text-gray-500 mb-1">{{ t('diagnostics.issues') }}</p>
-                <span 
-                  class="u-badge text-xs"
-                  :class="result.issuesFound === 0 ? 'u-badge-success' : result.issuesFound <= 2 ? 'u-badge-warning' : 'u-badge-error'"
-                >
+                <span class="u-badge text-xs"
+                  :class="result.issuesFound === 0 ? 'u-badge-success' : result.issuesFound <= 2 ? 'u-badge-warning' : 'u-badge-error'">
                   {{ result.issuesFound }} {{ t('diagnostics.issuesCount') }}
                 </span>
               </div>
             </div>
-            
+
             <div class="flex items-center justify-between">
               <span class="u-body-sm text-gray-500">{{ result.completedAt }}</span>
               <div class="flex items-center gap-2">
@@ -214,29 +205,22 @@
                 <td>
                   <div class="flex items-center gap-2">
                     <div class="w-12 h-2 bg-gray-200 rounded-full">
-                      <div 
-                        class="h-2 rounded-full"
+                      <div class="h-2 rounded-full"
                         :class="result.score >= 90 ? 'bg-green-500' : result.score >= 70 ? 'bg-yellow-500' : 'bg-red-500'"
-                        :style="{ width: result.score + '%' }"
-                      ></div>
+                        :style="{ width: result.score + '%' }"></div>
                     </div>
                     <span class="u-body-sm font-medium">{{ result.score }}/100</span>
                   </div>
                 </td>
                 <td>
-                  <span 
-                    class="u-badge"
-                    :class="result.issuesFound === 0 ? 'u-badge-success' : result.issuesFound <= 2 ? 'u-badge-warning' : 'u-badge-error'"
-                  >
+                  <span class="u-badge"
+                    :class="result.issuesFound === 0 ? 'u-badge-success' : result.issuesFound <= 2 ? 'u-badge-warning' : 'u-badge-error'">
                     {{ result.issuesFound }} {{ t('diagnostics.issuesCount') }}
                   </span>
                 </td>
                 <td class="u-body-sm text-gray-500">{{ result.completedAt }}</td>
                 <td>
-                  <span 
-                    class="u-badge"
-                    :class="getStatusBadgeClass(result.status)"
-                  >
+                  <span class="u-badge" :class="getStatusBadgeClass(result.status)">
                     <Icon :name="getStatusIcon(result.status)" class="w-3 h-3" />
                     {{ t(`diagnostics.status.${result.status}`) }}
                   </span>
@@ -259,21 +243,13 @@
     </div>
 
     <!-- Run Diagnostic Modal -->
-    <URunDiagnosticModal
-      v-model="showRunModal"
-      :loading="isRunning"
-      @submit="startDiagnostic"
-      @cancel="showRunModal = false"
-    />
+    <URunDiagnosticModal v-model="showRunModal" :loading="isRunning" @submit="startDiagnostic"
+      @cancel="showRunModal = false" />
 
     <!-- Results Modal -->
-    <UModal
-      v-if="selectedResult"
-      v-model="showResultsModal"
+    <UModal v-if="selectedResult" v-model="showResultsModal"
       :title="t('diagnostics.results.titleWithName', { title: t('diagnostics.results.title'), name: selectedResult.name })"
-      :description="t('diagnostics.results.subtitle')"
-      size="xl"
-    >
+      :description="t('diagnostics.results.subtitle')" size="xl">
       <div class="space-y-6">
         <!-- Summary Cards -->
         <div class="grid gap-4 sm:grid-cols-3">
@@ -303,7 +279,7 @@
           <div class="space-y-4">
             <div class="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
               <div class="flex items-start gap-3">
-                <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <Icon name="heroicons:exclamation-triangle" class="w-5 h-5 text-yellow-600 mt-0.5 shrink-0" />
                 <div class="min-w-0">
                   <p class="font-medium text-yellow-800">
                     {{ t('diagnostics.recommendations.pressureMaintenance') }}
@@ -320,7 +296,7 @@
 
             <div class="p-4 border border-green-200 bg-green-50 rounded-lg">
               <div class="flex items-start gap-3">
-                <Icon name="heroicons:check-circle" class="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <Icon name="heroicons:check-circle" class="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
                 <div class="min-w-0">
                   <p class="font-medium text-green-800">
                     {{ t('diagnostics.recommendations.temperatureMonitoring') }}
@@ -352,7 +328,6 @@
 </template>
 
 <script setup lang="ts">
-import type { DiagnosticSession } from '~/types/api'
 
 interface ActiveSession {
   id: number
@@ -417,7 +392,7 @@ const recentResults = ref<DiagnosticUIResult[]>([
 
 const startDiagnostic = async (data: any) => {
   isRunning.value = true
-  
+
   const session: ActiveSession = {
     id: Date.now(),
     name: `New Diagnostic - ${data.equipment}`,
@@ -425,20 +400,20 @@ const startDiagnostic = async (data: any) => {
     progress: 0,
     startedAt: 'now'
   }
-  
+
   activeSessions.value.push(session)
   showRunModal.value = false
-  
+
   const interval = setInterval(() => {
     session.progress += Math.random() * 20
     if (session.progress >= 100) {
       session.progress = 100
       clearInterval(interval)
-      
+
       setTimeout(() => {
         activeSessions.value = activeSessions.value.filter(s => s.id !== session.id)
         isRunning.value = false
-        
+
         const newResult: DiagnosticUIResult = {
           id: session.id,
           name: session.name,
