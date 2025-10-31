@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue'
 
+type AppLocale = 'ru' | 'en'
+
 const route = useRoute()
-const { locale, setLocale, t: $t } = useI18n()
+const { locale, setLocale, t } = useI18n()
 
 // Safe store initialization
 let authStore: any = null
@@ -34,18 +36,18 @@ onMounted(() => {
 
 // Available languages
 const availableLocales = [
-  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
-  { code: 'en', name: 'English', flag: '🇺🇸' }
+  { code: 'ru' as AppLocale, name: 'Русский', flag: '🇷🇺' },
+  { code: 'en' as AppLocale, name: 'English', flag: '🇺🇸' }
 ]
 
 // Current language info
 const currentLocale = computed(() => 
-  availableLocales.find((l: { code: string; name: string; flag: string }) => l.code === locale.value) || availableLocales[0]
+  availableLocales.find((l: { code: AppLocale; name: string; flag: string }) => l.code === locale.value) || availableLocales[0]
 )
 
 // Switch language function
 const switchLanguage = async (code: string) => {
-  await setLocale(code)
+  await setLocale(code as AppLocale)
   showLanguageDropdown.value = false
 }
 
@@ -83,20 +85,20 @@ const showBreadcrumbs = computed(() => {
 
 const mapName = (path: string): string => {
   const mapping: Record<string, string> = {
-    '/dashboard': $t('nav.dashboard'),
-    '/systems': $t('nav.systems'),
-    '/diagnostics': $t('nav.diagnostics'),
-    '/reports': $t('nav.reports'),
-    '/chat': $t('nav.chat'),
-    '/settings': $t('nav.settings'),
-    '/equipments': $t('nav.equipments'),
+    '/dashboard': t('nav.dashboard'),
+    '/systems': t('nav.systems'),
+    '/diagnostics': t('nav.diagnostics'),
+    '/reports': t('nav.reports'),
+    '/chat': t('nav.chat'),
+    '/settings': t('nav.settings'),
+    '/equipments': t('nav.equipments'),
   }
-  return mapping[path] || $t('breadcrumbs.page')
+  return mapping[path] || t('breadcrumbs.page')
 }
 
 const breadcrumbs = computed(() => {
   const parts = route.path.split('/').filter(Boolean)
-  const acc: { name: string; href: string }[] = [{ name: $t('breadcrumbs.home'), href: '/' }]
+  const acc: { name: string; href: string }[] = [{ name: t('breadcrumbs.home'), href: '/' }]
   let current = ''
 
   for (let i = 0; i < parts.length; i++) {
@@ -105,16 +107,16 @@ const breadcrumbs = computed(() => {
 
     // Handle dynamic routes
     if (part === 'systems') {
-      acc.push({ name: $t('nav.systems'), href: current })
+      acc.push({ name: t('nav.systems'), href: current })
     } else if (part === 'equipments') {
-      acc.push({ name: $t('nav.equipments'), href: current })
+      acc.push({ name: t('nav.equipments'), href: current })
     } else if (/^\d+$/.test(part)) {
       // Numeric ID - show as dynamic name
       const prevPart = parts[i - 1]
       if (prevPart === 'systems') {
-        acc.push({ name: `${$t('breadcrumbs.system')} #${part}`, href: current })
+        acc.push({ name: `${t('breadcrumbs.system')} #${part}`, href: current })
       } else if (prevPart === 'equipments') {
-        acc.push({ name: `${$t('breadcrumbs.equipment')} #${part}`, href: current })
+        acc.push({ name: `${t('breadcrumbs.equipment')} #${part}`, href: current })
       } else {
         acc.push({ name: `#${part}`, href: current })
       }
@@ -127,10 +129,10 @@ const breadcrumbs = computed(() => {
 
 // Navigation links - with i18n
 const navigationLinks = computed(() => [
-  { to: '/dashboard', label: $t('nav.dashboard'), icon: 'heroicons:squares-2x2' },
-  { to: '/systems', label: $t('nav.systems'), icon: 'heroicons:server-stack' },
-  { to: '/diagnostics', label: $t('nav.diagnostics'), icon: 'heroicons:cpu-chip' },
-  { to: '/reports', label: $t('nav.reports'), icon: 'heroicons:document-text' }
+  { to: '/dashboard', label: t('nav.dashboard'), icon: 'heroicons:squares-2x2' },
+  { to: '/systems', label: t('nav.systems'), icon: 'heroicons:server-stack' },
+  { to: '/diagnostics', label: t('nav.diagnostics'), icon: 'heroicons:cpu-chip' },
+  { to: '/reports', label: t('nav.reports'), icon: 'heroicons:document-text' }
 ])
 
 // Check if link is active
@@ -156,10 +158,10 @@ const isActiveLink = (linkPath: string): boolean => {
               </div>
               <div class="hidden sm:block">
                 <span class="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                  {{ $t('app.title') }}
+                  {{ t('app.title') }}
                 </span>
                 <span class="block text-xs text-gray-500 leading-tight">
-                  {{ $t('app.subtitle') }}
+                  {{ t('app.subtitle') }}
                 </span>
               </div>
             </NuxtLink>
@@ -201,10 +203,10 @@ const isActiveLink = (linkPath: string): boolean => {
               <button 
                 @click="showLanguageDropdown = !showLanguageDropdown"
                 class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors flex items-center gap-1"
-                :aria-label="$t('ui.language.switch')"
+                :aria-label="t('ui.language.switch')"
               >
                 <Icon name="heroicons:language" class="w-5 h-5" />
-                <span class="text-sm font-medium">{{ currentLocale.code.toUpperCase() }}</span>
+                <span class="text-sm font-medium">{{ currentLocale?.code?.toUpperCase() }}</span>
                 <Icon 
                   name="heroicons:chevron-down" 
                   class="w-3 h-3 transition-transform" 
@@ -230,12 +232,12 @@ const isActiveLink = (linkPath: string): boolean => {
                     :key="langOption.code"
                     @click="switchLanguage(langOption.code)"
                     class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-                    :class="{ 'bg-blue-50 text-blue-600': currentLocale.code === langOption.code }"
+                    :class="{ 'bg-blue-50 text-blue-600': currentLocale?.code === langOption.code }"
                   >
                     <span class="text-base">{{ langOption.flag }}</span>
                     <span>{{ langOption.name }}</span>
                     <Icon 
-                      v-if="currentLocale.code === langOption.code" 
+                      v-if="currentLocale?.code === langOption.code" 
                       name="heroicons:check" 
                       class="w-4 h-4 ml-auto text-blue-600" 
                     />
@@ -280,7 +282,7 @@ const isActiveLink = (linkPath: string): boolean => {
                   <Icon name="heroicons:magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
-                    :placeholder="$t('ui.search') + '...'"
+                    :placeholder="t('ui.search') + '...'"
                     class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 bg-gray-50 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                   />
                 </div>
@@ -311,7 +313,7 @@ const isActiveLink = (linkPath: string): boolean => {
                   class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors"
                 >
                   <Icon name="heroicons:cog-6-tooth" class="w-5 h-5" />
-                  {{ $t('nav.settings') }}
+                  {{ t('nav.settings') }}
                 </NuxtLink>
                 <NuxtLink
                   to="/chat"
@@ -319,11 +321,11 @@ const isActiveLink = (linkPath: string): boolean => {
                   class="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors"
                 >
                   <Icon name="heroicons:chat-bubble-left-right" class="w-5 h-5" />
-                  {{ $t('nav.chat') }}
+                  {{ t('nav.chat') }}
                 </NuxtLink>
                 <div class="flex items-center gap-3 px-4 py-2 text-xs text-gray-500">
                   <Icon name="heroicons:cpu-chip" class="w-4 h-4" />
-                  <span>{{ $t('app.version') }} {{ $config?.public?.version || '1.0.0' }}</span>
+                  <span>{{ t('app.version') }} {{ $config?.public?.version || '1.0.0' }}</span>
                 </div>
               </div>
             </div>
@@ -391,17 +393,17 @@ const isActiveLink = (linkPath: string): boolean => {
         <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
           <div class="flex items-center gap-2">
             <Icon name="heroicons:cpu-chip" class="w-4 h-4" />
-            <span>&copy; 2025 {{ $t('app.title') }}. {{ $t('footer.copyright') }}.</span>
+            <span>&copy; 2025 {{ t('app.title') }}. {{ t('footer.copyright') }}.</span>
           </div>
           <div class="flex items-center flex-wrap gap-6">
             <NuxtLink to="/settings" class="hover:text-blue-600 transition-colors">
-              {{ $t('footer.settings') }}
+              {{ t('footer.settings') }}
             </NuxtLink>
             <NuxtLink to="/chat" class="hover:text-blue-600 transition-colors">
-              {{ $t('footer.help') }}
+              {{ t('footer.help') }}
             </NuxtLink>
             <span class="text-xs">
-              {{ $t('app.version') }} {{ $config?.public?.version || '1.0.0' }}
+              {{ t('app.version') }} {{ $config?.public?.version || '1.0.0' }}
             </span>
           </div>
         </div>
