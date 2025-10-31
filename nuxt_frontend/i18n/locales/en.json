@@ -105,7 +105,11 @@
       },
       "contact": {
         "title": "Contact",
-        "email": "Email: contact%40hydraulic-diagnostic.com",
+        "email": {
+          "mail": "Емайл: ",
+          "user": "contact",
+          "domain": "hydraulic-diagnostic.com"
+        },
         "phone": "Phone: +1 (555) 123-4567",
         "chat": "Chat: Available 24/7"
       },
