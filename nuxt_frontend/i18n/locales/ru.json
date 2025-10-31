@@ -44,5 +44,137 @@
     "copyright": "Все права защищены",
     "settings": "Настройки",
     "help": "Помощь"
+  },
+  "diagnostics": {
+    "title": "Диагностика систем",
+    "subtitle": "Мониторинг и анализ состояния гидравлических систем",
+    "runNew": "Запустить диагностику",
+    "healthScore": "Оценка состояния",
+    "started": "Начато",
+    "issues": "Проблемы",
+    "issuesCount": "проблем",
+    "issuesFound": "Обнаружено проблем",
+    "analysisDuration": "Время анализа",
+    "exportPDF": "Экспорт PDF",
+    "activeSessions": "Активные сессии",
+    "priority": "Приоритет",
+    "priorityMedium": "Средний",
+    "statusLabel": "Статус",
+    "statusNormal": "Норма",
+    "kpi": {
+      "activeSessions": "Активные сессии",
+      "runningNow": "выполняется",
+      "successRate": "Успешность",
+      "thisWeek": "за неделю {0}",
+      "avgDuration": "Среднее время",
+      "faster": "быстрее {0}",
+      "issuesFound": "Обнаружено",
+      "needsAttention": "требует внимания"
+    },
+    "status": {
+      "completed": "Завершено",
+      "warning": "Предупреждение",
+      "error": "Ошибка",
+      "processing": "Обработка"
+    },
+    "recentResults": {
+      "title": "Последние результаты",
+      "subtitle": "История диагностики систем"
+    },
+    "filters": {
+      "allEquipment": "Всё оборудование"
+    },
+    "table": {
+      "name": "Название",
+      "equipment": "Оборудование",
+      "healthScore": "Состояние",
+      "issues": "Проблемы",
+      "completed": "Завершено",
+      "status": "Статус",
+      "actions": "Действия"
+    },
+    "results": {
+      "title": "Результаты диагностики",
+      "subtitle": "Подробные результаты анализа",
+      "titleWithName": "{title}: {name}"
+    },
+    "recommendations": {
+      "pressureMaintenance": "Обслуживание давления",
+      "pressureMaintenanceDesc": "Проверьте состояние фильтров и уплотнений",
+      "temperatureMonitoring": "Контроль температуры",
+      "temperatureMonitoringDesc": "Температура в нормальных пределах"
+    }
+  },
+  "systems": {
+    "title": "Гидравлические системы",
+    "subtitle": "Управление и мониторинг оборудования",
+    "addNew": "Добавить систему",
+    "noSystems": "Нет систем",
+    "noSystemsDesc": "Добавьте первую гидравлическую систему для мониторинга",
+    "status": {
+      "active": "Активна",
+      "maintenance": "Обслуживание",
+      "inactive": "Неактивна",
+      "emergency": "Авария"
+    }
+  },
+  "chat": {
+    "title": "Консультации",
+    "subtitle": "Интеллектуальные консультации по диагностике",
+    "placeholder": "Опишите вашу проблему...",
+    "thinking": "Обрабатываю запрос...",
+    "newSession": {
+      "title": "Новая консультация",
+      "button": "Новая консультация"
+    }
+  },
+  "reports": {
+    "title": "Отчёты и аналитика",
+    "subtitle": "Генерация отчётов о состоянии систем",
+    "generate": {
+      "title": "Генерация отчёта",
+      "subtitle": "Настройте параметры отчёта",
+      "generateBtn": "Генерировать",
+      "generating": "Генерируется...",
+      "template": "Шаблон отчёта",
+      "period": "Период анализа",
+      "language": "Язык",
+      "customTitle": "Название отчёта",
+      "customTitlePlaceholder": "Например: Месячный отчёт по HYD-001",
+      "autoTitle": "Оставьте пустым для автоматического названия"
+    },
+    "periods": {
+      "last_24h": "Последние 24 часа",
+      "last_7d": "Последние 7 дней",
+      "last_30d": "Последние 30 дней",
+      "last_90d": "Последние 90 дней"
+    },
+    "locales": {
+      "ru": "Русский",
+      "en": "English",
+      "de": "Deutsch"
+    },
+    "templates": {
+      "execShort": "Краткий",
+      "executive": "Краткий обзор для руководства",
+      "techShort": "Технический",
+      "technical": "Подробный технический анализ",
+      "compShort": "Соответствие",
+      "compliance": "Отчёт о соответствии стандартам",
+      "maintShort": "Обслуживание",
+      "maintenance": "План обслуживания и ремонта"
+    },
+    "severity": {
+      "low": "Низкая",
+      "medium": "Средняя", 
+      "high": "Высокая",
+      "critical": "Критичная"
+    },
+    "status": {
+      "completed": "Готов",
+      "in_progress": "В процессе",
+      "pending": "Ожидание",
+      "failed": "Ошибка"
+    }
   }
 }

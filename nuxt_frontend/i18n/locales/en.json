@@ -44,5 +44,137 @@
     "copyright": "All rights reserved",
     "settings": "Settings",
     "help": "Help"
+  },
+  "diagnostics": {
+    "title": "System Diagnostics",
+    "subtitle": "Monitor and analyze hydraulic system performance",
+    "runNew": "Run Diagnostics",
+    "healthScore": "Health Score",
+    "started": "Started",
+    "issues": "Issues",
+    "issuesCount": "issues",
+    "issuesFound": "Issues Found",
+    "analysisDuration": "Analysis Duration",
+    "exportPDF": "Export PDF",
+    "activeSessions": "Active Sessions",
+    "priority": "Priority",
+    "priorityMedium": "Medium",
+    "statusLabel": "Status",
+    "statusNormal": "Normal",
+    "kpi": {
+      "activeSessions": "Active Sessions",
+      "runningNow": "running now",
+      "successRate": "Success Rate",
+      "thisWeek": "this week {0}",
+      "avgDuration": "Average Duration",
+      "faster": "faster {0}",
+      "issuesFound": "Issues Found",
+      "needsAttention": "needs attention"
+    },
+    "status": {
+      "completed": "Completed",
+      "warning": "Warning",
+      "error": "Error",
+      "processing": "Processing"
+    },
+    "recentResults": {
+      "title": "Recent Results",
+      "subtitle": "System diagnostic history"
+    },
+    "filters": {
+      "allEquipment": "All Equipment"
+    },
+    "table": {
+      "name": "Name",
+      "equipment": "Equipment",
+      "healthScore": "Health Score",
+      "issues": "Issues",
+      "completed": "Completed",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "results": {
+      "title": "Diagnostic Results",
+      "subtitle": "Detailed analysis results",
+      "titleWithName": "{title}: {name}"
+    },
+    "recommendations": {
+      "pressureMaintenance": "Pressure Maintenance",
+      "pressureMaintenanceDesc": "Check filter and seal conditions",
+      "temperatureMonitoring": "Temperature Control",
+      "temperatureMonitoringDesc": "Temperature within normal limits"
+    }
+  },
+  "systems": {
+    "title": "Hydraulic Systems",
+    "subtitle": "Equipment management and monitoring",
+    "addNew": "Add System",
+    "noSystems": "No Systems",
+    "noSystemsDesc": "Add your first hydraulic system for monitoring",
+    "status": {
+      "active": "Active",
+      "maintenance": "Maintenance",
+      "inactive": "Inactive",
+      "emergency": "Emergency"
+    }
+  },
+  "chat": {
+    "title": "Consultations",
+    "subtitle": "AI-powered diagnostic consultations",
+    "placeholder": "Describe your problem...",
+    "thinking": "Processing request...",
+    "newSession": {
+      "title": "New Consultation",
+      "button": "New Consultation"
+    }
+  },
+  "reports": {
+    "title": "Reports & Analytics",
+    "subtitle": "Generate system status reports",
+    "generate": {
+      "title": "Generate Report",
+      "subtitle": "Configure report parameters",
+      "generateBtn": "Generate",
+      "generating": "Generating...",
+      "template": "Report Template",
+      "period": "Analysis Period",
+      "language": "Language",
+      "customTitle": "Report Title",
+      "customTitlePlaceholder": "e.g., Monthly Report for HYD-001",
+      "autoTitle": "Leave empty for automatic naming"
+    },
+    "periods": {
+      "last_24h": "Last 24 hours",
+      "last_7d": "Last 7 days",
+      "last_30d": "Last 30 days",
+      "last_90d": "Last 90 days"
+    },
+    "locales": {
+      "ru": "Russian",
+      "en": "English",
+      "de": "German"
+    },
+    "templates": {
+      "execShort": "Executive",
+      "executive": "Executive summary for management",
+      "techShort": "Technical",
+      "technical": "Detailed technical analysis",
+      "compShort": "Compliance",
+      "compliance": "Standards compliance report",
+      "maintShort": "Maintenance",
+      "maintenance": "Maintenance and repair plan"
+    },
+    "severity": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "critical": "Critical"
+    },
+    "status": {
+      "completed": "Ready",
+      "in_progress": "In Progress",
+      "pending": "Pending",
+      "failed": "Failed"
+    }
   }
 }
