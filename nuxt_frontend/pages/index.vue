@@ -4,23 +4,17 @@
     <nav class="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div class="u-container u-flex-between py-4">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center">
+          <div class="w-10 h-10 rounded-lg bg-linear-to-br from-blue-600 to-blue-400 flex items-center justify-center">
             <Icon name="heroicons:chart-bar-square" class="w-6 h-6 text-white" />
           </div>
           <span class="text-lg font-bold text-gray-900 dark:text-white">Hydraulic Diagnostic</span>
         </div>
         <div class="flex items-center gap-4">
-          <NuxtLink 
-            to="/auth/login" 
-            class="u-btn u-btn-ghost u-btn-md"
-          >
+          <NuxtLink to="/auth/login" class="u-btn u-btn-ghost u-btn-md">
             <Icon name="heroicons:arrow-right-on-rectangle" class="w-4 h-4 mr-1" />
             Sign In
           </NuxtLink>
-          <NuxtLink 
-            to="/auth/register" 
-            class="u-btn u-btn-primary u-btn-md"
-          >
+          <NuxtLink to="/auth/register" class="u-btn u-btn-primary u-btn-md">
             <Icon name="heroicons:plus" class="w-4 h-4 mr-1" />
             Get Started
           </NuxtLink>
@@ -29,20 +23,18 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="py-20 bg-gradient-to-b from-blue-50 dark:from-gray-800 to-white dark:to-gray-900">
+    <section class="py-20 bg-linear-to-b from-blue-50 dark:from-gray-800 to-white dark:to-gray-900">
       <div class="u-container">
         <div class="max-w-3xl mx-auto text-center">
           <h1 class="u-h1 mb-6">
             Advanced Hydraulic Systems Diagnostics
           </h1>
           <p class="u-body-lg text-gray-600 dark:text-gray-300 mb-8">
-            Real-time monitoring, AI-powered analysis, and predictive maintenance for hydraulic systems. Keep your operations running at peak efficiency.
+            Real-time monitoring, AI-powered analysis, and predictive maintenance for hydraulic systems. Keep your
+            operations running at peak efficiency.
           </p>
           <div class="flex items-center justify-center gap-4">
-            <NuxtLink 
-              to="/auth/register"
-              class="u-btn u-btn-primary u-btn-lg"
-            >
+            <NuxtLink to="/auth/register" class="u-btn u-btn-primary u-btn-lg">
               <Icon name="heroicons:rocket-launch" class="w-5 h-5 mr-2" />
               Start Free Trial
             </NuxtLink>
@@ -60,7 +52,8 @@
       <div class="u-container">
         <div class="text-center mb-12">
           <h2 class="u-h2 mb-4">Powerful Features</h2>
-          <p class="u-body-lg text-gray-600 dark:text-gray-300">Everything you need to monitor and optimize hydraulic systems</p>
+          <p class="u-body-lg text-gray-600 dark:text-gray-300">Everything you need to monitor and optimize hydraulic
+            systems</p>
         </div>
 
         <div class="u-grid-responsive">
@@ -170,11 +163,9 @@
       <div class="u-container">
         <div class="u-card u-gradient-primary p-12 text-center text-white">
           <h2 class="text-3xl font-bold mb-4">Ready to optimize your hydraulic systems?</h2>
-          <p class="text-lg mb-8 opacity-90">Join hundreds of companies using Hydraulic Diagnostic to improve efficiency and reduce downtime.</p>
-          <NuxtLink 
-            to="/auth/register"
-            class="u-btn u-btn-lg bg-white hover:bg-gray-100 text-blue-600 font-medium"
-          >
+          <p class="text-lg mb-8 opacity-90">Join hundreds of companies using Hydraulic Diagnostic to improve efficiency
+            and reduce downtime.</p>
+          <NuxtLink to="/auth/register" class="u-btn u-btn-lg bg-white hover:bg-gray-100 text-blue-600 font-medium">
             Start Your Free Trial Now
           </NuxtLink>
         </div>
