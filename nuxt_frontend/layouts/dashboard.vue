@@ -44,7 +44,6 @@ const mapName = (path: string): string => ({
   '/systems': t('nav.systems'),
   '/diagnostics': t('nav.diagnostics'),
   '/reports': t('nav.reports'),
-  '/chat': t('nav.chat'),
   '/settings': t('nav.settings'),
   '/equipments': t('nav.equipments')
 }[path] || t('breadcrumbs.page'))
@@ -81,7 +80,7 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
 <template>
   <div class="min-h-screen bg-gray-50">
     <!-- Desktop & Mobile Navbar -->
-    <nav class="bg-white border-b border-gray-200 shadow-sm">
+    <nav class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
       <div class="container mx-auto px-4">
         <div class="flex items-center justify-between h-16">
           <!-- Logo section -->
@@ -97,7 +96,7 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
             </NuxtLink>
           </div>
 
-          <!-- Desktop navigation (hidden on mobile) -->
+          <!-- Desktop navigation -->
           <div class="hidden lg:flex items-center space-x-6">
             <NuxtLink v-for="link in navigationLinks" :key="link.to" :to="link.to" :class="['px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2', isActiveLink(link.to) ? 'text-blue-700 bg-blue-50' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50']">
               <Icon :name="link.icon" class="w-4 h-4" />
@@ -107,17 +106,6 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
 
           <!-- Right actions -->
           <div class="flex items-center space-x-3">
-            <!-- Search (hidden on small mobile) -->
-            <button class="hidden sm:block p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-              <Icon name="heroicons:magnifying-glass" class="w-5 h-5" />
-            </button>
-
-            <!-- Notifications -->
-            <button class="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
-              <Icon name="heroicons:bell" class="w-5 h-5" />
-              <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-            </button>
-
             <!-- Language Toggle -->
             <div class="relative language-dropdown">
               <button @click="showLanguageDropdown = !showLanguageDropdown" class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors flex items-center gap-1" :aria-label="t('ui.language.switch')">
@@ -125,7 +113,7 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
                 <span class="text-sm font-medium">{{ currentLocale?.code?.toUpperCase() }}</span>
                 <Icon name="heroicons:chevron-down" class="w-3 h-3 transition-transform" :class="{ 'rotate-180': showLanguageDropdown }" />
               </button>
-              <transition enter-active-class="transition ease-out duration-200" enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-150" leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
+              <transition enter-active-class="transition ease-out duration-200" enter-from-class="transform opacity-0 scale-95" enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-150" leave-from-class="transform opacity-100 scale-100" leave-to-class="opacity-0 scale-95">
                 <div v-show="showLanguageDropdown" class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50">
                   <button v-for="langOption in availableLocales" :key="langOption.code" @click="switchLanguage(langOption.code)" class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3" :class="{ 'bg-blue-50 text-blue-600': currentLocale?.code === langOption.code }">
                     <span class="text-base">{{ langOption.flag }}</span>
@@ -139,8 +127,8 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
             <!-- User profile -->
             <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md cursor-pointer hover:shadow-lg transition-shadow">{{ userInitials }}</div>
 
-            <!-- Mobile menu button (shown only on mobile) -->
-            <button @click="toggleMobileMenu" class="lg:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors relative z-50" aria-label="Toggle mobile menu">
+            <!-- Mobile menu button -->
+            <button @click="toggleMobileMenu" class="lg:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors" aria-label="Toggle mobile menu">
               <Icon :name="isMobileMenuOpen ? 'heroicons:x-mark' : 'heroicons:bars-3'" class="w-6 h-6" />
             </button>
           </div>
@@ -148,11 +136,12 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
       </div>
     </nav>
 
+    <!-- Mobile overlay -->
     <Transition enter-active-class="transition-opacity duration-200" enter-from-class="opacity-0" enter-to-class="opacity-100" leave-active-class="transition-opacity duration-150" leave-from-class="opacity-100" leave-to-class="opacity-0">
       <div v-if="isMobileMenuOpen" class="fixed inset-0 bg-black/20 z-30 lg:hidden" @click="closeMobileMenu"></div>
     </Transition>
 
-    <div v-if="showBreadcrumbs" class="bg-white border-b border-gray-100">
+    <div v-if="showBreadcrumbs" class="bg-white border-b border-gray-100 sticky top-16 z-30">
       <div class="container mx-auto px-4">
         <nav class="flex items-center space-x-2 text-sm py-3">
           <Icon name="heroicons:home" class="w-4 h-4 text-gray-500" />
@@ -172,8 +161,5 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
 </template>
 
 <style>
-#modal-portal {
-  position: relative;
-  z-index: 60;
-}
+#modal-portal { position: relative; z-index: 60; }
 </style>
