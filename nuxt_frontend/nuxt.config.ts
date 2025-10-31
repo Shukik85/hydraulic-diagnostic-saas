@@ -10,7 +10,8 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxtjs/i18n',
     '@nuxt/icon',
-    '@nuxt/image'
+    '@nuxt/image',
+    '@nuxtjs/color-mode'
   ],
   
   i18n: {
@@ -30,7 +31,7 @@ export default defineNuxtConfig({
     ],
     defaultLocale: 'ru',
     strategy: 'no_prefix',
-    langDir: './locales/',
+    langDir: 'locales',
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'i18n_redirected',
