@@ -1,0 +1,48 @@
+{
+  "app": {
+    "name": "Гидравлика ИИ",
+    "title": "Гидравлик Диагностик",
+    "subtitle": "Диагностическая платформа",
+    "version": "Версия"
+  },
+  "nav": {
+    "dashboard": "Дашборд",
+    "systems": "Системы",
+    "diagnostics": "Диагностика",
+    "reports": "Отчёты",
+    "chat": "Консультации",
+    "settings": "Настройки",
+    "equipments": "Оборудование",
+    "openDashboard": "Открыть дашборд",
+    "notifications": "Уведомления"
+  },
+  "ui": {
+    "search": "Поиск",
+    "help": "Помощь",
+    "profile": "Профиль",
+    "settings": "Настройки",
+    "logout": "Выйти",
+    "close": "Закрыть",
+    "cancel": "Отмена",
+    "view": "Просмотр",
+    "optional": "опционально",
+    "minutes": "мин",
+    "toggleTheme": "Переключить тему",
+    "lightTheme": "Светлая",
+    "darkTheme": "Тёмная",
+    "language": {
+      "switch": "Сменить язык"
+    }
+  },
+  "breadcrumbs": {
+    "home": "Главная",
+    "page": "Страница",
+    "system": "Система",
+    "equipment": "Оборудование"
+  },
+  "footer": {
+    "copyright": "Все права защищены",
+    "settings": "Настройки",
+    "help": "Помощь"
+  }
+}

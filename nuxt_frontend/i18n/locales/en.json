@@ -1,0 +1,48 @@
+{
+  "app": {
+    "name": "Hydraulic AI",
+    "title": "Hydraulic Diagnostic",
+    "subtitle": "Diagnostic Platform",
+    "version": "Version"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "systems": "Systems",
+    "diagnostics": "Diagnostics",
+    "reports": "Reports",
+    "chat": "Chat",
+    "settings": "Settings",
+    "equipments": "Equipment",
+    "openDashboard": "Open Dashboard",
+    "notifications": "Notifications"
+  },
+  "ui": {
+    "search": "Search",
+    "help": "Help",
+    "profile": "Profile",
+    "settings": "Settings",
+    "logout": "Logout",
+    "close": "Close",
+    "cancel": "Cancel",
+    "view": "View",
+    "optional": "optional",
+    "minutes": "min",
+    "toggleTheme": "Toggle Theme",
+    "lightTheme": "Light",
+    "darkTheme": "Dark",
+    "language": {
+      "switch": "Switch Language"
+    }
+  },
+  "breadcrumbs": {
+    "home": "Home",
+    "page": "Page",
+    "system": "System",
+    "equipment": "Equipment"
+  },
+  "footer": {
+    "copyright": "All rights reserved",
+    "settings": "Settings",
+    "help": "Help"
+  }
+}
