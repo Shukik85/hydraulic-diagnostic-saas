@@ -1,76 +1,101 @@
-export default defineEventHandler(async event => {
-  const query = getQuery(event);
-  const source = (query.source || 'btc').toString();
-
-  // BTC-derived (как было) + ETH-derived (новое)
-  const btc = {
-    key: 'btc',
-    name: 'Bitcoin (Нестабильная)',
+export default defineEventHandler(async (event) => {
+  // Get query parameters
+  const query = getQuery(event)
+  const source = (query.source as string) || 'btc'
+  
+  // Mock data sources with proper typing
+  const sources: Record<string, {
+    key: string
+    name: string
     sparklines: {
-      temperature: [54.3, 55.0, 53.1, 53.1, 52.2, 54.0, 52.2],
-      pressure: [146.1, 145.0, 147.9, 147.8, 149.1, 146.5, 149.2],
-      flow_rate: [98.1, 100.0, 95.2, 95.3, 93.1, 97.5, 93.0],
-      vibration: [0.84, 1.23, 2.12, 1.21, 1.85, 1.9, 2.47],
-    },
+      temperature: number[]
+      pressure: number[]
+      flow_rate: number[]
+      vibration: number[]
+    }
     thresholds: {
-      temperature: { green: 50.0, red: 54.0 },
-      pressure: { green: 148.0, red: 152.0 },
-      flow_rate: { green: 90.0, red: 96.0 },
-      vibration: { green: 1.2, red: 2.0 },
+      temperature: { green: number; red: number }
+      pressure: { green: number; red: number }
+      flow_rate: { green: number; red: number }
+      vibration: { green: number; red: number }
+    }
+  }> = {
+    btc: {
+      key: 'HYD-001',
+      name: 'Pump Station A',
+      sparklines: {
+        temperature: [65, 67, 64, 68, 66, 69, 67, 65, 63, 64, 66, 68],
+        pressure: [2.1, 2.3, 2.2, 2.4, 2.3, 2.1, 2.2, 2.3, 2.4, 2.2, 2.1, 2.3],
+        flow_rate: [180, 175, 185, 190, 188, 182, 179, 183, 186, 184, 181, 187],
+        vibration: [0.8, 0.9, 0.7, 1.0, 0.8, 0.9, 0.7, 0.8, 0.9, 0.8, 0.7, 0.9]
+      },
+      thresholds: {
+        temperature: { green: 70, red: 80 },
+        pressure: { green: 2.5, red: 3.0 },
+        flow_rate: { green: 200, red: 250 },
+        vibration: { green: 1.0, red: 1.5 }
+      }
     },
-  };
-
-  const eth = {
-    key: 'eth',
-    name: 'Ethereum (Экстремальная)',
-    sparklines: {
-      temperature: [53.0, 55.0, 53.4, 52.5, 50.5, 50.7, 48.7],
-      pressure: [151.0, 148.0, 150.4, 151.8, 154.8, 154.4, 157.4],
-      flow_rate: [90.8, 95.0, 91.5, 89.6, 85.4, 85.9, 81.7],
-      vibration: [0.9, 1.97, 1.87, 1.31, 2.61, 1.16, 2.7],
-    },
-    thresholds: {
-      temperature: { green: 48.75, red: 52.65 },
-      pressure: { green: 157.35, red: 151.5 },
-      flow_rate: { green: 81.75, red: 90.05 },
-      vibration: { green: 1.19, red: 1.94 },
-    },
-  };
-
-  const sources = { btc, eth };
-  const selected = sources[source] || btc;
-
-  // Aggregates for the selected source (min/max/avg for a week)
-  const arr = selected.sparklines;
-  const avg = xs => Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100;
-  const week_stats = {
-    temperature: {
-      min: Math.min(...arr.temperature),
-      max: Math.max(...arr.temperature),
-      avg: avg(arr.temperature),
-    },
-    pressure: {
-      min: Math.min(...arr.pressure),
-      max: Math.max(...arr.pressure),
-      avg: avg(arr.pressure),
-    },
-    flow_rate: {
-      min: Math.min(...arr.flow_rate),
-      max: Math.max(...arr.flow_rate),
-      avg: avg(arr.flow_rate),
-    },
-    vibration: {
-      min: Math.min(...arr.vibration),
-      max: Math.max(...arr.vibration),
-      avg: avg(arr.vibration),
-    },
-  };
-
+    eth: {
+      key: 'HYD-002',
+      name: 'Hydraulic Motor B',
+      sparklines: {
+        temperature: [70, 72, 69, 73, 71, 74, 72, 70, 68, 69, 71, 73],
+        pressure: [1.8, 2.0, 1.9, 2.1, 2.0, 1.8, 1.9, 2.0, 2.1, 1.9, 1.8, 2.0],
+        flow_rate: [150, 145, 155, 160, 158, 152, 149, 153, 156, 154, 151, 157],
+        vibration: [0.6, 0.7, 0.5, 0.8, 0.6, 0.7, 0.5, 0.6, 0.7, 0.6, 0.5, 0.7]
+      },
+      thresholds: {
+        temperature: { green: 75, red: 85 },
+        pressure: { green: 2.2, red: 2.7 },
+        flow_rate: { green: 170, red: 200 },
+        vibration: { green: 0.8, red: 1.2 }
+      }
+    }
+  }
+  
+  const selected = sources[source] || sources.btc
+  
+  // Helper function with proper typing
+  const avg = (xs: number[]): number => Math.round((xs.reduce((a: number, b: number) => a + b, 0) / xs.length) * 100) / 100
+  
   return {
-    source: selected.key,
-    name: selected.name,
-    sparklines: selected.sparklines,
-    thresholds: selected.thresholds,
-    aggregates: { week_stats },
-  };
-});
+    system: {
+      key: selected.key,
+      name: selected.name,
+      health_score: Math.floor(Math.random() * 20) + 80,
+      status: 'active',
+      last_update: new Date().toISOString()
+    },
+    metrics: {
+      temperature: {
+        current: selected.sparklines.temperature[selected.sparklines.temperature.length - 1],
+        average: avg(selected.sparklines.temperature),
+        threshold_green: selected.thresholds.temperature.green,
+        threshold_red: selected.thresholds.temperature.red,
+        sparkline: selected.sparklines.temperature
+      },
+      pressure: {
+        current: selected.sparklines.pressure[selected.sparklines.pressure.length - 1],
+        average: avg(selected.sparklines.pressure),
+        threshold_green: selected.thresholds.pressure.green,
+        threshold_red: selected.thresholds.pressure.red,
+        sparkline: selected.sparklines.pressure
+      },
+      flow_rate: {
+        current: selected.sparklines.flow_rate[selected.sparklines.flow_rate.length - 1],
+        average: avg(selected.sparklines.flow_rate),
+        threshold_green: selected.thresholds.flow_rate.green,
+        threshold_red: selected.thresholds.flow_rate.red,
+        sparkline: selected.sparklines.flow_rate
+      },
+      vibration: {
+        current: selected.sparklines.vibration[selected.sparklines.vibration.length - 1],
+        average: avg(selected.sparklines.vibration),
+        threshold_green: selected.thresholds.vibration.green,
+        threshold_red: selected.thresholds.vibration.red,
+        sparkline: selected.sparklines.vibration
+      }
+    }
+  }
+})
