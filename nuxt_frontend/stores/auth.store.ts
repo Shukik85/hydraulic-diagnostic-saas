@@ -2,21 +2,21 @@
 import type { User } from '~/types/api';
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null);
+  const user = ref<User | null>(null);
   const loading = ref(false);
-  const error = ref(null);
+  const error = ref<string | null>(null);
 
   const api = useApi();
 
   // Getters with null safety
-  // const isAuthenticated = computed(() => !!user.value);
-  const isAuthenticated = true;
+  const isAuthenticated = computed(() => !!user.value);
   const userName = computed(() => {
     if (!user.value) return '';
-    if (user.value.first_name || user.value.last_name) {
-      return `${user.value.first_name || ''} ${user.value.last_name || ''}`.trim();
+    const u = user.value;
+    if (u.first_name || u.last_name) {
+      return `${u.first_name || ''} ${u.last_name || ''}`.trim();
     }
-    return user.value.username || user.value.name || user.value.email;
+    return u.username || u.name || u.email || '';
   });
 
   // Actions with proper error handling
@@ -88,7 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true;
     try {
       const updated = await api.updateUser(profileData);
-      if (updated) {
+      if (updated && user.value) {
         user.value = { ...user.value, ...updated };
       }
       return updated;
