@@ -5,6 +5,7 @@ type AppLocale = 'ru' | 'en'
 
 const route = useRoute()
 const { locale, setLocale, t } = useI18n()
+const config = useRuntimeConfig()
 
 let authStore: any = null
 const isMobileMenuOpen = ref(false)
@@ -75,6 +76,13 @@ const navigationLinks = computed(() => [
 ])
 
 const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? route.path === '/dashboard' : route.path.startsWith(linkPath)
+
+// Footer computed: email assembled from i18n parts
+const emailUser = computed(() => t('landing.footer.contact.emailUser'))
+const emailDomain = computed(() => t('landing.footer.contact.emailDomain'))
+const emailLabel = computed(() => t('landing.footer.contact.emailLabel'))
+const email = computed(() => `${emailUser.value}@${emailDomain.value}`)
+const version = computed(() => config?.public?.version || '1.0.0')
 </script>
 
 <template>
@@ -106,6 +114,15 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
 
           <!-- Right actions -->
           <div class="flex items-center space-x-3">
+            <!-- Help (Chat) -->
+            <NuxtLink to="/chat" class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors" :title="t('ui.help')">
+              <Icon name="heroicons:question-mark-circle" class="w-5 h-5" />
+            </NuxtLink>
+            <!-- Notifications -->
+            <button class="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors" :title="t('nav.notifications')">
+              <Icon name="heroicons:bell" class="w-5 h-5" />
+              <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
             <!-- Language Toggle -->
             <div class="relative language-dropdown">
               <button @click="showLanguageDropdown = !showLanguageDropdown" class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors flex items-center gap-1" :aria-label="t('ui.language.switch')">
@@ -123,9 +140,6 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
                 </div>
               </transition>
             </div>
-
-            <!-- User profile -->
-            <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md cursor-pointer hover:shadow-lg transition-shadow">{{ userInitials }}</div>
 
             <!-- Mobile menu button -->
             <button @click="toggleMobileMenu" class="lg:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors" aria-label="Toggle mobile menu">
@@ -155,7 +169,28 @@ const isActiveLink = (linkPath: string): boolean => linkPath === '/dashboard' ? 
     </div>
 
     <main class="py-6"><div class="container mx-auto px-4"><slot /></div></main>
-    <footer class="bg-white border-t border-gray-200 mt-16"><div class="container mx-auto px-4 py-6"><div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600"><div class="flex items-center gap-2"><Icon name="heroicons:cpu-chip" class="w-4 h-4" /><span>&copy; 2025 {{ t('app.title') }}. {{ t('footer.copyright') }}.</span></div><div class="flex items-center flex-wrap gap-6"><NuxtLink to="/settings" class="hover:text-blue-600 transition-colors">{{ t('footer.settings') }}</NuxtLink><NuxtLink to="/chat" class="hover:text-blue-600 transition-colors">{{ t('footer.help') }}</NuxtLink><span class="text-xs">{{ t('app.version') }} {{ $config?.public?.version || '1.0.0' }}</span></div></div></div></footer>
+
+    <!-- Unified Footer (not sticky) -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+      <div class="container mx-auto px-4 py-6">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
+          <div class="flex items-center gap-2">
+            <Icon name="heroicons:cpu-chip" class="w-4 h-4" />
+            <span>&copy; 2025 {{ t('app.title') }}. {{ t('footer.copyright') }}.</span>
+          </div>
+          <div class="flex items-center flex-wrap gap-6">
+            <div class="flex items-center gap-1">
+              <span>{{ emailLabel }}</span>
+              <a class="hover:text-blue-600 transition-colors" :href="`mailto:${email}`">{{ email }}</a>
+            </div>
+            <span>{{ t('landing.footer.contact.phone') }}</span>
+            <NuxtLink to="/chat" class="hover:text-blue-600 transition-colors">{{ t('landing.footer.contact.chat') }}</NuxtLink>
+            <span class="text-xs">{{ t('app.version') }} {{ version }}</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+
     <Teleport to="body"><div id="modal-portal"></div></Teleport>
   </div>
 </template>
