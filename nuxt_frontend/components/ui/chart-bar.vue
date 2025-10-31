@@ -1,49 +1,132 @@
 <template>
-  <div class="w-full h-full">
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart :data="data" :margin="{ top: 20, right: 30, left: 20, bottom: 20 }">
-        <CartesianGrid strokeDasharray="3 3" class="stroke-muted" />
-        <XAxis
-          :dataKey="xKey"
-          class="text-muted-foreground"
-          :fontSize="12"
-          :tickLine="false"
-          :axisLine="false"
-        />
-        <YAxis class="text-muted-foreground" :fontSize="12" :tickLine="false" :axisLine="false" />
-        <Tooltip
-          :contentStyle="{
-            backgroundColor: 'hsl(var(--card))',
-            border: '1px solid hsl(var(--border))',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          }"
-          :labelStyle="{ color: 'hsl(var(--foreground))' }"
-        />
-        <Bar
-          :dataKey="dataKey"
-          :fill="color"
-          :radius="[4, 4, 0, 0]"
-          :animationDuration="1000"
-          animationEasing="ease-in-out"
-        />
-      </BarChart>
-    </ResponsiveContainer>
+  <div class="h-full w-full">
+    <VChart 
+      ref="chartRef"
+      :option="option" 
+      autoresize 
+      :class="props.class || 'h-40 w-full'"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { use } from 'echarts/core'
+import { BarChart } from 'echarts/charts'
+import { 
+  GridComponent, 
+  TooltipComponent, 
+  LegendComponent 
+} from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import VChart from 'vue-echarts'
+import { ref, computed } from 'vue'
+
+// Register ECharts components
+use([
+  BarChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  CanvasRenderer
+])
 
 interface Props {
-  data: any[];
-  dataKey: string;
-  xKey?: string;
-  color?: string;
+  data: Array<{ name: string; value: number; [key: string]: any }>
+  dataKey?: string
+  xKey?: string
+  color?: string
+  showGrid?: boolean
+  showTooltip?: boolean
+  height?: string
+  class?: string
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
+  dataKey: 'value',
   xKey: 'name',
-  color: 'hsl(var(--primary))',
-});
+  color: '#3b82f6',
+  showGrid: true,
+  showTooltip: true,
+  height: '320px'
+})
+
+const chartRef = ref()
+
+// ECharts option
+const option = computed(() => ({
+  grid: {
+    left: props.showGrid ? 40 : 8,
+    right: props.showGrid ? 20 : 8,
+    top: props.showGrid ? 20 : 8,
+    bottom: props.showGrid ? 40 : 8,
+    containLabel: true
+  },
+  tooltip: props.showTooltip ? {
+    trigger: 'axis',
+    axisPointer: {
+      type: 'shadow'
+    },
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    textStyle: {
+      color: '#374151'
+    }
+  } : undefined,
+  xAxis: {
+    type: 'category',
+    data: props.data.map(item => item[props.xKey]),
+    axisLine: {
+      show: props.showGrid,
+      lineStyle: { color: '#e5e7eb' }
+    },
+    axisTick: {
+      show: props.showGrid,
+      lineStyle: { color: '#e5e7eb' }
+    },
+    axisLabel: {
+      show: props.showGrid,
+      color: '#6b7280'
+    }
+  },
+  yAxis: {
+    type: 'value',
+    axisLine: {
+      show: props.showGrid,
+      lineStyle: { color: '#e5e7eb' }
+    },
+    axisTick: {
+      show: props.showGrid,
+      lineStyle: { color: '#e5e7eb' }
+    },
+    axisLabel: {
+      show: props.showGrid,
+      color: '#6b7280'
+    },
+    splitLine: {
+      show: props.showGrid,
+      lineStyle: {
+        color: '#f3f4f6',
+        type: 'dashed'
+      }
+    }
+  },
+  series: [{
+    type: 'bar',
+    data: props.data.map(item => item[props.dataKey]),
+    itemStyle: {
+      color: props.color,
+      borderRadius: [4, 4, 0, 0]
+    },
+    emphasis: {
+      focus: 'series',
+      itemStyle: {
+        shadowBlur: 10,
+        shadowColor: props.color + '50'
+      }
+    },
+    animationDuration: 1000,
+    animationEasing: 'cubicOut'
+  }]
+}))
 </script>
