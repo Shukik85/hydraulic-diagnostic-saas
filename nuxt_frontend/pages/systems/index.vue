@@ -1,177 +1,185 @@
 <template>
-  <div class="space-y-6">
+  <div class="space-y-8">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h1 class="u-h2">Hydraulic Systems</h1>
-        <p class="u-body text-gray-600 dark:text-gray-400 mt-1">Manage and monitor your hydraulic systems</p>
+        <h1 class="u-h2">{{ t('systems.title') }}</h1>
+        <p class="u-body text-gray-600 mt-1">
+          {{ t('systems.subtitle') }}
+        </p>
       </div>
-      <div class="flex items-center gap-3">
-        <button class="u-btn u-btn-secondary u-btn-md" @click="onRefresh" :disabled="loading">
-          <Icon name="i-heroicons-arrow-path" class="w-4 h-4 mr-2" :class="{ 'animate-spin': loading }" />
-          Refresh
-        </button>
-        <button class="u-btn u-btn-primary u-btn-md" @click="openCreateModal = true">
-          <Icon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
-          Add System
-        </button>
+      <button @click="showCreateModal = true" class="u-btn u-btn-primary u-btn-md w-full sm:w-auto">
+        <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
+        {{ t('systems.addNew') }}
+      </button>
+    </div>
+
+    <!-- Systems Grid -->
+    <div v-if="systems.length > 0" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div v-for="system in systems" :key="system.id" class="u-card p-6 hover:shadow-lg transition-shadow">
+        <div class="flex items-start justify-between mb-4">
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold text-gray-900 truncate">{{ system.name }}</h3>
+            <p class="text-sm text-gray-500">{{ system.type }}</p>
+          </div>
+          <span class="u-badge" :class="getSystemStatusClass(system.status)">
+            {{ t(`systems.status.${system.status}`) }}
+          </span>
+        </div>
+        
+        <div class="space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Давление</span>
+            <span class="font-semibold">{{ system.pressure }} бар</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Температура</span>
+            <span class="font-semibold">{{ system.temperature }}°C</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-gray-600">Обновлено</span>
+            <span class="text-sm text-gray-500">{{ formatDate(system.lastUpdate) }}</span>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2 mt-4">
+          <NuxtLink :to="`/systems/${system.id}`" class="u-btn u-btn-primary u-btn-sm flex-1">
+            <Icon name="heroicons:eye" class="w-4 h-4 mr-1" />
+            {{ t('ui.view') }}
+          </NuxtLink>
+          <button class="u-btn u-btn-ghost u-btn-sm flex-1">
+            <Icon name="heroicons:cog-6-tooth" class="w-4 h-4 mr-1" />
+            {{ t('ui.settings') }}
+          </button>
+        </div>
       </div>
     </div>
 
-    <!-- Systems Table -->
-    <div class="u-card overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h3 class="u-h4 text-gray-900 dark:text-white">All Systems</h3>
+    <!-- Empty State -->
+    <div v-else class="u-card p-12 text-center">
+      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <Icon name="heroicons:server-stack" class="w-8 h-8 text-gray-400" />
       </div>
-
-      <div v-if="loading && systemsStore.systems.length === 0" class="p-12 text-center">
-        <Icon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-gray-400 animate-spin mb-4" />
-        <p class="text-gray-500 dark:text-gray-400">Loading systems...</p>
-      </div>
-
-      <div v-else-if="!loading && systemsStore.systems.length === 0" class="p-12 text-center">
-        <Icon name="i-heroicons-cpu-chip" class="w-16 h-16 mx-auto text-gray-400 mb-4" />
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">No systems yet</h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-6">Create your first hydraulic system to start monitoring</p>
-        <button class="u-btn u-btn-primary u-btn-md" @click="openCreateModal = true">
-          <Icon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
-          Add System
-        </button>
-      </div>
-
-      <div v-else class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead class="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">System</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Pressure</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Temperature</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            <tr v-for="system in systemsStore.systems" :key="system.id" class="hover:bg-gray-50 dark:hover:bg-gray-800">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <NuxtLink 
-                  :to="`/systems/${system.id}`" 
-                  class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
-                >
-                  {{ system.name }}
-                </NuxtLink>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span 
-                  :class="getStatusClass(system.status)"
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                >
-                  {{ system.status }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                {{ system.pressure }} MPa
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                {{ system.temperature }}°C
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <NuxtLink 
-                  :to="`/systems/${system.id}`" 
-                  class="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-4"
-                >
-                  View
-                </NuxtLink>
-                <button class="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300">
-                  Delete
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ t('systems.noSystems') }}</h3>
+      <p class="text-gray-600 mb-6">{{ t('systems.noSystemsDesc') }}</p>
+      <button @click="showCreateModal = true" class="u-btn u-btn-primary">
+        <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
+        {{ t('systems.addNew') }}
+      </button>
     </div>
 
-    <!-- Create System Modal Component -->
-    <UCreateSystemModal 
-      v-model="openCreateModal" 
-      :loading="createLoading"
-      @submit="onCreate"
-      @cancel="onCancelCreate"
+    <!-- Create System Modal -->
+    <UCreateSystemModal
+      v-model="showCreateModal"
+      :loading="isCreating"
+      @submit="handleCreateSystem"
+      @cancel="showCreateModal = false"
     />
   </div>
 </template>
 
 <script setup lang="ts">
+import type { HydraulicSystem } from '~/types/api'
+
+// Page metadata
 definePageMeta({
-  layout: 'dashboard',
-  title: 'Hydraulic Systems',
   middleware: ['auth']
 })
 
+// Composables
+const { t } = useI18n()
 const systemsStore = useSystemsStore()
-const loading = ref(false)
-const createLoading = ref(false)
-const openCreateModal = ref(false)
 
-const getStatusClass = (status: string) => {
-  const classes = {
-    'active': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    'maintenance': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-    'emergency': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    'inactive': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+// State
+const showCreateModal = ref(false)
+const isCreating = ref(false)
+
+// Mock systems data
+const systems = ref<HydraulicSystem[]>([  
+  {
+    id: 1,
+    name: 'HYD-001 - Pump Station A',
+    type: 'industrial',
+    status: 'active',
+    description: 'Основная насосная станция производственной линии',
+    pressure: 2.3,
+    temperature: 68,
+    flow_rate: 185,
+    vibration: 0.8,
+    health_score: 92,
+    last_update: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 2, 
+    name: 'HYD-002 - Hydraulic Motor B',
+    type: 'mobile',
+    status: 'maintenance',
+    description: 'Гидравлический мотор мобильной установки',
+    pressure: 1.8,
+    temperature: 72,
+    flow_rate: 150,
+    vibration: 1.2,
+    health_score: 78,
+    last_update: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+])
+
+// Methods
+const handleCreateSystem = async (data: any) => {
+  isCreating.value = true
+  
+  try {
+    // Check if store has createSystem method
+    if (systemsStore && typeof systemsStore.addSystem === 'function') {
+      await systemsStore.addSystem(data)
+    } else {
+      // Fallback: add to local state
+      const newSystem: HydraulicSystem = {
+        id: Date.now(),
+        name: data.name,
+        type: data.type,
+        status: data.status || 'active',
+        description: data.description,
+        pressure: 0,
+        temperature: 0,
+        flow_rate: 0,
+        vibration: 0,
+        health_score: 100,
+        last_update: new Date().toISOString(),
+        created_at: new Date().toISOString(), 
+        updated_at: new Date().toISOString()
+      }
+      systems.value.push(newSystem)
+    }
+    
+    showCreateModal.value = false
+  } catch (error) {
+    console.error('Failed to create system:', error)
+  } finally {
+    isCreating.value = false
+  }
+}
+
+const getSystemStatusClass = (status: string): string => {
+  const classes: Record<string, string> = {
+    active: 'u-badge-success',
+    maintenance: 'u-badge-warning', 
+    emergency: 'u-badge-error',
+    inactive: 'u-badge-gray'
   }
   return classes[status] || classes['inactive']
 }
 
-const onRefresh = async () => {
-  if (loading.value) return
-  loading.value = true
-  try {
-    await systemsStore.fetchSystems()
-  } catch (error) {
-    console.error('Failed to refresh systems:', error)
-    // TODO: Show toast notification
-  } finally {
-    loading.value = false
-  }
+const formatDate = (dateString: string): string => {
+  return new Date(dateString).toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit', 
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
-
-// Updated to match new form structure with type and description
-const onCreate = async (data: { name: string; type: string; status: string; description: string }) => {
-  createLoading.value = true
-  try {
-    // Check if store has createSystem method
-    if (typeof systemsStore.createSystem !== 'function') {
-      // Graceful fallback for MVP - show friendly message
-      alert('Создание систем будет реализовано на этапе 2-3. Пока используйте Admin Panel: http://localhost:8000/admin/')
-      openCreateModal.value = false
-      return
-    }
-    
-    // Call real API through store
-    await systemsStore.createSystem(data)
-    
-    // Refresh the systems list
-    await systemsStore.fetchSystems()
-    
-    // Close modal and show success
-    openCreateModal.value = false
-    alert(`System "${data.name}" created successfully!`)
-    
-  } catch (error: any) {
-    console.error('Failed to create system:', error)
-    alert(`Failed to create system: ${error?.message || 'Unknown error'}`)
-  } finally {
-    createLoading.value = false
-  }
-}
-
-const onCancelCreate = () => {
-  openCreateModal.value = false
-}
-
-// Load systems on mount
-onMounted(() => {
-  systemsStore.fetchSystems()
-})
 </script>
