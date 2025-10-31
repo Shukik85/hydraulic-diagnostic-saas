@@ -2,8 +2,8 @@
   <UModal
     :model-value="modelValue"
     @update:model-value="$emit('update:modelValue', $event)"
-    :title="$t('reports.generate.title')"
-    :description="$t('reports.generate.subtitle')"
+    :title="t('reports.generate.title')"
+    :description="t('reports.generate.subtitle')"
     size="lg"
     :close-on-backdrop="true"
   >
@@ -11,7 +11,7 @@
       <!-- Report Template -->
       <div>
         <label class="u-label" for="template">
-          {{ $t('reports.generate.template') }}
+          {{ t('reports.generate.template') }}
         </label>
         <div class="relative">
           <select 
@@ -20,10 +20,10 @@
             class="u-input appearance-none cursor-pointer"
             :disabled="loading"
           >
-            <option value="executive">{{ $t('reports.templates.executive') }}</option>
-            <option value="technical">{{ $t('reports.templates.technical') }}</option>
-            <option value="compliance">{{ $t('reports.templates.compliance') }}</option>
-            <option value="maintenance">{{ $t('reports.templates.maintenance') }}</option>
+            <option value="executive">{{ t('reports.templates.executive') }}</option>
+            <option value="technical">{{ t('reports.templates.technical') }}</option>
+            <option value="compliance">{{ t('reports.templates.compliance') }}</option>
+            <option value="maintenance">{{ t('reports.templates.maintenance') }}</option>
           </select>
           <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -32,7 +32,7 @@
       <!-- Date Range -->
       <div>
         <label class="u-label" for="date-range">
-          {{ $t('reports.generate.period') }}
+          {{ t('reports.generate.period') }}
         </label>
         <div class="relative">
           <select 
@@ -41,10 +41,10 @@
             class="u-input appearance-none cursor-pointer"
             :disabled="loading"
           >
-            <option value="last_24h">{{ $t('reports.periods.last_24h') }}</option>
-            <option value="last_7d">{{ $t('reports.periods.last_7d') }}</option>
-            <option value="last_30d">{{ $t('reports.periods.last_30d') }}</option>
-            <option value="last_90d">{{ $t('reports.periods.last_90d') }}</option>
+            <option value="last_24h">{{ t('reports.periods.last_24h') }}</option>
+            <option value="last_7d">{{ t('reports.periods.last_7d') }}</option>
+            <option value="last_30d">{{ t('reports.periods.last_30d') }}</option>
+            <option value="last_90d">{{ t('reports.periods.last_90d') }}</option>
           </select>
           <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -53,7 +53,7 @@
       <!-- Report Language -->
       <div>
         <label class="u-label" for="locale">
-          {{ $t('reports.generate.language') }}
+          {{ t('reports.generate.language') }}
         </label>
         <div class="relative">
           <select 
@@ -62,9 +62,9 @@
             class="u-input appearance-none cursor-pointer"
             :disabled="loading"
           >
-            <option value="en-US">{{ $t('reports.locales.en') }}</option>
-            <option value="ru-RU">{{ $t('reports.locales.ru') }}</option>
-            <option value="de-DE">{{ $t('reports.locales.de') }}</option>
+            <option value="en-US">{{ t('reports.locales.en') }}</option>
+            <option value="ru-RU">{{ t('reports.locales.ru') }}</option>
+            <option value="de-DE">{{ t('reports.locales.de') }}</option>
           </select>
           <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
@@ -73,15 +73,15 @@
       <!-- Custom Title -->
       <div>
         <label class="u-label" for="report-title">
-          {{ $t('reports.generate.customTitle') }}
-          <span class="text-gray-400 font-normal">({{ $t('ui.optional', 'optional') }})</span>
+          {{ t('reports.generate.customTitle') }}
+          <span class="text-gray-400 font-normal">({{ t('ui.optional') }})</span>
         </label>
         <input 
           id="report-title"
           v-model.trim="form.title"
           type="text" 
           class="u-input"
-          :placeholder="$t('reports.generate.customTitlePlaceholder')"
+          :placeholder="t('reports.generate.customTitlePlaceholder')"
           :disabled="loading"
           maxlength="255"
         />
@@ -93,7 +93,7 @@
           <Icon name="heroicons:document-text" class="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
           <div>
             <p class="text-sm font-medium text-green-900">
-              {{ $t('reports.generate.preview') }}
+              {{ t('reports.generate.preview') }}
             </p>
             <p class="text-sm text-green-700 mt-1">
               {{ getPreviewText() }}
@@ -101,7 +101,7 @@
             <div class="flex items-center gap-4 mt-3 text-xs text-green-600">
               <span class="flex items-center gap-1">
                 <Icon name="heroicons:clock" class="h-3 w-3" />
-                ~2-5 {{ $t('ui.minutes') }}
+                ~2-5 {{ t('ui.minutes') }}
               </span>
               <span class="flex items-center gap-1">
                 <Icon name="heroicons:document-arrow-down" class="h-3 w-3" />
@@ -120,7 +120,7 @@
         :disabled="loading"
         type="button"
       >
-        {{ $t('ui.cancel') }}
+        {{ t('ui.cancel') }}
       </button>
       <button 
         class="u-btn u-btn-success min-w-[120px]"
@@ -138,7 +138,7 @@
           name="heroicons:document-plus" 
           class="h-4 w-4 mr-2" 
         />
-        {{ loading ? $t('reports.generate.generating') : $t('reports.generate.generateBtn') }}
+        {{ loading ? t('reports.generate.generating') : t('reports.generate.generateBtn') }}
       </button>
     </template>
   </UModal>
@@ -167,7 +167,7 @@ const emit = defineEmits<{
   'cancel': []
 }>()
 
-const { $t } = useI18n()
+const { t } = useI18n()
 
 // Form state
 const form = reactive<ReportFormData>({
@@ -180,28 +180,28 @@ const form = reactive<ReportFormData>({
 // Helpers
 const getTemplateLabel = (template: string): string => {
   const labels: Record<string, string> = {
-    executive: $t('reports.templates.execShort', 'Executive Summary'),
-    technical: $t('reports.templates.techShort', 'Technical Analysis'),
-    compliance: $t('reports.templates.compShort', 'Compliance Report'),
-    maintenance: $t('reports.templates.maintShort', 'Maintenance Planning')
+    executive: t('reports.templates.execShort', 'Executive Summary'),
+    technical: t('reports.templates.techShort', 'Technical Analysis'),
+    compliance: t('reports.templates.compShort', 'Compliance Report'),
+    maintenance: t('reports.templates.maintShort', 'Maintenance Planning')
   }
-  return labels[template] || $t('reports.generate.title')
+  return labels[template] || t('reports.generate.title')
 }
 
 const getRangeLabel = (range: string): string => {
   const labels: Record<string, string> = {
-    last_24h: $t('reports.periods.24hShort', '24h'),
-    last_7d: $t('reports.periods.7dShort', '7d'),
-    last_30d: $t('reports.periods.30dShort', '30d'),
-    last_90d: $t('reports.periods.90dShort', '90d')
+    last_24h: t('reports.periods.24hShort', '24h'),
+    last_7d: t('reports.periods.7dShort', '7d'),
+    last_30d: t('reports.periods.30dShort', '30d'),
+    last_90d: t('reports.periods.90dShort', '90d')
   }
-  return labels[range] || $t('reports.generate.period')
+  return labels[range] || t('reports.generate.period')
 }
 
 const getPreviewText = (): string => {
   const template = getTemplateLabel(form.template)
   const period = getRangeLabel(form.range)
-  const customTitle = form.title ? `"${form.title}"` : $t('reports.generate.autoTitle')
+  const customTitle = form.title ? `"${form.title}"` : t('reports.generate.autoTitle')
   return `${template} • ${period} • ${customTitle}`
 }
 
