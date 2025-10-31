@@ -1,12 +1,7 @@
 <template>
-  <UModal
-    :model-value="modelValue"
-    @update:model-value="$emit('update:modelValue', $event)"
-    :title="t('reports.generate.title')"
-    :description="t('reports.generate.subtitle')"
-    size="lg"
-    :close-on-backdrop="true"
-  >
+  <UModal :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)"
+    :title="t('reports.generate.title')" :description="t('reports.generate.subtitle')" size="lg"
+    :close-on-backdrop="true">
     <div class="space-y-5">
       <!-- Report Template -->
       <div>
@@ -14,18 +9,15 @@
           {{ t('reports.generate.template') }}
         </label>
         <div class="relative">
-          <select 
-            id="template"
-            v-model="form.template"
-            class="u-input appearance-none cursor-pointer"
-            :disabled="loading"
-          >
+          <select id="template" v-model="form.template" class="u-input appearance-none cursor-pointer"
+            :disabled="loading">
             <option value="executive">{{ t('reports.templates.executive') }}</option>
             <option value="technical">{{ t('reports.templates.technical') }}</option>
             <option value="compliance">{{ t('reports.templates.compliance') }}</option>
             <option value="maintenance">{{ t('reports.templates.maintenance') }}</option>
           </select>
-          <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <Icon name="heroicons:chevron-down"
+            class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
       </div>
 
@@ -35,18 +27,15 @@
           {{ t('reports.generate.period') }}
         </label>
         <div class="relative">
-          <select 
-            id="date-range"
-            v-model="form.range"
-            class="u-input appearance-none cursor-pointer"
-            :disabled="loading"
-          >
+          <select id="date-range" v-model="form.range" class="u-input appearance-none cursor-pointer"
+            :disabled="loading">
             <option value="last_24h">{{ t('reports.periods.last_24h') }}</option>
             <option value="last_7d">{{ t('reports.periods.last_7d') }}</option>
             <option value="last_30d">{{ t('reports.periods.last_30d') }}</option>
             <option value="last_90d">{{ t('reports.periods.last_90d') }}</option>
           </select>
-          <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <Icon name="heroicons:chevron-down"
+            class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
       </div>
 
@@ -56,17 +45,13 @@
           {{ t('reports.generate.language') }}
         </label>
         <div class="relative">
-          <select 
-            id="locale"
-            v-model="form.locale"
-            class="u-input appearance-none cursor-pointer"
-            :disabled="loading"
-          >
+          <select id="locale" v-model="form.locale" class="u-input appearance-none cursor-pointer" :disabled="loading">
             <option value="en-US">{{ t('reports.locales.en') }}</option>
             <option value="ru-RU">{{ t('reports.locales.ru') }}</option>
             <option value="de-DE">{{ t('reports.locales.de') }}</option>
           </select>
-          <Icon name="heroicons:chevron-down" class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <Icon name="heroicons:chevron-down"
+            class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none" />
         </div>
       </div>
 
@@ -76,21 +61,14 @@
           {{ t('reports.generate.customTitle') }}
           <span class="text-gray-400 font-normal">({{ t('ui.optional') }})</span>
         </label>
-        <input 
-          id="report-title"
-          v-model.trim="form.title"
-          type="text" 
-          class="u-input"
-          :placeholder="t('reports.generate.customTitlePlaceholder')"
-          :disabled="loading"
-          maxlength="255"
-        />
+        <input id="report-title" v-model.trim="form.title" type="text" class="u-input"
+          :placeholder="t('reports.generate.customTitlePlaceholder')" :disabled="loading" maxlength="255" />
       </div>
 
       <!-- Generation Preview -->
       <div class="rounded-lg bg-green-50 border border-green-200 p-4">
         <div class="flex items-start gap-3">
-          <Icon name="heroicons:document-text" class="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+          <Icon name="heroicons:document-text" class="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
           <div>
             <p class="text-sm font-medium text-green-900">
               {{ t('reports.generate.preview') }}
@@ -114,30 +92,12 @@
     </div>
 
     <template #footer>
-      <button 
-        class="u-btn u-btn-secondary"
-        @click="handleCancel"
-        :disabled="loading"
-        type="button"
-      >
+      <button class="u-btn u-btn-secondary" @click="handleCancel" :disabled="loading" type="button">
         {{ t('ui.cancel') }}
       </button>
-      <button 
-        class="u-btn u-btn-success min-w-[120px]"
-        @click="handleSubmit"
-        :disabled="loading"
-        type="button"
-      >
-        <Icon 
-          v-if="loading" 
-          name="heroicons:arrow-path" 
-          class="h-4 w-4 animate-spin mr-2" 
-        />
-        <Icon 
-          v-else 
-          name="heroicons:document-plus" 
-          class="h-4 w-4 mr-2" 
-        />
+      <button class="u-btn u-btn-success min-w-[120px]" @click="handleSubmit" :disabled="loading" type="button">
+        <Icon v-if="loading" name="heroicons:arrow-path" class="h-4 w-4 animate-spin mr-2" />
+        <Icon v-else name="heroicons:document-plus" class="h-4 w-4 mr-2" />
         {{ loading ? t('reports.generate.generating') : t('reports.generate.generateBtn') }}
       </button>
     </template>

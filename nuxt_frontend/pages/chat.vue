@@ -18,17 +18,12 @@
 
       <!-- Sessions List -->
       <div class="flex-1 overflow-y-auto p-4 space-y-3">
-        <div
-          v-for="session in chatSessions"
-          :key="session.id"
-          @click="selectSession(session)"
-          class="p-4 rounded-lg cursor-pointer u-transition-fast"
-          :class="activeSession?.id === session.id 
-            ? 'bg-blue-50 border border-blue-200' 
-            : 'hover:bg-gray-50 border border-transparent'"
-        >
+        <div v-for="session in chatSessions" :key="session.id" @click="selectSession(session)"
+          class="p-4 rounded-lg cursor-pointer u-transition-fast" :class="activeSession?.id === session.id
+            ? 'bg-blue-50 border border-blue-200'
+            : 'hover:bg-gray-50 border border-transparent'">
           <div class="flex items-start gap-3">
-            <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-600 rounded-full u-flex-center flex-shrink-0">
+            <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-600 rounded-full u-flex-center shrink-0">
               <Icon name="heroicons:chat-bubble-left" class="w-4 h-4 text-white" />
             </div>
             <div class="flex-1 min-w-0">
@@ -54,10 +49,9 @@
     </div>
 
     <!-- Mobile: Slide-out Sidebar -->
-    <div 
+    <div
       class="lg:hidden fixed inset-y-0 left-0 z-40 w-80 bg-white border-r border-gray-200 flex flex-col transform transition-transform duration-300 ease-in-out"
-      :class="showSidebar ? 'translate-x-0' : '-translate-x-full'"
-    >
+      :class="showSidebar ? 'translate-x-0' : '-translate-x-full'">
       <!-- Mobile Sidebar Header -->
       <div class="p-4 border-b border-gray-200">
         <div class="u-flex-between mb-4">
@@ -79,17 +73,12 @@
 
       <!-- Mobile Sessions List -->
       <div class="flex-1 overflow-y-auto p-4 space-y-3">
-        <div
-          v-for="session in chatSessions"
-          :key="session.id"
-          @click="selectSession(session)"
-          class="p-3 rounded-lg cursor-pointer u-transition-fast"
-          :class="activeSession?.id === session.id 
-            ? 'bg-blue-50 border border-blue-200' 
-            : 'hover:bg-gray-50 border border-transparent'"
-        >
+        <div v-for="session in chatSessions" :key="session.id" @click="selectSession(session)"
+          class="p-3 rounded-lg cursor-pointer u-transition-fast" :class="activeSession?.id === session.id
+            ? 'bg-blue-50 border border-blue-200'
+            : 'hover:bg-gray-50 border border-transparent'">
           <div class="flex items-start gap-3">
-            <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-600 rounded-full u-flex-center flex-shrink-0">
+            <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-600 rounded-full u-flex-center shrink-0">
               <Icon name="heroicons:chat-bubble-left" class="w-4 h-4 text-white" />
             </div>
             <div class="flex-1 min-w-0">
@@ -115,21 +104,12 @@
     </div>
 
     <!-- Mobile Sidebar Overlay -->
-    <div 
-      v-if="showSidebar" 
-      @click="showSidebar = false"
-      class="lg:hidden fixed inset-0 bg-black/50 z-30"
-    ></div>
+    <div v-if="showSidebar" @click="showSidebar = false" class="lg:hidden fixed inset-0 bg-black/50 z-30"></div>
 
     <!-- Mobile: Swipe Indicator (only when sidebar is closed) -->
-    <div 
-      v-if="!showSidebar"
-      @click="showSidebar = true"
-      @touchstart="handleTouchStart"
-      @touchmove="handleTouchMove" 
+    <div v-if="!showSidebar" @click="showSidebar = true" @touchstart="handleTouchStart" @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
-      class="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 cursor-pointer touch-pan-x"
-    >
+      class="lg:hidden fixed left-0 top-1/2 -translate-y-1/2 z-50 cursor-pointer touch-pan-x">
       <!-- Swipe handle with vertical lines -->
       <div class="bg-white border border-gray-300 rounded-r-lg px-1 py-4 shadow-md hover:bg-gray-50 transition-colors">
         <div class="flex flex-col gap-1 items-center">
@@ -141,7 +121,7 @@
     </div>
 
     <!-- Chat Area -->
-    <div class="flex-1 lg:flex-none lg:flex-grow flex flex-col bg-white min-h-0">
+    <div class="flex-1 lg:flex-none lg:grow flex flex-col bg-white min-h-0">
       <!-- Chat Header -->
       <div v-if="activeSession" class="p-6 border-b border-gray-200">
         <div class="u-flex-between">
@@ -151,7 +131,7 @@
               {{ activeSession.description }}
             </p>
           </div>
-          <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="flex items-center gap-2 shrink-0">
             <button class="u-btn u-btn-ghost u-btn-sm">
               <Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" />
             </button>
@@ -162,65 +142,44 @@
       <!-- Messages Area -->
       <div class="flex-1 overflow-y-auto bg-gray-50">
         <div v-if="activeSession" class="max-w-4xl mx-auto p-6 space-y-6">
-          <div
-            v-for="message in activeSession.messages"
-            :key="message.id"
-            class="flex items-start gap-4"
-            :class="message.role === 'user' ? 'flex-row-reverse' : 'flex-row'"
-          >
+          <div v-for="message in activeSession.messages" :key="message.id" class="flex items-start gap-4"
+            :class="message.role === 'user' ? 'flex-row-reverse' : 'flex-row'">
             <!-- Avatar -->
-            <div class="flex-shrink-0">
-              <div 
-                v-if="message.role === 'assistant'"
-                class="w-10 h-10 bg-linear-to-br from-blue-500 to-purple-600 rounded-full u-flex-center"
-              >
+            <div class="shrink-0">
+              <div v-if="message.role === 'assistant'"
+                class="w-10 h-10 bg-linear-to-br from-blue-500 to-purple-600 rounded-full u-flex-center">
                 <Icon name="heroicons:cpu-chip" class="w-5 h-5 text-white" />
               </div>
-              <div 
-                v-else
-                class="w-10 h-10 bg-linear-to-br from-gray-600 to-gray-700 rounded-full u-flex-center"
-              >
+              <div v-else class="w-10 h-10 bg-linear-to-br from-gray-600 to-gray-700 rounded-full u-flex-center">
                 <Icon name="heroicons:user" class="w-5 h-5 text-white" />
               </div>
             </div>
 
             <!-- Message Bubble -->
-            <div 
-              class="max-w-2xl"
-              :class="message.role === 'user' 
-                ? 'bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl p-4' 
-                : 'u-card p-4'"
-            >
-              <div class="whitespace-pre-wrap u-body" 
-                   :class="message.role === 'user' ? 'text-white' : 'text-gray-900'">
+            <div class="max-w-2xl" :class="message.role === 'user'
+              ? 'bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl p-4'
+              : 'u-card p-4'">
+              <div class="whitespace-pre-wrap u-body" :class="message.role === 'user' ? 'text-white' : 'text-gray-900'">
                 {{ message.content }}
               </div>
 
               <!-- Sources -->
-              <div v-if="message.sources?.length" class="mt-3 pt-3 border-t" 
-                   :class="message.role === 'user' ? 'border-blue-500' : 'border-gray-200'">
-                <p class="text-xs mb-2" 
-                   :class="message.role === 'user' ? 'text-blue-100' : 'text-gray-500'">
+              <div v-if="message.sources?.length" class="mt-3 pt-3 border-t"
+                :class="message.role === 'user' ? 'border-blue-500' : 'border-gray-200'">
+                <p class="text-xs mb-2" :class="message.role === 'user' ? 'text-blue-100' : 'text-gray-500'">
                   Sources:
                 </p>
                 <div class="space-y-1">
-                  <a
-                    v-for="source in message.sources"
-                    :key="source.url"
-                    :href="source.url"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="block text-xs hover:underline"
-                    :class="message.role === 'user' ? 'text-blue-100' : 'text-blue-600'"
-                  >
+                  <a v-for="source in message.sources" :key="source.url" :href="source.url" target="_blank"
+                    rel="noopener noreferrer" class="block text-xs hover:underline"
+                    :class="message.role === 'user' ? 'text-blue-100' : 'text-blue-600'">
                     <Icon name="heroicons:document-text" class="w-3 h-3 mr-1 inline" />
                     {{ source.title }}
                   </a>
                 </div>
               </div>
 
-              <p class="text-xs mt-3 opacity-70" 
-                 :class="message.role === 'user' ? 'text-blue-100' : 'text-gray-500'">
+              <p class="text-xs mt-3 opacity-70" :class="message.role === 'user' ? 'text-blue-100' : 'text-gray-500'">
                 {{ formatTimestamp(message.timestamp) }}
               </p>
             </div>
@@ -271,21 +230,12 @@
       <div v-if="activeSession" class="border-t border-gray-200 p-6 bg-white">
         <form @submit.prevent="sendMessage" class="flex items-end gap-4">
           <div class="flex-1">
-            <textarea
-              v-model="newMessage"
-              :disabled="isLoading"
-              :placeholder="$t('chat.placeholder')"
-              rows="2"
-              class="u-input resize-none"
-              @keydown.meta.enter.prevent="sendMessage"
-              @keydown.ctrl.enter.prevent="sendMessage"
-            ></textarea>
+            <textarea v-model="newMessage" :disabled="isLoading" :placeholder="$t('chat.placeholder')" rows="2"
+              class="u-input resize-none" @keydown.meta.enter.prevent="sendMessage"
+              @keydown.ctrl.enter.prevent="sendMessage"></textarea>
           </div>
-          <button
-            type="submit"
-            :disabled="!newMessage.trim() || isLoading"
-            class="u-btn u-btn-primary u-btn-md flex-shrink-0"
-          >
+          <button type="submit" :disabled="!newMessage.trim() || isLoading"
+            class="u-btn u-btn-primary u-btn-md shrink-0">
             <Icon v-if="!isLoading" name="heroicons:paper-airplane" class="w-4 h-4 mr-2" />
             <div v-else class="u-spinner w-4 h-4 mr-2"></div>
             {{ isLoading ? $t('chat.sending') : $t('chat.send') }}
@@ -298,10 +248,7 @@
     </div>
 
     <!-- New Session Modal - UI Component -->
-    <UChatNewSessionModal
-      v-model="showNewSessionModal"
-      @submit="createNewSessionFromModal"
-    />
+    <UChatNewSessionModal v-model="showNewSessionModal" @submit="createNewSessionFromModal" />
   </div>
 </template>
 
@@ -330,7 +277,7 @@ interface ChatSession {
 }
 
 // State
-const activeSession = ref<ChatSession | null>(null)
+const activeSession = ref(null)
 const newMessage = ref('')
 const isLoading = ref(false)
 const showNewSessionModal = ref(false)
@@ -342,8 +289,8 @@ let touchStartY = 0
 const SWIPE_THRESHOLD = 50
 
 const handleTouchStart = (event: TouchEvent) => {
-  touchStartX = event.touches[0].clientX
-  touchStartY = event.touches[0].clientY
+  touchStartX = event.touches[0]?.clientX || 0
+  touchStartY = event.touches[0]?.clientY || 0
 }
 
 const handleTouchMove = (event: TouchEvent) => {
@@ -352,12 +299,12 @@ const handleTouchMove = (event: TouchEvent) => {
 }
 
 const handleTouchEnd = (event: TouchEvent) => {
-  const touchEndX = event.changedTouches[0].clientX
-  const touchEndY = event.changedTouches[0].clientY
-  
+  const touchEndX = event.changedTouches[0]?.clientX || 0
+  const touchEndY = event.changedTouches[0]?.clientY || 0
+
   const deltaX = touchEndX - touchStartX
   const deltaY = touchEndY - touchStartY
-  
+
   // Check if it's a horizontal swipe to the right and not too vertical
   if (deltaX > SWIPE_THRESHOLD && Math.abs(deltaY) < SWIPE_THRESHOLD) {
     showSidebar.value = true
@@ -365,7 +312,7 @@ const handleTouchEnd = (event: TouchEvent) => {
 }
 
 // Demo chat sessions
-const chatSessions = ref<ChatSession[]>([
+const chatSessions = ref([
   {
     id: 1,
     title: 'HYD-001 System Analysis',
@@ -510,7 +457,7 @@ onMounted(() => {
 <style scoped>
 .line-clamp-2 {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
