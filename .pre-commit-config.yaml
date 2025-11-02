@@ -78,7 +78,7 @@ repos:
     rev: v9.38.0
     hooks:
       - id: eslint
-        files: '\.\(js|ts|vue)$'
+        files: "\\.(?:js|ts|vue)$"
         exclude: '^backend/'
         additional_dependencies:
           - eslint@^9.14.0
@@ -89,7 +89,7 @@ repos:
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
-        files: '\.\(js|ts|vue|json|css|scss|md)$'
+        files: "\\.(?:js|ts|vue|json|css|scss|md)$"
         exclude: '^backend/'
         additional_dependencies:
           - prettier@^3.3.0
@@ -100,7 +100,7 @@ repos:
     hooks:
       - id: actionlint
         name: Lint GitHub Actions
-        files: '^.github/workflows/.*\.(yml|yaml)$'
+        files: '^.github/workflows/.*\\.(yml|yaml)$'
 
   # Local bot operations validation
   - repo: local
@@ -109,7 +109,7 @@ repos:
         name: Validate GitHub Workflows
         entry: python scripts/validate_workflows.py
         language: python
-        files: '^.github/workflows/.*\.(yml|yaml)$'
+        files: '^.github/workflows/.*\\.(yml|yaml)$'
         additional_dependencies:
           - PyYAML>=6.0
       
@@ -117,5 +117,5 @@ repos:
         name: Validate Bot Operations
         entry: python scripts/bot_risk_classifier.py --test
         language: python
-        files: 'scripts/bot.*\.py$'
+        files: 'scripts/bot.*\\.py$'
         pass_filenames: false
