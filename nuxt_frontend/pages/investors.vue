@@ -247,11 +247,14 @@
 
 <script setup lang="ts">
 import { definePageMeta } from '#imports'
+import { computed } from 'vue'
 
-// Use const assertion on entire metadata object for Nuxt 4 strict typing
+// Use computed to satisfy MaybeRef/ComputedRef layout typing in Nuxt 4
+const layout = computed(() => 'default' as const)
+
 definePageMeta({
   title: 'Business Analytics',
-  layout: 'default',
+  layout,
   middleware: ['auth']
 } as const)
 
