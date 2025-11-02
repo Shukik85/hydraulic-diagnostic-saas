@@ -30,10 +30,11 @@ repos:
     rev: v0.14.2
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--fix]
         exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
       - id: ruff-format
         exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
+
 # Временно отключён до решения проблемы с плагином
   # - repo: https://github.com/pre-commit/mirrors-mypy
   #   rev: v1.18.2
