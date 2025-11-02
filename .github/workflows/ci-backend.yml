@@ -43,7 +43,7 @@ jobs:
       - name: Lint (Ruff)
         run: |
           ruff --version
-          ruff backend --fix --exit-non-zero-on-fix
+          ruff check backend --fix --exit-non-zero-on-fix
 
       - name: Format (Black)
         run: |
