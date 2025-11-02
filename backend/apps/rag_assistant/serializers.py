@@ -68,14 +68,21 @@ class DocumentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["created_at", "updated_at", "rag_system_name", "content_length"]
+        read_only_fields = [
+            "created_at",
+            "updated_at",
+            "rag_system_name",
+            "content_length",
+        ]
 
     def validate_title(self, value):
         """Проверка заголовка."""
         if not value or not value.strip():
             raise serializers.ValidationError("Заголовок документа обязателен.")
         if len(value) > 255:
-            raise serializers.ValidationError("Заголовок не должен превышать 255 символов.")
+            raise serializers.ValidationError(
+                "Заголовок не должен превышать 255 символов."
+            )
         return value.strip()
 
     def validate_content(self, value):

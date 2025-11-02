@@ -220,10 +220,16 @@ SPECTACULAR_SETTINGS = {
     "SCHEMA_PATH_PREFIX": "/api/",
     "SERVERS": [
         {"url": "http://localhost:8000", "description": "Development server"},
-        {"url": "https://api.hydraulic-diagnostic.com", "description": "Production server"},
+        {
+            "url": "https://api.hydraulic-diagnostic.com",
+            "description": "Production server",
+        },
     ],
     "TAGS": [
-        {"name": "diagnostics", "description": "Hydraulic system diagnostics operations"},
+        {
+            "name": "diagnostics",
+            "description": "Hydraulic system diagnostics operations",
+        },
         {"name": "rag", "description": "Knowledge base and RAG operations"},
         {"name": "users", "description": "User management and authentication"},
     ],

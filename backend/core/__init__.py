@@ -1,4 +1,5 @@
 """Модуль проекта с автогенерированным докстрингом."""
+
 # backend/core/__init__.py
 import os
 import sys
@@ -11,7 +12,6 @@ from .celery import app as celery_app
 # Автоподключение Django в интерактивных сессиях (python/ipython),
 # чтобы можно было сразу делать импорты из проекта, не вызывая вручную django.setup().
 def _auto_setup_django_for_shell() -> None:
-
     # Срабатывает только в интерактивных сессиях
     if not hasattr(sys, "ps1"):
         return

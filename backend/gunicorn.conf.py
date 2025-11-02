@@ -23,10 +23,9 @@ graceful_timeout = 30
 # Logging
 loglevel = os.environ.get("GUNICORN_LOG_LEVEL", "info")
 accesslog = "-"  # stdout
-errorlog = "-"   # stderr
+errorlog = "-"  # stderr
 access_log_format = (
-    '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s '
-    '"%(f)s" "%(a)s" %(D)s %(L)s'
+    '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s %(L)s'
 )
 
 # Process naming
@@ -53,22 +52,27 @@ raw_env = [
     "DJANGO_SETTINGS_MODULE=core.settings",
 ]
 
+
 # Hooks
 def when_ready(server):
     """Called just after the server is started."""
     server.log.info("Gunicorn server is ready. Listening on: %s", server.address)
 
+
 def worker_int(worker):
     """Called when a worker receives the SIGINT or SIGQUIT signal."""
     worker.log.info("Worker received SIGINT or SIGQUIT. Shutting down...")
+
 
 def pre_fork(server, worker):
     """Called just before a worker is forked."""
     server.log.info("Worker spawned (pid: %s)", worker.pid)
 
+
 def post_fork(server, worker):
     """Called just after a worker has been forked."""
     server.log.info("Worker spawned (pid: %s)", worker.pid)
+
 
 def worker_abort(worker):
     """Called when a worker receives the SIGTERM signal."""

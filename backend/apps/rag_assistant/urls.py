@@ -37,14 +37,17 @@ def api_metrics(request):
             "total": RagSystem.objects.count(),
             "active_today": RagQueryLog.objects.filter(
                 timestamp__date=current_day.split(":")[0]
-            ).values("system").distinct().count(),
+            )
+            .values("system")
+            .distinct()
+            .count(),
         },
         "documents": {
             "total": Document.objects.count(),
             "by_language": dict(
-                Document.objects.values("language").annotate(
-                    count=models.Count("id")
-                ).values_list("language", "count")
+                Document.objects.values("language")
+                .annotate(count=models.Count("id"))
+                .values_list("language", "count")
             ),
         },
         "requests": {

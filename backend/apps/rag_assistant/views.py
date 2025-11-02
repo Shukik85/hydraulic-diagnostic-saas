@@ -49,14 +49,14 @@ class RagSystemViewSet(viewsets.ModelViewSet):
             "total_documents": system.documents.count(),
             "total_logs": system.logs.count(),
             "documents_by_language": dict(
-                system.documents.values("language").annotate(
-                    count=Count("id")
-                ).values_list("language", "count")
+                system.documents.values("language")
+                .annotate(count=Count("id"))
+                .values_list("language", "count")
             ),
             "documents_by_format": dict(
-                system.documents.values("format").annotate(
-                    count=Count("id")
-                ).values_list("format", "count")
+                system.documents.values("format")
+                .annotate(count=Count("id"))
+                .values_list("format", "count")
             ),
         }
 

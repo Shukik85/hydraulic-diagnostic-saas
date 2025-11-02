@@ -9,35 +9,33 @@ from apps.rag_assistant.rag_service import RAGService
 
 class Command(BaseCommand):
     """Initialize RAG system with hydraulic diagnostic knowledge base."""
-    
+
     help = "Initialize RAG system with sample hydraulic diagnostic documents"
-    
+
     def add_arguments(self, parser):
         parser.add_argument(
-            '--name',
+            "--name",
             type=str,
-            default='hydraulic-diagnostics-v1',
-            help='Name for the RAG system'
+            default="hydraulic-diagnostics-v1",
+            help="Name for the RAG system",
         )
         parser.add_argument(
-            '--rebuild',
-            action='store_true',
-            help='Rebuild existing RAG system'
+            "--rebuild", action="store_true", help="Rebuild existing RAG system"
         )
         parser.add_argument(
-            '--load-samples',
-            action='store_true',
+            "--load-samples",
+            action="store_true",
             default=True,
-            help='Load sample hydraulic documents'
+            help="Load sample hydraulic documents",
         )
-    
+
     def handle(self, *args, **options):
-        rag_name = options['name']
-        rebuild = options['rebuild']
-        load_samples = options['load_samples']
-        
+        rag_name = options["name"]
+        rebuild = options["rebuild"]
+        load_samples = options["load_samples"]
+
         self.stdout.write(f"\n🤖 Initializing RAG system: {rag_name}\n")
-        
+
         # Check if RAG system exists
         try:
             rag_system = RagSystem.objects.get(name=rag_name)
@@ -50,7 +48,9 @@ class Command(BaseCommand):
                 return
             else:
                 self.stdout.write(
-                    self.style.WARNING(f"Rebuilding existing RAG system '{rag_name}'...")
+                    self.style.WARNING(
+                        f"Rebuilding existing RAG system '{rag_name}'..."
+                    )
                 )
                 # Delete existing documents
                 rag_system.documents.all().delete()
@@ -64,37 +64,33 @@ class Command(BaseCommand):
                 index_config={
                     "dimension": 768,
                     "metric": "inner_product",
-                    "normalize_embeddings": True
-                }
+                    "normalize_embeddings": True,
+                },
             )
-            self.stdout.write(
-                self.style.SUCCESS(f"Created new RAG system: {rag_name}")
-            )
-        
+            self.stdout.write(self.style.SUCCESS(f"Created new RAG system: {rag_name}"))
+
         # Load sample documents if requested
         if load_samples:
             self.load_sample_documents(rag_system)
-        
+
         # Build RAG index
         self.build_rag_index(rag_system)
-        
+
         self.stdout.write(
-            self.style.SUCCESS(f"\n✅ RAG system '{rag_name}' initialized successfully!")
+            self.style.SUCCESS(
+                f"\n✅ RAG system '{rag_name}' initialized successfully!"
+            )
         )
-        self.stdout.write(
-            f"   Documents: {rag_system.documents.count()}"
-        )
-        self.stdout.write(
-            f"   System ID: {rag_system.id}"
-        )
+        self.stdout.write(f"   Documents: {rag_system.documents.count()}")
+        self.stdout.write(f"   System ID: {rag_system.id}")
         self.stdout.write(
             "\n📚 You can now query the RAG system via API: /api/rag/query/\n"
         )
-    
+
     def load_sample_documents(self, rag_system):
         """Load sample hydraulic diagnostic documents."""
         self.stdout.write("Loading sample hydraulic diagnostic documents...")
-        
+
         sample_documents = [
             {
                 "title": "Hydraulic Pump Pressure Loss Diagnostics",
@@ -127,8 +123,8 @@ Diagnostic steps:
                     "category": "pump_diagnostics",
                     "equipment_type": "hydraulic_pump",
                     "severity": "high",
-                    "keywords": ["pressure_loss", "pump_failure", "diagnostics"]
-                }
+                    "keywords": ["pressure_loss", "pump_failure", "diagnostics"],
+                },
             },
             {
                 "title": "Hydraulic System Overheating Solutions",
@@ -163,8 +159,8 @@ Solutions:
                     "category": "thermal_management",
                     "equipment_type": "hydraulic_system",
                     "severity": "medium",
-                    "keywords": ["overheating", "temperature", "cooling"]
-                }
+                    "keywords": ["overheating", "temperature", "cooling"],
+                },
             },
             {
                 "title": "Диагностика гидравлических цилиндров",
@@ -191,11 +187,11 @@ Solutions:
                     "category": "cylinder_diagnostics",
                     "equipment_type": "hydraulic_cylinder",
                     "severity": "high",
-                    "keywords": ["цилиндр", "утечка", "диагностика"]
-                }
-            }
+                    "keywords": ["цилиндр", "утечка", "диагностика"],
+                },
+            },
         ]
-        
+
         created_count = 0
         for doc_data in sample_documents:
             document = Document.objects.create(
@@ -204,30 +200,30 @@ Solutions:
                 content=doc_data["content"],
                 format=doc_data["format"],
                 language=doc_data["language"],
-                metadata=doc_data["metadata"]
+                metadata=doc_data["metadata"],
             )
             created_count += 1
             self.stdout.write(f"  + {document.title}")
-        
+
         self.stdout.write(
             self.style.SUCCESS(f"\nLoaded {created_count} sample documents")
         )
-    
+
     def build_rag_index(self, rag_system):
         """Build FAISS index for the RAG system."""
         self.stdout.write("\nBuilding RAG index...")
-        
+
         try:
             # For now, just acknowledge that documents are ready for indexing
             # The actual indexing will be handled by the RAG service
             documents_count = rag_system.documents.count()
-            
+
             self.stdout.write(
-                self.style.SUCCESS(f"RAG system ready with {documents_count} documents for indexing")
+                self.style.SUCCESS(
+                    f"RAG system ready with {documents_count} documents for indexing"
+                )
             )
-            
+
         except Exception as e:
-            self.stdout.write(
-                self.style.ERROR(f"Error preparing RAG index: {str(e)}")
-            )
+            self.stdout.write(self.style.ERROR(f"Error preparing RAG index: {str(e)}"))
             raise

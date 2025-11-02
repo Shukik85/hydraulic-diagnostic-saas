@@ -72,7 +72,9 @@ class SensorDataSerializer(serializers.ModelSerializer):
 class SystemComponentSerializer(serializers.ModelSerializer):
     """Сериализатор компонентов системы."""
 
-    specification = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    specification = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True
+    )
 
     class Meta:
         model = SystemComponent
@@ -203,7 +205,7 @@ class DiagnosticEngineSettingsSerializer(serializers.Serializer):
 
 class MathematicalModelResultSerializer(serializers.ModelSerializer):
     """Сериализатор результатов математической модели.
-    
+
     Включает валидацию отклонений >= 0 и соответствия статуса.
     """
 
@@ -216,7 +218,7 @@ class MathematicalModelResultSerializer(serializers.ModelSerializer):
             "pressure_deviation",
             "flow_deviation",
             "speed_deviation",
-            "max_deviation", 
+            "max_deviation",
             "score",
             "status",
             "created_at",
@@ -226,37 +228,51 @@ class MathematicalModelResultSerializer(serializers.ModelSerializer):
     def validate_pressure_deviation(self, value):
         """Валидация отклонения давления."""
         if value < 0:
-            raise serializers.ValidationError("Отклонение давления не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Отклонение давления не может быть отрицательным"
+            )
         return value
 
     def validate_flow_deviation(self, value):
         """Валидация отклонения расхода."""
         if value < 0:
-            raise serializers.ValidationError("Отклонение расхода не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Отклонение расхода не может быть отрицательным"
+            )
         return value
 
     def validate_speed_deviation(self, value):
         """Валидация отклонения скорости."""
         if value < 0:
-            raise serializers.ValidationError("Отклонение скорости не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Отклонение скорости не может быть отрицательным"
+            )
         return value
 
     def validate_score(self, value):
         """Валидация математического скора."""
         if not (0 <= value <= 1):
-            raise serializers.ValidationError("Математический скор должен быть в диапазоне [0, 1]")
+            raise serializers.ValidationError(
+                "Математический скор должен быть в диапазоне [0, 1]"
+            )
         return value
 
     def validate(self, attrs):
         """Комплексная валидация."""
         # Проверим что max_deviation соответствует максимуму из трех отклонений
-        if all(k in attrs for k in ['pressure_deviation', 'flow_deviation', 'speed_deviation']):
+        if all(
+            k in attrs
+            for k in ["pressure_deviation", "flow_deviation", "speed_deviation"]
+        ):
             calculated_max = max(
-                attrs['pressure_deviation'],
-                attrs['flow_deviation'], 
-                attrs['speed_deviation']
+                attrs["pressure_deviation"],
+                attrs["flow_deviation"],
+                attrs["speed_deviation"],
             )
-            if 'max_deviation' in attrs and abs(attrs['max_deviation'] - calculated_max) > 0.01:
+            if (
+                "max_deviation" in attrs
+                and abs(attrs["max_deviation"] - calculated_max) > 0.01
+            ):
                 raise serializers.ValidationError(
                     "max_deviation должен равняться максимуму из трех отклонений"
                 )
@@ -265,7 +281,7 @@ class MathematicalModelResultSerializer(serializers.ModelSerializer):
 
 class PhasePortraitResultSerializer(serializers.ModelSerializer):
     """Сериализатор результатов фазового портрета.
-    
+
     Включает валидацию типа портрета и area_deviation >= 0.
     """
 
@@ -273,7 +289,7 @@ class PhasePortraitResultSerializer(serializers.ModelSerializer):
         model = PhasePortraitResult
         fields = [
             "id",
-            "system", 
+            "system",
             "timestamp",
             "portrait_type",
             "area_deviation",
@@ -285,7 +301,7 @@ class PhasePortraitResultSerializer(serializers.ModelSerializer):
 
     def validate_portrait_type(self, value):
         """Валидация типа фазового портрета."""
-        valid_types = ['velocity_position', 'force_velocity', 'pressure_flow']
+        valid_types = ["velocity_position", "force_velocity", "pressure_flow"]
         if value not in valid_types:
             raise serializers.ValidationError(
                 f"Тип портрета должен быть одним из: {', '.join(valid_types)}"
@@ -295,31 +311,35 @@ class PhasePortraitResultSerializer(serializers.ModelSerializer):
     def validate_area_deviation(self, value):
         """Валидация отклонения площади."""
         if value < 0:
-            raise serializers.ValidationError("Отклонение площади не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Отклонение площади не может быть отрицательным"
+            )
         return value
 
     def validate_score(self, value):
         """Валидация фазового скора."""
         if not (0 <= value <= 1):
-            raise serializers.ValidationError("Фазовый скор должен быть в диапазоне [0, 1]")
+            raise serializers.ValidationError(
+                "Фазовый скор должен быть в диапазоне [0, 1]"
+            )
         return value
 
     def validate(self, attrs):
         """Комплексная валидация согласованности статуса с area_deviation."""
-        if 'area_deviation' in attrs and 'status' in attrs:
-            area_dev = attrs['area_deviation']
-            status = attrs['status']
-            
+        if "area_deviation" in attrs and "status" in attrs:
+            area_dev = attrs["area_deviation"]
+            status = attrs["status"]
+
             # Проверка согласованности статуса с порогами
-            if area_dev < 10 and status != 'normal':
+            if area_dev < 10 and status != "normal":
                 raise serializers.ValidationError(
                     "При отклонении площади < 10% статус должен быть 'normal'"
                 )
-            elif 10 <= area_dev < 25 and status != 'pre_fault':
+            elif 10 <= area_dev < 25 and status != "pre_fault":
                 raise serializers.ValidationError(
                     "При отклонении площади 10-25% статус должен быть 'pre_fault'"
                 )
-            elif area_dev >= 25 and status != 'fault':
+            elif area_dev >= 25 and status != "fault":
                 raise serializers.ValidationError(
                     "При отклонении площади >= 25% статус должен быть 'fault'"
                 )
@@ -328,7 +348,7 @@ class PhasePortraitResultSerializer(serializers.ModelSerializer):
 
 class TribodiagnosticResultSerializer(serializers.ModelSerializer):
     """Сериализатор результатов трибодиагностики.
-    
+
     Включает валидацию pH [0,14], формата ISO класса и числовых полей >= 0.
     """
 
@@ -340,7 +360,7 @@ class TribodiagnosticResultSerializer(serializers.ModelSerializer):
             "analysis_date",
             "iso_class",
             "particles_4um",
-            "particles_6um", 
+            "particles_6um",
             "particles_14um",
             "water_content_ppm",
             "viscosity_cst",
@@ -356,7 +376,7 @@ class TribodiagnosticResultSerializer(serializers.ModelSerializer):
 
     def validate_iso_class(self, value):
         """Валидация формата ISO класса."""
-        if not re.match(r'^\d{2}/\d{2}/\d{2}$', value):
+        if not re.match(r"^\d{2}/\d{2}/\d{2}$", value):
             raise serializers.ValidationError(
                 "ISO класс должен быть в формате 'NN/NN/NN' (например, '18/16/13')"
             )
@@ -365,31 +385,41 @@ class TribodiagnosticResultSerializer(serializers.ModelSerializer):
     def validate_ph_level(self, value):
         """Валидация уровня pH."""
         if not (0 <= value <= 14):
-            raise serializers.ValidationError("pH уровень должен быть в диапазоне [0, 14]")
+            raise serializers.ValidationError(
+                "pH уровень должен быть в диапазоне [0, 14]"
+            )
         return value
 
     def validate_particles_4um(self, value):
         """Валидация частиц 4 мкм."""
         if value < 0:
-            raise serializers.ValidationError("Количество частиц не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Количество частиц не может быть отрицательным"
+            )
         return value
 
     def validate_particles_6um(self, value):
         """Валидация частиц 6 мкм."""
         if value < 0:
-            raise serializers.ValidationError("Количество частиц не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Количество частиц не может быть отрицательным"
+            )
         return value
 
     def validate_particles_14um(self, value):
         """Валидация частиц 14 мкм."""
         if value < 0:
-            raise serializers.ValidationError("Количество частиц не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Количество частиц не может быть отрицательным"
+            )
         return value
 
     def validate_water_content_ppm(self, value):
         """Валидация содержания воды."""
         if value < 0:
-            raise serializers.ValidationError("Содержание воды не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Содержание воды не может быть отрицательным"
+            )
         return value
 
     def validate_viscosity_cst(self, value):
@@ -401,31 +431,39 @@ class TribodiagnosticResultSerializer(serializers.ModelSerializer):
     def validate_iron_ppm(self, value):
         """Валидация содержания железа."""
         if value < 0:
-            raise serializers.ValidationError("Содержание железа не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Содержание железа не может быть отрицательным"
+            )
         return value
 
     def validate_copper_ppm(self, value):
         """Валидация содержания меди."""
         if value < 0:
-            raise serializers.ValidationError("Содержание меди не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Содержание меди не может быть отрицательным"
+            )
         return value
 
     def validate_aluminum_ppm(self, value):
         """Валидация содержания алюминия."""
         if value < 0:
-            raise serializers.ValidationError("Содержание алюминия не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Содержание алюминия не может быть отрицательным"
+            )
         return value
 
     def validate_score(self, value):
         """Валидация трибологического скора."""
         if not (0 <= value <= 1):
-            raise serializers.ValidationError("Трибологический скор должен быть в диапазоне [0, 1]")
+            raise serializers.ValidationError(
+                "Трибологический скор должен быть в диапазоне [0, 1]"
+            )
         return value
 
 
 class IntegratedDiagnosticResultSerializer(serializers.ModelSerializer):
     """Сериализатор интегрированных результатов диагностики.
-    
+
     integrated_score и overall_status вычисляются автоматически (read-only).
     """
 
@@ -439,7 +477,7 @@ class IntegratedDiagnosticResultSerializer(serializers.ModelSerializer):
             "phase_result",
             "tribo_result",
             "math_score",
-            "phase_score", 
+            "phase_score",
             "tribo_score",
             "integrated_score",
             "overall_status",
@@ -454,29 +492,39 @@ class IntegratedDiagnosticResultSerializer(serializers.ModelSerializer):
     def validate_math_score(self, value):
         """Валидация математического скора."""
         if not (0 <= value <= 1):
-            raise serializers.ValidationError("Математический скор должен быть в диапазоне [0, 1]")
+            raise serializers.ValidationError(
+                "Математический скор должен быть в диапазоне [0, 1]"
+            )
         return value
 
     def validate_phase_score(self, value):
         """Валидация фазового скора."""
         if not (0 <= value <= 1):
-            raise serializers.ValidationError("Фазовый скор должен быть в диапазоне [0, 1]")
+            raise serializers.ValidationError(
+                "Фазовый скор должен быть в диапазоне [0, 1]"
+            )
         return value
 
     def validate_tribo_score(self, value):
         """Валидация трибологического скора."""
         if not (0 <= value <= 1):
-            raise serializers.ValidationError("Трибологический скор должен быть в диапазоне [0, 1]")
+            raise serializers.ValidationError(
+                "Трибологический скор должен быть в диапазоне [0, 1]"
+            )
         return value
 
     def validate_confidence_level(self, value):
         """Валидация уровня доверия."""
         if not (0 <= value <= 1):
-            raise serializers.ValidationError("Уровень доверия должен быть в диапазоне [0, 1]")
+            raise serializers.ValidationError(
+                "Уровень доверия должен быть в диапазоне [0, 1]"
+            )
         return value
 
     def validate_predicted_remaining_life(self, value):
         """Валидация предсказанного остаточного ресурса."""
         if value < 0:
-            raise serializers.ValidationError("Остаточный ресурс не может быть отрицательным")
+            raise serializers.ValidationError(
+                "Остаточный ресурс не может быть отрицательным"
+            )
         return value
