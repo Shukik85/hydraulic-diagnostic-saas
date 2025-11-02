@@ -260,9 +260,7 @@ class Command(BaseCommand):
         severity = (
             "critical"
             if len(events) >= 10
-            else "error"
-            if len(events) >= 6
-            else "warning"
+            else "error" if len(events) >= 6 else "warning"
         )
 
         # Анализ типов проблем
