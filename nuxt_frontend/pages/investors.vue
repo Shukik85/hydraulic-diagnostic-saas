@@ -247,14 +247,11 @@
 
 <script setup lang="ts">
 import { definePageMeta } from '#imports'
-import { computed } from 'vue'
 
-// Use computed to satisfy MaybeRef/ComputedRef layout typing in Nuxt 4
-const layout = computed(() => 'default' as const)
-
+// Business Analytics page uses dashboard layout for authenticated internal pages
 definePageMeta({
   title: 'Business Analytics',
-  layout,
+  layout: 'dashboard' as const,
   middleware: ['auth']
 } as const)
 
