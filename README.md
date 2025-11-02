@@ -41,17 +41,59 @@ pre-commit install
 pre-commit run --all-files
 ```
 
+## 🤖 Hybrid Bot Operations System
+
+**Новая система безопасных автоматических операций с контролем критичных изменений:**
+
+### **Smart Auto-Approval (80% операций):**
+- ✅ **Documentation updates** (*.md, README, docs/)
+- ✅ **Test additions** (test_*.py, *_test.py)
+- ✅ **Lint fixes** (ruff/black/prettier changes)
+- ✅ **Comments and docstrings**
+- ✅ **Dependencies updates** (requirements.txt, package.json)
+
+### **Manual Approval Required (20% операций):**
+- ⚠️ **Workflow changes** (.github/workflows/)
+- ⚠️ **Database migrations** (Django migrations)
+- ⚠️ **File deletions** (любые удаления)
+- ⚠️ **Production configs** (docker-compose, .env)
+- ⚠️ **Security-sensitive** (токены, ключи, пароли)
+
+### **Как использовать:**
+
+```bash
+# 1. Начать сессию разработки (в PR комментариях)
+/start-session {"goal": "timescale-ingestion-mvp", "duration": "4h"}
+
+# 2. Одобрить операцию (если требуется)
+/approve {"files": [{"path": "workflow.yml", "action": "create"}]}
+
+# 3. Откатить операции
+/rollback {"last": 3}
+
+# 4. Статус сессии
+/bot-status
+```
+
+### **Transparent Audit Trail:**
+- 📋 Все операции логируются в `.bot-operations/`
+- 🔍 Превью diff'ов перед выполнением критичных изменений
+- ↩️ Rollback capability для любых операций
+- 📱 Telegram уведомления обо всех действиях
+
 ## 📊 CI/CD
 
 **GitHub Actions:**
 - `ci-frontend.yml` → ESLint + Prettier + TypeScript
 - `ci-backend.yml` → Ruff + Black + Bandit + pytest  
 - `notifications.yml` → Telegram уведомления
+- `bot-hybrid.yml` → Bot operations с approval
 
-**Линтеры:**
-- **Python:** Ruff (вместо flake8), Black, Bandit, pip-audit
-- **Frontend:** ESLint + Prettier
-- **Общее:** pre-commit hooks, Hadolint (Docker)
+**Validation & Security:**
+- **actionlint** — статический анализ GitHub Actions
+- **workflow validator** — проверка опасных команд и permissions
+- **bot risk classifier** — автоматическая классификация операций
+- **pre-commit hooks** — ruff, black, bandit, prettier, actionlint
 
 ## 📱 Telegram Notifications
 
@@ -62,6 +104,7 @@ pre-commit run --all-files
 - PR помечен как `ready_for_review`
 - CI падает (`failure`)
 - Issues закрыты
+- Bot operations (approval required, completed, failed)
 
 **Setup:**
 1. Создать бота через @BotFather
@@ -86,9 +129,16 @@ git commit -m "READY: TimescaleDB ingestion completed, tests green"
 
 **Процесс:**
 1. Атомарные коммиты с информативными сообщениями
-2. Pre-commit hooks обязательны (ruff, black, bandit)
+2. Pre-commit hooks обязательны (ruff, black, bandit, actionlint)
 3. PR review для всех изменений
 4. "READY:" коммиты для уведомлений о готовности
+5. Bot operations для автоматизации рутинных задач
+
+**Bot Operations Workflow:**
+1. Безопасные операции выполняются автоматически
+2. Критичные операции требуют `/approve` команды
+3. Все действия логируются и могут быть откачены
+4. Сессии разработки с auto-approval настройками
 
 ## 🔒 Security
 
@@ -97,6 +147,11 @@ git commit -m "READY: TimescaleDB ingestion completed, tests green"
 - Rate limiting на критичных эндпоинтах
 - Audit trail для всех операций
 - HTTPS + secure cookies в production
+- **Bot operations security:**
+  - Risk classification для всех автоматических операций
+  - Validation опасных команд в workflows
+  - Approval gates для критичных изменений
+  - Rollback capability с restore points
 
 ## 📚 Documentation
 
@@ -104,6 +159,10 @@ git commit -m "READY: TimescaleDB ingestion completed, tests green"
 - `DoD_CHECKLISTS.md` → критерии приемки этапов
 - `backend/BACKEND_IMPLEMENTATION_PLAN.md` → детальный план backend
 - `nuxt_frontend/IMPLEMENTATION_PLAN.md` → план frontend
+- **Bot Operations:**
+  - `scripts/bot_risk_classifier.py` → алгоритм классификации операций
+  - `scripts/bot_session_manager.py` → управление сессиями разработки
+  - `scripts/validate_workflows.py` → валидация GitHub Actions
 
 ## 🤝 Contributing
 
@@ -111,6 +170,11 @@ git commit -m "READY: TimescaleDB ingestion completed, tests green"
 2. Следовать архитектурным принципам (инкрементальность, совместимость)
 3. Покрывать изменения тестами
 4. Обновлять документацию при изменении контрактов
+5. **Для bot operations:**
+   - Использовать `/start-session` для активных сессий разработки
+   - Безопасные операции (docs, tests, lint) выполняются автоматически
+   - Критичные изменения требуют manual approval через `/approve`
+   - При ошибках использовать `/rollback` для отката
 
 ---
 
