@@ -140,7 +140,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ChatMessage, ChatSession } from '~/types/api'
+import type { ChatMessage, ChatSession } from '~/types/chat'
 
 // Page metadata
 definePageMeta({
@@ -151,12 +151,12 @@ definePageMeta({
 const { t } = useI18n()
 
 // State with proper typing
-const activeSession = ref(null)
+const activeSession = ref<ChatSession | null>(null)
 const newMessage = ref('')
 const isLoading = ref(false)
 
 // Mock chat sessions data with proper typing
-const chatSessions = ref([
+const chatSessions = ref<ChatSession[]>([
   {
     id: 1,
     title: 'Диагностика насосной станции',
