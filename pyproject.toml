@@ -11,50 +11,72 @@ select = ["E", "F", "I", "UP", "B", "SIM", "DTZ", "PTH", "RUF", "ARG"]
 ignore = ["D", "ANN"]
 
 [tool.ruff.lint.per-file-ignores]
-# Полное отключение для автогенерируемых/тестов
-"*/migrations/*" = ["ALL"]
-"*/tests/*" = ["ALL"]
+# Миграции Django - полное исключение
+"*/migrations/*.py" = [
+    "E", "F", "I", "UP", "B", "SIM", "DTZ", "PTH", "RUF", "ARG",
+    "W", "C", "N", "YTT", "S", "BLE", "FBT", "A", "COM", "CPY",
+    "C4", "EM", "EXE", "FA", "ISC", "ICN", "G", "INP", "PIE",
+    "PYI", "Q", "RSE", "RET", "SLF", "SLOT", "TID", "TCH",
+    "INT", "ARG", "PTH", "TD", "FIX", "ERA", "PD", "PGH", "PL",
+    "TRY", "FLY", "NPY", "AIR", "PERF", "FURB", "LOG", "RUF"
+]
 
-# Django/DRF patterns — RUF012 это норма для всех Django файлов
+# Тесты - исключение большинства правил
+"*/tests/*.py" = [
+    "D", "ANN", "S", "BLE", "FBT", "A", "DTZ", "EM", "G", "PIE",
+    "ARG", "PTH", "TD", "FIX", "ERA", "PD", "PGH", "TRY", "RUF012"
+]
+
+"test_*.py" = [
+    "D", "ANN", "S", "BLE", "FBT", "A", "DTZ", "EM", "G", "PIE",
+    "ARG", "PTH", "TD", "FIX", "ERA", "PD", "PGH", "TRY", "RUF012"
+]
+
+# Django/DRF паттерны - специфические исключения
 "*/admin.py" = ["RUF012", "DTZ005", "RUF001"]
-"*/models.py" = ["RUF012", "RUF001", "RUF002"]
-"*/serializers.py" = ["RUF012", "D205"]
-"*/views.py" = ["RUF012"]
-"*/optimized_views.py" = ["RUF012", "D205", "SIM102"]
+"*/models.py" = ["RUF012", "RUF001", "RUF002", "A003"]
+"*/serializers.py" = ["RUF012", "RUF001"]
+"*/views.py" = ["RUF012", "ARG001", "ARG002"]
+"*/optimized_views.py" = ["RUF012", "SIM102", "ARG001"]
 
-# Django специфика — ARG001 норма для сигналов/celery
-"*/signals.py" = ["ARG001", "D205"]
-"*/celery.py" = ["ARG001"]
-"*/tasks.py" = ["ARG001", "D417", "B904", "DTZ003"]
+# Django специфика - сигналы и задачи
+"*/signals.py" = ["ARG001", "ARG002"]
+"*/celery.py" = ["ARG001", "UP007"]
+"*/tasks.py" = ["ARG001", "B904", "DTZ003", "RUF001"]
 "*/tasks_build.py" = ["ARG001", "DTZ003"]
-"*/urls.py" = ["ARG001", "PLC0415"]
+"*/urls.py" = ["ARG001", "RUF001"]
 
-# Системные файлы
-"*/asgi.py" = ["PGH003", "ARG001"]
-"*/health_checks.py" = ["PLC0415", "D205", "ARG001"]
-"*/pagination.py" = ["D205", "B904"]
-"*/settings.py" = ["RUF003"]
-"manage.py" = ["PLC0415"]
+# Системные файлы Django
+"*/asgi.py" = ["ARG001", "UP007"]
+"*/wsgi.py" = ["ARG001", "UP007"]
+"*/health_checks.py" = ["ARG001", "RUF001"]
+"*/pagination.py" = ["B904", "RUF001"]
+"*/settings.py" = ["RUF003", "F405", "F403"]
+"*/settings/*.py" = ["RUF003", "F405", "F403"]
+"manage.py" = ["ARG001"]
 "*/__init__.py" = ["F401"]
 
 # RAG/AI специфические файлы
-"*/rag_core.py" = ["PGH003", "PTH123"]
-"*/rag_service.py" = ["PLC0415", "B904", "PTH108", "PTH110"]
+"*/rag_core.py" = ["PTH123", "RUF001"]
+"*/rag_service.py" = ["B904", "PTH108", "PTH110"]
 "*/rag_system.py" = ["PTH118", "RUF001"]
-"*/llm_factory.py" = ["PGH003"]
-"*/middleware.py" = ["D205", "SIM102", "PLC0415"]
+"*/llm_factory.py" = ["RUF001"]
+"*/middleware.py" = ["SIM102", "ARG001"]
 "*/apps.py" = ["RUF001"]
 
 # Диагностические файлы
 "*/timescale_tasks.py" = ["ARG001", "B012"]
-"*/websocket_consumers.py" = ["DTZ005", "PLC0415"]
-"*/test_*.py" = ["DTZ005", "PLC0415", "PT017"]
-"test_*.py" = ["DTZ005", "PTH120", "PLC0415"]
+"*/websocket_consumers.py" = ["DTZ005", "ARG001"]
 
 [tool.ruff.format]
 quote-style = "double"
-indent-style = "space"
+indent-style = "space"  
 
 [tool.ruff.lint.isort]
 known-first-party = ["backend", "apps", "core"]
 combine-as-imports = true
+
+[tool.bandit]
+# Bandit настройки для безопасности
+skips = ["B101", "B601"]
+exclude_dirs = ["tests", "migrations"]
