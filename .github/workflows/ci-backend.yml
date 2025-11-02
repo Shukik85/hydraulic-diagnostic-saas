@@ -2,7 +2,7 @@ name: Backend CI
 
 on:
   push:
-    branches: [chore/lint-fixes-ci-green, main]
+    branches: [chore/lint-fixes-ci-green, main, master]
     paths:
       - 'backend/**'
       - 'pyproject.toml'
@@ -40,12 +40,16 @@ jobs:
           pip install -r backend/requirements.txt
           pip install -r backend/requirements-dev.txt
           
-      - name: Lint (Ruff)
+      - name: Lint (Ruff check)
         run: |
           ruff --version
-          ruff check backend --fix --exit-non-zero-on-fix
+          ruff check backend --output-format=github
 
-      - name: Format (Black)
+      - name: Lint (Ruff format check)
+        run: |
+          ruff format --check backend --diff
+
+      - name: Format (Black) 
         run: |
           black --version
           black --check backend
