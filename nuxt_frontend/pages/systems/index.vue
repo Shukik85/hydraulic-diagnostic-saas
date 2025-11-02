@@ -73,11 +73,12 @@
 </template>
 
 <script setup lang="ts">
+import { definePageMeta } from '#imports'
 import type { HydraulicSystem } from '~/types/api'
 
 // Page metadata
 definePageMeta({
-  layout: 'dashboard',
+  layout: 'dashboard' as const,
   middleware: ['auth']
 })
 
@@ -89,7 +90,10 @@ const showCreateModal = ref(false)
 const isCreating = ref(false)
 
 // Mock data
-const systems = ref<HydraulicSystem[]>([
+const systems = ref([] as HydraulicSystem[])
+
+// Initialize with mock data
+systems.value = [
   {
     id: 1,
     name: 'HYD-001 - Pump Station A',
@@ -120,7 +124,7 @@ const systems = ref<HydraulicSystem[]>([
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   }
-])
+]
 
 // Methods
 const handleCreateSystem = async (data: any) => {
