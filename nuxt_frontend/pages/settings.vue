@@ -8,13 +8,9 @@
 
     <!-- Settings Navigation -->
     <div class="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        @click="activeTab = tab.id"
+      <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
         class="px-4 py-2 text-sm font-medium rounded-md u-transition-fast"
-        :class="activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
-      >
+        :class="activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'">
         <Icon :name="tab.icon" class="w-4 h-4 mr-2 inline" />
         {{ tab.name }}
       </button>
@@ -27,7 +23,7 @@
           <h3 class="u-h4">{{ t('settings.profile.title') }}</h3>
           <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.profile.subtitle') }}</p>
         </div>
-        
+
         <div class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -39,12 +35,12 @@
               <input v-model="profile.lastName" class="u-input" />
             </div>
           </div>
-          
+
           <div>
             <label class="u-label">{{ t('settings.profile.emailAddress') }}</label>
             <input v-model="profile.email" type="email" class="u-input" />
           </div>
-          
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="u-label">{{ t('settings.profile.company') }}</label>
@@ -55,7 +51,7 @@
               <input v-model="profile.phone" type="tel" class="u-input" />
             </div>
           </div>
-          
+
           <div class="pt-4">
             <button class="u-btn u-btn-primary u-btn-md">
               <Icon name="heroicons:check" class="w-4 h-4 mr-2" />
@@ -70,7 +66,7 @@
           <h3 class="u-h4">{{ t('settings.profile.changePassword') }}</h3>
           <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.profile.changePasswordSubtitle') }}</p>
         </div>
-        
+
         <div class="space-y-4">
           <div>
             <label class="u-label">{{ t('settings.profile.currentPassword') }}</label>
@@ -84,7 +80,7 @@
             <label class="u-label">{{ t('settings.profile.confirmPassword') }}</label>
             <input type="password" class="u-input" :placeholder="t('settings.profile.confirmPasswordPlaceholder')" />
           </div>
-          
+
           <div class="pt-4">
             <button class="u-btn u-btn-primary u-btn-md">
               <Icon name="heroicons:key" class="w-4 h-4 mr-2" />
@@ -102,49 +98,63 @@
           <h3 class="u-h4">{{ t('settings.notifications.title') }}</h3>
           <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.notifications.subtitle') }}</p>
         </div>
-        
+
         <div class="space-y-6">
           <div class="u-flex-between">
             <div>
               <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.systemAlerts') }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.systemAlertsDesc') }}</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.systemAlertsDesc') }}
+              </p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="notifications.systemAlerts" type="checkbox" class="sr-only peer" />
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <div
+                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+              </div>
             </label>
           </div>
-          
+
           <div class="u-flex-between">
             <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.maintenanceReminders') }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.maintenanceRemindersDesc') }}</p>
+              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.maintenanceReminders')
+              }}</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{
+                t('settings.notifications.maintenanceRemindersDesc') }}</p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="notifications.maintenanceReminders" type="checkbox" class="sr-only peer" />
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <div
+                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+              </div>
             </label>
           </div>
-          
+
           <div class="u-flex-between">
             <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.diagnosticReports') }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.diagnosticReportsDesc') }}</p>
+              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.diagnosticReports') }}
+              </p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.diagnosticReportsDesc')
+              }}</p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="notifications.diagnosticReports" type="checkbox" class="sr-only peer" />
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <div
+                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+              </div>
             </label>
           </div>
-          
+
           <div class="u-flex-between">
             <div>
               <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.weeklySummary') }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.weeklySummaryDesc') }}</p>
+              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.weeklySummaryDesc') }}
+              </p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="notifications.weeklySummary" type="checkbox" class="sr-only peer" />
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <div
+                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+              </div>
             </label>
           </div>
         </div>
@@ -158,7 +168,7 @@
           <h3 class="u-h4">{{ t('settings.integrations.title') }}</h3>
           <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.integrations.subtitle') }}</p>
         </div>
-        
+
         <div class="space-y-4">
           <div class="u-flex-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
             <div class="flex items-center gap-3">
@@ -167,7 +177,8 @@
               </div>
               <div>
                 <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.integrations.scadaSystem') }}</p>
-                <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.integrations.scadaSystemDesc') }}</p>
+                <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.integrations.scadaSystemDesc') }}
+                </p>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -198,8 +209,10 @@
                 <Icon name="heroicons:chat-bubble-left-right" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.integrations.slackIntegration') }}</p>
-                <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.integrations.slackIntegrationDesc') }}</p>
+                <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.integrations.slackIntegration') }}
+                </p>
+                <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.integrations.slackIntegrationDesc')
+                }}</p>
               </div>
             </div>
             <div class="flex items-center gap-2">
@@ -215,7 +228,7 @@
           <h3 class="u-h4">{{ t('settings.integrations.apiKeys') }}</h3>
           <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.integrations.apiKeysSubtitle') }}</p>
         </div>
-        
+
         <div class="space-y-4">
           <div class="u-flex-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <div>
@@ -232,7 +245,7 @@
               </button>
             </div>
           </div>
-          
+
           <button class="u-btn u-btn-ghost u-btn-md">
             <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
             {{ t('settings.integrations.generateNewKey') }}
@@ -270,7 +283,7 @@
               <tr>
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full u-flex-center">
+                    <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full u-flex-center">
                       <Icon name="heroicons:user" class="w-4 h-4 text-white" />
                     </div>
                     <div>
@@ -284,16 +297,20 @@
                 <td><span class="u-badge u-badge-success">{{ t('settings.team.active') }}</span></td>
                 <td>
                   <div class="flex items-center gap-1">
-                    <button class="u-btn u-btn-ghost u-btn-sm"><Icon name="heroicons:pencil" class="w-4 h-4" /></button>
-                    <button class="u-btn u-btn-ghost u-btn-sm"><Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" /></button>
+                    <button class="u-btn u-btn-ghost u-btn-sm">
+                      <Icon name="heroicons:pencil" class="w-4 h-4" />
+                    </button>
+                    <button class="u-btn u-btn-ghost u-btn-sm">
+                      <Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
-              
+
               <tr>
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-500 rounded-full u-flex-center">
+                    <div class="w-8 h-8 bg-linear-to-br from-green-500 to-teal-500 rounded-full u-flex-center">
                       <Icon name="heroicons:user" class="w-4 h-4 text-white" />
                     </div>
                     <div>
@@ -307,8 +324,12 @@
                 <td><span class="u-badge u-badge-success">{{ t('settings.team.active') }}</span></td>
                 <td>
                   <div class="flex items-center gap-1">
-                    <button class="u-btn u-btn-ghost u-btn-sm"><Icon name="heroicons:pencil" class="w-4 h-4" /></button>
-                    <button class="u-btn u-btn-ghost u-btn-sm"><Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" /></button>
+                    <button class="u-btn u-btn-ghost u-btn-sm">
+                      <Icon name="heroicons:pencil" class="w-4 h-4" />
+                    </button>
+                    <button class="u-btn u-btn-ghost u-btn-sm">
+                      <Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -325,7 +346,7 @@
           <h3 class="u-h4">{{ t('settings.system.title') }}</h3>
           <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.system.subtitle') }}</p>
         </div>
-        
+
         <div class="space-y-6">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -346,7 +367,7 @@
               </select>
             </div>
           </div>
-          
+
           <div class="u-flex-between">
             <div>
               <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.system.autoBackup') }}</p>
@@ -354,10 +375,12 @@
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" checked class="sr-only peer" />
-              <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              <div
+                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+              </div>
             </label>
           </div>
-          
+
           <div class="pt-4">
             <button class="u-btn u-btn-primary u-btn-md">
               <Icon name="heroicons:check" class="w-4 h-4 mr-2" />
@@ -380,13 +403,13 @@ definePageMeta({
 const { t } = useI18n()
 const activeTab = ref('profile')
 
-const tabs = [
+const tabs = computed(() => [
   { id: 'profile', name: t('settings.tabs.profile'), icon: 'heroicons:user' },
   { id: 'notifications', name: t('settings.tabs.notifications'), icon: 'heroicons:bell' },
   { id: 'integrations', name: t('settings.tabs.integrations'), icon: 'heroicons:puzzle-piece' },
   { id: 'team', name: t('settings.tabs.team'), icon: 'heroicons:users' },
   { id: 'system', name: t('settings.tabs.system'), icon: 'heroicons:cog-6-tooth' }
-]
+])
 
 const profile = ref({ firstName: 'John', lastName: 'Doe', email: 'john.doe@company.com', company: 'ABC Manufacturing', phone: '+1 (555) 123-4567' })
 
