@@ -248,11 +248,12 @@
 <script setup lang="ts">
 import { definePageMeta } from '#imports'
 
+// Business Analytics page uses dashboard layout for authenticated internal pages
 definePageMeta({
   title: 'Business Analytics',
-  layout: 'default' as const,
+  layout: 'dashboard' as const,
   middleware: ['auth']
-})
+} as const)
 
 // Business intelligence data
 const marketData = ref({
