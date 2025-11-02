@@ -1,0 +1,67 @@
+name: Telegram Notifications
+
+on:
+  push:
+    branches: [chore/lint-fixes-ci-green, main]
+  pull_request:
+    types: [ready_for_review]
+  workflow_run:
+    workflows: ["Frontend CI", "Backend CI"]
+    types: [completed]
+  issues:
+    types: [closed]
+
+jobs:
+  notify:
+    name: Send Telegram Notification
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'READY:')) ||
+      (github.event_name == 'pull_request' && github.event.action == 'ready_for_review') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure') ||
+      (github.event_name == 'issues' && github.event.action == 'closed')
+      
+    steps:
+      - name: Get commit info
+        id: commit
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "sha=${{ github.event.head_commit.id }}" >> $GITHUB_OUTPUT
+            echo "message=${{ github.event.head_commit.message }}" >> $GITHUB_OUTPUT
+            echo "url=${{ github.event.head_commit.url }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "sha=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+            echo "message=PR ready: ${{ github.event.pull_request.title }}" >> $GITHUB_OUTPUT
+            echo "url=${{ github.event.pull_request.html_url }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+            echo "message=CI Failed: ${{ github.event.workflow_run.name }}" >> $GITHUB_OUTPUT
+            echo "url=${{ github.event.workflow_run.html_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "sha=N/A" >> $GITHUB_OUTPUT
+            echo "message=Issue closed: ${{ github.event.issue.title }}" >> $GITHUB_OUTPUT
+            echo "url=${{ github.event.issue.html_url }}" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Send Telegram notification
+        run: |
+          MESSAGE="🎯 Hydraulic Diagnostic SaaS\n\n"
+          
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            MESSAGE="${MESSAGE}✅ $(echo "${{ steps.commit.outputs.message }}" | head -n1)\n"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            MESSAGE="${MESSAGE}🔄 ${{ steps.commit.outputs.message }}\n"
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            MESSAGE="${MESSAGE}❌ ${{ steps.commit.outputs.message }}\n"
+          else
+            MESSAGE="${MESSAGE}📋 ${{ steps.commit.outputs.message }}\n"
+          fi
+          
+          MESSAGE="${MESSAGE}🔗 ${{ steps.commit.outputs.url }}\n"
+          MESSAGE="${MESSAGE}⏰ $(date '+%d.%m.%Y %H:%M MSK')"
+          
+          curl -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=${MESSAGE}" \
+            -d "parse_mode=HTML" \
+            -d "disable_web_page_preview=true"
