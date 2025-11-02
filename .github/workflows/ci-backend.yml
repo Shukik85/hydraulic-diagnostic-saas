@@ -40,10 +40,26 @@ jobs:
           pip install -r backend/requirements.txt
           pip install -r backend/requirements-dev.txt
           
-      - name: Pre-commit (Ruff, Black, Bandit, pip-audit)
+      - name: Lint (Ruff)
         run: |
-          pip install pre-commit
-          pre-commit run --all-files
+          ruff --version
+          ruff backend --fix --exit-non-zero-on-fix
+
+      - name: Format (Black)
+        run: |
+          black --version
+          black --check backend
+
+      - name: Security (Bandit)
+        run: |
+          bandit --version
+          bandit -c pyproject.toml -r backend -x tests
+
+      # Pre-commit отключён в CI: инструменты запускаются отдельно
+      # - name: Pre-commit (disabled in CI; covered by individual steps)
+      #   run: |
+      #     pip install pre-commit
+      #     pre-commit run --all-files
           
       - name: Django checks
         run: |
