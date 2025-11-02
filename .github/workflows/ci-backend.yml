@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (Ruff, Black, Bandit, pytest)
+    name: Backend (Ruff, Bandit, pytest)
     runs-on: ubuntu-latest
     
     steps:
@@ -40,30 +40,19 @@ jobs:
           pip install -r backend/requirements.txt
           pip install -r backend/requirements-dev.txt
           
-      - name: Lint (Ruff check)
+      - name: Lint & Format (Ruff)
         run: |
           ruff --version
           ruff check backend --output-format=github
-
-      - name: Lint (Ruff format check)
-        run: |
           ruff format --check backend --diff
-
-      - name: Format (Black) 
-        run: |
-          black --version
-          black --check backend
 
       - name: Security (Bandit)
         run: |
           bandit --version
           bandit -c pyproject.toml -r backend -x tests
 
-      # Pre-commit отключён в CI: инструменты запускаются отдельно
-      # - name: Pre-commit (disabled in CI; covered by individual steps)
-      #   run: |
-      #     pip install pre-commit
-      #     pre-commit run --all-files
+      # Ruff format заменяет Black - дублирование не нужно
+      # Black и Ruff format делают одно и то же
           
       - name: Django checks
         run: |
