@@ -1,12 +1,9 @@
 <template>
   <div class="space-y-8">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex items-center justify-between">
       <div>
         <h1 class="u-h2">{{ t('systems.title') }}</h1>
-        <p class="u-body text-gray-600 mt-1">
-          {{ t('systems.subtitle') }}
-        </p>
+        <p class="u-body text-gray-600 mt-1">{{ t('systems.subtitle') }}</p>
       </div>
       <button @click="showCreateModal = true" class="u-btn u-btn-primary u-btn-md w-full sm:w-auto">
         <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
@@ -14,7 +11,6 @@
       </button>
     </div>
 
-    <!-- Systems Grid -->
     <div v-if="systems.length > 0" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <div v-for="system in systems" :key="system.id" class="u-card p-6 hover:shadow-lg transition-shadow">
         <div class="flex items-start justify-between mb-4">
@@ -26,22 +22,22 @@
             {{ t(`systems.status.${system.status}`) }}
           </span>
         </div>
-        
+
         <div class="space-y-3">
           <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">Давление</span>
+            <span class="text-sm text-gray-600">{{ t('systems.pressure') }}</span>
             <span class="font-semibold">{{ system.pressure }} бар</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">Температура</span>
+            <span class="text-sm text-gray-600">{{ t('systems.temperature') }}</span>
             <span class="font-semibold">{{ system.temperature }}°C</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">Обновлено</span>
+            <span class="text-sm text-gray-600">{{ t('systems.updated') }}</span>
             <span class="text-sm text-gray-500">{{ formatDate(system.last_update) }}</span>
           </div>
         </div>
-        
+
         <div class="flex items-center gap-2 mt-4">
           <NuxtLink :to="`/systems/${system.id}`" class="u-btn u-btn-primary u-btn-sm flex-1">
             <Icon name="heroicons:eye" class="w-4 h-4 mr-1" />
@@ -55,7 +51,6 @@
       </div>
     </div>
 
-    <!-- Empty State -->
     <div v-else class="u-card p-12 text-center">
       <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <Icon name="heroicons:server-stack" class="w-8 h-8 text-gray-400" />
@@ -68,7 +63,6 @@
       </button>
     </div>
 
-    <!-- Create System Modal -->
     <UCreateSystemModal
       v-model="showCreateModal"
       :loading="isCreating"
@@ -83,6 +77,7 @@ import type { HydraulicSystem } from '~/types/api'
 
 // Page metadata
 definePageMeta({
+  layout: 'dashboard',
   middleware: ['auth']
 })
 
@@ -93,7 +88,7 @@ const { t } = useI18n()
 const showCreateModal = ref(false)
 const isCreating = ref(false)
 
-// Mock systems data
+// Mock data
 const systems = ref<HydraulicSystem[]>([
   {
     id: 1,
@@ -130,9 +125,7 @@ const systems = ref<HydraulicSystem[]>([
 // Methods
 const handleCreateSystem = async (data: any) => {
   isCreating.value = true
-  
   try {
-    // Local state fallback (no store integration yet)
     const newSystem: HydraulicSystem = {
       id: Date.now(),
       name: data.name,
