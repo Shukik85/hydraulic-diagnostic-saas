@@ -248,11 +248,12 @@
 <script setup lang="ts">
 import { definePageMeta } from '#imports'
 
+// Use const assertion on entire metadata object for Nuxt 4 strict typing
 definePageMeta({
   title: 'Business Analytics',
-  layout: 'default' as const,
+  layout: 'default',
   middleware: ['auth']
-})
+} as const)
 
 // Business intelligence data
 const marketData = ref({
