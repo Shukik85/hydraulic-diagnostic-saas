@@ -1,137 +1,93 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2024-04-03',
+  ssr: false, // SPA режим для дэшборда
+
+  compatibilityDate: '2025-10-30', // Убираем warning
+
   devtools: { enabled: true },
 
-  // Runtime configuration
+  modules: [
+    '@pinia/nuxt',
+    '@nuxtjs/i18n',
+    '@nuxt/icon',
+    '@nuxt/image',
+    '@nuxtjs/color-mode'
+  ],
+
+  i18n: {
+    locales: [
+      {
+        code: 'ru',
+        name: 'Русский',
+        file: 'ru.json',
+        language: 'ru-RU'
+      },
+      {
+        code: 'en',
+        name: 'English',
+        file: 'en.json',
+        language: 'en-US'
+      }
+    ],
+    defaultLocale: 'ru',
+    strategy: 'no_prefix',
+    langDir: 'locales',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_redirected',
+      redirectOn: 'root',
+      fallbackLocale: 'ru'
+    },
+    // Для @nuxtjs/i18n v10 - отдельная конфигурация
+    vueI18n: './i18n.config.ts'
+  },
+
   runtimeConfig: {
-    // Private keys (server-side only)
-    apiSecret: process.env.NUXT_API_SECRET || '',
-    
-    // Public keys (exposed to client)
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
-      appName: 'Hydraulic Diagnostic SaaS',
-      appVersion: '1.0.0'
+      wsBase: process.env.NUXT_PUBLIC_WS_BASE || 'ws://localhost:8000/ws',
+      version: '1.0.0'
     }
   },
 
-  // App configuration
+  css: [
+    '~/styles/premium-tokens.css'
+  ],
+
+  postcss: {
+    plugins: {
+      '@tailwindcss/postcss': {},
+      autoprefixer: {}
+    }
+  },
+
+  // Единый корневой путь компонентов, рекурсивное сканирование подпапок
+  components: [
+    { path: '~/components', global: true, pathPrefix: false },
+    { path: '~/components/ui', global: true, pathPrefix: false }
+  ],
+
   app: {
     head: {
-      charset: 'utf-8',
-      viewport: 'width=device-width, initial-scale=1',
-      title: 'Hydraulic Diagnostic SaaS',
+      title: 'Гидравлик Диагностик - Промышленные Решения',
       meta: [
-        { name: 'description', content: 'Professional hydraulic system diagnostic platform' },
-        { name: 'format-detection', content: 'telephone=no' }
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: 'Интеллектуальная платформа диагностики гидравлических систем с ИИ-анализом' }
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ]
-    },
-    // Page transitions
-    pageTransition: { name: 'page', mode: 'out-in' },
-    layoutTransition: { name: 'layout', mode: 'out-in' }
+    }
   },
 
-  // Modules
-  modules: [
-    // Add modules here as needed
-    // '@nuxtjs/tailwindcss',
-    // '@pinia/nuxt',
-    // '@vueuse/nuxt',
-  ],
-
-  // CSS configuration
-  css: [
-    // Add global CSS files here
-    // '~/assets/css/main.css'
-  ],
-
-  // Build configuration
+  // Explicit component transpilation for better compatibility
   build: {
-    transpile: [],
+    transpile: []
   },
 
-  // Vite configuration
-  vite: {
-    build: {
-      // Chunk size warnings
-      chunkSizeWarningLimit: 1000,
-      // Optimize deps
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vue-vendor': ['vue', 'vue-router']
-          }
-        }
-      }
-    },
-    optimizeDeps: {
-      include: ['vue', 'vue-router']
-    }
-  },
-
-  // Nitro configuration (server)
-  nitro: {
-    compressPublicAssets: true,
-    minify: true,
-    // Prerender routes for static generation
-    prerender: {
-      crawlLinks: true,
-      routes: ['/']
-    },
-    // Server handlers
-    routeRules: {
-      // Add caching rules
-      '/**': { 
-        headers: {
-          'cache-control': 'public, max-age=0, must-revalidate'
-        }
-      },
-      '/api/**': { 
-        cors: true,
-        headers: {
-          'cache-control': 'no-cache'
-        }
-      }
-    }
-  },
-
-  // TypeScript configuration
-  typescript: {
-    strict: true,
-    typeCheck: false, // Enable in development if needed
-    shim: false
-  },
-
-  // Experimental features
+  // Client-side rendering optimization
   experimental: {
-    payloadExtraction: true,
-    renderJsonPayloads: true,
-    typedPages: true
-  },
-
-  // Development configuration
-  devServer: {
-    port: 3000,
-    host: '0.0.0.0'
-  },
-
-  // Import auto-imports configuration
-  imports: {
-    dirs: [
-      'composables',
-      'composables/**'
-    ]
-  },
-
-  // Component auto-import configuration
-  components: [
-    {
-      path: '~/components',
-      pathPrefix: false
-    }
-  ]
+    payloadExtraction: false
+  }
 })

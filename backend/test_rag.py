@@ -1,37 +1,63 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
+import json
 import os
+from pathlib import Path
 import sys
+import time
+from typing import Any
+
+import django
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+import numpy as np
 
 # Инициализация Django окружения (для доступа к settings, если нужно)
 BASE_DIR = os.path.dirname(__file__)
 sys.path.insert(0, BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
-import django
 django.setup()
 
-import time
-import json
-from typing import List, Dict, Any
-import numpy as np
-from pathlib import Path
-
-from apps.rag_assistant.rag_core import (
-    LocalStorageBackend,
+# После django.setup() можно безопасно импортировать Django-зависимые модули
+from apps.rag_assistant.llm_factory import LLMFactory  # noqa: E402
+from apps.rag_assistant.rag_core import (  # noqa: E402
     DEFAULT_LOCAL_STORAGE,
+    LocalStorageBackend,
     VectorIndex,
 )
-from apps.rag_assistant.llm_factory import LLMFactory
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 
 
-def format_docs(docs: List[Dict[str, Any]]) -> str:
+def format_docs(docs: list[dict[str, Any]]) -> str:
+    """Выполняет format docs
+
+    pass
+    Args:
+        docs (Any): Параметр docs
+
+    """
     return "\n\n".join(d["content"] for d in docs if d.get("content"))
 
 
 def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
-    def _encode(texts: List[str]) -> np.ndarray:
+    """Выполняет build rag chain
+
+    pass
+    Args:
+        vindex (Any): Параметр vindex
+        ollama_embedder (Any): Параметр ollama_embedder
+        llm (Any): Параметр llm
+
+    """
+
+    def _encode(texts: list[str]) -> np.ndarray:
+        """Выполняет  encode
+
+        Args:
+            texts (Any): Параметр texts
+
+        """
         embs = ollama_embedder.embed_documents(texts)
         arr = np.array(embs, dtype="float32")
         norms = np.linalg.norm(arr, axis=1, keepdims=True) + 1e-12
@@ -40,6 +66,12 @@ def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
     docs_list = (vindex.metadata or {}).get("docs", [])
 
     def retrieve(question: str):
+        """Выполняет retrieve
+
+        Args:
+            question (Any): Параметр question
+
+        """
         q_emb = _encode([question])
         _, indices = vindex.search(q_emb, k=4)
         results = []
@@ -65,18 +97,20 @@ def build_rag_chain(vindex: VectorIndex, ollama_embedder, llm):
     )
     parser = StrOutputParser()
 
-    chain = (
+    return (
         {"question": RunnablePassthrough()}
         | {"docs": RunnableLambda(lambda x: retrieve(x["question"]))}
-        | RunnableLambda(lambda x: {"question": x["question"], "context": format_docs(x["docs"])})
+        | RunnableLambda(
+            lambda x: {"question": x["question"], "context": format_docs(x["docs"])}
+        )
         | prompt
         | llm
         | parser
     )
-    return chain
 
 
 def main():
+    """Выполняет main"""
     print("✅ AI Engine и RAG система инициализированы")
 
     # 1) Исходные документы
@@ -118,7 +152,7 @@ def main():
     # 4) Запросы
     print("🔍 Testing RAG chain...")
     queries = ["pump problems", "pressure issues", "air in lines"]
-    for i, q in enumerate(queries, 1):
+    for _i, q in enumerate(queries, 1):
         t0 = time.time()
         answer = chain.invoke({"question": q})
         dt = time.time() - t0

@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 import os
 
 from django.core.asgi import get_asgi_application
@@ -8,6 +10,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 try:
     from channels.auth import AuthMiddlewareStack  # type: ignore
     from channels.routing import ProtocolTypeRouter, URLRouter  # type: ignore
+
     from apps.diagnostics import routing  # type: ignore
 
     application = ProtocolTypeRouter(

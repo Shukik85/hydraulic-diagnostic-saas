@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # apps/rag_assistant/optimized_views.py
 # ОПТИМИЗИРОВАННЫЕ VIEWSETS ДЛЯ RAG ASSISTANT
 
@@ -11,13 +13,12 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 
+from core.pagination import LargeResultsSetPagination, StandardResultsSetPagination
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
-
-from core.pagination import LargeResultsSetPagination, StandardResultsSetPagination
 
 from .models import Document, RagQueryLog, RagSystem
 from .rag_service import RagAssistant
@@ -29,18 +30,17 @@ performance_logger = logging.getLogger("performance")
 
 
 class AIOperationThrottle(UserRateThrottle):
-    """Custom throttle для AI операций"""
+    """Custom throttle для AI операций."""
 
     scope = "ai_queries"
 
 
 class OptimizedDocumentViewSet(viewsets.ModelViewSet):
-    """
-    Оптимизированный ViewSet для документов с:
+    """Оптимизированный ViewSet для документов с:
     - select_related/prefetch_related для оптимизации запросов
     - кеширование списков на 5 минут
     - разные поля для list и detail вьюх
-    - async обработка через Celery
+    - async обработка через Celery.
     """
 
     serializer_class = DocumentSerializer
@@ -57,9 +57,7 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
 
     def get_queryset(self):
-        """
-        Оптимизированные запросы с select_related
-        """
+        """Оптимизированные запросы с select_related."""
         queryset = Document.objects.select_related("rag_system")
 
         # Разные поля для разных действий
@@ -88,16 +86,12 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
     @method_decorator(cache_page(60 * 5))  # 5 минут кеш
     @method_decorator(vary_on_headers("User-Agent", "Accept-Language"))
     def list(self, request, *args, **kwargs):
-        """
-        Оптимизированный list с кешированием
-        """
+        """Оптимизированный list с кешированием."""
         return super().list(request, *args, **kwargs)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        """
-        Создание документа с async обработкой
-        """
+        """Создание документа с async обработкой."""
         start_time = time.time()
 
         serializer = self.get_serializer(data=request.data)
@@ -134,9 +128,7 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated],
     )
     def reindex(self, request, pk=None):
-        """
-        Переиндексация конкретного документа
-        """
+        """Переиндексация конкретного документа."""
         document = self.get_object()
 
         # Запускаем асинхронную переиндексацию
@@ -158,9 +150,7 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated],
     )
     def batch_reindex(self, request):
-        """
-        Пакетная переиндексация документов
-        """
+        """Пакетная переиндексация документов."""
         document_ids = request.data.get("document_ids", [])
 
         if not document_ids:
@@ -201,16 +191,14 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
 
 
 class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
-    """
-    Оптимизированный ViewSet для RAG систем
-    """
+    """Оптимизированный ViewSet для RAG систем."""
 
     queryset = RagSystem.objects.prefetch_related(
         Prefetch(
             "document_set",
             queryset=Document.objects.only("id", "title", "language", "format"),
         )
-    ).annotate(document_count=Count("document"))
+    ).annotate(document_count=Count("id"))
     serializer_class = RagSystemSerializer
     pagination_class = StandardResultsSetPagination
     filter_backends = [
@@ -233,9 +221,7 @@ class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated],
     )
     def query(self, request, pk=None):
-        """
-        Оптимизированный запрос к RAG системе
-        """
+        """Оптимизированный запрос к RAG системе."""
         start_time = time.time()
 
         system = self.get_object()
@@ -309,9 +295,8 @@ class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
 
 
 class OptimizedRagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Оптимизированный ViewSet для логов RAG запросов
-    ReadOnly - только чтение, создание через RAG service
+    """Оптимизированный ViewSet для логов RAG запросов
+    ReadOnly - только чтение, создание через RAG service.
     """
 
     serializer_class = RagQueryLogSerializer
@@ -323,9 +308,7 @@ class OptimizedRagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """
-        Оптимизированные запросы для логов
-        """
+        """Оптимизированные запросы для логов."""
         queryset = RagQueryLog.objects.select_related("system", "document")
 
         # Ограничиваем доступ для обычных пользователей

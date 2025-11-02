@@ -1,0 +1,165 @@
+name: Hybrid Bot Operations
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: bot-operations-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  bot-hybrid:
+    name: Bot Hybrid Operations
+    runs-on: ubuntu-latest
+    if: >
+      github.event.issue.pull_request &&
+      (
+        contains(github.event.comment.body, '/start-session') ||
+        contains(github.event.comment.body, '/approve') ||
+        contains(github.event.comment.body, '/rollback') ||
+        contains(github.event.comment.body, '/bot-status')
+      )
+    
+    steps:
+      - name: Debug event
+        run: |
+          echo "🔍 Event trigger debug:"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Issue: #${{ github.event.issue.number }}"
+          echo "Comment: '${{ github.event.comment.body }}'"
+          echo "Has PR: ${{ !!github.event.issue.pull_request }}"
+          
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Parse command
+        id: parse
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          echo "full_comment=${COMMENT}" >> $GITHUB_OUTPUT
+          
+          echo "🔍 Debug: Full comment received:"
+          echo "$COMMENT"
+          
+          # Extract command type with case-insensitive matching
+          COMMENT_LOWER=$(echo "$COMMENT" | tr '[:upper:]' '[:lower:]')
+          
+          if echo "$COMMENT_LOWER" | grep -q '/start-session'; then
+            echo "command=start-session" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT_LOWER" | grep -q '/approve'; then
+            echo "command=approve" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT_LOWER" | grep -q '/rollback'; then
+            echo "command=rollback" >> $GITHUB_OUTPUT
+          elif echo "$COMMENT_LOWER" | grep -q '/bot-status'; then
+            echo "command=status" >> $GITHUB_OUTPUT
+          else
+            echo "command=unknown" >> $GITHUB_OUTPUT
+          fi
+          
+          # Extract JSON payload if present
+          JSON_PAYLOAD=$(echo "$COMMENT" | grep -o '{[^}]*}' || echo "{}")
+          echo "json_payload=${JSON_PAYLOAD}" >> $GITHUB_OUTPUT
+          
+          PARSED_CMD=$(grep "command=" $GITHUB_OUTPUT | cut -d'=' -f2)
+          echo "📊 Parsed command: $PARSED_CMD"
+          echo "📋 Parsed payload: $JSON_PAYLOAD"
+          
+      - name: Handle start-session
+        if: steps.parse.outputs.command == 'start-session'
+        run: |
+          echo "🚀 Starting bot session..."
+          
+          # Install jq if not available
+          sudo apt-get update -qq && sudo apt-get install -y jq
+          
+          # Create session file
+          mkdir -p .bot-operations
+          cat > .bot-operations/session.json << EOF
+          {
+            "session_id": "session-$(date +%s)",
+            "started_by": "${{ github.actor }}",
+            "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "pr_number": ${{ github.event.issue.number }},
+            "payload": ${{ steps.parse.outputs.json_payload }},
+            "status": "active",
+            "operations": []
+          }
+          EOF
+          
+          echo "✅ Session created:"
+          cat .bot-operations/session.json | jq .
+          
+      - name: Handle approve
+        if: steps.parse.outputs.command == 'approve'
+        run: |
+          echo "✅ Processing approval..."
+          PAYLOAD='${{ steps.parse.outputs.json_payload }}'
+          
+          if [[ "$PAYLOAD" != "{}" ]] && [[ "$PAYLOAD" != "" ]]; then
+            echo "📋 Operation payload: $PAYLOAD"
+            mkdir -p .bot-operations
+            echo "$PAYLOAD" > .bot-operations/approved-operation-$(date +%s).json
+            echo "✅ Operation approved and stored"
+          else
+            echo "❌ No operation payload found"
+          fi
+          
+      - name: Handle rollback
+        if: steps.parse.outputs.command == 'rollback'
+        run: |
+          echo "↩️ Processing rollback..."
+          echo "Rollback capability: READY (placeholder)"
+          
+      - name: Handle status
+        if: steps.parse.outputs.command == 'status'
+        run: |
+          echo "📊 Bot Operations Status"
+          if [ -f ".bot-operations/session.json" ]; then
+            echo "✅ Active Session:"
+            cat .bot-operations/session.json | jq . 2>/dev/null || cat .bot-operations/session.json
+          else
+            echo "❌ No active session"
+          fi
+          
+      - name: Comment response
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const command = '${{ steps.parse.outputs.command }}';
+            const actor = '${{ github.actor }}';
+            const prNumber = '${{ github.event.issue.number }}';
+            
+            let responseBody = '';
+            
+            if (command === 'start-session') {
+              responseBody = `🤖 **Bot Session Started!**\n\n✅ Session active for @${actor} in PR #${prNumber}\n\n**Commands:**\n- \`/approve {"files": [...]}\` - Approve operation\n- \`/rollback {"last": 3}\` - Rollback operations\n- \`/bot-status\` - Show session status\n\n🚀 **Demo successful!** Hybrid Bot Operations System is working.`;
+            } else if (command === 'approve') {
+              responseBody = `✅ **Operation Approved**\n\nDemo: Operation would be classified and executed.`;
+            } else if (command === 'rollback') {
+              responseBody = `↩️ **Rollback Demo**\n\nDemo: Would rollback recent operations.`;
+            } else if (command === 'status') {
+              responseBody = `📊 **Bot Status**\n\n✅ **System:** Online\n🤖 **Session:** Active\n📋 **Commands:** Ready`;
+            } else {
+              responseBody = `❓ **Unknown Command**\n\n**Available:** /start-session, /approve, /rollback, /bot-status`;
+            }
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: responseBody
+            });

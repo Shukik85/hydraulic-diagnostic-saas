@@ -1,13 +1,16 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 import asyncio
+from datetime import datetime, timedelta
 import json
 import logging
-from datetime import datetime, timedelta
 
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
-
+from asgiref.sync import async_to_sync
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.layers import get_channel_layer
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 
 from .models import HydraulicSystem, SensorData
 
@@ -16,9 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
-    """
-    WebSocket consumer для real-time обновлений диагностических систем
-    """
+    """WebSocket consumer для real-time обновлений диагностических систем."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -28,7 +29,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         self.heartbeat_task = None
 
     async def connect(self):
-        """Подключение клиента"""
+        """Подключение клиента."""
         try:
             logger.info(f"WebSocket подключение от {self.scope['client']}")
 
@@ -52,7 +53,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
             await self.close()
 
     async def disconnect(self, close_code):
-        """Отключение клиента"""
+        """Отключение клиента."""
         logger.info(f"WebSocket отключение: {close_code}")
 
         # Остановка heartbeat
@@ -70,7 +71,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
             await self.unsubscribe_from_system(system_id)
 
     async def receive(self, text_data):
-        """Получение сообщения от клиента"""
+        """Получение сообщения от клиента."""
         try:
             data = json.loads(text_data)
             message_type = data.get("type")
@@ -101,7 +102,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
             await self.send_error("Ошибка обработки сообщения")
 
     async def handle_auth(self, data):
-        """Аутентификация пользователя"""
+        """Аутентификация пользователя."""
         token = data.get("token")
 
         if not token:
@@ -140,13 +141,13 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
             )
 
     async def handle_ping(self, data):
-        """Обработка ping запроса"""
+        """Обработка ping запроса."""
         await self.send_message(
             {"type": "pong", "timestamp": datetime.now().isoformat()}
         )
 
     async def handle_subscribe(self, data):
-        """Подписка на общие каналы"""
+        """Подписка на общие каналы."""
         if not self.user:
             await self.send_auth_required()
             return
@@ -173,7 +174,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def handle_subscribe_system(self, data):
-        """Подписка на обновления конкретной системы"""
+        """Подписка на обновления конкретной системы."""
         if not self.user:
             await self.send_auth_required()
             return
@@ -201,7 +202,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def handle_unsubscribe_system(self, data):
-        """Отписка от обновлений системы"""
+        """Отписка от обновлений системы."""
         system_id = data.get("system_id")
         if system_id:
             await self.unsubscribe_from_system(system_id)
@@ -215,7 +216,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
             )
 
     async def handle_get_system_status(self, data):
-        """Получение текущего статуса системы"""
+        """Получение текущего статуса системы."""
         if not self.user:
             await self.send_auth_required()
             return
@@ -243,7 +244,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def handle_system_command(self, data):
-        """Обработка команд системе"""
+        """Обработка команд системе."""
         if not self.user:
             await self.send_auth_required()
             return
@@ -268,21 +269,21 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
             await self.send_error(f"Неизвестная команда: {command}")
 
     async def subscribe_to_system(self, system_id):
-        """Подписка на систему"""
+        """Подписка на систему."""
         group_name = f"system_{system_id}"
         await self.channel_layer.group_add(group_name, self.channel_name)
         self.subscribed_systems.add(system_id)
         logger.debug(f"Подписка на систему {system_id}")
 
     async def unsubscribe_from_system(self, system_id):
-        """Отписка от системы"""
+        """Отписка от системы."""
         group_name = f"system_{system_id}"
         await self.channel_layer.group_discard(group_name, self.channel_name)
         self.subscribed_systems.discard(system_id)
         logger.debug(f"Отписка от системы {system_id}")
 
     async def start_system_monitoring(self, system_id):
-        """Запуск мониторинга системы"""
+        """Запуск мониторинга системы."""
         # Здесь может быть логика запуска мониторинга
         await self.send_message(
             {
@@ -293,7 +294,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def stop_system_monitoring(self, system_id):
-        """Остановка мониторинга системы"""
+        """Остановка мониторинга системы."""
         await self.send_message(
             {
                 "type": "monitoring_stopped",
@@ -303,7 +304,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def trigger_diagnostic(self, system_id):
-        """Запуск диагностики системы"""
+        """Запуск диагностики системы."""
         # Имитация запуска диагностики
         await self.send_message(
             {
@@ -331,7 +332,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
 
     # Обработчики событий от каналов
     async def sensor_data_update(self, event):
-        """Обработка обновления данных датчиков"""
+        """Обработка обновления данных датчиков."""
         await self.send_message(
             {
                 "type": "sensor_data",
@@ -346,7 +347,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def critical_alert(self, event):
-        """Обработка критических предупреждений"""
+        """Обработка критических предупреждений."""
         await self.send_message(
             {
                 "type": "critical_alert",
@@ -361,7 +362,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def diagnostic_result(self, event):
-        """Обработка результатов диагностики"""
+        """Обработка результатов диагностики."""
         await self.send_message(
             {
                 "type": "diagnostic_result",
@@ -373,7 +374,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def system_status_change(self, event):
-        """Обработка изменения статуса системы"""
+        """Обработка изменения статуса системы."""
         await self.send_message(
             {
                 "type": "system_status_change",
@@ -386,11 +387,11 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
 
     # Вспомогательные методы
     async def send_message(self, message):
-        """Отправка сообщения клиенту"""
+        """Отправка сообщения клиенту."""
         await self.send(text_data=json.dumps(message, ensure_ascii=False))
 
     async def send_error(self, error_message):
-        """Отправка ошибки клиенту"""
+        """Отправка ошибки клиенту."""
         await self.send_message(
             {
                 "type": "error",
@@ -400,11 +401,11 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
         )
 
     async def send_auth_required(self):
-        """Уведомление о необходимости аутентификации"""
+        """Уведомление о необходимости аутентификации."""
         await self.send_error("Требуется аутентификация")
 
     async def heartbeat_loop(self):
-        """Heartbeat для поддержания соединения"""
+        """Heartbeat для поддержания соединения."""
         try:
             while True:
                 await asyncio.sleep(30)  # Ping каждые 30 секунд
@@ -417,7 +418,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
     # База данных методы (sync_to_async)
     @database_sync_to_async
     def get_user_from_token(self, token):
-        """Получение пользователя по токену"""
+        """Получение пользователя по токену."""
         try:
             # Простая проверка токена
             # В реальном приложении здесь должна быть проверка JWT токена
@@ -430,7 +431,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_user_system(self, system_id):
-        """Получение системы пользователя"""
+        """Получение системы пользователя."""
         try:
             if not self.user:
                 return None
@@ -443,7 +444,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_latest_sensor_data(self, system_id):
-        """Получение последних данных датчиков"""
+        """Получение последних данных датчиков."""
         try:
             latest_data = []
             sensor_types = ["pressure", "temperature", "flow", "vibration"]
@@ -475,7 +476,7 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_recent_critical_events(self, system_id, hours=24):
-        """Получение недавних критических событий"""
+        """Получение недавних критических событий."""
         try:
             cutoff_time = datetime.now() - timedelta(hours=hours)
             critical_events = SensorData.objects.filter(
@@ -497,14 +498,11 @@ class DiagnosticSystemConsumer(AsyncWebsocketConsumer):
             return []
 
 
-from asgiref.sync import async_to_sync
-
 # Утилиты для отправки WebSocket сообщений из других частей приложения
-from channels.layers import get_channel_layer
 
 
 def send_sensor_data_update(system_id, sensor_data):
-    """Отправка обновления данных датчика через WebSocket"""
+    """Отправка обновления данных датчика через WebSocket."""
     channel_layer = get_channel_layer()
     group_name = f"system_{system_id}"
 
@@ -523,7 +521,7 @@ def send_sensor_data_update(system_id, sensor_data):
 
 
 def send_critical_alert(system, alert_type, message, severity="high"):
-    """Отправка критического предупреждения"""
+    """Отправка критического предупреждения."""
     channel_layer = get_channel_layer()
     group_name = f"system_{system.id}"
 
@@ -542,7 +540,7 @@ def send_critical_alert(system, alert_type, message, severity="high"):
 
 
 def send_diagnostic_result(system, report):
-    """Отправка результата диагностики"""
+    """Отправка результата диагностики."""
     channel_layer = get_channel_layer()
     group_name = f"system_{system.id}"
 

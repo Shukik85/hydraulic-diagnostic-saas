@@ -1,25 +1,32 @@
-import json
+"""Модуль проекта с автогенерированным докстрингом."""
+
 from datetime import datetime, timedelta
+import json
 
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
-from .models import DiagnosticReport, HydraulicSystem, SensorData
+from .models import (
+    DiagnosticReport,
+    HydraulicSystem,
+    IntegratedDiagnosticResult,
+    MathematicalModelResult,
+    PhasePortraitResult,
+    SensorData,
+    TribodiagnosticResult,
+)
 
 
 @admin.register(HydraulicSystem)
 class HydraulicSystemAdmin(admin.ModelAdmin):
-    """Расширенный админ интерфейс для гидравлических систем"""
+    """Расширенный админ интерфейс для гидравлических систем."""
 
     list_display = [
         "name",
         "system_type",
         "status",
         "owner",
-        "location",
-        "max_pressure",
-        "max_flow",
         "health_indicator",
         "last_sensor_data",
         "created_at",
@@ -30,10 +37,9 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
         "status",
         "created_at",
         "owner",
-        ("installation_date", admin.DateFieldListFilter),
     ]
 
-    search_fields = ["name", "location", "owner__username", "owner__email"]
+    search_fields = ["name", "owner__username", "owner__email"]
 
     readonly_fields = [
         "created_at",
@@ -45,18 +51,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
     fieldsets = (
         (
             "Основная информация",
-            {"fields": ("name", "system_type", "location", "status", "owner")},
-        ),
-        (
-            "Технические характеристики",
-            {
-                "fields": (
-                    "max_pressure",
-                    "max_flow",
-                    "temperature_range",
-                    "installation_date",
-                )
-            },
+            {"fields": ("name", "system_type", "status", "owner")},
         ),
         (
             "Системная информация",
@@ -76,7 +71,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
     @admin.display(description="Состояние")
     def health_indicator(self, obj):
-        """Индикатор здоровья системы"""
+        """Индикатор здоровья системы."""
         try:
             day_ago = datetime.now() - timedelta(days=1)
             recent_data = obj.sensor_data.filter(timestamp__gte=day_ago)
@@ -94,19 +89,18 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
             if critical_ratio == 0:
                 return format_html('<span style="color: green;">🟢 Отлично</span>')
-            elif critical_ratio < 0.1:
+            if critical_ratio < 0.1:
                 return format_html('<span style="color: lightgreen;">🔵 Хорошо</span>')
-            elif critical_ratio < 0.3:
+            if critical_ratio < 0.3:
                 return format_html('<span style="color: orange;">🟠 Внимание</span>')
-            else:
-                return format_html('<span style="color: red;">🔴 Критично</span>')
+            return format_html('<span style="color: red;">🔴 Критично</span>')
 
         except Exception:
             return format_html('<span style="color: gray;">⚪ Ошибка</span>')
 
     @admin.display(description="Последние данные")
     def last_sensor_data(self, obj):
-        """Последние данные датчика"""
+        """Последние данные датчика."""
         latest = obj.sensor_data.order_by("-timestamp").first()
         if latest:
             color = "red" if latest.is_critical else "green"
@@ -122,7 +116,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
     @admin.display(description="Статистика")
     def system_statistics(self, obj):
-        """Статистика системы"""
+        """Статистика системы."""
         try:
             week_ago = datetime.now() - timedelta(days=7)
 
@@ -140,7 +134,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
                 <p><strong>Записи датчиков:</strong> {sensor_count}</p>
                 <p><strong>Критические события:</strong> {critical_count}</p>
                 <p><strong>Диагностических отчетов:</strong> {reports_count}</p>
-                <p><strong>Среднее критических событий в день:</strong> {round(critical_count/7, 1)}</p>
+                <p><strong>Среднее критических событий в день:</strong> {round(critical_count / 7, 1)}</p>
             </div>
             """
 
@@ -150,7 +144,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
     @admin.action(description="🔍 Запустить диагностику")
     def run_diagnostics(self, request, queryset):
-        """Запуск диагностики для выбранных систем"""
+        """Запуск диагностики для выбранных систем."""
         count = 0
         for system in queryset:
             try:
@@ -170,7 +164,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
     @admin.action(description="📊 Сводный отчет")
     def generate_health_report(self, request, queryset):
-        """Генерация отчета о состоянии систем"""
+        """Генерация отчета о состоянии систем."""
         total_systems = queryset.count()
         healthy_systems = 0
 
@@ -190,7 +184,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
     @admin.action(description="📤 Экспорт данных")
     def export_system_data(self, request, queryset):
-        """Экспорт данных систем"""
+        """Экспорт данных систем."""
         self.message_user(
             request, f"Экспорт {queryset.count()} систем (функция в разработке)"
         )
@@ -198,7 +192,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
 @admin.register(SensorData)
 class SensorDataAdmin(admin.ModelAdmin):
-    """Админ интерфейс для данных датчиков"""
+    """Админ интерфейс для данных датчиков."""
 
     list_display = [
         "system",
@@ -230,12 +224,12 @@ class SensorDataAdmin(admin.ModelAdmin):
 
     @admin.display(description="Значение", ordering="value")
     def value_with_unit(self, obj):
-        """Значение с единицей измерения"""
+        """Значение с единицей измерения."""
         return f"{obj.value} {obj.unit}"
 
     @admin.display(description="Статус", ordering="is_critical")
     def critical_indicator(self, obj):
-        """Индикатор критичности"""
+        """Индикатор критичности."""
         if obj.is_critical:
             return format_html(
                 '<span style="color: red; font-weight: bold;">🔴 Критично</span>'
@@ -244,14 +238,14 @@ class SensorDataAdmin(admin.ModelAdmin):
 
     @admin.display(description="Владелец", ordering="system__owner__username")
     def system_owner(self, obj):
-        """Владелец системы"""
+        """Владелец системы."""
         return obj.system.owner.username
 
     actions = ["mark_as_critical", "mark_as_normal", "export_sensor_data"]
 
     @admin.action(description="⚠️ Отметить как критические")
     def mark_as_critical(self, request, queryset):
-        """Отметить как критические"""
+        """Отметить как критические."""
         updated = queryset.update(
             is_critical=True, warning_message="Отмечено как критическое администратором"
         )
@@ -259,14 +253,14 @@ class SensorDataAdmin(admin.ModelAdmin):
 
     @admin.action(description="✅ Отметить как нормальные")
     def mark_as_normal(self, request, queryset):
-        """Отметить как нормальные"""
+        """Отметить как нормальные."""
         updated = queryset.update(is_critical=False, warning_message="")
         self.message_user(request, f"{updated} записей отмечены как нормальные")
 
 
 @admin.register(DiagnosticReport)
 class DiagnosticReportAdmin(admin.ModelAdmin):
-    """Админ интерфейс для диагностических отчетов"""
+    """Админ интерфейс для диагностических отчетов."""
 
     list_display = [
         "title",
@@ -310,7 +304,7 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
 
     @admin.display(description="Серьезность", ordering="severity")
     def severity_indicator(self, obj):
-        """Индикатор серьезности"""
+        """Индикатор серьезности."""
         colors = {
             "info": "blue",
             "warning": "orange",
@@ -331,19 +325,19 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
 
     @admin.display(description="Владелец", ordering="system__owner__username")
     def system_owner(self, obj):
-        """Владелец системы"""
+        """Владелец системы."""
         return obj.system.owner.username
 
     @admin.display(description="AI анализ")
     def has_ai_analysis(self, obj):
-        """Наличие AI анализа"""
+        """Наличие AI анализа."""
         if obj.ai_analysis:
             return format_html('<span style="color: green;">🤖 Да</span>')
         return format_html('<span style="color: gray;">❌ Нет</span>')
 
     @admin.display(description="Превью AI анализа")
     def ai_analysis_preview(self, obj):
-        """Превью AI анализа"""
+        """Превью AI анализа."""
         if not obj.ai_analysis:
             return "AI анализ отсутствует"
 
@@ -380,14 +374,14 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
 
     @admin.action(description="📤 Экспорт отчетов")
     def export_reports(self, request, queryset):
-        """Экспорт отчетов"""
+        """Экспорт отчетов."""
         self.message_user(
             request, f"Экспорт {queryset.count()} отчетов (функция в разработке)"
         )
 
     @admin.action(description="🤖 Регенерировать AI анализ")
     def regenerate_ai_analysis(self, request, queryset):
-        """Регенерация AI анализа"""
+        """Регенерация AI анализа."""
         count = 0
         for report in queryset:
             try:
@@ -401,6 +395,151 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
                 )
 
         self.message_user(request, f"AI анализ регенерирован для {count} отчетов")
+
+
+# Новые админы для диагностических моделей Sprint 1
+
+
+@admin.register(MathematicalModelResult)
+class MathematicalModelResultAdmin(admin.ModelAdmin):
+    """Админ интерфейс результатов математической модели."""
+
+    list_display = (
+        "id",
+        "system",
+        "timestamp",
+        "pressure_deviation",
+        "flow_deviation",
+        "speed_deviation",
+        "max_deviation",
+        "score",
+        "status",
+        "created_at",
+    )
+
+    list_filter = (
+        "status",
+        ("timestamp", admin.DateFieldListFilter),
+        ("created_at", admin.DateFieldListFilter),
+        "system",
+    )
+
+    search_fields = ("system__name",)
+    ordering = ("-timestamp",)
+    readonly_fields = ("created_at",)
+    date_hierarchy = "timestamp"
+    list_per_page = 30
+
+
+@admin.register(PhasePortraitResult)
+class PhasePortraitResultAdmin(admin.ModelAdmin):
+    """Админ интерфейс результатов фазового портрета."""
+
+    list_display = (
+        "id",
+        "system",
+        "timestamp",
+        "portrait_type",
+        "area_deviation",
+        "center_shift_x",
+        "center_shift_y",
+        "contour_breaks",
+        "shape_distortion",
+        "score",
+        "status",
+        "created_at",
+    )
+
+    list_filter = (
+        "portrait_type",
+        "status",
+        ("timestamp", admin.DateFieldListFilter),
+        ("created_at", admin.DateFieldListFilter),
+        "system",
+    )
+
+    search_fields = ("system__name",)
+    ordering = ("-timestamp",)
+    readonly_fields = ("created_at",)
+    date_hierarchy = "timestamp"
+    list_per_page = 30
+
+
+@admin.register(TribodiagnosticResult)
+class TribodiagnosticResultAdmin(admin.ModelAdmin):
+    """Админ интерфейс результатов трибодиагностики."""
+
+    list_display = (
+        "id",
+        "system",
+        "analysis_date",
+        "iso_class",
+        "particles_4um",
+        "particles_6um",
+        "particles_14um",
+        "water_content_ppm",
+        "viscosity_cst",
+        "ph_level",
+        "iron_ppm",
+        "copper_ppm",
+        "aluminum_ppm",
+        "score",
+        "status",
+        "created_at",
+    )
+
+    list_filter = (
+        "status",
+        ("analysis_date", admin.DateFieldListFilter),
+        ("created_at", admin.DateFieldListFilter),
+        "system",
+        "wear_source",
+    )
+
+    search_fields = ("system__name", "lab_report_number", "analyzed_by")
+    ordering = ("-analysis_date",)
+    readonly_fields = ("created_at",)
+    date_hierarchy = "analysis_date"
+    list_per_page = 25
+
+
+@admin.register(IntegratedDiagnosticResult)
+class IntegratedDiagnosticResultAdmin(admin.ModelAdmin):
+    """Админ интерфейс интегрированных результатов диагностики."""
+
+    list_display = (
+        "id",
+        "system",
+        "timestamp",
+        "math_score",
+        "phase_score",
+        "tribo_score",
+        "integrated_score",
+        "overall_status",
+        "predicted_remaining_life",
+        "confidence_level",
+        "data_quality_score",
+        "created_at",
+    )
+
+    list_filter = (
+        "overall_status",
+        ("timestamp", admin.DateFieldListFilter),
+        ("created_at", admin.DateFieldListFilter),
+        "system",
+    )
+
+    search_fields = ("system__name",)
+    ordering = ("-timestamp",)
+
+    readonly_fields = (
+        "integrated_score",
+        "overall_status",
+        "created_at",
+    )
+
+    date_hierarchy = "timestamp"
+    list_per_page = 25
 
 
 # Дополнительная конфигурация админки

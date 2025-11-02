@@ -43,7 +43,7 @@
 - `0002_optimize_models.py`
   - Индексы и constraints с фиксированными именами
   - GeneratedField `day_bucket`
-  - (опционально) `RunSQL` для GIN индекса по JSON: 
+  - (опционально) `RunSQL` для GIN индекса по JSON:
     ```sql
     CREATE INDEX IF NOT EXISTS component_spec_gin ON system_component USING GIN (specification jsonb_path_ops);
     ```

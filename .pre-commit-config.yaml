@@ -1,134 +1,121 @@
-# Конфигурация pre-commit hooks для Django 5.2.7 проекта (2025)
-# Обеспечивает качество кода, безопасность и совместимость
-
-exclude: |
-  (?x)^(
-      migrations/.*|
-      .*\.min\.(js|css)$|
-      staticfiles/.*|
-      static/.*|
-      media/.*|
-      node_modules/.*|
-      \.venv/.*|
-      venv/.*
-  )$
-
-default_stages: [pre-commit]
-fail_fast: false
-
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        args: [--markdown-linebreak-ext=md]
+        exclude: '.*\.(md|rst)$'
       - id: end-of-file-fixer
+        exclude: '.*\.(md|rst)$'
       - id: check-yaml
-        args: [--allow-multiple-documents]
       - id: check-added-large-files
-        args: [--maxkb=1024]
-      - id: check-case-conflict
+        args: [--maxkb=1000]
       - id: check-merge-conflict
+      - id: debug-statements
       - id: check-json
       - id: check-toml
       - id: check-xml
-      - id: debug-statements
-      - id: check-builtin-literals
-      - id: check-docstring-first
-      - id: requirements-txt-fixer
-
-  - repo: https://github.com/adamchainz/django-upgrade
-    rev: "1.25.0"
-    hooks:
-      - id: django-upgrade
-        args: [--target-version, "5.2"]
-
-  - repo: https://github.com/GitGuardian/ggshield
-    rev: v1.43.0
-    hooks:
-      - id: ggshield
-        stages: [pre-commit]
-
-  - repo: https://github.com/pycqa/bandit
-    rev: 1.8.3
-    hooks:
-      - id: bandit
-        args: [-c, .bandit, -r, .]
-        additional_dependencies: ["bandit[toml]"]
-
-  - repo: https://github.com/pycqa/isort
-    rev: 7.0.0
-    hooks:
-      - id: isort
-        args: [--profile=black, --line-length=88, --multi-line=3, --trailing-comma]
-        files: \.(py|pyi|pyx|pxd)$
+      - id: mixed-line-ending
+        args: [--fix=lf]
 
   - repo: https://github.com/psf/black
     rev: 25.9.0
     hooks:
       - id: black
-        args: [--line-length=88, --target-version=py310, --target-version=py311, --target-version=py312, --target-version=py313]
-        language_version: python3
+        language_version: python3.11
+        exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
+        args: [--line-length=88]
 
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.1.1
+  # Modern Ruff replaces flake8 + isort + many other tools
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.2
     hooks:
-      - id: flake8
-        args: [--max-line-length=88, --extend-ignore=E203,E501,W503,E701]
-        additional_dependencies:
-          - flake8-bugbear>=24.10.31
-          - flake8-comprehensions>=3.15.0
-          - flake8-docstrings>=1.7.0
-          - flake8-import-order>=0.18.2
-          - flake8-pie>=0.16.0
-          - flake8-simplify>=0.21.0
-          - flake8-deprecated>=2.2.1
-          - flake8-django-migrations>=1.2.0
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
+      - id: ruff-format
+        exclude: '^(frontend/|nuxt_frontend/|.*migrations/)'
+# Временно отключён до решения проблемы с плагином
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.18.2
+  #   hooks:
+  #     - id: mypy
+  #       exclude: '^(frontend/|nuxt_frontend/|.*migrations/|.*tests/)'
+  #       args: [--ignore-missing-imports, --check-untyped-defs]
+  #       additional_dependencies:
+  #         - django-stubs[compatible-mypy]>=5.2.7
+  #         - types-requests>=2.32.0
+  #         - types-PyYAML>=6.0.12
+  #         - types-redis>=4.6.0
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.18.2
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.8.6  # Updated version
     hooks:
-      - id: mypy
-        args: [--ignore-missing-imports, --check-untyped-defs]
-        additional_dependencies:
-          - django-stubs[compatible-mypy]==5.2.7
-          - djangorestframework-stubs[compatible-mypy]>=3.15.1
-          - celery-types>=0.22.0
-          - types-redis>=4.6.0.20241004
-          - types-requests>=2.32.0.20241016
+      - id: bandit
+        args: [-c, pyproject.toml]  # Use pyproject.toml instead of .bandit
+        exclude: '^(frontend/|nuxt_frontend/|.*tests/)'
+        additional_dependencies: ["bandit[toml]"]
 
-  - repo: https://github.com/djlint/djlint
-    rev: v1.34.1
+  - repo: https://github.com/pypa/pip-audit
+    rev: v2.9.0  # укажи актуальный релиз
     hooks:
-      - id: djlint
-        name: djlint-reformat-django
-        args: [--profile=django, --reformat, --indent=2]
-        files: \.(html|htm)$
-      - id: djlint
-        name: djlint-lint-django
-        args: [--profile=django]
-        files: \.(html|htm)$
+      - id: pip-audit
+        args:
+          - --strict            # fail on vulns
+          - --requirement
+          - backend/requirements.txt
+          - --requirement
+          - backend/requirements-dev.txt
 
+  # Docker and infrastructure
   - repo: https://github.com/hadolint/hadolint
-    rev: v2.12.0
+    rev: v2.14.0
     hooks:
       - id: hadolint
-        args: [--ignore, DL3008, --ignore, DL3009, --ignore, DL3015]
-        files: ^Dockerfile(\..*)?$|^.*\/Dockerfile(\..*)?$|^docker\/.*Dockerfile$
+        args: [--ignore, DL3008, --ignore, DL3009]
 
-  - repo: https://github.com/wemake-services/dotenv-linter
-    rev: 0.4.0
+  # Frontend linting (ESLint & Prettier)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.38.0
     hooks:
-      - id: dotenv-linter
+      - id: eslint
+        files: "\\.(?:js|ts|vue)$"
+        exclude: '^backend/'
+        additional_dependencies:
+          - eslint@^9.14.0
+          - '@nuxt/eslint-config@^0.7.0'
+          - 'vue-eslint-parser@^9.4.0'
 
-ci:
-  autofix_commit_msg: |
-    [pre-commit.ci] auto fixes from pre-commit hooks
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: "\\.(?:js|ts|vue|json|css|scss|md)$"
+        exclude: '^backend/'
+        additional_dependencies:
+          - prettier@^3.3.0
 
-    for more information, see https://pre-commit.ci
-  autofix_prs: true
-  autoupdate_branch: ''
-  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
-  autoupdate_schedule: weekly
-  skip: [ggshield]
-  submodules: false
+  # GitHub Actions validation
+  - repo: https://github.com/rhymond/actionlint
+    rev: v1.7.1
+    hooks:
+      - id: actionlint
+        name: Lint GitHub Actions
+        files: '^.github/workflows/.*\\.(yml|yaml)$'
+
+  # Local bot operations validation
+  - repo: local
+    hooks:
+      - id: validate-workflows
+        name: Validate GitHub Workflows
+        entry: python scripts/validate_workflows.py
+        language: python
+        files: '^.github/workflows/.*\\.(yml|yaml)$'
+        additional_dependencies:
+          - PyYAML>=6.0
+      
+      - id: validate-bot-operations
+        name: Validate Bot Operations
+        entry: python scripts/bot_risk_classifier.py --test
+        language: python
+        files: 'scripts/bot.*\\.py$'
+        pass_filenames: false

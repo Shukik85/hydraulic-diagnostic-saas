@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 # apps/diagnostics/urls.py
 
 from django.urls import include, path

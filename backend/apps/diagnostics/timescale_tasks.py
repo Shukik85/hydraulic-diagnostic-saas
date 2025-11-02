@@ -1,392 +1,336 @@
-"""
-TimescaleDB задачи для управления партициями и данными.
-Модуль содержит Celery задачи для автоматизации управления hypertables.
+"""TimescaleDB задачи для манаджмента гипертаблиц и политик.
+
+Оптимизировано под политики:
+- Chunk interval: 7 дней
+- Compression age: 30 дней
+- Retention period: 365 дней
 """
 
-import logging
+from __future__ import annotations
+
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
+import logging
+from typing import Any
 
 from celery import shared_task
-from django.db import connection, transaction
-from django.conf import settings
+from django.db import connection
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
+# Константы для соответствия с миграциями
+DEFAULT_CHUNK_INTERVAL_DAYS: int = 7
+DEFAULT_COMPRESSION_AGE_DAYS: int = 30
+DEFAULT_RETENTION_PERIOD_DAYS: int = 365
+
 
 @shared_task(bind=True, max_retries=3)
 def ensure_partitions_for_range(
-    self, 
-    table_name: str = 'sensor_data',
-    start_time: str = None,
-    end_time: str = None,
-    chunk_interval: str = '7 days'
-) -> Dict[str, Any]:
-    """
-    Обеспечивает создание chunk'ов TimescaleDB для указанного временного диапазона.
-    
-    Args:
-        table_name: Имя hypertable 
-        start_time: ISO строка начального времени (по умолчанию - сейчас)
-        end_time: ISO строка конечного времени (по умолчанию - сейчас + 30 дней)
-        chunk_interval: Интервал chunk'а (например '7 days', '1 day')
-    
-    Returns:
-        Dict с результатами операции
-    """
+    self,  # type: ignore[no-untyped-def]
+    table_name: str = "diagnostics_sensordata",
+    start_time: str | None = None,
+    end_time: str | None = None,
+    chunk_interval: str = "7 days",
+) -> dict[str, Any]:
+    """Обеспечивает создание chunk'ов TimescaleDB для указанного временного диапазона."""
     try:
-        if not start_time:
-            start_dt = timezone.now()
-        else:
-            start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-            
-        if not end_time:
-            end_dt = start_dt + timedelta(days=30)
-        else:
-            end_dt = datetime.fromisoformat(end_time.replace('Z', '+00:00'))
-            
+        start_dt: datetime = (
+            timezone.now()
+            if start_time is None
+            else datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+        )
+        end_dt: datetime = (
+            start_dt + timedelta(days=30)
+            if end_time is None
+            else datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+        )
+
         with connection.cursor() as cursor:
-            # Проверяем, что таблица является hypertable
-            cursor.execute("""
-                SELECT 1 FROM timescaledb_information.hypertables 
-                WHERE hypertable_name = %s
-            """, [table_name])
-            
+            cursor.execute(
+                "SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = %s",
+                [table_name],
+            )
             if not cursor.fetchone():
-                raise ValueError(f"Table {table_name} is not a hypertable")
-            
-            # Получаем существующие chunk'и в диапазоне
-            cursor.execute("""
-                SELECT chunk_name, range_start, range_end 
-                FROM timescaledb_information.chunks 
+                return {
+                    "status": "failed",
+                    "error": f"Table {table_name} is not a hypertable",
+                    "task_id": getattr(self.request, "id", None),
+                }
+
+            cursor.execute(
+                """
+                SELECT chunk_name, range_start, range_end
+                FROM timescaledb_information.chunks
                 WHERE hypertable_name = %s
                 AND range_start <= %s AND range_end >= %s
-                ORDER BY range_start;
-            """, [table_name, end_dt, start_dt])
-            
-            existing_chunks = cursor.fetchall()
-            
-            # Проверяем настройки chunk_time_interval
-            cursor.execute("""
-                SELECT d.interval_length 
+                ORDER BY range_start
+                """,
+                [table_name, end_dt, start_dt],
+            )
+            existing_chunks: list[tuple] = list(cursor.fetchall())
+
+            cursor.execute(
+                """
+                SELECT d.interval_length
                 FROM timescaledb_information.dimensions d
                 JOIN timescaledb_information.hypertables h ON h.hypertable_name = d.hypertable_name
-                WHERE h.hypertable_name = %s AND d.dimension_type = 'Time';
-            """, [table_name])
-            
-            current_interval = cursor.fetchone()
-            
-        result = {
-            'status': 'success',
-            'table': table_name,
-            'start_time': start_dt.isoformat(),
-            'end_time': end_dt.isoformat(),
-            'existing_chunks': len(existing_chunks),
-            'current_chunk_interval': str(current_interval[0]) if current_interval else 'unknown',
-            'task_id': self.request.id
+                WHERE h.hypertable_name = %s AND d.dimension_type = 'Time'
+                """,
+                [table_name],
+            )
+            interval_row = cursor.fetchone()
+
+        result: dict[str, Any] = {
+            "status": "success",
+            "table": table_name,
+            "start_time": start_dt.isoformat(),
+            "end_time": end_dt.isoformat(),
+            "existing_chunks": len(existing_chunks),
+            "current_chunk_interval": (
+                str(interval_row[0]) if interval_row else "unknown"
+            ),
+            "expected_chunk_interval": f"{DEFAULT_CHUNK_INTERVAL_DAYS} days",
+            "task_id": getattr(self.request, "id", None),
         }
-        
-        logger.info(f"Partition check completed: {result}")
         return result
-        
+
     except Exception as exc:
-        logger.error(f"Partition creation failed: {exc}")
-        self.retry(countdown=60, exc=exc)
+        logger.error("Partition creation failed: %s", exc)
+        # В Celery .retry возвращает None; добавляем явный возврат для mypy
+        try:
+            self.retry(countdown=60, exc=exc)  # type: ignore[call-arg]
+        finally:
+            return {"status": "retry", "error": str(exc)}
 
 
 @shared_task(bind=True, max_retries=2)
 def cleanup_old_partitions(
-    self,
-    table_name: str = 'sensor_data', 
-    retention_period: str = '90 days'
-) -> Dict[str, Any]:
-    """
-    Очищает старые chunk'и TimescaleDB согласно политике retention.
-    
-    Args:
-        table_name: Имя hypertable
-        retention_period: Период хранения (например '90 days', '1 year')
-    
-    Returns:
-        Dict с результатами очистки
-    """
+    self,  # type: ignore[no-untyped-def]
+    table_name: str = "diagnostics_sensordata",
+    retention_period_days: int = DEFAULT_RETENTION_PERIOD_DAYS,
+) -> dict[str, Any]:
+    """Удаляет старые чанки (старше retention_period_days)."""
     try:
-        # Парсим период ретеншена
-        if 'days' in retention_period:
-            days = int(retention_period.split()[0])
-        elif 'year' in retention_period:
-            days = int(retention_period.split()[0]) * 365
-        else:
-            days = 90  # по умолчанию
-            
-        cutoff_time = timezone.now() - timedelta(days=days)
-        
+        cutoff_time: datetime = timezone.now() - timedelta(days=retention_period_days)
+        dropped_chunks: list[dict[str, Any]] = []
+
         with connection.cursor() as cursor:
-            # Получаем список старых chunk'ов
-            cursor.execute("""
-                SELECT 
-                    format('%I.%I', chunk_schema, chunk_name) as full_chunk_name,
-                    chunk_name, 
-                    range_start, 
-                    range_end, 
-                    pg_size_pretty(pg_total_relation_size(format('%I.%I', chunk_schema, chunk_name))) as size
-                FROM timescaledb_information.chunks 
-                WHERE hypertable_name = %s 
-                AND range_end < %s
-                ORDER BY range_start;
-            """, [table_name, cutoff_time])
-            
-            old_chunks = cursor.fetchall()
-            dropped_chunks = []
-            total_size_freed = 0
-            
-            for full_name, chunk_name, start_time, end_time, size in old_chunks:
+            cursor.execute(
+                """
+                SELECT format('%I.%I', chunk_schema, chunk_name) as full_chunk_name,
+                       chunk_name, range_start, range_end,
+                       pg_size_pretty(pg_total_relation_size(format('%I.%I', chunk_schema, chunk_name))) as size
+                FROM timescaledb_information.chunks
+                WHERE hypertable_name = %s AND range_end < %s
+                ORDER BY range_start
+                """,
+                [table_name, cutoff_time],
+            )
+            for full_name, chunk_name, start_time, end_time, size in cursor.fetchall():
                 try:
-                    # Удаляем chunk
-                    cursor.execute(f"SELECT drop_chunk('{full_name}', if_exists => true)")
-                    dropped_chunks.append({
-                        'name': chunk_name,
-                        'range_start': start_time.isoformat(),
-                        'range_end': end_time.isoformat(),
-                        'size': size
-                    })
-                    logger.info(f"Dropped chunk {chunk_name} (size: {size})")
-                    
-                except Exception as chunk_error:
-                    logger.error(f"Failed to drop chunk {chunk_name}: {chunk_error}")
-        
-        result = {
-            'status': 'success',
-            'table': table_name,
-            'retention_period': retention_period,
-            'cutoff_time': cutoff_time.isoformat(),
-            'chunks_dropped': len(dropped_chunks),
-            'dropped_chunks': dropped_chunks,
-            'task_id': self.request.id
+                    cursor.execute(
+                        "SELECT drop_chunk(%s, if_exists => true)", [full_name]
+                    )
+                    dropped_chunks.append(
+                        {
+                            "name": chunk_name,
+                            "range_start": start_time.isoformat(),
+                            "range_end": end_time.isoformat(),
+                            "size": size,
+                        }
+                    )
+                except Exception as e:
+                    logger.warning("Failed to drop chunk %s: %s", chunk_name, e)
+
+        return {
+            "status": "success",
+            "table": table_name,
+            "retention_period_days": retention_period_days,
+            "cutoff_time": cutoff_time.isoformat(),
+            "chunks_dropped": len(dropped_chunks),
+            "dropped_chunks": dropped_chunks,
+            "task_id": getattr(self.request, "id", None),
         }
-        
-        logger.info(f"Cleanup completed: {result}")
-        return result
-        
+
     except Exception as exc:
-        logger.error(f"Cleanup failed: {exc}")
-        self.retry(countdown=300, exc=exc)  # 5 минут до повтора
+        logger.error("Cleanup failed: %s", exc)
+        try:
+            self.retry(countdown=300, exc=exc)  # type: ignore[call-arg]
+        finally:
+            return {"status": "retry", "error": str(exc)}
 
 
 @shared_task(bind=True)
 def compress_old_chunks(
-    self,
-    table_name: str = 'sensor_data',
-    compression_age: str = '30 days'
-) -> Dict[str, Any]:
-    """
-    Сжимает старые chunk'и для экономии места.
-    
-    Args:
-        table_name: Имя hypertable
-        compression_age: Возраст chunk'ов для сжатия
-    
-    Returns:
-        Dict с результатами сжатия
-    """
+    self,  # type: ignore[no-untyped-def]
+    table_name: str = "diagnostics_sensordata",
+    compression_age_days: int = DEFAULT_COMPRESSION_AGE_DAYS,
+) -> dict[str, Any]:
+    """Сжимает чанки старше compression_age_days."""
     try:
-        days = int(compression_age.split()[0])
-        compression_cutoff = timezone.now() - timedelta(days=days)
-        
+        cutoff: datetime = timezone.now() - timedelta(days=compression_age_days)
+        compressed_chunks: list[dict[str, Any]] = []
+
         with connection.cursor() as cursor:
-            # Получаем несжатые chunk'и старше указанного возраста
-            cursor.execute("""
-                SELECT 
-                    format('%I.%I', chunk_schema, chunk_name) as full_chunk_name,
-                    chunk_name, 
-                    range_start, 
-                    range_end 
-                FROM timescaledb_information.chunks 
-                WHERE hypertable_name = %s 
-                AND range_end < %s
-                AND NOT is_compressed
-                ORDER BY range_start;
-            """, [table_name, compression_cutoff])
-            
-            uncompressed_chunks = cursor.fetchall()
-            compressed_chunks = []
-            
-            for full_name, chunk_name, start_time, end_time in uncompressed_chunks:
+            cursor.execute(
+                """
+                SELECT format('%I.%I', chunk_schema, chunk_name) as full_chunk_name,
+                       chunk_name, range_start, range_end
+                FROM timescaledb_information.chunks
+                WHERE hypertable_name = %s AND range_end < %s AND NOT is_compressed
+                ORDER BY range_start
+                """,
+                [table_name, cutoff],
+            )
+            for full_name, chunk_name, start_time, end_time in cursor.fetchall():
                 try:
-                    cursor.execute(f"SELECT compress_chunk('{full_name}')")
-                    compressed_chunks.append({
-                        'name': chunk_name,
-                        'range_start': start_time.isoformat(),
-                        'range_end': end_time.isoformat()
-                    })
-                    logger.info(f"Compressed chunk {chunk_name}")
-                    
-                except Exception as compress_error:
-                    logger.error(f"Failed to compress chunk {chunk_name}: {compress_error}")
-        
-        result = {
-            'status': 'success',
-            'table': table_name,
-            'compression_age': compression_age,
-            'cutoff_time': compression_cutoff.isoformat(),
-            'chunks_compressed': len(compressed_chunks),
-            'compressed_chunks': compressed_chunks,
-            'task_id': self.request.id
-        }
-        
-        logger.info(f"Compression completed: {result}")
-        return result
-        
-    except Exception as exc:
-        logger.error(f"Compression failed: {exc}")
+                    cursor.execute("SELECT compress_chunk(%s)", [full_name])
+                    compressed_chunks.append(
+                        {
+                            "name": chunk_name,
+                            "range_start": start_time.isoformat(),
+                            "range_end": end_time.isoformat(),
+                        }
+                    )
+                except Exception as e:
+                    logger.warning("Failed to compress chunk %s: %s", chunk_name, e)
+
         return {
-            'status': 'failed',
-            'error': str(exc),
-            'task_id': self.request.id
+            "status": "success",
+            "table": table_name,
+            "compression_age_days": compression_age_days,
+            "cutoff_time": cutoff.isoformat(),
+            "chunks_compressed": len(compressed_chunks),
+            "compressed_chunks": compressed_chunks,
+            "task_id": getattr(self.request, "id", None),
+        }
+
+    except Exception as exc:
+        logger.error("Compression failed: %s", exc)
+        return {
+            "status": "failed",
+            "error": str(exc),
+            "task_id": getattr(self.request, "id", None),
         }
 
 
 @shared_task
-def get_hypertable_stats(table_name: str = 'sensor_data') -> Dict[str, Any]:
-    """
-    Получает статистику по hypertable.
-    
-    Args:
-        table_name: Имя hypertable
-    
-    Returns:
-        Dict со статистикой
-    """
+def get_hypertable_stats(table_name: str = "diagnostics_sensordata") -> dict[str, Any]:
+    """Получает статистику по hypertable."""
     try:
         with connection.cursor() as cursor:
-            # Общая статистика по hypertable
-            cursor.execute("""
-                SELECT 
-                    hypertable_size(%s) as total_size,
-                    pg_size_pretty(hypertable_size(%s)) as total_size_pretty,
-                    (
-                        SELECT COUNT(*) 
-                        FROM timescaledb_information.chunks 
-                        WHERE hypertable_name = %s
-                    ) as total_chunks,
-                    (
-                        SELECT COUNT(*) 
-                        FROM timescaledb_information.chunks 
-                        WHERE hypertable_name = %s AND is_compressed = true
-                    ) as compressed_chunks
-            """, [table_name, table_name, table_name, table_name])
-            
-            stats = cursor.fetchone()
-            
-            # Статистика по chunk'ам за последние периоды
-            cursor.execute("""
-                SELECT 
-                    date_trunc('day', range_start) as day,
-                    COUNT(*) as chunks_count,
-                    pg_size_pretty(
-                        SUM(
-                            pg_total_relation_size(
-                                format('%I.%I', chunk_schema, chunk_name)
-                            )
-                        )
-                    ) as day_size
-                FROM timescaledb_information.chunks 
-                WHERE hypertable_name = %s 
-                AND range_start >= NOW() - INTERVAL '30 days'
+            cursor.execute(
+                """
+                SELECT hypertable_size(%s) as total_size,
+                       pg_size_pretty(hypertable_size(%s)) as total_size_pretty,
+                       (SELECT COUNT(*) FROM timescaledb_information.chunks WHERE hypertable_name = %s) as total_chunks,
+                       (SELECT COUNT(*) FROM timescaledb_information.chunks WHERE hypertable_name = %s AND is_compressed = true) as compressed_chunks
+                """,
+                [table_name, table_name, table_name, table_name],
+            )
+            total_size, total_size_pretty, total_chunks, compressed_chunks = (
+                cursor.fetchone()
+            )
+
+            cursor.execute(
+                """
+                SELECT date_trunc('day', range_start) as day,
+                       COUNT(*) as chunks_count,
+                       pg_size_pretty(SUM(pg_total_relation_size(format('%I.%I', chunk_schema, chunk_name)))) as day_size
+                FROM timescaledb_information.chunks
+                WHERE hypertable_name = %s AND range_start >= NOW() - INTERVAL '30 days'
                 GROUP BY date_trunc('day', range_start)
                 ORDER BY day DESC
-                LIMIT 10;
-            """, [table_name])
-            
+                LIMIT 10
+                """,
+                [table_name],
+            )
             daily_stats = cursor.fetchall()
-            
-        result = {
-            'status': 'success',
-            'table': table_name,
-            'total_size': stats[0],
-            'total_size_pretty': stats[1],
-            'total_chunks': stats[2],
-            'compressed_chunks': stats[3],
-            'compression_ratio': f"{(stats[3]/stats[2]*100):.1f}%" if stats[2] > 0 else "0%",
-            'daily_stats': [
-                {
-                    'date': day.isoformat() if day else None,
-                    'chunks': count,
-                    'size': size
-                } for day, count, size in daily_stats
-            ],
-            'collected_at': timezone.now().isoformat()
-        }
-        
-        return result
-        
-    except Exception as exc:
-        logger.error(f"Stats collection failed: {exc}")
+
         return {
-            'status': 'failed',
-            'error': str(exc),
-            'table': table_name
+            "status": "success",
+            "table": table_name,
+            "total_size": total_size,
+            "total_size_pretty": total_size_pretty,
+            "total_chunks": int(total_chunks or 0),
+            "compressed_chunks": int(compressed_chunks or 0),
+            "compression_ratio": (
+                f"{(int(compressed_chunks or 0) / int(total_chunks or 1) * 100):.1f}%"
+                if int(total_chunks or 0) > 0
+                else "0%"
+            ),
+            "current_policies": {
+                "chunk_interval_days": DEFAULT_CHUNK_INTERVAL_DAYS,
+                "compression_age_days": DEFAULT_COMPRESSION_AGE_DAYS,
+                "retention_period_days": DEFAULT_RETENTION_PERIOD_DAYS,
+            },
+            "daily_stats": [
+                {"date": d.isoformat() if d else None, "chunks": c, "size": s}
+                for d, c, s in daily_stats
+            ],
+            "collected_at": timezone.now().isoformat(),
         }
+
+    except Exception as exc:
+        logger.error("Stats collection failed: %s", exc)
+        return {"status": "failed", "error": str(exc), "table": table_name}
 
 
 @shared_task
-def timescale_health_check() -> Dict[str, Any]:
-    """
-    Проверка здоровья TimescaleDB.
-    
-    Returns:
-        Dict с результатами проверки
-    """
+def timescale_health_check() -> dict[str, Any]:
+    """Проверяет состояние TimescaleDB расширения и фоновых задач."""
     try:
         with connection.cursor() as cursor:
-            # Проверяем доступность TimescaleDB
-            cursor.execute("SELECT extversion FROM pg_extension WHERE extname = 'timescaledb';")
-            timescale_version = cursor.fetchone()
-            
-            if not timescale_version:
+            cursor.execute(
+                "SELECT extversion FROM pg_extension WHERE extname = 'timescaledb'"
+            )
+            version_row = cursor.fetchone()
+            if not version_row:
                 return {
-                    'status': 'failed',
-                    'error': 'TimescaleDB extension not installed',
-                    'checked_at': timezone.now().isoformat()
+                    "status": "failed",
+                    "error": "TimescaleDB extension not installed",
+                    "checked_at": timezone.now().isoformat(),
                 }
-            
-            # Проверяем состояние hypertables
-            cursor.execute("""
-                SELECT hypertable_name, num_dimensions
-                FROM timescaledb_information.hypertables;
-            """)
-            
-            hypertables = cursor.fetchall()
-            
-            # Проверяем фоновые процессы TimescaleDB
-            cursor.execute("""
-                SELECT application_name, state, query
-                FROM pg_stat_activity
-                WHERE application_name LIKE '%timescaledb%'
-                OR query LIKE '%_timescaledb_%';
-            """)
-            
-            background_jobs = cursor.fetchall()
-            
-        result = {
-            'status': 'success',
-            'timescale_version': timescale_version[0],
-            'hypertables_count': len(hypertables),
-            'hypertables': [
-                {'name': name, 'dimensions': dims} 
-                for name, dims in hypertables
-            ],
-            'background_jobs': len(background_jobs),
-            'checked_at': timezone.now().isoformat()
-        }
-        
-        return result
-        
-    except Exception as exc:
-        logger.error(f"Health check failed: {exc}")
+
+            cursor.execute("SELECT COUNT(*) FROM timescaledb_information.hypertables")
+            hypertables_count = int(cursor.fetchone()[0])
+
+            cursor.execute(
+                """
+                SELECT application_name, proc_name, scheduled, config
+                FROM timescaledb_information.jobs
+                WHERE proc_name IN ('policy_compression', 'policy_retention')
+                ORDER BY application_name
+                """
+            )
+            active_policies = [
+                {
+                    "application_name": r[0],
+                    "proc_name": r[1],
+                    "scheduled": r[2],
+                    "config": r[3],
+                }
+                for r in cursor.fetchall()
+            ]
+
         return {
-            'status': 'failed',
-            'error': str(exc),
-            'checked_at': timezone.now().isoformat()
+            "status": "success",
+            "timescale_version": version_row[0],
+            "hypertables_count": hypertables_count,
+            "active_policies_count": len(active_policies),
+            "active_policies": active_policies,
+            "expected_policies": {
+                "chunk_interval_days": DEFAULT_CHUNK_INTERVAL_DAYS,
+                "compression_age_days": DEFAULT_COMPRESSION_AGE_DAYS,
+                "retention_period_days": DEFAULT_RETENTION_PERIOD_DAYS,
+            },
+            "checked_at": timezone.now().isoformat(),
+        }
+
+    except Exception as exc:
+        logger.error("Health check failed: %s", exc)
+        return {
+            "status": "failed",
+            "error": str(exc),
+            "checked_at": timezone.now().isoformat(),
         }

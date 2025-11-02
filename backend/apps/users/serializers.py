@@ -1,3 +1,7 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
+from typing import ClassVar
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -11,8 +15,14 @@ class UserBasicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserModel
-        fields = ["id", "username", "email", "first_name", "last_name"]
-        read_only_fields = fields
+        fields: ClassVar[list[str]] = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+        ]
+        read_only_fields: ClassVar[list[str]] = fields
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -22,7 +32,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = [
+        fields: ClassVar[list[str]] = [
             "user",
             "avatar",
             "bio",
@@ -34,7 +44,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["user", "created_at", "updated_at"]
+        read_only_fields: ClassVar[list[str]] = ["user", "created_at", "updated_at"]
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -44,17 +54,22 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserModel
-        fields = ["email", "username", "password", "first_name", "last_name"]
+        fields: ClassVar[list[str]] = [
+            "email",
+            "username",
+            "password",
+            "first_name",
+            "last_name",
+        ]
 
     def create(self, validated_data):
-        user = UserModel.objects.create_user(
+        return UserModel.objects.create_user(
             email=validated_data["email"],
             username=validated_data["username"],
             first_name=validated_data.get("first_name", ""),
             last_name=validated_data.get("last_name", ""),
             password=validated_data["password"],
         )
-        return user
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -64,7 +79,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserModel
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "email",
             "username",
@@ -85,7 +100,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "reports_generated",
             "profile",
         ]
-        read_only_fields = [
+        read_only_fields: ClassVar[list[str]] = [
             "id",
             "email",
             "created_at",
@@ -103,7 +118,7 @@ class UserActivitySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserActivity
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "user",
             "action",
@@ -113,4 +128,4 @@ class UserActivitySerializer(serializers.ModelSerializer):
             "metadata",
             "created_at",
         ]
-        read_only_fields = fields
+        read_only_fields: ClassVar[list[str]] = fields

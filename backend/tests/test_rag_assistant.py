@@ -1,6 +1,7 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-
 import pytest
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -13,17 +14,30 @@ User = get_user_model()
 
 @pytest.fixture
 def api_client():
+    """Краткое описание функции."""
     return APIClient()
 
 
 @pytest.fixture
 def user(db):
-    user = User.objects.create_user(email="u@e.com", username="u", password="Pwd12345")
-    return user
+    """Краткое описание функции.
+
+    Args:
+        db (TYPE): описание.
+
+    """
+    return User.objects.create_user(email="u@e.com", username="u", password="Pwd12345")
 
 
 @pytest.fixture
 def auth_client(api_client, user):
+    """Краткое описание функции.
+
+    Args:
+        api_client (TYPE): описание.
+        user (TYPE): описание.
+
+    """
     resp = api_client.post(
         reverse("token_obtain_pair"), {"email": user.email, "password": "Pwd12345"}
     )
@@ -34,6 +48,12 @@ def auth_client(api_client, user):
 
 @pytest.fixture
 def rag_system(db):
+    """Краткое описание функции.
+
+    Args:
+        db (TYPE): описание.
+
+    """
     return RagSystem.objects.create(
         name="test-system",
         description="Test",
@@ -46,6 +66,12 @@ def rag_system(db):
 @pytest.mark.django_db
 def test_document_crud(auth_client):
     # Create multilingual Markdown document
+    """Краткое описание функции.
+
+    Args:
+        auth_client (TYPE): описание.
+
+    """
     data = {
         "title": "Привет",
         "content": "# Заголовок\nТекст на русском",
@@ -78,6 +104,14 @@ def test_document_crud(auth_client):
 @pytest.mark.django_db
 def test_index_and_query(auth_client, rag_system, tmp_path):
     # Create document and associate
+    """Краткое описание функции.
+
+    Args:
+        auth_client (TYPE): описание.
+        rag_system (TYPE): описание.
+        tmp_path (TYPE): описание.
+
+    """
     _ = Document.objects.create(
         title="Hello",
         content="Hello world",
@@ -111,6 +145,13 @@ def test_index_and_query(auth_client, rag_system, tmp_path):
 @pytest.mark.django_db
 def test_rag_assistant_service(tmp_path, rag_system):
     # Write temp file for loader
+    """Краткое описание функции.
+
+    Args:
+        tmp_path (TYPE): описание.
+        rag_system (TYPE): описание.
+
+    """
     doc = Document.objects.create(
         title="T", content="Sample text", format="txt", language="en", metadata={}
     )

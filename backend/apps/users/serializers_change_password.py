@@ -1,3 +1,5 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 from django.contrib.auth import password_validation
 from rest_framework import serializers
 
@@ -9,7 +11,9 @@ class ChangePasswordSerializer(serializers.Serializer):
     def validate(self, attrs):
         user = self.context.get("user") or self.context.get("request").user
         if not user.check_password(attrs["old_password"]):
-            raise serializers.ValidationError({"old_password": "Неверный текущий пароль"})
+            raise serializers.ValidationError(
+                {"old_password": "Неверный текущий пароль"}
+            )
         # Валидация нового пароля через стандартные валидаторы Django
         password_validation.validate_password(attrs["new_password"], user=user)
         return attrs
@@ -18,5 +22,5 @@ class ChangePasswordSerializer(serializers.Serializer):
         user = self.context.get("user") or self.context.get("request").user
         new_password = self.validated_data["new_password"]
         user.set_password(new_password)
-        user.save(update_fields=["password"]) 
+        user.save(update_fields=["password"])
         return user

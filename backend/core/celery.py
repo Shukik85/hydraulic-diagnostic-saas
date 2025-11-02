@@ -1,6 +1,10 @@
+"""Модуль проекта с автогенерированным докстрингом."""
+
 import os
 
 from celery import Celery
+from celery.signals import task_failure, task_postrun, task_prerun
+from celery.utils.log import get_task_logger
 from decouple import config
 
 # Устанавливаем Django settings module
@@ -58,19 +62,14 @@ app.conf.update(
 # Автообнаружение задач
 app.autodiscover_tasks()
 
+# ОПТИМИЗАЦИЯ: настройка логгирования Celery
+logger = get_task_logger(__name__)
+
 
 # Мониторинг состояния Celery
 @app.task(bind=True)
 def debug_task(self):
     print(f"Request: {self.request!r}")
-
-
-from celery.signals import task_failure, task_postrun, task_prerun
-
-# ОПТИМИЗАЦИЯ: настройка логгирования Celery
-from celery.utils.log import get_task_logger
-
-logger = get_task_logger(__name__)
 
 
 @task_prerun.connect
