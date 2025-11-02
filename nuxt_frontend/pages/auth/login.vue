@@ -99,9 +99,11 @@
 </template>
 
 <script setup lang="ts">
+import { definePageMeta } from '#imports'
+
 // Redirect if already authenticated
 definePageMeta({
-  layout: 'auth',
+  layout: 'auth' as const,
   middleware: ['guest']
 })
 
