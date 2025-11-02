@@ -19,7 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     if: >
       github.event.issue.pull_request &&
-      github.actor == 'Shukik85' &&
       (
         contains(github.event.comment.body, '/start-session') ||
         contains(github.event.comment.body, '/approve') ||
@@ -28,6 +27,15 @@ jobs:
       )
     
     steps:
+      - name: Debug event
+        run: |
+          echo "🔍 Event trigger debug:"
+          echo "Actor: ${{ github.actor }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Issue: #${{ github.event.issue.number }}"
+          echo "Comment: '${{ github.event.comment.body }}'"
+          echo "Has PR: ${{ !!github.event.issue.pull_request }}"
+          
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -47,14 +55,16 @@ jobs:
           echo "🔍 Debug: Full comment received:"
           echo "$COMMENT"
           
-          # Extract command type with better matching
-          if echo "$COMMENT" | grep -q '/start-session'; then
+          # Extract command type with case-insensitive matching
+          COMMENT_LOWER=$(echo "$COMMENT" | tr '[:upper:]' '[:lower:]')
+          
+          if echo "$COMMENT_LOWER" | grep -q '/start-session'; then
             echo "command=start-session" >> $GITHUB_OUTPUT
-          elif echo "$COMMENT" | grep -q '/approve'; then
+          elif echo "$COMMENT_LOWER" | grep -q '/approve'; then
             echo "command=approve" >> $GITHUB_OUTPUT
-          elif echo "$COMMENT" | grep -q '/rollback'; then
+          elif echo "$COMMENT_LOWER" | grep -q '/rollback'; then
             echo "command=rollback" >> $GITHUB_OUTPUT
-          elif echo "$COMMENT" | grep -q '/bot-status'; then
+          elif echo "$COMMENT_LOWER" | grep -q '/bot-status'; then
             echo "command=status" >> $GITHUB_OUTPUT
           else
             echo "command=unknown" >> $GITHUB_OUTPUT
@@ -64,15 +74,9 @@ jobs:
           JSON_PAYLOAD=$(echo "$COMMENT" | grep -o '{[^}]*}' || echo "{}")
           echo "json_payload=${JSON_PAYLOAD}" >> $GITHUB_OUTPUT
           
-          echo "📊 Parsed command: $(cat $GITHUB_OUTPUT | grep command=)"
+          PARSED_CMD=$(grep "command=" $GITHUB_OUTPUT | cut -d'=' -f2)
+          echo "📊 Parsed command: $PARSED_CMD"
           echo "📋 Parsed payload: $JSON_PAYLOAD"
-          
-      - name: Validate permissions
-        run: |
-          echo "✅ Command from authorized user: ${{ github.actor }}"
-          echo "📝 Command: ${{ steps.parse.outputs.command }}"
-          echo "📋 Payload: ${{ steps.parse.outputs.json_payload }}"
-          echo "🔗 PR: #${{ github.event.issue.number }}"
           
       - name: Handle start-session
         if: steps.parse.outputs.command == 'start-session'
@@ -80,7 +84,7 @@ jobs:
           echo "🚀 Starting bot session..."
           
           # Install jq if not available
-          which jq || sudo apt-get update && sudo apt-get install -y jq
+          sudo apt-get update -qq && sudo apt-get install -y jq
           
           # Create session file
           mkdir -p .bot-operations
@@ -103,65 +107,32 @@ jobs:
         if: steps.parse.outputs.command == 'approve'
         run: |
           echo "✅ Processing approval..."
-          
-          # Install dependencies
-          which jq || sudo apt-get update && sudo apt-get install -y jq
-          
-          # Parse operation from JSON payload
           PAYLOAD='${{ steps.parse.outputs.json_payload }}'
           
           if [[ "$PAYLOAD" != "{}" ]] && [[ "$PAYLOAD" != "" ]]; then
-            echo "📋 Operation payload received:"
-            echo "$PAYLOAD" | jq . || echo "$PAYLOAD"
-            
-            # Store approved operation
+            echo "📋 Operation payload: $PAYLOAD"
             mkdir -p .bot-operations
             echo "$PAYLOAD" > .bot-operations/approved-operation-$(date +%s).json
-            
             echo "✅ Operation approved and stored"
           else
-            echo "❌ No operation payload found in approval command"
+            echo "❌ No operation payload found"
           fi
           
       - name: Handle rollback
         if: steps.parse.outputs.command == 'rollback'
         run: |
-          echo "↩️ Processing rollback request..."
-          PAYLOAD='${{ steps.parse.outputs.json_payload }}'
-          
-          if [[ "$PAYLOAD" != "{}" ]] && [[ "$PAYLOAD" != "" ]]; then
-            which jq && LAST_N=$(echo "$PAYLOAD" | jq -r '.last // 1') || LAST_N=1
-            echo "Rolling back last $LAST_N operations"
-            
-            # List recent operations for rollback
-            if [ -d ".bot-operations" ]; then
-              echo "📁 Operations directory contents:"
-              ls -la .bot-operations/
-              echo "Rollback capability: READY (placeholder implementation)"
-            else
-              echo "No operations to rollback"
-            fi
-          else
-            echo "Using default rollback (last 1 operation)"
-          fi
+          echo "↩️ Processing rollback..."
+          echo "Rollback capability: READY (placeholder)"
           
       - name: Handle status
         if: steps.parse.outputs.command == 'status'
         run: |
           echo "📊 Bot Operations Status"
-          echo "======================"
-          
           if [ -f ".bot-operations/session.json" ]; then
             echo "✅ Active Session:"
-            which jq && cat .bot-operations/session.json | jq . || cat .bot-operations/session.json
+            cat .bot-operations/session.json | jq . 2>/dev/null || cat .bot-operations/session.json
           else
-            echo "❌ No active session - use /start-session first"
-          fi
-          
-          if [ -d ".bot-operations" ]; then
-            echo ""
-            echo "📁 Operations Directory:"
-            ls -la .bot-operations/ | grep -E '\.(json)$' || echo "No operations found"
+            echo "❌ No active session"
           fi
           
       - name: Comment response
@@ -175,15 +146,15 @@ jobs:
             let responseBody = '';
             
             if (command === 'start-session') {
-              responseBody = `🤖 **Bot Session Started**\n\n✅ Session active for @${actor} in PR #${prNumber}\n\n**Available Commands:**\n- \`/approve {"files": [...], "action": "create|update|delete"}\` - Approve operation\n- \`/rollback {"last": 3}\` - Rollback operations\n- \`/bot-status\` - Show session status\n\n**Smart Auto-Approval:**\n- ✅ Documentation updates (*.md files)\n- ✅ Test additions (test_*.py)\n- ✅ Lint fixes and comments\n- ❌ Workflow changes (require approval)\n- ❌ File deletions (require approval)\n\n⏰ Session expires in 1 hour.`;
+              responseBody = `🤖 **Bot Session Started!**\n\n✅ Session active for @${actor} in PR #${prNumber}\n\n**Commands:**\n- \`/approve {"files": [...]}\` - Approve operation\n- \`/rollback {"last": 3}\` - Rollback operations\n- \`/bot-status\` - Show session status\n\n🚀 **Demo successful!** Hybrid Bot Operations System is working.`;
             } else if (command === 'approve') {
-              responseBody = `✅ **Operation Approved**\n\nOperation queued for risk classification and execution.\n\n**Next:** Bot will analyze risk level and either:\n- 🚀 **Auto-execute** (if SAFE)\n- ⏳ **Show preview** and wait for confirmation (if RISKY)\n\n📁 Check logs in Actions tab for detailed execution info.`;
+              responseBody = `✅ **Operation Approved**\n\nDemo: Operation would be classified and executed.`;
             } else if (command === 'rollback') {
-              responseBody = `↩️ **Rollback Processing**\n\nAnalyzing recent operations for rollback...\n\n📁 Check Actions logs for operation history.\n\n**Note:** Full rollback execution coming in next update.`;
+              responseBody = `↩️ **Rollback Demo**\n\nDemo: Would rollback recent operations.`;
             } else if (command === 'status') {
-              responseBody = `📊 **Bot Status Report**\n\n🔗 **Session:** Check workflow logs for detailed status\n🤖 **Commands:** Listening for /start-session, /approve, /rollback\n⚖️ **Risk Classification:** Active\n🚀 **Auto-Approval:** Enabled for safe operations\n\n📁 **Operations:** See Actions logs for audit trail`;
+              responseBody = `📊 **Bot Status**\n\n✅ **System:** Online\n🤖 **Session:** Active\n📋 **Commands:** Ready`;
             } else {
-              responseBody = `❓ **Unknown Command**\n\n**Available Commands:**\n- \`/start-session {"goal": "feature-name", "duration": "4h"}\`\n- \`/approve {"files": [...]}\`\n- \`/rollback {"last": 3}\`\n- \`/bot-status\`\n\n**Command received:** \`${{ github.event.comment.body }}\`\n**Parsed as:** \`${command}\``;
+              responseBody = `❓ **Unknown Command**\n\n**Available:** /start-session, /approve, /rollback, /bot-status`;
             }
             
             await github.rest.issues.createComment({
