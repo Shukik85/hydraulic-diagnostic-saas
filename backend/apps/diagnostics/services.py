@@ -103,7 +103,7 @@ class DiagnosticEngine:
         self,
         system: HydraulicSystem,
         anomalies: list[dict[str, Any]],
-        sensor_data: dict[str, Any],
+        _sensor_data: dict[str, Any],
     ) -> DiagnosticReport:
         """Создаёт диагностический отчёт на основе аномалий."""
         has_critical = any(a.get("severity") == "critical" for a in anomalies)
@@ -154,7 +154,7 @@ class DiagnosticEngine:
             return "critical"
         return "warning"
 
-    def _get_anomaly_message(self, parameter: str, value: float, severity: str) -> str:
+    def _get_anomaly_message(self, parameter: str, value: float, _severity: str) -> str:
         """Генерирует понятное сообщение об аномалии."""
         messages: dict[str, dict[str, str]] = {
             "pressure": {

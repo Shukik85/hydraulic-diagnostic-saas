@@ -18,7 +18,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         password_validation.validate_password(attrs["new_password"], user=user)
         return attrs
 
-    def save(self, **kwargs):
+    def save(self, **_kwargs):
         user = self.context.get("user") or self.context.get("request").user
         new_password = self.validated_data["new_password"]
         user.set_password(new_password)
