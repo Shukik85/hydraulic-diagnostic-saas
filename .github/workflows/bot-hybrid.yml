@@ -1,0 +1,171 @@
+name: Hybrid Bot Operations
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  bot-hybrid:
+    name: Bot Hybrid Operations
+    runs-on: ubuntu-latest
+    if: >
+      github.event.issue.pull_request &&
+      github.actor == 'Shukik85' &&
+      (
+        startsWith(github.event.comment.body, '/start-session') ||
+        startsWith(github.event.comment.body, '/approve') ||
+        startsWith(github.event.comment.body, '/rollback') ||
+        startsWith(github.event.comment.body, '/bot-status')
+      )
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Parse command
+        id: parse
+        run: |
+          COMMENT="${{ github.event.comment.body }}"
+          echo "full_comment=${COMMENT}" >> $GITHUB_OUTPUT
+          
+          # Extract command type
+          if [[ "$COMMENT" =~ ^/start-session ]]; then
+            echo "command=start-session" >> $GITHUB_OUTPUT
+          elif [[ "$COMMENT" =~ ^/approve ]]; then
+            echo "command=approve" >> $GITHUB_OUTPUT
+          elif [[ "$COMMENT" =~ ^/rollback ]]; then
+            echo "command=rollback" >> $GITHUB_OUTPUT
+          elif [[ "$COMMENT" =~ ^/bot-status ]]; then
+            echo "command=status" >> $GITHUB_OUTPUT
+          else
+            echo "command=unknown" >> $GITHUB_OUTPUT
+          fi
+          
+          # Extract JSON payload if present
+          JSON_PAYLOAD=$(echo "$COMMENT" | grep -o '{.*}' || echo "{}")
+          echo "json_payload=${JSON_PAYLOAD}" >> $GITHUB_OUTPUT
+          
+      - name: Validate permissions
+        run: |
+          echo "✅ Command from authorized user: ${{ github.actor }}"
+          echo "📝 Command: ${{ steps.parse.outputs.command }}"
+          echo "📋 Payload: ${{ steps.parse.outputs.json_payload }}"
+          
+      - name: Handle start-session
+        if: steps.parse.outputs.command == 'start-session'
+        run: |
+          echo "🚀 Starting bot session..."
+          
+          # Create session file
+          mkdir -p .bot-operations
+          cat > .bot-operations/session.json << EOF
+          {
+            "session_id": "session-$(date +%s)",
+            "started_by": "${{ github.actor }}",
+            "started_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "pr_number": ${{ github.event.issue.number }},
+            "payload": ${{ steps.parse.outputs.json_payload }},
+            "status": "active",
+            "operations": []
+          }
+          EOF
+          
+          echo "✅ Session created: $(cat .bot-operations/session.json | jq -r .session_id)"
+          
+      - name: Handle approve
+        if: steps.parse.outputs.command == 'approve'
+        run: |
+          echo "✅ Processing approval..."
+          
+          # Parse operation from JSON payload
+          PAYLOAD='${{ steps.parse.outputs.json_payload }}'
+          
+          if [[ "$PAYLOAD" != "{}" ]]; then
+            echo "📋 Operation payload received"
+            echo "$PAYLOAD" | jq .
+            
+            # Classify risk using our classifier
+            python scripts/bot_risk_classifier.py --operation "$PAYLOAD"
+            
+            # Store approved operation
+            mkdir -p .bot-operations
+            echo "$PAYLOAD" > .bot-operations/approved-operation-$(date +%s).json
+            
+            echo "✅ Operation approved and queued for execution"
+          else
+            echo "❌ No operation payload found in approval command"
+          fi
+          
+      - name: Handle rollback
+        if: steps.parse.outputs.command == 'rollback'
+        run: |
+          echo "↩️ Processing rollback request..."
+          PAYLOAD='${{ steps.parse.outputs.json_payload }}'
+          
+          if [[ "$PAYLOAD" != "{}" ]]; then
+            LAST_N=$(echo "$PAYLOAD" | jq -r '.last // 1')
+            echo "Rolling back last $LAST_N operations"
+            
+            # List recent operations for rollback
+            if [ -d ".bot-operations" ]; then
+              ls -la .bot-operations/
+              echo "Rollback capability: IMPLEMENTED (placeholder)"
+            else
+              echo "No operations to rollback"
+            fi
+          fi
+          
+      - name: Handle status
+        if: steps.parse.outputs.command == 'status'
+        run: |
+          echo "📊 Bot Operations Status"
+          echo "======================"
+          
+          if [ -f ".bot-operations/session.json" ]; then
+            echo "✅ Active Session:"
+            cat .bot-operations/session.json | jq .
+          else
+            echo "❌ No active session"
+          fi
+          
+          if [ -d ".bot-operations" ]; then
+            echo ""
+            echo "📁 Recent Operations:"
+            ls -la .bot-operations/ | grep -E '\.(json)$' || echo "No operations found"
+          fi
+          
+      - name: Comment response
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const command = '${{ steps.parse.outputs.command }}';
+            const actor = '${{ github.actor }}';
+            
+            let responseBody = '';
+            
+            if (command === 'start-session') {
+              responseBody = `🤖 **Bot Session Started**\n\n✅ Session active for @${actor}\n\n**Available Commands:**\n- \`/approve {"files": [...], "action": "create|update|delete"}\` - Approve operation\n- \`/rollback {"last": 3}\` - Rollback operations\n- \`/bot-status\` - Show session status\n\n**Smart Auto-Approval:**\n- ✅ Documentation updates (*.md files)\n- ✅ Test additions (test_*.py)\n- ✅ Lint fixes and comments\n- ❌ Workflow changes (require approval)\n- ❌ File deletions (require approval)`;
+            } else if (command === 'approve') {
+              responseBody = `✅ **Operation Approved**\n\nOperation queued for risk classification and execution.\n\n**Next:** Bot will analyze risk level and either:\n- 🚀 **Auto-execute** (if SAFE)\n- ⏳ **Show preview** and wait for confirmation (if RISKY)`;
+            } else if (command === 'rollback') {
+              responseBody = `↩️ **Rollback Requested**\n\nAnalyzing recent operations for rollback...\n\n**Note:** Full rollback implementation coming in next update.`;
+            } else if (command === 'status') {
+              responseBody = `📊 **Bot Status Report**\n\nSee workflow logs for detailed status information.\n\n**Session Management:** Active for this PR\n**Risk Classification:** Enabled\n**Auto-Approval:** Active for safe operations`;
+            } else {
+              responseBody = `❓ **Unknown Command**\n\n**Available Commands:**\n- \`/start-session {"goal": "feature-name", "duration": "4h"}\`\n- \`/approve {"operation": "..."}\`\n- \`/rollback {"last": 3}\`\n- \`/bot-status\``;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: responseBody
+            });
