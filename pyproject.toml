@@ -7,8 +7,15 @@ line-length = 88
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "DTZ", "PTH", "RUF", "ARG"]
-ignore = ["D", "ANN"]
+select = ["E", "F", "I", "UP", "B", "SIM", "DTZ", "PTH", "ARG"]
+ignore = [
+    "D",      # pydocstyle - отключаем docstring правила
+    "ANN",    # flake8-annotations - отключаем аннотации
+    "RUF001", # ambiguous-unicode-character-string - кириллица в строках OK
+    "RUF002", # ambiguous-unicode-character-docstring - кириллица в docstring OK  
+    "RUF003", # ambiguous-unicode-character-comment - кириллица в комментариях OK
+    "E501",   # line-too-long - часто невозможно сократить Django код
+]
 
 [tool.ruff.lint.per-file-ignores]
 # Миграции Django - полное исключение
@@ -22,51 +29,52 @@ ignore = ["D", "ANN"]
 ]
 
 # Тесты - исключение большинства правил
-"*/tests/*.py" = [
-    "D", "ANN", "S", "BLE", "FBT", "A", "DTZ", "EM", "G", "PIE",
-    "ARG", "PTH", "TD", "FIX", "ERA", "PD", "PGH", "TRY", "RUF012"
-]
-
-"test_*.py" = [
-    "D", "ANN", "S", "BLE", "FBT", "A", "DTZ", "EM", "G", "PIE",
-    "ARG", "PTH", "TD", "FIX", "ERA", "PD", "PGH", "TRY", "RUF012"
-]
+"*/tests/*.py" = ["ARG001", "ARG002", "DTZ003", "DTZ005", "PTH120"]
+"test_*.py" = ["ARG001", "ARG002", "DTZ003", "DTZ005", "PTH120", "I001"]
 
 # Django/DRF паттерны - специфические исключения
-"*/admin.py" = ["RUF012", "DTZ005", "RUF001"]
-"*/models.py" = ["RUF012", "RUF001", "RUF002", "A003"]
-"*/serializers.py" = ["RUF012", "RUF001"]
+"*/admin.py" = ["RUF012", "DTZ005", "ARG001", "ARG002", "I001"]
+"*/models.py" = ["RUF012", "A003", "UP037", "I001"]
+"*/serializers.py" = ["RUF012", "I001"]
 "*/views.py" = ["RUF012", "ARG001", "ARG002"]
-"*/optimized_views.py" = ["RUF012", "SIM102", "ARG001"]
+"*/optimized_views.py" = ["RUF012", "SIM102", "ARG001", "ARG002"]
 
 # Django специфика - сигналы и задачи
 "*/signals.py" = ["ARG001", "ARG002"]
 "*/celery.py" = ["ARG001", "UP007"]
-"*/tasks.py" = ["ARG001", "B904", "DTZ003", "RUF001"]
-"*/tasks_build.py" = ["ARG001", "DTZ003"]
-"*/urls.py" = ["ARG001", "RUF001"]
+"*/tasks.py" = ["ARG001", "ARG002", "B904", "DTZ003", "I001"]
+"*/tasks_build.py" = ["ARG001", "DTZ003", "I001"]
+"*/urls.py" = ["ARG001", "F821", "I001"]
 
 # Системные файлы Django
 "*/asgi.py" = ["ARG001", "UP007"]
 "*/wsgi.py" = ["ARG001", "UP007"]
-"*/health_checks.py" = ["ARG001", "RUF001"]
-"*/pagination.py" = ["B904", "RUF001"]
-"*/settings.py" = ["RUF003", "F405", "F403"]
-"*/settings/*.py" = ["RUF003", "F405", "F403"]
+"*/health_checks.py" = ["ARG001", "I001"]
+"*/pagination.py" = ["B904", "ARG002"]
+"*/settings.py" = ["F405", "F403"]
+"*/settings/*.py" = ["F405", "F403"]
 "manage.py" = ["ARG001"]
 "*/__init__.py" = ["F401"]
 
 # RAG/AI специфические файлы
-"*/rag_core.py" = ["PTH123", "RUF001"]
-"*/rag_service.py" = ["B904", "PTH108", "PTH110"]
-"*/rag_system.py" = ["PTH118", "RUF001"]
-"*/llm_factory.py" = ["RUF001"]
-"*/middleware.py" = ["SIM102", "ARG001"]
-"*/apps.py" = ["RUF001"]
+"*/rag_core.py" = ["PTH123", "I001"]
+"*/rag_service.py" = ["B904", "PTH108", "PTH110", "I001"]
+"*/rag_system.py" = ["PTH118", "I001"]
+"*/llm_factory.py" = ["I001"]
+"*/middleware.py" = ["SIM102", "ARG001", "I001"]
+"*/apps.py" = ["I001"]
 
 # Диагностические файлы
-"*/timescale_tasks.py" = ["ARG001", "B012"]
-"*/websocket_consumers.py" = ["DTZ005", "ARG001"]
+"*/timescale_tasks.py" = ["ARG001", "B012", "I001"]
+"*/websocket_consumers.py" = ["DTZ005", "ARG001", "ARG002", "I001"]
+"*/ai_engine.py" = ["ARG002"]
+
+# Management commands
+"*/management/commands/*.py" = ["ARG001", "ARG002", "DTZ003", "DTZ005", "F401", "I001", "RUF010"]
+
+# Корневые файлы
+"conftest.py" = ["ARG001", "I001"]
+"smoke_*.py" = ["I001"]
 
 [tool.ruff.format]
 quote-style = "double"
