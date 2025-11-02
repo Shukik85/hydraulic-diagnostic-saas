@@ -244,12 +244,13 @@
 </template>
 
 <script setup lang="ts">
+import { definePageMeta } from '#imports'
 import { computed, ref } from 'vue'
 
 type AppLocale = 'ru' | 'en'
 
 definePageMeta({
-  layout: 'blank',
+  layout: 'blank' as const,
   middleware: []
 })
 
