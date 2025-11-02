@@ -164,23 +164,22 @@ git commit -m "READY: TimescaleDB ingestion completed, tests green"
   - `scripts/bot_session_manager.py` → управление сессиями разработки
   - `scripts/validate_workflows.py` → валидация GitHub Actions
 
-## 🤝 Contributing
-
-1. Установить pre-commit: `pre-commit install`
-2. Следовать архитектурным принципам (инкрементальность, совместимость)
-3. Покрывать изменения тестами
-4. Обновлять документацию при изменении контрактов
-5. **Для bot operations:**
-   - Использовать `/start-session` для активных сессий разработки
-   - Безопасные операции (docs, tests, lint) выполняются автоматически
-   - Критичные изменения требуют manual approval через `/approve`
-   - При ошибках использовать `/rollback` для отката
-
 ---
 
-**Enterprise Features Roadmap:**
-- 100+ датчиков, 20+ промышленных протоколов
-- Predictive maintenance + RUL (Remaining Useful Life)
-- Advanced reporting + compliance
-- Multi-tenant SaaS + enterprise integrations
-- 99.9% SLA + horizontal scaling
+## 🧪 Quick Test (Bot & CI)
+
+1. В PR комментариях:
+```
+/start-session {"goal":"hybrid-demo","duration":"1h"}
+```
+2. Статус:
+```
+/bot-status
+```
+Если бот молчит:
+- Убедитесь, что PR не draft (нажмите Ready for review)
+- Settings → Actions → Workflow permissions: Read and write + Allow approvals
+
+Diagnostics:
+- Откройте вкладку Actions
+- Откройте последний run нужного workflow
