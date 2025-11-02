@@ -380,13 +380,14 @@ definePageMeta({
 const { t } = useI18n()
 const activeTab = ref('profile')
 
-const tabs = [
+// FIXED: Make tabs reactive to locale changes
+const tabs = computed(() => [
   { id: 'profile', name: t('settings.tabs.profile'), icon: 'heroicons:user' },
   { id: 'notifications', name: t('settings.tabs.notifications'), icon: 'heroicons:bell' },
   { id: 'integrations', name: t('settings.tabs.integrations'), icon: 'heroicons:puzzle-piece' },
   { id: 'team', name: t('settings.tabs.team'), icon: 'heroicons:users' },
   { id: 'system', name: t('settings.tabs.system'), icon: 'heroicons:cog-6-tooth' }
-]
+])
 
 const profile = ref({ firstName: 'John', lastName: 'Doe', email: 'john.doe@company.com', company: 'ABC Manufacturing', phone: '+1 (555) 123-4567' })
 
