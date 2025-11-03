@@ -58,11 +58,7 @@ class HELMModel(BaseMLModel):
                 features = features.reshape(1, -1)
 
             # HELM иерархическая обработка
-            normalized_features = (
-                self.scaler.fit_transform(features)
-                if hasattr(self.scaler, "transform")
-                else features
-            )
+            normalized_features = self.scaler.fit_transform(features) if hasattr(self.scaler, "transform") else features
 
             # Мок HELM логика (в реальности сложнее)
             level1_score = (
@@ -102,9 +98,7 @@ class HELMModel(BaseMLModel):
 
         except Exception as e:
             processing_time = time.time() - start_time
-            logger.error(
-                "HELM prediction failed", error=str(e), processing_time_ms=processing_time * 1000
-            )
+            logger.error("HELM prediction failed", error=str(e), processing_time_ms=processing_time * 1000)
             raise
 
     def _normalize_score(self, raw_score: float) -> float:

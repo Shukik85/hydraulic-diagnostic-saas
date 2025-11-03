@@ -166,6 +166,7 @@ async def service_info():
 
 # Глобальные dependency функции
 
+
 def get_ensemble_model() -> EnsembleModel:
     if not ensemble_model:
         raise HTTPException(status_code=503, detail="Ensemble model not loaded")

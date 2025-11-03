@@ -36,9 +36,7 @@ class Settings(BaseSettings):
     redis_max_connections: int = Field(default=20, env="REDIS_MAX_CONNECTIONS")
 
     # Database (for model metadata)
-    database_url: str = Field(
-        default="postgresql://user:pass@localhost:5432/hydraulic", env="DATABASE_URL"
-    )
+    database_url: str = Field(default="postgresql://user:pass@localhost:5432/hydraulic", env="DATABASE_URL")
 
     # Monitoring
     enable_metrics: bool = Field(default=True, env="ENABLE_METRICS")
@@ -51,9 +49,7 @@ class Settings(BaseSettings):
 
     # Security
     api_key: str | None = Field(default=None, env="ML_API_KEY")
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"], env="CORS_ORIGINS"
-    )
+    cors_origins: list[str] = Field(default=["http://localhost:3000", "http://localhost:8000"], env="CORS_ORIGINS")
 
     # Feature Engineering
     feature_window_minutes: int = Field(default=10, env="FEATURE_WINDOW_MINUTES")
@@ -103,7 +99,7 @@ MODEL_CONFIG = {
         "file": "catboost_model.joblib",
         "weight": settings.ensemble_weights[0],  # 50% - Primary model
         "accuracy_target": 0.999,  # Higher than HELM
-        "latency_target_ms": 5,    # Much faster than HELM
+        "latency_target_ms": 5,  # Much faster than HELM
         "description": "Enterprise gradient boosting for hydraulic anomaly detection (HELM replacement)",
         "license": "Apache 2.0",
         "commercial_safe": True,
@@ -143,10 +139,10 @@ MODEL_CONFIG = {
 
 # ENSEMBLE PERFORMANCE TARGETS
 ENSEMBLE_TARGETS = {
-    "accuracy": 0.996,      # Combined: 99.6%+
-    "latency_p90_ms": 20,   # Down from 100ms
-    "latency_p99_ms": 35,   # Conservative estimate
-    "memory_mb": 500,       # Total memory budget
+    "accuracy": 0.996,  # Combined: 99.6%+
+    "latency_p90_ms": 20,  # Down from 100ms
+    "latency_p99_ms": 35,  # Conservative estimate
+    "memory_mb": 500,  # Total memory budget
     "throughput_rps": 100,  # Requests per second
 }
 

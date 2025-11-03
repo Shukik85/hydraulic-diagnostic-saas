@@ -4,13 +4,13 @@ Provides readiness/liveness checks for CPU, memory, models and cache.
 """
 
 import time
-from typing import Dict
 
 import psutil
 import structlog
 
 from config import HEALTH_METRICS
 from models.ensemble import EnsembleModel
+
 from .cache_service import CacheService
 
 logger = structlog.get_logger()
@@ -26,7 +26,7 @@ class HealthCheckService:
         self,
         ensemble: EnsembleModel | None = None,
         cache: CacheService | None = None,
-    ) -> Dict[str, object]:
+    ) -> dict[str, object]:
         """Return structured health status with resource and dependency checks."""
         process = psutil.Process()
         vm = psutil.virtual_memory()

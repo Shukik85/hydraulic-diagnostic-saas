@@ -113,7 +113,9 @@ class AdaptiveModel(BaseMLModel):
             raise
 
     async def _calculate_adaptive_threshold(
-        self, _features: np.ndarray, system_id: str = None  # ✅ Исправил ARG002
+        self,
+        _features: np.ndarray,
+        system_id: str = None,  # ✅ Исправил ARG002
     ) -> float:
         """Вычисление динамического порога."""
         base_threshold = self.base_threshold
@@ -188,9 +190,7 @@ class AdaptiveModel(BaseMLModel):
         # Ограничиваем размер кеша
         if len(self.system_state_cache) > 1000:
             # Удаляем старые записи
-            oldest_systems = sorted(
-                self.system_state_cache.items(), key=lambda x: x[1].get("updated_at", 0)
-            )[:100]
+            oldest_systems = sorted(self.system_state_cache.items(), key=lambda x: x[1].get("updated_at", 0))[:100]
 
             for system_id, _ in oldest_systems:
                 del self.system_state_cache[system_id]

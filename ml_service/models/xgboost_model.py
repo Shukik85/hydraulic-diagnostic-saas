@@ -97,9 +97,7 @@ class XGBoostModel(BaseMLModel):
 
         except Exception as e:
             processing_time = time.time() - start_time
-            logger.error(
-                "XGBoost prediction failed", error=str(e), processing_time_ms=processing_time * 1000
-            )
+            logger.error("XGBoost prediction failed", error=str(e), processing_time_ms=processing_time * 1000)
             raise
 
     def _sigmoid_transform(self, x: float) -> float:

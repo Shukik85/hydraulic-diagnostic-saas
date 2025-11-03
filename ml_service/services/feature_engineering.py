@@ -156,15 +156,9 @@ class FeatureEngineer:
             pressure_data = df[df["sensor_type"] == "pressure"]["value"]
             temp_data = df[df["sensor_type"] == "temperature"]["value"]
 
-            if (
-                len(pressure_data) > 1
-                and len(temp_data) > 1
-                and len(pressure_data) == len(temp_data)
-            ):
+            if len(pressure_data) > 1 and len(temp_data) > 1 and len(pressure_data) == len(temp_data):
                 correlation = np.corrcoef(pressure_data, temp_data)[0, 1]
-                features["temp_pressure_correlation"] = float(
-                    correlation if not np.isnan(correlation) else 0.0
-                )
+                features["temp_pressure_correlation"] = float(correlation if not np.isnan(correlation) else 0.0)
             else:
                 features["temp_pressure_correlation"] = 0.0
 
@@ -319,9 +313,7 @@ class FeatureEngineer:
             first_half_std = data[:mid_point].std()
             second_half_std = data[mid_point:].std()
 
-            std_ratio = min(first_half_std, second_half_std) / max(
-                first_half_std, second_half_std, 0.001
-            )
+            std_ratio = min(first_half_std, second_half_std) / max(first_half_std, second_half_std, 0.001)
 
             return float(std_ratio)  # Чем ближе к 1, тем стационарнее
 

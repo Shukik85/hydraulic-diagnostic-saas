@@ -170,9 +170,7 @@ class BaseMLModel(ABC):
 
     def get_stats(self) -> dict[str, Any]:
         """Получение статистики модели."""
-        avg_time = (
-            self.total_inference_time / self.prediction_count if self.prediction_count > 0 else 0.0
-        )
+        avg_time = self.total_inference_time / self.prediction_count if self.prediction_count > 0 else 0.0
 
         return {
             "model_name": self.model_name,
@@ -184,7 +182,7 @@ class BaseMLModel(ABC):
             "load_time_seconds": self.load_time,
             **self.metadata,
         }
-        
+
     def get_model_info(self) -> dict[str, Any]:
         """Получение полной информации о модели."""
         return {
@@ -198,7 +196,7 @@ class BaseMLModel(ABC):
             "is_loaded": self.is_loaded,
             "load_time_ms": (self.load_time * 1000) if self.load_time else None,
         }
-        
+
     def get_version(self) -> str:
         """Получение версии модели."""
         return self.version

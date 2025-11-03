@@ -183,9 +183,7 @@ class EnsembleModel:
             logger.error("Ensemble prediction failed", error=str(e))
             raise
 
-    async def _get_model_prediction(
-        self, model_name: str, model: BaseMLModel, features: np.ndarray
-    ) -> dict[str, Any]:
+    async def _get_model_prediction(self, model_name: str, model: BaseMLModel, features: np.ndarray) -> dict[str, Any]:
         """Получение предсказания от одной модели."""
         start_time = time.time()
 
@@ -273,12 +271,8 @@ class EnsembleModel:
 
         # Ограничиваем размер списков (1000 последних значений)
         if len(self.performance_metrics["inference_times"]) > 1000:
-            self.performance_metrics["inference_times"] = self.performance_metrics[
-                "inference_times"
-            ][-1000:]
-            self.performance_metrics["accuracy_scores"] = self.performance_metrics[
-                "accuracy_scores"
-            ][-1000:]
+            self.performance_metrics["inference_times"] = self.performance_metrics["inference_times"][-1000:]
+            self.performance_metrics["accuracy_scores"] = self.performance_metrics["accuracy_scores"][-1000:]
 
     async def warmup(self, warmup_samples: int = 10) -> None:
         """Прогрев моделей для оптимизации первого запроса."""

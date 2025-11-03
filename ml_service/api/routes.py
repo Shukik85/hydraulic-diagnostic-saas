@@ -134,9 +134,7 @@ async def predict_anomaly(
     except Exception as e:
         processing_time = (time.time() - start_time) * 1000
 
-        logger.error(
-            "Prediction failed", error=str(e), processing_time_ms=processing_time, trace_id=trace_id
-        )
+        logger.error("Prediction failed", error=str(e), processing_time_ms=processing_time, trace_id=trace_id)
 
         metrics.prediction_errors.inc()
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}") from e
@@ -179,9 +177,7 @@ async def predict_batch(
                     result = await predict_anomaly(req, ensemble, get_cache_service())
                     results.append(result)
                 except Exception as err:
-                    error_response = ErrorResponse(
-                        error=str(err), error_code="PREDICTION_FAILED", trace_id=trace_id
-                    )
+                    error_response = ErrorResponse(error=str(err), error_code="PREDICTION_FAILED", trace_id=trace_id)
                     results.append(error_response)
 
         # Подсчет статистики
@@ -216,13 +212,9 @@ async def extract_features(request: FeatureExtractionRequest):
     """Извлечение признаков из сенсорных данных."""
     try:
         feature_engineer = FeatureEngineer()
-        features = await feature_engineer.extract_features(
-            request.sensor_data, feature_groups=request.feature_groups
-        )
+        features = await feature_engineer.extract_features(request.sensor_data, feature_groups=request.feature_groups)
 
-        return FeatureExtractionResponse(
-            system_id=request.sensor_data.system_id, feature_vector=features
-        )
+        return FeatureExtractionResponse(system_id=request.sensor_data.system_id, feature_vector=features)
 
     except Exception as e:
         logger.error("Feature extraction failed", error=str(e))
@@ -267,9 +259,7 @@ async def get_models_status(ensemble: EnsembleModel = Depends(get_ensemble_model
 
 
 @router.post("/models/reload")
-async def reload_models(
-    background_tasks: BackgroundTasks, ensemble: EnsembleModel = Depends(get_ensemble_model)
-):
+async def reload_models(background_tasks: BackgroundTasks, ensemble: EnsembleModel = Depends(get_ensemble_model)):
     """Перезагрузка всех моделей."""
     try:
         # Перезагрузка в фоновом режиме
@@ -287,9 +277,7 @@ async def reload_models(
 
 
 @router.put("/config", response_model=ConfigResponse)
-async def update_config(
-    request: ConfigUpdateRequest, ensemble: EnsembleModel = Depends(get_ensemble_model)
-):
+async def update_config(request: ConfigUpdateRequest, ensemble: EnsembleModel = Depends(get_ensemble_model)):
     """Обновление конфигурации в runtime."""
     try:
         updated_fields = []

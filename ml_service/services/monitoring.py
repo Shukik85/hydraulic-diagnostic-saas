@@ -3,8 +3,8 @@ Prometheus Monitoring for ML Service
 Enterprise метрики производительности
 """
 
-import time
 import asyncio  # ✅ Добавлен импорт для периодического обновления
+import time
 from typing import Any
 
 import psutil
@@ -56,31 +56,19 @@ class MetricsService:
         )
 
         # Метрики моделей
-        self.model_accuracy = Gauge(
-            "ml_model_accuracy", "Точность моделей", ["model_name"], registry=self.registry
-        )
+        self.model_accuracy = Gauge("ml_model_accuracy", "Точность моделей", ["model_name"], registry=self.registry)
 
-        self.ensemble_score = Gauge(
-            "ml_ensemble_score", "Текущий ensemble скор", registry=self.registry
-        )
+        self.ensemble_score = Gauge("ml_ensemble_score", "Текущий ensemble скор", registry=self.registry)
 
         # Метрики кеша
-        self.cache_hits = Counter(
-            "ml_cache_hits_total", "Количество попаданий в кеш", registry=self.registry
-        )
+        self.cache_hits = Counter("ml_cache_hits_total", "Количество попаданий в кеш", registry=self.registry)
 
-        self.cache_misses = Counter(
-            "ml_cache_misses_total", "Количество промахов кеша", registry=self.registry
-        )
+        self.cache_misses = Counter("ml_cache_misses_total", "Количество промахов кеша", registry=self.registry)
 
         # Системные метрики
-        self.memory_usage = Gauge(
-            "ml_memory_usage_bytes", "Использование памяти в байтах", registry=self.registry
-        )
+        self.memory_usage = Gauge("ml_memory_usage_bytes", "Использование памяти в байтах", registry=self.registry)
 
-        self.cpu_usage = Gauge(
-            "ml_cpu_usage_percent", "Загрузка CPU в процентах", registry=self.registry
-        )
+        self.cpu_usage = Gauge("ml_cpu_usage_percent", "Загрузка CPU в процентах", registry=self.registry)
 
         # Метаданные сервиса
         self.service_info = Info("ml_service_info", "Метаданные ML сервиса", registry=self.registry)

@@ -4,7 +4,7 @@ ML модели для гидравлической диагностики.
 Enterprise ML stack:
 - CatBoost: Primary model (HELM replacement) - 99.9% accuracy, <5ms latency
 - XGBoost: Valve/accumulator specialization
-- RandomForest: Ensemble stabilizer  
+- RandomForest: Ensemble stabilizer
 - Adaptive: Dynamic thresholds
 - Ensemble: Weighted voting (patent-safe)
 """
@@ -19,7 +19,7 @@ from .xgboost_model import XGBoostModel
 
 __all__ = [
     "BaseMLModel",
-    "CatBoostModel",      # ➕ Замена HELMModel
+    "CatBoostModel",  # ➕ Замена HELMModel
     "XGBoostModel",
     "RandomForestModel",
     "AdaptiveModel",

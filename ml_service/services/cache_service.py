@@ -56,11 +56,7 @@ class CacheService:
             logger.info("Redis cache connected", url=settings.redis_url)
 
         except Exception as e:
-            logger.warning(
-                "Redis connection failed, using mock cache",
-                error=str(e),
-                redis_url=settings.redis_url
-            )
+            logger.warning("Redis connection failed, using mock cache", error=str(e), redis_url=settings.redis_url)
             # Fallback на mock cache
             self.redis = None
             self.is_mock = True
@@ -79,7 +75,7 @@ class CacheService:
         """Проверка подключения."""
         if self.is_mock:
             return True  # Mock cache всегда доступен
-        
+
         if not self.redis:
             return False
 
@@ -129,10 +125,10 @@ class CacheService:
                     else:
                         # TTL истек
                         del self.mock_cache[cache_key]
-                
+
                 self.miss_count += 1
                 return None
-            
+
             # Real Redis
             cached_data = await self.redis.get(cache_key)
 
@@ -166,17 +162,12 @@ class CacheService:
 
             if self.is_mock:
                 # Mock cache с TTL
-                self.mock_cache[cache_key] = {
-                    "data": cache_data,
-                    "cached_at": time.time()
-                }
+                self.mock_cache[cache_key] = {"data": cache_data, "cached_at": time.time()}
                 logger.debug("Prediction cached to mock", key=cache_key, ttl=settings.cache_ttl_seconds)
                 return True
-            
+
             # Real Redis
-            await self.redis.set(
-                cache_key, json.dumps(cache_data, default=str), ex=settings.cache_ttl_seconds
-            )
+            await self.redis.set(cache_key, json.dumps(cache_data, default=str), ex=settings.cache_ttl_seconds)
 
             logger.debug("Prediction cached", key=cache_key, ttl=settings.cache_ttl_seconds)
             return True
@@ -215,10 +206,10 @@ class CacheService:
                     count = len(self.mock_cache)
                     self.mock_cache.clear()
                     return count
-            
+
             if not self.redis:
                 return 0
-            
+
             if pattern:
                 keys = await self.redis.keys(f"{self.cache_prefix}{pattern}*")
                 if keys:

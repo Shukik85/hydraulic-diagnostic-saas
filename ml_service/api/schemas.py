@@ -16,7 +16,7 @@ class BaseResponse(BaseModel):
 
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     trace_id: str | None = None
-    
+
     class Config:
         # Убираем protected namespaces для полей вида ml_*
         protected_namespaces = ()
@@ -80,7 +80,7 @@ class PredictionRequest(BaseModel):
         if v not in allowed_types:
             raise ValueError(f"prediction_type must be one of {allowed_types}")
         return v
-    
+
     class Config:
         protected_namespaces = ()
 
@@ -88,13 +88,13 @@ class PredictionRequest(BaseModel):
 class ModelPrediction(BaseModel):
     """Предсказание одной модели."""
 
-    ml_model: str          # было model_name
-    version: str           # было model_version
+    ml_model: str  # было model_name
+    version: str  # было model_version
     prediction_score: float = Field(..., ge=0.0, le=1.0)
     confidence: float = Field(..., ge=0.0, le=1.0)
     processing_time_ms: float
     features_used: int
-    
+
     class Config:
         protected_namespaces = ()
 
@@ -135,7 +135,7 @@ class BatchPredictionRequest(BaseModel):
 
     requests: list[PredictionRequest] = Field(..., min_items=1, max_items=32)
     parallel_processing: bool = Field(default=True)
-    
+
     class Config:
         protected_namespaces = ()
 
@@ -158,11 +158,11 @@ class ModelInfo(BaseModel):
     description: str
     accuracy: float = Field(..., ge=0.0, le=1.0)
     last_trained: datetime
-    size_mb: float         # было model_size_mb
+    size_mb: float  # было model_size_mb
     features_count: int
     is_loaded: bool
     load_time_ms: float | None = None
-    
+
     class Config:
         protected_namespaces = ()
 
