@@ -6,7 +6,7 @@ Abstract base class для всех ML моделей
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple  # ✅ Полный typing импорт
 
 import joblib
 import numpy as np
@@ -28,18 +28,19 @@ class BaseMLModel(ABC):
     - Валидацию данных
     """
 
-    def __init__(self, model_name: str, model_file: str):
+    def __init__(self, model_name: str, model_file: Optional[str] = None):
         self.model_name = model_name
-        self.model_file = model_file
+        self.model_file = model_file or f"{model_name}_model.joblib"
         self.version = "1.0.0"
         self.model = None
         self.is_loaded = False
+        self.is_trained = False  # ✅ Для компатибильности с CatBoost
         self.load_time = None
         self.prediction_count = 0
         self.total_inference_time = 0.0
 
         # Метаданные модели
-        self.metadata = {
+        self.metadata: Dict[str, Any] = {
             "features_count": 0,
             "model_size_mb": 0.0,
             "last_used": None,
@@ -57,6 +58,7 @@ class BaseMLModel(ABC):
             if model_path.exists():
                 self.model = joblib.load(model_path)
                 self.is_loaded = True
+                self.is_trained = True
                 self.load_time = time.time() - start_time
 
                 # Обновление метаданных
@@ -92,8 +94,10 @@ class BaseMLModel(ABC):
         self.model.fit(mock_data)
 
         self.is_loaded = True
+        self.is_trained = True
         self.load_time = 0.1  # Быстрая загрузка mock
         self.metadata["features_count"] = 25
+        self.metadata["accuracy_score"] = 0.85  # Mock accuracy
 
         logger.info(f"Mock {self.model_name} model created")
 
@@ -115,7 +119,7 @@ class BaseMLModel(ABC):
         if not self.is_loaded:
             raise RuntimeError(f"Model {self.model_name} not loaded")
 
-        results = []
+        results: List[Dict[str, Any]] = []
         start_time = time.time()
 
         try:
@@ -174,11 +178,30 @@ class BaseMLModel(ABC):
             "model_name": self.model_name,
             "version": self.version,
             "is_loaded": self.is_loaded,
+            "is_trained": self.is_trained,
             "predictions_count": self.prediction_count,
             "average_inference_time_ms": avg_time * 1000,
             "load_time_seconds": self.load_time,
             **self.metadata,
         }
+        
+    def get_model_info(self) -> Dict[str, Any]:
+        """Получение полной информации о модели."""
+        return {
+            "name": self.model_name,
+            "version": self.version,
+            "description": f"{self.model_name} model for hydraulic anomaly detection",
+            "accuracy": self.metadata.get("accuracy_score", 0.0),
+            "last_trained": self.metadata.get("last_trained", None),
+            "size_mb": self.metadata.get("model_size_mb", 0.0),
+            "features_count": self.metadata.get("features_count", 0),
+            "is_loaded": self.is_loaded,
+            "load_time_ms": (self.load_time * 1000) if self.load_time else None,
+        }
+        
+    def get_version(self) -> str:
+        """Получение версии модели."""
+        return self.version
 
     async def cleanup(self) -> None:
         """Очистка ресурсов."""
@@ -186,6 +209,7 @@ class BaseMLModel(ABC):
 
         self.model = None
         self.is_loaded = False
+        self.is_trained = False
 
     def __str__(self) -> str:
         status = "loaded" if self.is_loaded else "not loaded"
