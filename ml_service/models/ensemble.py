@@ -126,13 +126,12 @@ class EnsembleModel:
         except Exception as e:
             logger.warning("Adaptive model failed to load", error=str(e))
 
-    async def predict(self, features: np.ndarray, _use_cache: bool = True) -> dict[str, Any]:
+    async def predict(self, features: np.ndarray) -> dict[str, Any]:  # ✅ FIX ARG002: убрал _use_cache
         """
         Enterprise ensemble предсказание с <100ms latency.
 
         Args:
             features: Массив признаков
-            use_cache: Использовать кеш
 
         Returns:
             Словарь с предсказанием и метриками
@@ -215,13 +214,13 @@ class EnsembleModel:
     def _calculate_ensemble_score(self, predictions: list[dict[str, Any]]) -> dict[str, Any]:
         """Вычисление ensemble скора с весами."""
         if not predictions:
-            return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0}
+            return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0, "is_anomaly": False}
 
         # Отфильтровываем ошибочные предсказания
         valid_predictions = [p for p in predictions if "error" not in p]
 
         if not valid_predictions:
-            return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0}
+            return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0, "is_anomaly": False}
 
         # Весовое среднее
         weighted_score = 0.0
@@ -243,7 +242,7 @@ class EnsembleModel:
             total_weight += weight
 
         if total_weight == 0:
-            return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0}
+            return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0, "is_anomaly": False}
 
         final_score = weighted_score / total_weight
         final_confidence = confidence_sum / total_weight
@@ -259,7 +258,7 @@ class EnsembleModel:
         return {
             "ensemble_score": final_score,
             "severity": severity,
-            "is_anomaly": final_score > settings.prediction_threshold,
+            "is_anomaly": final_score > settings.prediction_threshold,  # ✅ FIX 2: добавлен is_anomaly
             "confidence": final_confidence,
         }
 
@@ -283,7 +282,7 @@ class EnsembleModel:
 
         for i in range(warmup_samples):
             try:
-                await self.predict(dummy_features[i], use_cache=False)
+                await self.predict(dummy_features[i])  # ✅ FIX: убрал use_cache=False
             except Exception as e:
                 logger.warning(f"Warmup sample {i} failed", error=str(e))
 
