@@ -1,30 +1,25 @@
 """
-ML Inference Service - FastAPI Application
+ML Inference Service - FastAPI Application (Production-ready)
 Enterprise гидравлическая диагностика с ML
 """
 
+import json
 import time
 import uuid
 from contextlib import asynccontextmanager
 
 import structlog
 import uvicorn
-from api.middleware import (
-    ErrorHandlingMiddleware,
-    MetricsMiddleware,
-    RateLimitMiddleware,
-    TraceIDMiddleware,
-)
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from prometheus_client import make_asgi_app
-from services.health_check import HealthCheckService
 
 from api.routes import router as api_router
 from config import ANOMALY_THRESHOLDS, settings
 from models.ensemble import EnsembleModel
 from services.cache_service import CacheService
+from services.health_check import HealthCheckService
 from services.monitoring import setup_metrics
 
 # Настройка логирования
@@ -37,8 +32,8 @@ health_service: HealthCheckService | None = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Управление жизненным циклом приложения."""
+async def lifespan(_app: FastAPI):
+    """Управление жизненным циклом приложения (prod)."""
     global ensemble_model, cache_service, health_service
 
     logger.info("Starting ML Inference Service", version=settings.version)
@@ -63,7 +58,6 @@ async def lifespan(app: FastAPI):
         setup_metrics()
 
         logger.info("ML Service started successfully")
-
         yield
 
     except Exception as e:
@@ -72,13 +66,10 @@ async def lifespan(app: FastAPI):
     finally:
         # Очистка ресурсов
         logger.info("Shutting down ML Service")
-
         if cache_service:
             await cache_service.disconnect()
-
         if ensemble_model:
             await ensemble_model.cleanup()
-
         logger.info("ML Service shutdown complete")
 
 
@@ -92,7 +83,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS настройки
+# Сжатие ответов
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
+# CORS (только проверенные источники)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -100,13 +94,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
-
-# Middleware
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-app.add_middleware(ErrorHandlingMiddleware)
-app.add_middleware(MetricsMiddleware)
-app.add_middleware(TraceIDMiddleware)
-app.add_middleware(RateLimitMiddleware, calls=100, period=60)  # 100 запросов в минуту
 
 # API роуты
 app.include_router(api_router, prefix="/api/v1")
@@ -136,9 +123,7 @@ async def health_check():
         raise HTTPException(status_code=503, detail="Health service not initialized")
 
     health_status = await health_service.check_health()
-
-    status_code = 200 if health_status["healthy"] else 503
-    return Response(content=health_status, status_code=status_code, media_type="application/json")
+    return health_status
 
 
 @app.get("/ready")
@@ -161,10 +146,7 @@ async def readiness_check():
 @app.get("/info")
 async def service_info():
     """Информация о сервисе."""
-    model_info = {}
-
-    if ensemble_model:
-        model_info = ensemble_model.get_model_info()
+    model_info = ensemble_model.get_model_info() if ensemble_model else {}
 
     return {
         "service": settings.app_name,
@@ -183,33 +165,23 @@ async def service_info():
 
 
 # Глобальные dependency функции
+
 def get_ensemble_model() -> EnsembleModel:
-    """Получить ensemble модель."""
     if not ensemble_model:
         raise HTTPException(status_code=503, detail="Ensemble model not loaded")
     return ensemble_model
 
 
 def get_cache_service() -> CacheService:
-    """Получить cache сервис."""
     if not cache_service:
         raise HTTPException(status_code=503, detail="Cache service not initialized")
     return cache_service
 
 
-def get_health_service() -> HealthCheckService:
-    """Получить health check сервис."""
-    if not health_service:
-        raise HTTPException(status_code=503, detail="Health service not initialized")
-    return health_service
-
-
-# Обработчик ошибок
+# Глобальный обработчик ошибок (структурированный ответ)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """Глобальный обработчик ошибок."""
-    trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
-
+    trace_id = str(uuid.uuid4())
     logger.error(
         "Unhandled exception",
         error=str(exc),
@@ -218,9 +190,13 @@ async def global_exception_handler(request: Request, exc: Exception):
         url=str(request.url),
     )
 
-    return HTTPException(
+    return JSONResponse(
         status_code=500,
-        detail={"error": "Internal server error", "trace_id": trace_id, "timestamp": time.time()},
+        content={
+            "error": "Internal server error",
+            "trace_id": trace_id,
+            "timestamp": time.time(),
+        },
     )
 
 
