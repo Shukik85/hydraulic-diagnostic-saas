@@ -53,6 +53,7 @@ raw_env = [
     "DJANGO_SETTINGS_MODULE=core.settings",
 ]
 
+
 # Hooks
 def when_ready(server):
     """Called just after the server is started."""

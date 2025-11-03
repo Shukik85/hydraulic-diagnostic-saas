@@ -384,7 +384,9 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
                     parts.append(format_html("<ul>{}</ul>", rec_items))
 
             return format_html(
-                "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'>" "{}" "</div>",
+                "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'>"
+                "{}"
+                "</div>",
                 format_html_join("", "{}", ((p,) for p in parts)),
             )
         except Exception as e:
