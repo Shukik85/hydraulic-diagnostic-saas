@@ -118,12 +118,12 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Проверка здоровья сервиса."""
+    """Проверка здоровья сервиса (resources + dependencies)."""
     if not health_service:
         raise HTTPException(status_code=503, detail="Health service not initialized")
 
-    health_status = await health_service.check_health()
-    return health_status
+    status = await health_service.check_health(ensemble_model, cache_service)
+    return status
 
 
 @app.get("/ready")
