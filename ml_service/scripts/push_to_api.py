@@ -114,13 +114,14 @@ class MLAPITester:
             # Создаем абсолютный timestamp для цикла
             base_time = datetime.now(UTC)
             cycle_timestamp = base_time.replace(
-                second=int(row["timestamp"]), microsecond=int((row["timestamp"] % 1) * 1000000)
+                second=int(row["timestamp"]) % 60,  # ✅ Приводим к диапазону 0-59
+                microsecond=int((row["timestamp"] % 1) * 1000000),
             )
 
             reading = {
                 "timestamp": cycle_timestamp.isoformat(),
                 "sensor_type": row["sensor_type"],
-                "value": float(row["value"]),
+                "value": float(row["value"]) if hasattr(row["value"], "item") else float(row["value"]),
                 "unit": row["unit"],
                 "component_id": None,  # UCI данные не содержат component_id
             }
