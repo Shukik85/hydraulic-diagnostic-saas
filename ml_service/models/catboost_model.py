@@ -258,7 +258,7 @@ class CatBoostModel(BaseMLModel):
             feature_names = [f"feature_{i}" for i in range(len(self.feature_importance_))]
         
         # Create importance dict
-        importance_dict = dict(zip(feature_names, self.feature_importance_))
+        importance_dict = dict(zip(feature_names, self.feature_importance_, strict=False))  # ✅ Исправил B905
         
         # Sort by importance and get top N
         sorted_importance = sorted(
