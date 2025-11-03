@@ -4,15 +4,14 @@ Enterprise adaptive модель с динамическими порогами
 """
 
 import time
-from typing import Dict, Any, Tuple
+from typing import Any
 
 import numpy as np
 import structlog
-from sklearn.ensemble import IsolationForest
-from scipy import stats
+
+from config import MODEL_CONFIG, settings
 
 from .base_model import BaseMLModel
-from config import MODEL_CONFIG, settings
 
 logger = structlog.get_logger()
 
@@ -36,7 +35,7 @@ class AdaptiveModel(BaseMLModel):
         self.recent_scores = []
         self.system_state_cache = {}
 
-    async def predict(self, features: np.ndarray, system_id: str = None) -> Dict[str, Any]:
+    async def predict(self, features: np.ndarray, system_id: str = None) -> dict[str, Any]:
         """
         Adaptive предсказание с динамическими порогами.
 
@@ -182,7 +181,7 @@ class AdaptiveModel(BaseMLModel):
         """Нормализация скора."""
         return 1.0 / (1.0 + np.exp(-raw_score * 1.2))
 
-    async def update_system_state(self, system_id: str, state_info: Dict[str, Any]) -> None:
+    async def update_system_state(self, system_id: str, state_info: dict[str, Any]) -> None:
         """Обновление состояния системы для адаптации."""
         self.system_state_cache[system_id] = {**state_info, "updated_at": time.time()}
 

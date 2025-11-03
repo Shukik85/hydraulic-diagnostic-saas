@@ -6,30 +6,29 @@ Enterprise API endpoints для гидравлической диагности�
 import asyncio
 import time
 import uuid
-from typing import List, Dict, Any
 
 import structlog
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
-from .schemas import (
-    PredictionRequest,
-    PredictionResponse,
-    BatchPredictionRequest,
-    BatchPredictionResponse,
-    FeatureExtractionRequest,
-    FeatureExtractionResponse,
-    ModelStatusResponse,
-    ConfigUpdateRequest,
-    ConfigResponse,
-    MetricsResponse,
-    ErrorResponse,
-)
+from config import settings
 from models.ensemble import EnsembleModel
 from services.cache_service import CacheService
 from services.feature_engineering import FeatureEngineer
 from services.monitoring import metrics
-from config import settings
+
+from .schemas import (
+    BatchPredictionRequest,
+    BatchPredictionResponse,
+    ConfigResponse,
+    ConfigUpdateRequest,
+    ErrorResponse,
+    FeatureExtractionRequest,
+    FeatureExtractionResponse,
+    MetricsResponse,
+    ModelStatusResponse,
+    PredictionRequest,
+    PredictionResponse,
+)
 
 logger = structlog.get_logger()
 router = APIRouter()

@@ -4,11 +4,11 @@ Enterprise метрики производительности
 """
 
 import time
-from typing import Dict, Any
+from typing import Any
 
 import psutil
 import structlog
-from prometheus_client import Counter, Histogram, Gauge, Info, CollectorRegistry, generate_latest
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, Info
 
 from config import settings
 
@@ -118,7 +118,7 @@ class MetricsService:
         """Запись ошибки."""
         self.prediction_errors.labels(model_name=model_name, error_type=error_type).inc()
 
-    def get_metrics_summary(self) -> Dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Сводка метрик."""
         uptime = time.time() - self.start_time
 

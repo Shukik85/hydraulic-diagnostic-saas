@@ -4,15 +4,15 @@ Enterprise HELM модель с 99.5% accuracy target
 """
 
 import time
-from typing import Dict, Any
+from typing import Any
 
 import numpy as np
 import structlog
-from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 
-from .base_model import BaseMLModel
 from config import MODEL_CONFIG
+
+from .base_model import BaseMLModel
 
 logger = structlog.get_logger()
 
@@ -34,7 +34,7 @@ class HELMModel(BaseMLModel):
         self.hierarchy_levels = 3
         self.confidence_threshold = 0.85
 
-    async def predict(self, features: np.ndarray) -> Dict[str, Any]:
+    async def predict(self, features: np.ndarray) -> dict[str, Any]:
         """
         HELM предсказание с иерархической обработкой.
 

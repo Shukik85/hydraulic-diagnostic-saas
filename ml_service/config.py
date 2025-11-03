@@ -3,8 +3,6 @@ ML Inference Service Configuration
 Enterprise конфигурация для гидравлической диагностики
 """
 
-import os
-from typing import List, Optional
 from pydantic import Field, validator
 from pydantic_settings import BaseSettings
 
@@ -24,7 +22,7 @@ class Settings(BaseSettings):
 
     # ML Models - UPDATED FOR CATBOOST ENSEMBLE
     model_path: str = Field(default="./models", env="MODEL_PATH")
-    ensemble_weights: List[float] = [0.5, 0.3, 0.15, 0.05]  # CatBoost, XGBoost, RandomForest, Adaptive
+    ensemble_weights: list[float] = [0.5, 0.3, 0.15, 0.05]  # CatBoost, XGBoost, RandomForest, Adaptive
     prediction_threshold: float = Field(default=0.6, env="PREDICTION_THRESHOLD")
 
     # Performance - OPTIMIZED FOR CATBOOST
@@ -52,8 +50,8 @@ class Settings(BaseSettings):
     model_warmup_timeout: int = Field(default=60, env="MODEL_WARMUP_TIMEOUT")
 
     # Security
-    api_key: Optional[str] = Field(default=None, env="ML_API_KEY")
-    cors_origins: List[str] = Field(
+    api_key: str | None = Field(default=None, env="ML_API_KEY")
+    cors_origins: list[str] = Field(
         default=["http://localhost:3000", "http://localhost:8000"], env="CORS_ORIGINS"
     )
 
@@ -67,7 +65,7 @@ class Settings(BaseSettings):
 
     # External Services
     backend_api_url: str = Field(default="http://localhost:8000/api", env="BACKEND_API_URL")
-    notification_service_url: Optional[str] = Field(default=None, env="NOTIFICATION_SERVICE_URL")
+    notification_service_url: str | None = Field(default=None, env="NOTIFICATION_SERVICE_URL")
 
     @validator("ensemble_weights")
     def validate_ensemble_weights(cls, v):

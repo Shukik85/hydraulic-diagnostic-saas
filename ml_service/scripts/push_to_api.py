@@ -20,10 +20,9 @@ import argparse
 import asyncio
 import json
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Any
-from uuid import UUID, uuid4
+from typing import Any
 
 import httpx
 import pandas as pd
@@ -52,7 +51,7 @@ class MLAPITester:
     def __init__(self, api_base: str, timeout: int = 30):
         self.api_base = api_base.rstrip('/')
         self.timeout = timeout
-        self.results: List[Dict[str, Any]] = []
+        self.results: list[dict[str, Any]] = []
         
     async def test_service_health(self) -> bool:
         """Проверка готовности ML сервиса."""
@@ -109,13 +108,13 @@ class MLAPITester:
             logger.error("Failed to load UCI data", error=str(e), path=data_path)
             raise
     
-    def convert_cycle_to_sensor_batch(self, cycle_df: pd.DataFrame, cycle_id: int) -> Dict[str, Any]:
+    def convert_cycle_to_sensor_batch(self, cycle_df: pd.DataFrame, cycle_id: int) -> dict[str, Any]:
         """Конвертация одного цикла UCI в SensorDataBatch."""
         readings = []
         
         for _, row in cycle_df.iterrows():
             # Создаем абсолютный timestamp для цикла
-            base_time = datetime.now(timezone.utc)
+            base_time = datetime.now(UTC)
             cycle_timestamp = base_time.replace(
                 second=int(row['timestamp']),
                 microsecond=int((row['timestamp'] % 1) * 1000000)
@@ -145,7 +144,7 @@ class MLAPITester:
             "model_names": ["helm", "xgboost", "random_forest"]
         }
     
-    async def test_single_prediction(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def test_single_prediction(self, request_data: dict[str, Any]) -> dict[str, Any]:
         """Тест одиночного предсказания."""
         start_time = time.time()
         
@@ -194,7 +193,7 @@ class MLAPITester:
                 "error": str(e)
             }
     
-    async def test_batch_prediction(self, requests_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def test_batch_prediction(self, requests_data: list[dict[str, Any]]) -> dict[str, Any]:
         """Тест пакетного предсказания."""
         start_time = time.time()
         
@@ -243,7 +242,7 @@ class MLAPITester:
                 "error": str(e)
             }
     
-    def analyze_results(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def analyze_results(self, results: list[dict[str, Any]]) -> dict[str, Any]:
         """Анализ результатов тестирования."""
         if not results:
             return {"error": "No results to analyze"}
@@ -382,14 +381,14 @@ async def main():
     print("🧪 UCI HYDRAULIC ML API TEST REPORT")
     print("="*60)
     
-    print(f"\n📊 SUMMARY:")
+    print("\n📊 SUMMARY:")
     print(f"  Total Tests: {analysis['total_tests']}")
     print(f"  Success Rate: {analysis['success_rate']:.1f}%")
     print(f"  Failed Tests: {analysis['failed_tests']}")
     
     if analysis.get("latency_stats"):
         latency = analysis["latency_stats"]
-        print(f"\n⚡ PERFORMANCE:")
+        print("\n⚡ PERFORMANCE:")
         print(f"  Request Time p50: {latency['request_time_p50_ms']:.1f}ms")
         print(f"  Request Time p90: {latency['request_time_p90_ms']:.1f}ms")
         print(f"  Request Time p99: {latency['request_time_p99_ms']:.1f}ms")
@@ -398,16 +397,16 @@ async def main():
     
     if analysis.get("prediction_stats"):
         pred = analysis["prediction_stats"]
-        print(f"\n🎯 PREDICTIONS:")
+        print("\n🎯 PREDICTIONS:")
         print(f"  Average Ensemble Score: {pred['ensemble_score_mean']:.3f}")
         print(f"  Score Std Deviation: {pred['ensemble_score_std']:.3f}")
         print(f"  Average Confidence: {pred['confidence_mean']:.3f}")
-        print(f"  Severity Distribution:")
+        print("  Severity Distribution:")
         for severity, count in pred["severity_distribution"].items():
             print(f"    {severity}: {count} ({count/analysis['successful_tests']*100:.1f}%)")
     
     if analysis.get("errors"):
-        print(f"\n❌ ERRORS:")
+        print("\n❌ ERRORS:")
         for error in analysis["errors"][:5]:  # Показываем первые 5
             print(f"  - {error}")
     
@@ -421,7 +420,7 @@ async def main():
             "cycles_tested": args.cycles,
             "data_source": args.data,
             "batch_mode": args.batch,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         },
         "analysis": analysis,
         "raw_results": results[:10]  # Первые 10 результатов для детального анализа

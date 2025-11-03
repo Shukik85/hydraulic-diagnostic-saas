@@ -10,12 +10,12 @@ Enterprise ML stack:
 """
 
 # Явные импорты (без wildcard imports)
+from .adaptive_model import AdaptiveModel
 from .base_model import BaseMLModel
 from .catboost_model import CatBoostModel  # ➕ Новая enterprise модель
-from .xgboost_model import XGBoostModel
-from .random_forest_model import RandomForestModel
-from .adaptive_model import AdaptiveModel
 from .ensemble import EnsembleModel
+from .random_forest_model import RandomForestModel
+from .xgboost_model import XGBoostModel
 
 __all__ = [
     "BaseMLModel",

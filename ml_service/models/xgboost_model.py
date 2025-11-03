@@ -4,14 +4,14 @@ Enterprise XGBoost с 99.8% accuracy target
 """
 
 import time
-from typing import Dict, Any
+from typing import Any
 
 import numpy as np
 import structlog
-from sklearn.ensemble import IsolationForest
+
+from config import MODEL_CONFIG
 
 from .base_model import BaseMLModel
-from config import MODEL_CONFIG
 
 logger = structlog.get_logger()
 
@@ -33,7 +33,7 @@ class XGBoostModel(BaseMLModel):
         self.max_depth = 6
         self.learning_rate = 0.1
 
-    async def predict(self, features: np.ndarray) -> Dict[str, Any]:
+    async def predict(self, features: np.ndarray) -> dict[str, Any]:
         """
         XGBoost предсказание с gradient boosting.
 

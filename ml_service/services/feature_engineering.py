@@ -4,15 +4,14 @@ Enterprise feature extraction с 25+ признаками
 """
 
 import time
-from typing import Dict, List, Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import structlog
 from scipy import stats
-from scipy.signal import welch
 
-from api.schemas import SensorDataBatch, FeatureVector
+from api.schemas import FeatureVector, SensorDataBatch
 from config import FEATURE_CONFIG, settings
 
 logger = structlog.get_logger()
@@ -34,7 +33,7 @@ class FeatureEngineer:
         self.window_size = int(settings.feature_window_minutes * 60 * self.sampling_frequency)
 
     async def extract_features(
-        self, sensor_data: SensorDataBatch, feature_groups: Optional[List[str]] = None
+        self, sensor_data: SensorDataBatch, feature_groups: list[str] | None = None
     ) -> FeatureVector:
         """
         Извлечение признаков из сенсорных данных.
@@ -97,7 +96,7 @@ class FeatureEngineer:
             logger.error("Feature extraction failed", error=str(e))
             raise
 
-    def _readings_to_dataframe(self, readings: List[Any]) -> pd.DataFrame:
+    def _readings_to_dataframe(self, readings: list[Any]) -> pd.DataFrame:
         """Преобразование sensor readings в DataFrame."""
         data = []
 
@@ -117,7 +116,7 @@ class FeatureEngineer:
 
         return df
 
-    def _extract_sensor_features(self, df: pd.DataFrame) -> Dict[str, float]:
+    def _extract_sensor_features(self, df: pd.DataFrame) -> dict[str, float]:
         """Основные статистические признаки по типам датчиков."""
         features = {}
 
@@ -138,7 +137,7 @@ class FeatureEngineer:
 
         return features
 
-    def _extract_derived_features(self, df: pd.DataFrame) -> Dict[str, float]:
+    def _extract_derived_features(self, df: pd.DataFrame) -> dict[str, float]:
         """Производные признаки."""
         features = {}
 
@@ -196,7 +195,7 @@ class FeatureEngineer:
 
         return features
 
-    def _extract_window_features(self, df: pd.DataFrame) -> Dict[str, float]:
+    def _extract_window_features(self, df: pd.DataFrame) -> dict[str, float]:
         """Признаки на основе временных окон."""
         features = {}
 

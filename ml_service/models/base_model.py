@@ -6,7 +6,7 @@ Abstract base class для всех ML моделей
 import time
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple  # ✅ Полный typing импорт
+from typing import Any  # ✅ Полный typing импорт
 
 import joblib
 import numpy as np
@@ -28,7 +28,7 @@ class BaseMLModel(ABC):
     - Валидацию данных
     """
 
-    def __init__(self, model_name: str, model_file: Optional[str] = None):
+    def __init__(self, model_name: str, model_file: str | None = None):
         self.model_name = model_name
         self.model_file = model_file or f"{model_name}_model.joblib"
         self.version = "1.0.0"
@@ -40,7 +40,7 @@ class BaseMLModel(ABC):
         self.total_inference_time = 0.0
 
         # Метаданные модели
-        self.metadata: Dict[str, Any] = {
+        self.metadata: dict[str, Any] = {
             "features_count": 0,
             "model_size_mb": 0.0,
             "last_used": None,
@@ -71,7 +71,7 @@ class BaseMLModel(ABC):
                 )
             else:
                 # Создаем мок модель для разработки
-                logger.warning(f"Model file not found, creating mock model", path=str(model_path))
+                logger.warning("Model file not found, creating mock model", path=str(model_path))
                 await self._create_mock_model()
 
         except Exception as e:
@@ -102,7 +102,7 @@ class BaseMLModel(ABC):
         logger.info(f"Mock {self.model_name} model created")
 
     @abstractmethod
-    async def predict(self, features: np.ndarray) -> Dict[str, Any]:
+    async def predict(self, features: np.ndarray) -> dict[str, Any]:
         """
         Абстрактный метод предсказания.
 
@@ -114,12 +114,12 @@ class BaseMLModel(ABC):
         """
         pass
 
-    async def predict_batch(self, features_batch: np.ndarray) -> List[Dict[str, Any]]:
+    async def predict_batch(self, features_batch: np.ndarray) -> list[dict[str, Any]]:
         """Пакетное предсказание для оптимизации."""
         if not self.is_loaded:
             raise RuntimeError(f"Model {self.model_name} not loaded")
 
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         start_time = time.time()
 
         try:
@@ -132,7 +132,7 @@ class BaseMLModel(ABC):
             avg_time = total_time / len(features_batch)
 
             logger.info(
-                f"Batch prediction completed",
+                "Batch prediction completed",
                 model=self.model_name,
                 batch_size=len(features_batch),
                 total_time_ms=total_time,
@@ -168,7 +168,7 @@ class BaseMLModel(ABC):
         self.total_inference_time += processing_time
         self.metadata["last_used"] = time.time()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Получение статистики модели."""
         avg_time = (
             self.total_inference_time / self.prediction_count if self.prediction_count > 0 else 0.0
@@ -185,7 +185,7 @@ class BaseMLModel(ABC):
             **self.metadata,
         }
         
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Получение полной информации о модели."""
         return {
             "name": self.model_name,

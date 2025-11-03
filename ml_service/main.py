@@ -3,39 +3,37 @@ ML Inference Service - FastAPI Application
 Enterprise гидравлическая диагностика с ML
 """
 
-import asyncio
 import time
 import uuid
 from contextlib import asynccontextmanager
-from typing import Dict, List, Optional
 
 import structlog
 import uvicorn
-from fastapi import FastAPI, HTTPException, Depends, Request, Response
+from api.middleware import (
+    ErrorHandlingMiddleware,
+    MetricsMiddleware,
+    RateLimitMiddleware,
+    TraceIDMiddleware,
+)
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from prometheus_client import make_asgi_app
+from services.health_check import HealthCheckService
 
 from api.routes import router as api_router
-from api.middleware import (
-    TraceIDMiddleware,
-    MetricsMiddleware,
-    ErrorHandlingMiddleware,
-    RateLimitMiddleware,
-)
-from config import settings, ANOMALY_THRESHOLDS
+from config import ANOMALY_THRESHOLDS, settings
 from models.ensemble import EnsembleModel
 from services.cache_service import CacheService
-from services.monitoring import metrics, setup_metrics
-from services.health_check import HealthCheckService
+from services.monitoring import setup_metrics
 
 # Настройка логирования
 logger = structlog.get_logger()
 
 # Глобальные сервисы
-ensemble_model: Optional[EnsembleModel] = None
-cache_service: Optional[CacheService] = None
-health_service: Optional[HealthCheckService] = None
+ensemble_model: EnsembleModel | None = None
+cache_service: CacheService | None = None
+health_service: HealthCheckService | None = None
 
 
 @asynccontextmanager

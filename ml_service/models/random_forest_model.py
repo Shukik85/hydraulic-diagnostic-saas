@@ -4,14 +4,14 @@ Enterprise Random Forest с 99.6% accuracy target
 """
 
 import time
-from typing import Dict, Any
+from typing import Any
 
 import numpy as np
 import structlog
-from sklearn.ensemble import RandomForestClassifier, IsolationForest
+
+from config import MODEL_CONFIG
 
 from .base_model import BaseMLModel
-from config import MODEL_CONFIG
 
 logger = structlog.get_logger()
 
@@ -35,7 +35,7 @@ class RandomForestModel(BaseMLModel):
         self.min_samples_split = 5
         self.feature_importances_ = None
 
-    async def predict(self, features: np.ndarray) -> Dict[str, Any]:
+    async def predict(self, features: np.ndarray) -> dict[str, Any]:
         """
         Random Forest предсказание.
 

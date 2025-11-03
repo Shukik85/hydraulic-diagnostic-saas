@@ -6,7 +6,7 @@ Enterprise кеширование предсказаний с TTL
 import hashlib
 import json
 import time
-from typing import Dict, Any, Optional
+from typing import Any
 
 import aioredis
 import structlog
@@ -29,7 +29,7 @@ class CacheService:
     """
 
     def __init__(self):
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: aioredis.Redis | None = None
         self.connection_pool = None
         self.cache_prefix = "ml_pred:"
         self.hit_count = 0
@@ -100,7 +100,7 @@ class CacheService:
         values_string = json.dumps(rounded_values, sort_keys=True)
         return hashlib.md5(values_string.encode()).hexdigest()[:8]
 
-    async def get_prediction(self, cache_key: str) -> Optional[Dict[str, Any]]:
+    async def get_prediction(self, cache_key: str) -> dict[str, Any] | None:
         """Получение предсказания из кеша."""
         if not self.redis or not settings.cache_predictions:
             return None
@@ -124,7 +124,7 @@ class CacheService:
             self.miss_count += 1
             return None
 
-    async def save_prediction(self, cache_key: str, prediction: Dict[str, Any]) -> bool:
+    async def save_prediction(self, cache_key: str, prediction: dict[str, Any]) -> bool:
         """Сохранение предсказания в кеш."""
         if not self.redis or not settings.cache_predictions:
             return False
@@ -148,7 +148,7 @@ class CacheService:
             logger.warning("Cache save failed", error=str(e), key=cache_key)
             return False
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Статистика кеша."""
         total_requests = self.hit_count + self.miss_count
         hit_rate = (self.hit_count / total_requests) if total_requests > 0 else 0.0

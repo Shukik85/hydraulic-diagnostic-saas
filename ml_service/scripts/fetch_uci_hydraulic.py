@@ -17,7 +17,6 @@ from __future__ import annotations
 import argparse
 import uuid
 from pathlib import Path
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -75,9 +74,9 @@ def http_download(url: str, dest: Path) -> bool:
         return False
 
 
-def ensure_raw_files(raw_dir: Path) -> Dict[str, Path]:
+def ensure_raw_files(raw_dir: Path) -> dict[str, Path]:
     raw_dir.mkdir(parents=True, exist_ok=True)
-    paths: Dict[str, Path] = {}
+    paths: dict[str, Path] = {}
     for fn in FILES:
         p = raw_dir / fn
         if not p.exists():
@@ -118,14 +117,14 @@ def wide_row_to_long(
     )
 
 
-def build_long(sensors: Dict[str, pd.DataFrame], limit: int | None) -> pd.DataFrame:
+def build_long(sensors: dict[str, pd.DataFrame], limit: int | None) -> pd.DataFrame:
     base = sensors["PS1"]
     n_cycles = base.shape[0]
     if limit:
         n_cycles = min(n_cycles, limit)
     system_id = str(uuid.uuid4())
 
-    frames: List[pd.DataFrame] = []
+    frames: list[pd.DataFrame] = []
     for name, (stype, hz) in SENSOR_MAP.items():
         if name not in sensors:
             continue
@@ -149,8 +148,8 @@ def main() -> None:
 
     paths = ensure_raw_files(raw_dir)
 
-    sensors: Dict[str, pd.DataFrame] = {}
-    for key in SENSOR_MAP.keys():
+    sensors: dict[str, pd.DataFrame] = {}
+    for key in SENSOR_MAP:
         fn = f"{key}.txt"
         if fn in paths:
             sensors[key] = load_sensor_matrix(paths[fn])

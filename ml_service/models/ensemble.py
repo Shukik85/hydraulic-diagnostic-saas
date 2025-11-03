@@ -5,20 +5,18 @@ Enterprise ensemble с 4 ML моделями и <100ms latency
 
 import asyncio
 import time
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any
 
-import joblib
 import numpy as np
 import structlog
-from sklearn.ensemble import IsolationForest
 
-from config import settings, MODEL_CONFIG
+from config import MODEL_CONFIG, settings
+
+from .adaptive_model import AdaptiveModel
 from .base_model import BaseMLModel
 from .helm_model import HELMModel
-from .xgboost_model import XGBoostModel
 from .random_forest_model import RandomForestModel
-from .adaptive_model import AdaptiveModel
+from .xgboost_model import XGBoostModel
 
 logger = structlog.get_logger()
 
@@ -35,7 +33,7 @@ class EnsembleModel:
     """
 
     def __init__(self):
-        self.models: Dict[str, BaseMLModel] = {}
+        self.models: dict[str, BaseMLModel] = {}
         self.ensemble_weights = settings.ensemble_weights.copy()
         self.is_loaded = False
         self.load_start_time = None
@@ -128,7 +126,7 @@ class EnsembleModel:
         except Exception as e:
             logger.warning("Adaptive model failed to load", error=str(e))
 
-    async def predict(self, features: np.ndarray, use_cache: bool = True) -> Dict[str, Any]:
+    async def predict(self, features: np.ndarray, use_cache: bool = True) -> dict[str, Any]:
         """
         Enterprise ensemble предсказание с <100ms latency.
 
@@ -187,7 +185,7 @@ class EnsembleModel:
 
     async def _get_model_prediction(
         self, model_name: str, model: BaseMLModel, features: np.ndarray
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Получение предсказания от одной модели."""
         start_time = time.time()
 
@@ -216,7 +214,7 @@ class EnsembleModel:
                 "error": str(e),
             }
 
-    def _calculate_ensemble_score(self, predictions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _calculate_ensemble_score(self, predictions: list[dict[str, Any]]) -> dict[str, Any]:
         """Вычисление ensemble скора с весами."""
         if not predictions:
             return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0}
@@ -301,11 +299,11 @@ class EnsembleModel:
         """Проверка готовности ensemble."""
         return self.is_loaded and len([m for m in self.models.values() if m.is_loaded]) >= 2
 
-    def get_loaded_models(self) -> List[str]:
+    def get_loaded_models(self) -> list[str]:
         """Список загруженных моделей."""
         return [name for name, model in self.models.items() if model.is_loaded]
 
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Информация о загруженных моделях."""
         model_info = {}
 
@@ -328,7 +326,7 @@ class EnsembleModel:
 
         return model_info
 
-    def get_performance_metrics(self) -> Dict[str, Any]:
+    def get_performance_metrics(self) -> dict[str, Any]:
         """Метрики производительности."""
         if not self.performance_metrics["inference_times"]:
             return {"predictions_total": 0}

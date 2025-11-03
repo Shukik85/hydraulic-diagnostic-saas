@@ -4,7 +4,7 @@ Enterprise схемы для гидравлической диагностики
 """
 
 from datetime import datetime
-from typing import List, Dict, Optional, Any, Union
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field, validator
@@ -15,7 +15,7 @@ class BaseResponse(BaseModel):
     """Базовая схема ответа."""
 
     timestamp: datetime = Field(default_factory=datetime.utcnow)
-    trace_id: Optional[str] = None
+    trace_id: str | None = None
     
     class Config:
         # Убираем protected namespaces для полей вида ml_*
@@ -26,8 +26,8 @@ class ErrorResponse(BaseResponse):
     """Схема ошибки."""
 
     error: str
-    error_code: Optional[str] = None
-    details: Optional[Dict[str, Any]] = None
+    error_code: str | None = None
+    details: dict[str, Any] | None = None
 
 
 # Sensor Data Models
@@ -38,7 +38,7 @@ class SensorReading(BaseModel):
     sensor_type: str = Field(..., description="Тип датчика: pressure, temperature, flow, vibration")
     value: float = Field(..., description="Значение с датчика")
     unit: str = Field(..., description="Единица измерения")
-    component_id: Optional[UUID] = Field(None, description="ID компонента")
+    component_id: UUID | None = Field(None, description="ID компонента")
 
     @validator("sensor_type")
     def validate_sensor_type(cls, v):
@@ -52,8 +52,8 @@ class SensorDataBatch(BaseModel):
     """Пакет данных с датчиков."""
 
     system_id: UUID = Field(..., description="ID гидравлической системы")
-    readings: List[SensorReading] = Field(..., min_items=1, max_items=1000)
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Дополнительные метаданные")
+    readings: list[SensorReading] = Field(..., min_items=1, max_items=1000)
+    metadata: dict[str, Any] | None = Field(None, description="Дополнительные метаданные")
 
     @validator("readings")
     def validate_readings_timespan(cls, v):
@@ -72,7 +72,7 @@ class PredictionRequest(BaseModel):
     sensor_data: SensorDataBatch
     prediction_type: str = Field(default="anomaly", description="Тип предсказания")
     use_cache: bool = Field(default=True, description="Использовать кеш")
-    ml_models: Optional[List[str]] = Field(None, description="Конкретные модели")  # было model_names
+    ml_models: list[str] | None = Field(None, description="Конкретные модели")  # было model_names
 
     @validator("prediction_type")
     def validate_prediction_type(cls, v):
@@ -106,8 +106,8 @@ class AnomalyPrediction(BaseModel):
     anomaly_score: float = Field(..., ge=0.0, le=1.0, description="Оценка аномальности")
     severity: str = Field(..., description="Уровень серьезности: normal, warning, critical")
     confidence: float = Field(..., ge=0.0, le=1.0)
-    affected_components: List[str] = Field(default_factory=list)
-    anomaly_type: Optional[str] = Field(None, description="Тип аномалии")
+    affected_components: list[str] = Field(default_factory=list)
+    anomaly_type: str | None = Field(None, description="Тип аномалии")
 
     @validator("severity")
     def validate_severity(cls, v):
@@ -122,7 +122,7 @@ class PredictionResponse(BaseResponse):
 
     system_id: UUID
     prediction: AnomalyPrediction
-    ml_predictions: List[ModelPrediction]  # было model_predictions
+    ml_predictions: list[ModelPrediction]  # было model_predictions
     ensemble_score: float = Field(..., ge=0.0, le=1.0)
     total_processing_time_ms: float
     features_extracted: int
@@ -133,7 +133,7 @@ class PredictionResponse(BaseResponse):
 class BatchPredictionRequest(BaseModel):
     """Пакетный запрос на предсказание."""
 
-    requests: List[PredictionRequest] = Field(..., min_items=1, max_items=32)
+    requests: list[PredictionRequest] = Field(..., min_items=1, max_items=32)
     parallel_processing: bool = Field(default=True)
     
     class Config:
@@ -143,7 +143,7 @@ class BatchPredictionRequest(BaseModel):
 class BatchPredictionResponse(BaseResponse):
     """Ответ на пакетный запрос."""
 
-    results: List[Union[PredictionResponse, ErrorResponse]]
+    results: list[PredictionResponse | ErrorResponse]
     total_processing_time_ms: float
     successful_predictions: int
     failed_predictions: int
@@ -161,7 +161,7 @@ class ModelInfo(BaseModel):
     size_mb: float         # было model_size_mb
     features_count: int
     is_loaded: bool
-    load_time_ms: Optional[float] = None
+    load_time_ms: float | None = None
     
     class Config:
         protected_namespaces = ()
@@ -170,8 +170,8 @@ class ModelInfo(BaseModel):
 class ModelStatusResponse(BaseResponse):
     """Статус моделей."""
 
-    models: List[ModelInfo]
-    ensemble_weights: List[float]
+    models: list[ModelInfo]
+    ensemble_weights: list[float]
     total_models_loaded: int
     memory_usage_mb: float
 
@@ -181,7 +181,7 @@ class FeatureExtractionRequest(BaseModel):
     """Запрос на извлечение признаков."""
 
     sensor_data: SensorDataBatch
-    feature_groups: List[str] = Field(
+    feature_groups: list[str] = Field(
         default=["sensor_features", "derived_features", "window_features"],
         description="Группы признаков",
     )
@@ -190,8 +190,8 @@ class FeatureExtractionRequest(BaseModel):
 class FeatureVector(BaseModel):
     """Вектор признаков."""
 
-    features: Dict[str, float]
-    feature_names: List[str]
+    features: dict[str, float]
+    feature_names: list[str]
     extraction_time_ms: float
     data_quality_score: float = Field(..., ge=0.0, le=1.0)
 
@@ -209,8 +209,8 @@ class HealthStatus(BaseModel):
 
     healthy: bool
     status: str
-    checks: Dict[str, bool]
-    metrics: Dict[str, float]
+    checks: dict[str, bool]
+    metrics: dict[str, float]
     uptime_seconds: float
 
 
@@ -232,9 +232,9 @@ class MetricsResponse(BaseModel):
 class ConfigUpdateRequest(BaseModel):
     """Обновление конфигурации."""
 
-    ensemble_weights: Optional[List[float]] = None
-    prediction_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
-    cache_ttl_seconds: Optional[int] = Field(None, ge=0)
+    ensemble_weights: list[float] | None = None
+    prediction_threshold: float | None = Field(None, ge=0.0, le=1.0)
+    cache_ttl_seconds: int | None = Field(None, ge=0)
 
     @validator("ensemble_weights")
     def validate_ensemble_weights(cls, v):
@@ -249,9 +249,9 @@ class ConfigUpdateRequest(BaseModel):
 class ConfigResponse(BaseResponse):
     """Текущая конфигурация."""
 
-    ensemble_weights: List[float]
+    ensemble_weights: list[float]
     prediction_threshold: float
     max_inference_time_ms: int
     cache_enabled: bool
     cache_ttl_seconds: int
-    models_loaded: List[str]
+    models_loaded: list[str]

@@ -11,19 +11,18 @@ Enterprise production model for hydraulic systems (HELM replacement)
 """
 
 import time
-from typing import Dict, List, Any, Optional
-from datetime import datetime
+from typing import Any
 
 import numpy as np
-import pandas as pd
+import structlog
 from catboost import CatBoostClassifier, Pool
-from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.preprocessing import StandardScaler
+
+from config import settings
 
 from .base_model import BaseMLModel
-from config import settings, MODEL_CONFIG
-import structlog
 
 logger = structlog.get_logger()
 
@@ -82,7 +81,7 @@ class CatBoostModel(BaseMLModel):
             target_latency_ms=5
         )
     
-    def train(self, X: np.ndarray, y: np.ndarray, validation_split: float = 0.2) -> Dict[str, Any]:
+    def train(self, X: np.ndarray, y: np.ndarray, validation_split: float = 0.2) -> dict[str, Any]:
         """
         Train CatBoost model with enterprise optimizations.
         
@@ -194,7 +193,7 @@ class CatBoostModel(BaseMLModel):
             logger.error("CatBoost prediction failed", error=str(e))
             raise
     
-    def predict_single(self, features: np.ndarray) -> Dict[str, Any]:
+    def predict_single(self, features: np.ndarray) -> dict[str, Any]:
         """
         Single sample prediction with detailed output.
         
@@ -243,7 +242,7 @@ class CatBoostModel(BaseMLModel):
             logger.error("CatBoost single prediction failed", error=str(e))
             raise
     
-    def get_feature_importance(self, top_n: int = 20) -> Dict[str, float]:
+    def get_feature_importance(self, top_n: int = 20) -> dict[str, float]:
         """
         Get top N most important features.
         
@@ -289,7 +288,7 @@ class CatBoostModel(BaseMLModel):
         
         return round(estimated_mb, 2)
     
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """
         Get comprehensive model information.
         """
@@ -311,7 +310,7 @@ class CatBoostModel(BaseMLModel):
         
         return {**base_info, **catboost_info}
     
-    def optimize_for_production(self) -> Dict[str, Any]:
+    def optimize_for_production(self) -> dict[str, Any]:
         """
         Apply production optimizations for ultra-low latency.
         
