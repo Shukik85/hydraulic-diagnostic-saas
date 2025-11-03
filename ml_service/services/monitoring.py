@@ -4,6 +4,7 @@ Enterprise метрики производительности
 """
 
 import time
+import asyncio  # ✅ Добавлен импорт для периодического обновления
 from typing import Any
 
 import psutil
