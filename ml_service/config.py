@@ -1,0 +1,174 @@
+"""
+ML Inference Service Configuration
+Enterprise конфигурация для гидравлической диагностики
+"""
+
+import os
+from typing import List, Optional
+from pydantic import BaseSettings, Field, validator
+
+
+class Settings(BaseSettings):
+    """ML Service Settings with enterprise defaults."""
+    
+    # Application
+    app_name: str = "Hydraulic ML Inference Service"
+    version: str = "1.0.0"
+    debug: bool = Field(default=False, env="DEBUG")
+    
+    # Server
+    host: str = Field(default="0.0.0.0", env="ML_HOST")
+    port: int = Field(default=8001, env="ML_PORT")
+    workers: int = Field(default=4, env="ML_WORKERS")
+    
+    # ML Models
+    model_path: str = Field(default="./models", env="MODEL_PATH")
+    ensemble_weights: List[float] = [0.4, 0.4, 0.2]  # HELM, XGBoost, RandomForest
+    prediction_threshold: float = Field(default=0.6, env="PREDICTION_THRESHOLD")
+    
+    # Performance
+    max_inference_time_ms: int = Field(default=100, env="MAX_INFERENCE_TIME_MS")
+    batch_size: int = Field(default=32, env="BATCH_SIZE")
+    cache_predictions: bool = Field(default=True, env="CACHE_PREDICTIONS")
+    cache_ttl_seconds: int = Field(default=300, env="CACHE_TTL_SECONDS")  # 5 min
+    
+    # Redis Cache
+    redis_url: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
+    redis_max_connections: int = Field(default=20, env="REDIS_MAX_CONNECTIONS")
+    
+    # Database (for model metadata)
+    database_url: str = Field(
+        default="postgresql://user:pass@localhost:5432/hydraulic", 
+        env="DATABASE_URL"
+    )
+    
+    # Monitoring
+    enable_metrics: bool = Field(default=True, env="ENABLE_METRICS")
+    metrics_port: int = Field(default=9090, env="METRICS_PORT")
+    log_level: str = Field(default="INFO", env="LOG_LEVEL")
+    
+    # Health Checks
+    health_check_interval: int = Field(default=30, env="HEALTH_CHECK_INTERVAL")
+    model_warmup_timeout: int = Field(default=60, env="MODEL_WARMUP_TIMEOUT")
+    
+    # Security
+    api_key: Optional[str] = Field(default=None, env="ML_API_KEY")
+    cors_origins: List[str] = Field(
+        default=["http://localhost:3000", "http://localhost:8000"], 
+        env="CORS_ORIGINS"
+    )
+    
+    # Feature Engineering
+    feature_window_minutes: int = Field(default=10, env="FEATURE_WINDOW_MINUTES")
+    sampling_frequency_hz: float = Field(default=100.0, env="SAMPLING_FREQUENCY_HZ")
+    
+    # Anomaly Detection
+    anomaly_sensitivity: float = Field(default=0.8, env="ANOMALY_SENSITIVITY")
+    min_data_points: int = Field(default=100, env="MIN_DATA_POINTS")
+    
+    # External Services
+    backend_api_url: str = Field(
+        default="http://localhost:8000/api", 
+        env="BACKEND_API_URL"
+    )
+    notification_service_url: Optional[str] = Field(
+        default=None, 
+        env="NOTIFICATION_SERVICE_URL"
+    )
+    
+    @validator("ensemble_weights")
+    def validate_ensemble_weights(cls, v):
+        if len(v) != 3:
+            raise ValueError("Ensemble weights must have exactly 3 values")
+        if abs(sum(v) - 1.0) > 0.01:
+            raise ValueError("Ensemble weights must sum to 1.0")
+        return v
+    
+    @validator("prediction_threshold")
+    def validate_threshold(cls, v):
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("Prediction threshold must be between 0.0 and 1.0")
+        return v
+    
+    @validator("log_level")
+    def validate_log_level(cls, v):
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        if v.upper() not in valid_levels:
+            raise ValueError(f"Log level must be one of {valid_levels}")
+        return v.upper()
+    
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+
+# Global settings instance
+settings = Settings()
+
+# Model Configuration
+MODEL_CONFIG = {
+    "helm": {
+        "name": "HELM Anomaly Detection",
+        "file": "helm_model.joblib",
+        "weight": settings.ensemble_weights[0],
+        "accuracy_target": 0.995,
+        "description": "Hierarchical Extreme Learning Machine for pattern recognition"
+    },
+    "xgboost": {
+        "name": "XGBoost Classifier", 
+        "file": "xgboost_model.joblib",
+        "weight": settings.ensemble_weights[1],
+        "accuracy_target": 0.998,
+        "description": "Gradient boosting for complex feature interactions"
+    },
+    "random_forest": {
+        "name": "Random Forest",
+        "file": "random_forest_model.joblib", 
+        "weight": settings.ensemble_weights[2],
+        "accuracy_target": 0.996,
+        "description": "Ensemble method for robust predictions"
+    },
+    "adaptive": {
+        "name": "Adaptive Threshold",
+        "file": "adaptive_model.joblib",
+        "weight": 0.0,  # Используется для динамических порогов
+        "accuracy_target": 0.992,
+        "description": "Dynamic threshold adjustment based on system state"
+    }
+}
+
+# Feature Configuration
+FEATURE_CONFIG = {
+    "sensor_features": [
+        "pressure_mean", "pressure_std", "pressure_max", "pressure_min",
+        "temperature_mean", "temperature_std", "temperature_max", "temperature_min", 
+        "flow_mean", "flow_std", "flow_max", "flow_min",
+        "vibration_mean", "vibration_std", "vibration_max", "vibration_min"
+    ],
+    "derived_features": [
+        "pressure_gradient", "temperature_gradient", "flow_gradient",
+        "vibration_rms", "pressure_flow_ratio", "temp_pressure_correlation",
+        "system_efficiency", "anomaly_score_rolling"
+    ],
+    "window_features": [
+        "trend_slope", "seasonality_score", "stationarity_test",
+        "autocorrelation_lag1", "cross_correlation_max"
+    ]
+}
+
+# Anomaly Thresholds
+ANOMALY_THRESHOLDS = {
+    "normal": {"min": 0.0, "max": 0.3, "color": "green", "priority": "low"},
+    "warning": {"min": 0.3, "max": 0.6, "color": "yellow", "priority": "medium"},
+    "critical": {"min": 0.6, "max": 1.0, "color": "red", "priority": "high"}
+}
+
+# System Health Metrics
+HEALTH_METRICS = {
+    "cpu_threshold": 80.0,  # %
+    "memory_threshold": 85.0,  # %
+    "disk_threshold": 90.0,  # %
+    "response_time_threshold": settings.max_inference_time_ms,  # ms
+    "error_rate_threshold": 0.05,  # 5%
+    "model_accuracy_threshold": 0.95  # 95%
+}
