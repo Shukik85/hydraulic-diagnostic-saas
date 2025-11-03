@@ -22,13 +22,13 @@ class Settings(BaseSettings):
     port: int = Field(default=8001, env="ML_PORT")
     workers: int = Field(default=4, env="ML_WORKERS")
 
-    # ML Models
+    # ML Models - UPDATED FOR CATBOOST ENSEMBLE
     model_path: str = Field(default="./models", env="MODEL_PATH")
-    ensemble_weights: List[float] = [0.4, 0.4, 0.2]  # HELM, XGBoost, RandomForest
+    ensemble_weights: List[float] = [0.5, 0.3, 0.15, 0.05]  # CatBoost, XGBoost, RandomForest, Adaptive
     prediction_threshold: float = Field(default=0.6, env="PREDICTION_THRESHOLD")
 
-    # Performance
-    max_inference_time_ms: int = Field(default=100, env="MAX_INFERENCE_TIME_MS")
+    # Performance - OPTIMIZED FOR CATBOOST
+    max_inference_time_ms: int = Field(default=20, env="MAX_INFERENCE_TIME_MS")  # Reduced from 100ms
     batch_size: int = Field(default=32, env="BATCH_SIZE")
     cache_predictions: bool = Field(default=True, env="CACHE_PREDICTIONS")
     cache_ttl_seconds: int = Field(default=300, env="CACHE_TTL_SECONDS")  # 5 min
@@ -71,8 +71,8 @@ class Settings(BaseSettings):
 
     @validator("ensemble_weights")
     def validate_ensemble_weights(cls, v):
-        if len(v) != 3:
-            raise ValueError("Ensemble weights must have exactly 3 values")
+        if len(v) != 4:  # Updated for 4 models
+            raise ValueError("Ensemble weights must have exactly 4 values")
         if abs(sum(v) - 1.0) > 0.01:
             raise ValueError("Ensemble weights must sum to 1.0")
         return v
@@ -98,36 +98,58 @@ class Settings(BaseSettings):
 # Global settings instance
 settings = Settings()
 
-# Model Configuration
+# Model Configuration - UPDATED FOR CATBOOST ENSEMBLE
 MODEL_CONFIG = {
-    "helm": {
-        "name": "HELM Anomaly Detection",
-        "file": "helm_model.joblib",
-        "weight": settings.ensemble_weights[0],
-        "accuracy_target": 0.995,
-        "description": "Hierarchical Extreme Learning Machine for pattern recognition",
+    "catboost": {
+        "name": "CatBoost Anomaly Detection",
+        "file": "catboost_model.joblib",
+        "weight": settings.ensemble_weights[0],  # 50% - Primary model
+        "accuracy_target": 0.999,  # Higher than HELM
+        "latency_target_ms": 5,    # Much faster than HELM
+        "description": "Enterprise gradient boosting for hydraulic anomaly detection (HELM replacement)",
+        "license": "Apache 2.0",
+        "commercial_safe": True,
+        "russian_registry_compliant": True,
     },
     "xgboost": {
         "name": "XGBoost Classifier",
         "file": "xgboost_model.joblib",
-        "weight": settings.ensemble_weights[1],
+        "weight": settings.ensemble_weights[1],  # 30%
         "accuracy_target": 0.998,
-        "description": "Gradient boosting for complex feature interactions",
+        "latency_target_ms": 15,
+        "description": "Gradient boosting for valve/accumulator component specialization",
+        "license": "Apache 2.0",
+        "commercial_safe": True,
     },
     "random_forest": {
         "name": "Random Forest",
         "file": "random_forest_model.joblib",
-        "weight": settings.ensemble_weights[2],
+        "weight": settings.ensemble_weights[2],  # 15%
         "accuracy_target": 0.996,
-        "description": "Ensemble method for robust predictions",
+        "latency_target_ms": 25,
+        "description": "Ensemble stabilizer for robust predictions",
+        "license": "BSD-3-Clause",
+        "commercial_safe": True,
     },
     "adaptive": {
         "name": "Adaptive Threshold",
         "file": "adaptive_model.joblib",
-        "weight": 0.0,  # Используется для динамических порогов
+        "weight": settings.ensemble_weights[3],  # 5%
         "accuracy_target": 0.992,
+        "latency_target_ms": 3,
         "description": "Dynamic threshold adjustment based on system state",
+        "license": "Own Implementation",
+        "commercial_safe": True,
     },
+}
+
+# ENSEMBLE PERFORMANCE TARGETS
+ENSEMBLE_TARGETS = {
+    "accuracy": 0.996,      # Combined: 99.6%+
+    "latency_p90_ms": 20,   # Down from 100ms
+    "latency_p99_ms": 35,   # Conservative estimate
+    "memory_mb": 500,       # Total memory budget
+    "throughput_rps": 100,  # Requests per second
 }
 
 # Feature Configuration
