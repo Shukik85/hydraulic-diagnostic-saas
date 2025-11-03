@@ -3,7 +3,6 @@ ML Inference Service - FastAPI Application (Production-ready)
 Enterprise гидравлическая диагностика с ML
 """
 
-import json
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -13,6 +12,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
 
 from api.routes import router as api_router
