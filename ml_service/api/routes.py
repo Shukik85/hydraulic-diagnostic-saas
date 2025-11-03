@@ -104,7 +104,7 @@ async def predict_anomaly(
                 "affected_components": [],
                 "anomaly_type": None,
             },
-            model_predictions=prediction_result["individual_predictions"],
+            ml_predictions=prediction_result["individual_predictions"],  # поле обновлено
             ensemble_score=prediction_result["ensemble_score"],
             total_processing_time_ms=prediction_result["total_processing_time_ms"],
             features_extracted=len(features.features),
@@ -139,7 +139,7 @@ async def predict_anomaly(
         )
 
         metrics.prediction_errors.inc()
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}") from e
 
 
 @router.post("/predict/batch", response_model=BatchPredictionResponse)
@@ -178,9 +178,9 @@ async def predict_batch(
                 try:
                     result = await predict_anomaly(req, ensemble, get_cache_service())
                     results.append(result)
-                except Exception as e:
+                except Exception as err:
                     error_response = ErrorResponse(
-                        error=str(e), error_code="PREDICTION_FAILED", trace_id=trace_id
+                        error=str(err), error_code="PREDICTION_FAILED", trace_id=trace_id
                     )
                     results.append(error_response)
 
@@ -208,7 +208,7 @@ async def predict_batch(
 
     except Exception as e:
         logger.error("Batch prediction failed", error=str(e), trace_id=trace_id)
-        raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}") from e
 
 
 @router.post("/features/extract", response_model=FeatureExtractionResponse)
@@ -226,7 +226,7 @@ async def extract_features(request: FeatureExtractionRequest):
 
     except Exception as e:
         logger.error("Feature extraction failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Feature extraction failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Feature extraction failed: {str(e)}") from e
 
 
 # Model Management Endpoints
@@ -237,7 +237,7 @@ async def get_models_status(ensemble: EnsembleModel = Depends(get_ensemble_model
         import psutil
 
         models_info = []
-        for name, model in ensemble.models.items():
+        for _name, model in ensemble.models.items():  # _name не используется
             if model.is_loaded:
                 stats = model.get_stats()
                 models_info.append(
@@ -247,7 +247,7 @@ async def get_models_status(ensemble: EnsembleModel = Depends(get_ensemble_model
                         "description": f"Loaded model with {stats.get('predictions_count', 0)} predictions",
                         "accuracy": 0.95,  # TODO: реальная метрика
                         "last_trained": "2025-11-03T00:00:00Z",
-                        "model_size_mb": stats.get("model_size_mb", 0.0),
+                        "size_mb": stats.get("model_size_mb", 0.0),  # поле обновлено
                         "features_count": stats.get("features_count", 25),
                         "is_loaded": True,
                         "load_time_ms": stats.get("load_time_seconds", 0.0) * 1000,
@@ -263,7 +263,7 @@ async def get_models_status(ensemble: EnsembleModel = Depends(get_ensemble_model
 
     except Exception as e:
         logger.error("Failed to get models status", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}") from e
 
 
 @router.post("/models/reload")
@@ -283,7 +283,7 @@ async def reload_models(
 
     except Exception as e:
         logger.error("Model reload failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Reload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Reload failed: {str(e)}") from e
 
 
 @router.put("/config", response_model=ConfigResponse)
@@ -319,7 +319,7 @@ async def update_config(
 
     except Exception as e:
         logger.error("Config update failed", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Config update failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Config update failed: {str(e)}") from e
 
 
 @router.get("/metrics", response_model=MetricsResponse)
@@ -345,4 +345,4 @@ async def get_performance_metrics(ensemble: EnsembleModel = Depends(get_ensemble
 
     except Exception as e:
         logger.error("Failed to get metrics", error=str(e))
-        raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get metrics: {str(e)}") from e
