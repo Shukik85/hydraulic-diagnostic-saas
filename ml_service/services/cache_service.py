@@ -8,7 +8,7 @@ import json
 import time
 from typing import Any
 
-import aioredis
+import redis.asyncio as aioredis  # ✅ Замена aioredis на redis.asyncio
 import structlog
 
 from api.schemas import SensorDataBatch
@@ -34,9 +34,11 @@ class CacheService:
         self.cache_prefix = "ml_pred:"
         self.hit_count = 0
         self.miss_count = 0
+        self.is_mock = False
+        self.mock_cache: dict[str, dict[str, Any]] = {}  # Mock cache fallback
 
     async def connect(self) -> None:
-        """Подключение к Redis."""
+        """Подключение к Redis (с fallback на mock)."""
         try:
             self.connection_pool = aioredis.ConnectionPool.from_url(
                 settings.redis_url,
@@ -50,13 +52,19 @@ class CacheService:
 
             # Проверка подключения
             await self.redis.ping()
-
+            self.is_mock = False
             logger.info("Redis cache connected", url=settings.redis_url)
 
         except Exception as e:
-            logger.error("Redis connection failed", error=str(e))
+            logger.warning(
+                "Redis connection failed, using mock cache",
+                error=str(e),
+                redis_url=settings.redis_url
+            )
+            # Fallback на mock cache
             self.redis = None
-            raise
+            self.is_mock = True
+            self.mock_cache = {}
 
     async def disconnect(self) -> None:
         """Отключение от Redis."""
@@ -64,11 +72,14 @@ class CacheService:
             await self.redis.close()
         if self.connection_pool:
             await self.connection_pool.disconnect()
-
-        logger.info("Redis cache disconnected")
+        self.mock_cache.clear()
+        logger.info("Cache service disconnected")
 
     async def is_connected(self) -> bool:
         """Проверка подключения."""
+        if self.is_mock:
+            return True  # Mock cache всегда доступен
+        
         if not self.redis:
             return False
 
@@ -102,16 +113,32 @@ class CacheService:
 
     async def get_prediction(self, cache_key: str) -> dict[str, Any] | None:
         """Получение предсказания из кеша."""
-        if not self.redis or not settings.cache_predictions:
+        if not settings.cache_predictions:
             return None
 
         try:
+            if self.is_mock:
+                # Mock cache
+                if cache_key in self.mock_cache:
+                    cached_data = self.mock_cache[cache_key]
+                    # Проверяем TTL
+                    if time.time() - cached_data["cached_at"] < settings.cache_ttl_seconds:
+                        self.hit_count += 1
+                        logger.debug("Mock cache hit", key=cache_key)
+                        return cached_data["data"]
+                    else:
+                        # TTL истек
+                        del self.mock_cache[cache_key]
+                
+                self.miss_count += 1
+                return None
+            
+            # Real Redis
             cached_data = await self.redis.get(cache_key)
 
             if cached_data:
                 self.hit_count += 1
                 result = json.loads(cached_data)
-
                 logger.debug("Cache hit", key=cache_key)
                 return result
             else:
@@ -126,7 +153,7 @@ class CacheService:
 
     async def save_prediction(self, cache_key: str, prediction: dict[str, Any]) -> bool:
         """Сохранение предсказания в кеш."""
-        if not self.redis or not settings.cache_predictions:
+        if not settings.cache_predictions:
             return False
 
         try:
@@ -137,6 +164,16 @@ class CacheService:
                 "cache_ttl": settings.cache_ttl_seconds,
             }
 
+            if self.is_mock:
+                # Mock cache с TTL
+                self.mock_cache[cache_key] = {
+                    "data": cache_data,
+                    "cached_at": time.time()
+                }
+                logger.debug("Prediction cached to mock", key=cache_key, ttl=settings.cache_ttl_seconds)
+                return True
+            
+            # Real Redis
             await self.redis.set(
                 cache_key, json.dumps(cache_data, default=str), ex=settings.cache_ttl_seconds
             )
@@ -160,14 +197,28 @@ class CacheService:
             "hit_rate": hit_rate,
             "enabled": settings.cache_predictions,
             "ttl_seconds": settings.cache_ttl_seconds,
+            "backend": "mock" if self.is_mock else "redis",
+            "mock_entries": len(self.mock_cache) if self.is_mock else None,
         }
 
     async def clear_cache(self, pattern: str = None) -> int:
         """Очистка кеша."""
-        if not self.redis:
-            return 0
-
         try:
+            if self.is_mock:
+                if pattern:
+                    # Очищаем по паттерну
+                    keys_to_delete = [k for k in self.mock_cache.keys() if pattern in k]
+                    for k in keys_to_delete:
+                        del self.mock_cache[k]
+                    return len(keys_to_delete)
+                else:
+                    count = len(self.mock_cache)
+                    self.mock_cache.clear()
+                    return count
+            
+            if not self.redis:
+                return 0
+            
             if pattern:
                 keys = await self.redis.keys(f"{self.cache_prefix}{pattern}*")
                 if keys:
