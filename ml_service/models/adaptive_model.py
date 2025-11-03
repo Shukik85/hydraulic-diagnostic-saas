@@ -113,7 +113,7 @@ class AdaptiveModel(BaseMLModel):
             raise
 
     async def _calculate_adaptive_threshold(
-        self, features: np.ndarray, system_id: str = None
+        self, _features: np.ndarray, system_id: str = None  # ✅ Исправил ARG002
     ) -> float:
         """Вычисление динамического порога."""
         base_threshold = self.base_threshold
