@@ -4,8 +4,7 @@ from datetime import datetime, timedelta
 import json
 
 from django.contrib import admin
-from django.utils.html import format_html
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html, format_html_join, escape
 
 from .models import (
     DiagnosticReport,
@@ -116,7 +115,7 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
 
     @admin.display(description="Статистика")
     def system_statistics(self, obj):
-        """Статистика системы."""
+        """Статистика системы (безопасная HTML-сборка)."""
         try:
             week_ago = datetime.now() - timedelta(days=7)
 
@@ -128,17 +127,26 @@ class HydraulicSystemAdmin(admin.ModelAdmin):
                 created_at__gte=week_ago
             ).count()
 
-            stats_html = f"""
-            <div style="background: #f8f9fa; padding: 10px; border-radius: 5px;">
-                <h4>Статистика за неделю:</h4>
-                <p><strong>Записи датчиков:</strong> {sensor_count}</p>
-                <p><strong>Критические события:</strong> {critical_count}</p>
-                <p><strong>Диагностических отчетов:</strong> {reports_count}</p>
-                <p><strong>Среднее критических событий в день:</strong> {round(critical_count / 7, 1)}</p>
-            </div>
-            """
+            rows = [
+                ("Записи датчиков:", sensor_count),
+                ("Критические события:", critical_count),
+                ("Диагностических отчетов:", reports_count),
+                ("Среднее критических событий в день:", round(critical_count / 7, 1)),
+            ]
 
-            return mark_safe(stats_html)
+            stats_html = format_html(
+                '<div style="background: #f8f9fa; padding: 10px; border-radius: 5px;">'
+                "<h4>Статистика за неделю:</h4>"
+                "{}"
+                "</div>",
+                format_html_join(
+                    "",
+                    "<p><strong>{}</strong> {}</p>",
+                    ((escape(name), value) for name, value in rows),
+                ),
+            )
+
+            return stats_html
         except Exception as e:
             return f"Ошибка расчета статистики: {e}"
 
@@ -337,7 +345,7 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
 
     @admin.display(description="Превью AI анализа")
     def ai_analysis_preview(self, obj):
-        """Превью AI анализа."""
+        """Превью AI анализа (безопасная HTML-сборка)."""
         if not obj.ai_analysis:
             return "AI анализ отсутствует"
 
@@ -348,25 +356,37 @@ class DiagnosticReportAdmin(admin.ModelAdmin):
                 else obj.ai_analysis
             )
 
-            preview_html = (
-                "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'>"
-            )
+            parts = []
             if "system_health" in analysis:
                 health = analysis["system_health"]
-                preview_html += f"<p><strong>Состояние системы:</strong> {health.get('score', 'N/A')}%</p>"
+                parts.append(
+                    format_html(
+                        "<p><strong>Состояние системы:</strong> {}%</p>",
+                        health.get("score", "N/A"),
+                    )
+                )
             if "anomalies" in analysis:
                 anomalies = analysis["anomalies"]
-                preview_html += f"<p><strong>Аномалии:</strong> {len(anomalies.get('anomalies', []))}</p>"
+                parts.append(
+                    format_html(
+                        "<p><strong>Аномалии:</strong> {}</p>",
+                        len(anomalies.get("anomalies", [])),
+                    )
+                )
             if "recommendations" in analysis:
                 recs = analysis["recommendations"]
-                preview_html += f"<p><strong>Рекомендации:</strong> {len(recs)}</p>"
                 if recs:
-                    preview_html += "<ul>"
-                    for rec in recs[:3]:
-                        preview_html += f"<li>{rec.get('title', 'N/A')}</li>"
-                    preview_html += "</ul>"
-            preview_html += "</div>"
-            return mark_safe(preview_html)
+                    rec_items = format_html_join(
+                        "",
+                        "<li>{}</li>",
+                        ((escape(rec.get("title", "N/A")),) for rec in recs[:3]),
+                    )
+                    parts.append(format_html("<ul>{}</ul>", rec_items))
+
+            return format_html(
+                "<div style='background: #f8f9fa; padding: 10px; border-radius: 5px;'>" "{}" "</div>",
+                format_html_join("", "{}", ((p,) for p in parts)),
+            )
         except Exception as e:
             return f"Ошибка парсинга AI анализа: {e}"
 
