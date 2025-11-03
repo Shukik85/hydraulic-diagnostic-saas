@@ -336,7 +336,7 @@ class FeatureEngineer:
         try:
             # Простой FFT analysis
             fft = np.fft.fft(data.values)
-            freqs = np.fft.fftfreq(len(data))
+            # freqs = np.fft.fftfreq(len(data))  # не используется, удалено для Ruff F841
 
             # Находим доминирующие частоты
             power_spectrum = np.abs(fft) ** 2
