@@ -1,5 +1,7 @@
 ruff>=0.6
 black>=24.0
+bandit[toml]>=1.7
+pip-audit>=2.9
 pytest>=8.3
 pytest-django>=4.9
 factory-boy>=3.3
