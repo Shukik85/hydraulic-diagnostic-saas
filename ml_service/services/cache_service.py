@@ -207,7 +207,7 @@ class CacheService:
             if self.is_mock:
                 if pattern:
                     # Очищаем по паттерну
-                    keys_to_delete = [k for k in self.mock_cache.keys() if pattern in k]
+                    keys_to_delete = [k for k in self.mock_cache if pattern in k]  # ✅ Исправил SIM118
                     for k in keys_to_delete:
                         del self.mock_cache[k]
                     return len(keys_to_delete)
