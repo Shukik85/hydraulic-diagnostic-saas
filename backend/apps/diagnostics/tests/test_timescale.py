@@ -68,9 +68,9 @@ class TimescaleDBSmokeTest(TimescaleDBTestCase):
 
     def test_timescale_extension_installed(self):
         """Тест: расширение TimescaleDB установлено."""
-        assert (
-            self.check_timescale_extension()
-        ), "TimescaleDB extension is not installed"
+        assert self.check_timescale_extension(), (
+            "TimescaleDB extension is not installed"
+        )
 
     def test_sensor_data_is_hypertable(self):
         """Тест: таблица sensor_data является hypertable."""
@@ -78,9 +78,9 @@ class TimescaleDBSmokeTest(TimescaleDBTestCase):
         if not self.check_timescale_extension():
             self.skipTest("TimescaleDB extension not available")
 
-        assert self.check_hypertable_exists(
-            "sensor_data"
-        ), "sensor_data table is not a hypertable"
+        assert self.check_hypertable_exists("sensor_data"), (
+            "sensor_data table is not a hypertable"
+        )
 
     def test_insert_sensor_data(self):
         """Тест: вставка данных в hypertable работает корректно."""
