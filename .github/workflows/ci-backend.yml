@@ -64,7 +64,15 @@ jobs:
           bandit --version
           bandit -c pyproject.toml -r backend -x tests
 
-      - name: Django checks
+      - name: Django checks (production configuration)
+        env:
+          DJANGO_SETTINGS_MODULE: core.deploy_settings
+          SECRET_KEY: production-strong-secret-key-for-ci-security-checks-over-50-chars-unique
+          DATABASE_NAME: hydraulic_test
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: testpass
+          DATABASE_HOST: localhost
+          REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
           python manage.py check --deploy
