@@ -1,9 +1,11 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
 import re
+from typing import Optional
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from .models import (
     DiagnosticReport,
@@ -110,7 +112,8 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
             "latest_activity",
         ]
 
-    def get_system_type_display(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_system_type_display(self, obj) -> Optional[str]:
         """Получает system type display.
 
         Args:
@@ -119,7 +122,8 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         """
         return self.get_choice_display(obj, "system_type")
 
-    def get_status_display(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_status_display(self, obj) -> Optional[str]:
         """Получает status display.
 
         Args:
@@ -128,7 +132,8 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         """
         return self.get_choice_display(obj, "status")
 
-    def get_latest_activity(self, obj):
+    @extend_schema_field(serializers.DateTimeField())
+    def get_latest_activity(self, obj) -> Optional[str]:
         """Получает latest activity.
 
         Args:
@@ -172,7 +177,8 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
             "updated_at",
         ]
 
-    def get_severity_display(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_severity_display(self, obj) -> Optional[str]:
         """Получает severity display.
 
         Args:
@@ -181,7 +187,8 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
         """
         return self.get_choice_display(obj, "severity")
 
-    def get_status_display(self, obj):
+    @extend_schema_field(serializers.CharField())
+    def get_status_display(self, obj) -> Optional[str]:
         """Получает status display.
 
         Args:
