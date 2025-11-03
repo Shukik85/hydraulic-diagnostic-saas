@@ -102,6 +102,7 @@ tmp/
 *.parquet
 *.feather
 data/raw/
+data/uci_hydraulic/
 data/processed/
 models/trained/
 artifacts/
