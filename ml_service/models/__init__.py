@@ -9,9 +9,9 @@ from .ensemble import EnsembleModel
 
 __all__ = [
     "BaseMLModel",
-    "HELMModel", 
+    "HELMModel",
     "XGBoostModel",
     "RandomForestModel",
     "AdaptiveModel",
-    "EnsembleModel"
+    "EnsembleModel",
 ]

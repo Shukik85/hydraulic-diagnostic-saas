@@ -1,7 +1,6 @@
 """Модуль проекта с автогенерированным докстрингом."""
 
 import re
-from typing import Optional
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
@@ -113,7 +112,7 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         ]
 
     @extend_schema_field(serializers.CharField())
-    def get_system_type_display(self, obj) -> Optional[str]:
+    def get_system_type_display(self, obj) -> str | None:
         """Получает system type display.
 
         Args:
@@ -123,7 +122,7 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         return self.get_choice_display(obj, "system_type")
 
     @extend_schema_field(serializers.CharField())
-    def get_status_display(self, obj) -> Optional[str]:
+    def get_status_display(self, obj) -> str | None:
         """Получает status display.
 
         Args:
@@ -133,7 +132,7 @@ class HydraulicSystemListSerializer(ChoiceDisplayMixin, serializers.ModelSeriali
         return self.get_choice_display(obj, "status")
 
     @extend_schema_field(serializers.DateTimeField())
-    def get_latest_activity(self, obj) -> Optional[str]:
+    def get_latest_activity(self, obj) -> str | None:
         """Получает latest activity.
 
         Args:
@@ -178,7 +177,7 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
         ]
 
     @extend_schema_field(serializers.CharField())
-    def get_severity_display(self, obj) -> Optional[str]:
+    def get_severity_display(self, obj) -> str | None:
         """Получает severity display.
 
         Args:
@@ -188,7 +187,7 @@ class DiagnosticReportSerializer(ChoiceDisplayMixin, serializers.ModelSerializer
         return self.get_choice_display(obj, "severity")
 
     @extend_schema_field(serializers.CharField())
-    def get_status_display(self, obj) -> Optional[str]:
+    def get_status_display(self, obj) -> str | None:
         """Получает status display.
 
         Args:

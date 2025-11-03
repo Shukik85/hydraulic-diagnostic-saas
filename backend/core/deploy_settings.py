@@ -12,7 +12,7 @@ DEBUG = False
 # Enterprise безопасность: сильный SECRET_KEY (50+ символов, 5+ уникальных)
 SECRET_KEY = config(
     "SECRET_KEY",
-    default="production-hydraulic-diagnostic-platform-enterprise-secret-key-2025-strong-security-ml-powered"
+    default="production-hydraulic-diagnostic-platform-enterprise-secret-key-2025-strong-security-ml-powered",
 )
 
 # Security настройки

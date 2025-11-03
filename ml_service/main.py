@@ -19,9 +19,9 @@ from prometheus_client import make_asgi_app
 from api.routes import router as api_router
 from api.middleware import (
     TraceIDMiddleware,
-    MetricsMiddleware, 
+    MetricsMiddleware,
     ErrorHandlingMiddleware,
-    RateLimitMiddleware
+    RateLimitMiddleware,
 )
 from config import settings, ANOMALY_THRESHOLDS
 from models.ensemble import EnsembleModel
@@ -42,45 +42,45 @@ health_service: Optional[HealthCheckService] = None
 async def lifespan(app: FastAPI):
     """Управление жизненным циклом приложения."""
     global ensemble_model, cache_service, health_service
-    
+
     logger.info("Starting ML Inference Service", version=settings.version)
-    
+
     try:
         # Инициализация сервисов
         cache_service = CacheService()
         await cache_service.connect()
-        
+
         health_service = HealthCheckService()
-        
+
         # Загрузка ML моделей
         logger.info("Loading ML models", model_path=settings.model_path)
         ensemble_model = EnsembleModel()
         await ensemble_model.load_models()
-        
+
         # Прогрев моделей
         logger.info("Warming up models")
         await ensemble_model.warmup()
-        
+
         # Настройка метрик
         setup_metrics()
-        
+
         logger.info("ML Service started successfully")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error("Failed to start ML Service", error=str(e))
         raise
     finally:
         # Очистка ресурсов
         logger.info("Shutting down ML Service")
-        
+
         if cache_service:
             await cache_service.disconnect()
-            
+
         if ensemble_model:
             await ensemble_model.cleanup()
-            
+
         logger.info("ML Service shutdown complete")
 
 
@@ -91,7 +91,7 @@ app = FastAPI(
     description="Enterprise ML inference service for hydraulic systems anomaly detection",
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS настройки
@@ -127,7 +127,7 @@ async def root():
         "service": settings.app_name,
         "version": settings.version,
         "status": "operational",
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
 
 
@@ -136,15 +136,11 @@ async def health_check():
     """Проверка здоровья сервиса."""
     if not health_service:
         raise HTTPException(status_code=503, detail="Health service not initialized")
-    
+
     health_status = await health_service.check_health()
-    
+
     status_code = 200 if health_status["healthy"] else 503
-    return Response(
-        content=health_status,
-        status_code=status_code,
-        media_type="application/json"
-    )
+    return Response(content=health_status, status_code=status_code, media_type="application/json")
 
 
 @app.get("/ready")
@@ -152,15 +148,15 @@ async def readiness_check():
     """Проверка готовности к обработке запросов."""
     if not ensemble_model or not ensemble_model.is_ready():
         raise HTTPException(status_code=503, detail="Models not ready")
-    
+
     if not cache_service or not await cache_service.is_connected():
         raise HTTPException(status_code=503, detail="Cache service not ready")
-    
+
     return {
         "ready": True,
         "models_loaded": ensemble_model.get_loaded_models(),
         "cache_connected": await cache_service.is_connected(),
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
 
 
@@ -168,10 +164,10 @@ async def readiness_check():
 async def service_info():
     """Информация о сервисе."""
     model_info = {}
-    
+
     if ensemble_model:
         model_info = ensemble_model.get_model_info()
-    
+
     return {
         "service": settings.app_name,
         "version": settings.version,
@@ -182,9 +178,9 @@ async def service_info():
             "max_inference_time_ms": settings.max_inference_time_ms,
             "batch_size": settings.batch_size,
             "cache_enabled": settings.cache_predictions,
-            "cache_ttl": settings.cache_ttl_seconds
+            "cache_ttl": settings.cache_ttl_seconds,
         },
-        "timestamp": time.time()
+        "timestamp": time.time(),
     }
 
 
@@ -215,22 +211,18 @@ def get_health_service() -> HealthCheckService:
 async def global_exception_handler(request: Request, exc: Exception):
     """Глобальный обработчик ошибок."""
     trace_id = getattr(request.state, "trace_id", str(uuid.uuid4()))
-    
+
     logger.error(
         "Unhandled exception",
         error=str(exc),
         error_type=type(exc).__name__,
         trace_id=trace_id,
-        url=str(request.url)
+        url=str(request.url),
     )
-    
+
     return HTTPException(
         status_code=500,
-        detail={
-            "error": "Internal server error",
-            "trace_id": trace_id,
-            "timestamp": time.time()
-        }
+        detail={"error": "Internal server error", "trace_id": trace_id, "timestamp": time.time()},
     )
 
 
@@ -242,5 +234,5 @@ if __name__ == "__main__":
         workers=1 if settings.debug else settings.workers,
         log_level=settings.log_level.lower(),
         reload=settings.debug,
-        access_log=settings.debug
+        access_log=settings.debug,
     )
