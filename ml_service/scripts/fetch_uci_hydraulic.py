@@ -65,7 +65,7 @@ def http_download(url: str, dest: Path) -> bool:
     try:
         with requests.get(url, timeout=60, stream=True) as r:
             r.raise_for_status()
-            with open(dest, "wb") as f:
+            with dest.open("wb") as f:  # Path.open вместо open()
                 for chunk in r.iter_content(chunk_size=1 << 20):
                     if chunk:
                         f.write(chunk)
