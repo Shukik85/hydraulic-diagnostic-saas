@@ -22,7 +22,6 @@ statsmodels>=0.14,<0.15
 # Caching & Performance
 redis>=5.0,<6.0
 hiredis>=2.2,<3.0
-aioredis>=2.0,<3.0
 
 # Monitoring & Observability
 prometheus-client>=0.19,<0.20
