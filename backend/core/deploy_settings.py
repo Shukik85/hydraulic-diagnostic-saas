@@ -4,7 +4,9 @@
 Можно использовать через DJANGO_SETTINGS_MODULE=core.deploy_settings
 """
 
-from .settings import *  # noqa: F401,F403
+from decouple import config
+
+from .settings import CACHES, INSTALLED_APPS, LOGGING
 
 # Переопределяем настройки для production
 DEBUG = False
