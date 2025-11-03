@@ -126,7 +126,7 @@ class EnsembleModel:
         except Exception as e:
             logger.warning("Adaptive model failed to load", error=str(e))
 
-    async def predict(self, features: np.ndarray, use_cache: bool = True) -> dict[str, Any]:
+    async def predict(self, features: np.ndarray, _use_cache: bool = True) -> dict[str, Any]:
         """
         Enterprise ensemble предсказание с <100ms latency.
 

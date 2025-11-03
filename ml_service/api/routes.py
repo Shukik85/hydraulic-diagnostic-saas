@@ -143,7 +143,7 @@ async def predict_anomaly(
 @router.post("/predict/batch", response_model=BatchPredictionResponse)
 async def predict_batch(
     request: BatchPredictionRequest,
-    background_tasks: BackgroundTasks,
+    _background_tasks: BackgroundTasks,
     ensemble: EnsembleModel = Depends(get_ensemble_model),
 ):
     """
