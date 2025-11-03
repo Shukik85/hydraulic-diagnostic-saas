@@ -26,19 +26,32 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: pip
+          cache: 'pip'
           cache-dependency-path: |
             backend/requirements.txt
             backend/requirements-dev.txt
-            
+
+      - name: Restore pip cache (fallback for multi-step)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt', 'backend/requirements-dev.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: '1'
+          PIP_NO_PYTHON_VERSION_WARNING: '1'
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
           pip install -r backend/requirements-dev.txt
+          pip cache purge || true
+          pip cache dir || true
           
       - name: Lint & Format (Ruff)
         run: |
@@ -51,9 +64,6 @@ jobs:
           bandit --version
           bandit -c pyproject.toml -r backend -x tests
 
-      # Ruff format заменяет Black - дублирование не нужно
-      # Black и Ruff format делают одно и то же
-          
       - name: Django checks
         run: |
           cd backend
