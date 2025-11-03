@@ -141,7 +141,7 @@ class MLAPITester:
             },
             "prediction_type": "anomaly",
             "use_cache": True,
-            "model_names": ["helm", "xgboost", "random_forest"]
+            "ml_models": ["catboost", "xgboost", "random_forest"]  # обновлено поле и состав моделей
         }
     
     async def test_single_prediction(self, request_data: dict[str, Any]) -> dict[str, Any]:
@@ -168,7 +168,7 @@ class MLAPITester:
                         "ensemble_score": result.get("ensemble_score", 0),
                         "severity": result.get("prediction", {}).get("severity", "unknown"),
                         "confidence": result.get("prediction", {}).get("confidence", 0),
-                        "models_used": len(result.get("model_predictions", [])),
+                        "models_used": len(result.get("ml_predictions", [])),
                         "features_extracted": result.get("features_extracted", 0),
                         "cache_hit": result.get("cache_hit", False)
                     }
@@ -266,7 +266,7 @@ class MLAPITester:
         severities = [r.get("severity", "unknown") for r in successful]
         confidences = [r.get("confidence", 0) for r in successful if r.get("confidence")]
         
-        severity_counts = {}
+        severity_counts: dict[str, int] = {}
         for sev in severities:
             severity_counts[sev] = severity_counts.get(sev, 0) + 1
         
@@ -330,7 +330,7 @@ async def main():
     df = tester.load_uci_data(str(data_path), args.cycles)
     
     # Подготавливаем запросы по циклам
-    requests_data = []
+    requests_data: list[dict[str, Any]] = []
     
     for cycle_id in df['cycle'].unique()[:args.cycles]:
         cycle_df = df[df['cycle'] == cycle_id]
@@ -340,7 +340,7 @@ async def main():
     logger.info("Prepared requests", count=len(requests_data))
     
     # Выполняем тестирование
-    results = []
+    results: list[dict[str, Any]] = []
     
     if args.batch:
         logger.info("Running batch prediction test")
@@ -349,7 +349,7 @@ async def main():
         
         # Если batch успешен, извлекаем индивидуальные результаты
         if batch_result.get("success") and batch_result.get("results"):
-            for i, individual_result in enumerate(batch_result["results"]):
+            for _i, individual_result in enumerate(batch_result["results"]):  # i → _i
                 if isinstance(individual_result, dict) and "ensemble_score" in individual_result:
                     results.append({
                         "success": True,
@@ -358,7 +358,7 @@ async def main():
                         "ensemble_score": individual_result.get("ensemble_score", 0),
                         "severity": individual_result.get("prediction", {}).get("severity", "unknown"),
                         "confidence": individual_result.get("prediction", {}).get("confidence", 0),
-                        "models_used": len(individual_result.get("model_predictions", [])),
+                        "models_used": len(individual_result.get("ml_predictions", [])),  # обновлено поле
                         "features_extracted": individual_result.get("features_extracted", 0),
                         "cache_hit": individual_result.get("cache_hit", False)
                     })
@@ -426,7 +426,7 @@ async def main():
         "raw_results": results[:10]  # Первые 10 результатов для детального анализа
     }
     
-    with open(report_path, 'w') as f:
+    with report_path.open('w') as f:  # Path.open вместо open()
         json.dump(full_report, f, indent=2)
     
     print(f"\n📄 Full report saved to: {report_path}")
