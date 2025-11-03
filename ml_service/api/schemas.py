@@ -16,6 +16,10 @@ class BaseResponse(BaseModel):
 
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     trace_id: Optional[str] = None
+    
+    class Config:
+        # Убираем protected namespaces для полей вида ml_*
+        protected_namespaces = ()
 
 
 class ErrorResponse(BaseResponse):
@@ -28,7 +32,7 @@ class ErrorResponse(BaseResponse):
 
 # Sensor Data Models
 class SensorReading(BaseModel):
-    """Одно п kazakание с датчика."""
+    """Одно показание с датчика."""
 
     timestamp: datetime
     sensor_type: str = Field(..., description="Тип датчика: pressure, temperature, flow, vibration")
@@ -68,7 +72,7 @@ class PredictionRequest(BaseModel):
     sensor_data: SensorDataBatch
     prediction_type: str = Field(default="anomaly", description="Тип предсказания")
     use_cache: bool = Field(default=True, description="Использовать кеш")
-    model_names: Optional[List[str]] = Field(None, description="Конкретные модели")
+    ml_models: Optional[List[str]] = Field(None, description="Конкретные модели")  # было model_names
 
     @validator("prediction_type")
     def validate_prediction_type(cls, v):
@@ -76,17 +80,23 @@ class PredictionRequest(BaseModel):
         if v not in allowed_types:
             raise ValueError(f"prediction_type must be one of {allowed_types}")
         return v
+    
+    class Config:
+        protected_namespaces = ()
 
 
 class ModelPrediction(BaseModel):
     """Предсказание одной модели."""
 
-    model_name: str
-    model_version: str
+    ml_model: str          # было model_name
+    version: str           # было model_version
     prediction_score: float = Field(..., ge=0.0, le=1.0)
     confidence: float = Field(..., ge=0.0, le=1.0)
     processing_time_ms: float
     features_used: int
+    
+    class Config:
+        protected_namespaces = ()
 
 
 class AnomalyPrediction(BaseModel):
@@ -112,7 +122,7 @@ class PredictionResponse(BaseResponse):
 
     system_id: UUID
     prediction: AnomalyPrediction
-    model_predictions: List[ModelPrediction]
+    ml_predictions: List[ModelPrediction]  # было model_predictions
     ensemble_score: float = Field(..., ge=0.0, le=1.0)
     total_processing_time_ms: float
     features_extracted: int
@@ -125,6 +135,9 @@ class BatchPredictionRequest(BaseModel):
 
     requests: List[PredictionRequest] = Field(..., min_items=1, max_items=32)
     parallel_processing: bool = Field(default=True)
+    
+    class Config:
+        protected_namespaces = ()
 
 
 class BatchPredictionResponse(BaseResponse):
@@ -145,10 +158,13 @@ class ModelInfo(BaseModel):
     description: str
     accuracy: float = Field(..., ge=0.0, le=1.0)
     last_trained: datetime
-    model_size_mb: float
+    size_mb: float         # было model_size_mb
     features_count: int
     is_loaded: bool
     load_time_ms: Optional[float] = None
+    
+    class Config:
+        protected_namespaces = ()
 
 
 class ModelStatusResponse(BaseResponse):
