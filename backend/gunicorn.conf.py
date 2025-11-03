@@ -33,7 +33,8 @@ proc_name = "hydraulic-diagnostic-gunicorn"
 
 # Server mechanics
 daemon = False
-pidfile = "/tmp/gunicorn.pid"
+# Безопасный путь для pidfile через ENV переменную:
+pidfile = os.getenv("GUNICORN_PIDFILE", "/var/run/gunicorn/gunicorn.pid")
 user = None
 group = None
 tmp_upload_dir = None
@@ -51,7 +52,6 @@ limit_request_field_size = 8190
 raw_env = [
     "DJANGO_SETTINGS_MODULE=core.settings",
 ]
-
 
 # Hooks
 def when_ready(server):
