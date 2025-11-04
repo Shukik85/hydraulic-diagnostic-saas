@@ -7,17 +7,17 @@
 - Локализация RU/EN переключается в реальном времени
 - Линтеры и pre-commit успешно проходят
 
-## Этап 1. Data Ingestion & TimescaleDB
-- Hypertables созданы; retention и compression включены (5 лет)
-- Ingestion API принимает данные 10–60 сек, валидация и quarantine работают
-- Метрики ingestion (rate, errors) экспортируются в Prometheus
-- Контракты OpenAPI задокументированы
-
-## Этап 2. ML Inference (4 модели)
+## Этап 1. ML Inference (4 модели)
 - HELM/XGBoost/RandomForest/Adaptive интегрированы в pipeline
 - p95 inference latency < 100ms (на тестовом профиле)
 - Логи/метрики качества: accuracy, F1, FPR < 1%
 - Фичефлаги на включение/отключение моделей
+
+## Этап 2. Data Ingestion & TimescaleDB
+- Hypertables созданы; retention и compression включены (5 лет)
+- Ingestion API принимает данные 10–60 сек, валидация и quarantine работают
+- Метрики ingestion (rate, errors) экспортируются в Prometheus
+- Контракты OpenAPI задокументированы
 
 ## Этап 3. Real-time Dashboard
 - WebSocket обновляет gauges/charts/alerts timeline без фликов
