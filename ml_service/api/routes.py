@@ -14,7 +14,8 @@ from models.ensemble import EnsembleModel
 from services.cache_service import CacheService
 from services.feature_engineering import FeatureEngineer
 from services.monitoring import metrics
-from services.utils.features import vector_from_feature_vector, build_feature_cache_key
+from services.utils.features import project_features_25, build_feature_cache_key
+from services.utils.feature_names_25 import EXPECTED_FEATURE_NAMES_25
 
 from .schemas import (
     BatchPredictionRequest,
@@ -60,12 +61,12 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
     # Извлечение признаков
     feature_engineer = FeatureEngineer()
     fv = await feature_engineer.extract_features(req.sensor_data)
-    vector = vector_from_feature_vector(fv)
+    vector = project_features_25(fv)  # строго 25 признаков и порядок
 
-    # Кеш
+    # Кеш по признакам
     cache_key = None
     if req.use_cache and settings.cache_predictions:
-        cache_key = build_feature_cache_key(vector, fv.feature_names)
+        cache_key = build_feature_cache_key(vector, EXPECTED_FEATURE_NAMES_25)
         cached = await cache.get_prediction(cache_key)
         if cached:
             logger.info("Cache hit", trace_id=trace_id, cache_key=cache_key)
@@ -76,10 +77,9 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
             return PredictionResponse(**cached)
 
     # Предсказание
-    vector = np.asarray(vector, dtype=float)
     result = await ensemble.predict(vector)
 
-    # Сборка ответа согласно схемам
+    # Сборка ответа
     prediction = AnomalyPrediction(
         is_anomaly=bool(result.get("is_anomaly", False)),
         anomaly_score=float(result.get("ensemble_score", 0.5)),
@@ -94,8 +94,8 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
         try:
             ml_predictions.append(
                 ModelPrediction(
-                    ml_model=str(p.get("ml_model") or p.get("model_name")),
-                    version=str(p.get("version") or p.get("model_version", "v1")),
+                    ml_model=str(p.get("ml_model")),
+                    version=str(p.get("version", "v1")),
                     prediction_score=float(p.get("prediction_score", p.get("score", 0.5))),
                     confidence=float(p.get("confidence", 0.0)),
                     processing_time_ms=float(p.get("processing_time_ms", 0.0)),
@@ -118,11 +118,9 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
         trace_id=trace_id,
     )
 
-    # Сохранение в кеш
     if cache_key and settings.cache_predictions:
         await cache.save_prediction(cache_key, response.model_dump())
 
-    # Метрики
     metrics.predictions_total.labels(model_name="ensemble", prediction_type="anomaly").inc()
     metrics.inference_duration.labels(model_name="ensemble").observe(processing_time / 1000)
 
@@ -136,7 +134,6 @@ async def _safe_predict_item(req: PredictionRequest, ensemble: EnsembleModel, ca
         return ErrorResponse(error=str(e), error_code="PREDICTION_FAILED", trace_id=str(uuid.uuid4()))
 
 
-# ML Inference Endpoints
 @router.post("/predict", response_model=PredictionResponse)
 async def predict_anomaly(
     request: PredictionRequest,
@@ -144,7 +141,13 @@ async def predict_anomaly(
     ensemble: EnsembleModel = Depends(get_ensemble_model),
     cache: CacheService = Depends(get_cache_service),
 ):
-    return await _predict_core(request, ensemble, cache)
+    try:
+        return await _predict_core(request, ensemble, cache)
+    except Exception as e:
+        # Возвращаем структурированную ошибку вместо HTTP 500
+        err = ErrorResponse(error=str(e), error_code="PREDICTION_FAILED", trace_id=str(uuid.uuid4()))
+        # Но по контракту эндпоинт объявлен как PredictionResponse — поэтому поднимаем 500, пока не изменим спецификацию
+        raise HTTPException(status_code=500, detail=err.model_dump()) from e
 
 
 @router.post("/predict/batch", response_model=BatchPredictionResponse)
