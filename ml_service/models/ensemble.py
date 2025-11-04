@@ -1,5 +1,5 @@
 """
-Ensemble Model for Hydraulic Systems Anomaly Detection  
+Ensemble Model for Hydraulic Systems Anomaly Detection
 Enterprise ensemble с CatBoost + XGBoost + RandomForest + Adaptive
 """
 
@@ -52,7 +52,7 @@ class EnsembleModel:
         """Отложенная загрузка всех моделей."""
         self.load_start_time = time.time()
 
-        logger.info("Loading ensemble models", model_path=settings.model_path)
+        logger.info("Loading ensemble models", model_path=str(settings.model_path))
 
         try:
             # Параллельная загрузка моделей (✅ Без HELM!)
@@ -232,10 +232,10 @@ class EnsembleModel:
         confidence_sum = 0.0
 
         model_weights = {
-            "catboost": self.ensemble_weights[0],     # 50% - Основная модель
-            "xgboost": self.ensemble_weights[1],      # 30%
-            "random_forest": self.ensemble_weights[2], # 15% 
-            "adaptive": self.ensemble_weights[3],      # 5%
+            "catboost": self.ensemble_weights[0],  # 50% - Основная модель
+            "xgboost": self.ensemble_weights[1],  # 30%
+            "random_forest": self.ensemble_weights[2],  # 15%
+            "adaptive": self.ensemble_weights[3],  # 5%
         }
 
         for pred in valid_predictions:

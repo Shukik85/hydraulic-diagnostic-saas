@@ -3,6 +3,8 @@ ML Inference Service Configuration
 Enterprise конфигурация для гидравлической диагностики
 """
 
+from pathlib import Path
+
 from pydantic import Field, validator
 from pydantic_settings import BaseSettings
 
@@ -21,7 +23,7 @@ class Settings(BaseSettings):
     workers: int = Field(default=4, env="ML_WORKERS")
 
     # ML Models - UPDATED FOR CATBOOST ENSEMBLE
-    model_path: str = Field(default="./models", env="MODEL_PATH")
+    model_path: Path = Field(default=Path("./models"), env="MODEL_PATH")
     ensemble_weights: list[float] = [0.5, 0.3, 0.15, 0.05]  # CatBoost, XGBoost, RandomForest, Adaptive
     prediction_threshold: float = Field(default=0.6, env="PREDICTION_THRESHOLD")
 
@@ -87,6 +89,9 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        json_encoders = {
+            Path: str  # Converts Path to string when serializing
+        }
 
 
 # Global settings instance
