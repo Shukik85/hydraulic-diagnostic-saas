@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+import numpy as np  # ✅ Добавлен для фикса int64 serialization
 import pandas as pd
 import structlog
 
@@ -43,6 +44,23 @@ structlog.configure(
 )
 
 logger = structlog.get_logger()
+
+
+# ✅ FIX: JSON serialization helper
+def sanitize_for_json(obj: Any) -> Any:
+    """Конвертирует NumPy типы в JSON-сериализуемые."""
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: sanitize_for_json(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_for_json(item) for item in obj]
+    else:
+        return obj
 
 
 class MLAPITester:
@@ -118,11 +136,12 @@ class MLAPITester:
                 microsecond=int((row["timestamp"] % 1) * 1000000),
             )
 
+            # ✅ FIX: JSON-safe conversion
             reading = {
                 "timestamp": cycle_timestamp.isoformat(),
-                "sensor_type": row["sensor_type"],
-                "value": float(row["value"]) if hasattr(row["value"], "item") else float(row["value"]),
-                "unit": row["unit"],
+                "sensor_type": str(row["sensor_type"]),
+                "value": float(row["value"]) if not isinstance(row["value"], (int, float)) else float(row["value"]),
+                "unit": str(row["unit"]),
                 "component_id": None,  # UCI данные не содержат component_id
             }
             readings.append(reading)
@@ -131,7 +150,11 @@ class MLAPITester:
             "sensor_data": {
                 "system_id": str(cycle_df["system_id"].iloc[0]),
                 "readings": readings,
-                "metadata": {"source": "UCI_Hydraulic", "cycle": cycle_id, "sensors_count": len(readings)},
+                "metadata": {
+                    "source": "UCI_Hydraulic", 
+                    "cycle": int(cycle_id), 
+                    "sensors_count": int(len(readings))
+                },  # ✅ FIX: Приводим все к int/str
             },
             "prediction_type": "anomaly",
             "use_cache": True,
@@ -143,9 +166,14 @@ class MLAPITester:
         start_time = time.time()
 
         try:
+            # ✅ FIX: JSON-safe serialization
+            safe_request = sanitize_for_json(request_data)
+            
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.api_base}/api/v1/predict", json=request_data, headers={"Content-Type": "application/json"}
+                    f"{self.api_base}/api/v1/predict", 
+                    json=safe_request, 
+                    headers={"Content-Type": "application/json"}
                 )
 
                 request_time = (time.time() - start_time) * 1000  # ms
@@ -155,33 +183,35 @@ class MLAPITester:
 
                     return {
                         "success": True,
-                        "request_time_ms": request_time,
-                        "api_processing_time_ms": result.get("total_processing_time_ms", 0),
-                        "ensemble_score": result.get("ensemble_score", 0),
-                        "severity": result.get("prediction", {}).get("severity", "unknown"),
-                        "confidence": result.get("prediction", {}).get("confidence", 0),
-                        "models_used": len(result.get("ml_predictions", [])),
-                        "features_extracted": result.get("features_extracted", 0),
-                        "cache_hit": result.get("cache_hit", False),
+                        "request_time_ms": float(request_time),  # ✅ FIX: Явное приведение к float
+                        "api_processing_time_ms": float(result.get("total_processing_time_ms", 0)),
+                        "ensemble_score": float(result.get("ensemble_score", 0)),
+                        "severity": str(result.get("prediction", {}).get("severity", "unknown")),
+                        "confidence": float(result.get("prediction", {}).get("confidence", 0)),
+                        "models_used": int(len(result.get("ml_predictions", []))),
+                        "features_extracted": int(result.get("features_extracted", 0)),
+                        "cache_hit": bool(result.get("cache_hit", False)),
                     }
                 else:
                     logger.error("API request failed", status_code=response.status_code, response=response.text[:200])
                     return {
                         "success": False,
-                        "request_time_ms": request_time,
+                        "request_time_ms": float(request_time),
                         "error": f"HTTP {response.status_code}: {response.text[:100]}",
                     }
 
         except Exception as e:
             request_time = (time.time() - start_time) * 1000
             logger.error("Single prediction failed", error=str(e))
-            return {"success": False, "request_time_ms": request_time, "error": str(e)}
+            return {"success": False, "request_time_ms": float(request_time), "error": str(e)}
 
     async def test_batch_prediction(self, requests_data: list[dict[str, Any]]) -> dict[str, Any]:
         """Тест пакетного предсказания."""
         start_time = time.time()
 
-        batch_request = {"requests": requests_data, "parallel_processing": True}
+        # ✅ FIX: Обработка JSON serialization
+        safe_requests = sanitize_for_json(requests_data)
+        batch_request = {"requests": safe_requests, "parallel_processing": True}
 
         try:
             async with httpx.AsyncClient(timeout=self.timeout * 2) as client:
@@ -198,18 +228,18 @@ class MLAPITester:
 
                     return {
                         "success": True,
-                        "batch_size": len(requests_data),
-                        "request_time_ms": request_time,
-                        "api_processing_time_ms": result.get("total_processing_time_ms", 0),
-                        "successful_predictions": result.get("successful_predictions", 0),
-                        "failed_predictions": result.get("failed_predictions", 0),
+                        "batch_size": int(len(requests_data)),
+                        "request_time_ms": float(request_time),
+                        "api_processing_time_ms": float(result.get("total_processing_time_ms", 0)),
+                        "successful_predictions": int(result.get("successful_predictions", 0)),
+                        "failed_predictions": int(result.get("failed_predictions", 0)),
                         "results": result.get("results", []),
                     }
                 else:
                     return {
                         "success": False,
-                        "batch_size": len(requests_data),
-                        "request_time_ms": request_time,
+                        "batch_size": int(len(requests_data)),
+                        "request_time_ms": float(request_time),
                         "error": f"HTTP {response.status_code}: {response.text[:100]}",
                     }
 
@@ -218,15 +248,15 @@ class MLAPITester:
             logger.error("Batch prediction failed", error=str(e))
             return {
                 "success": False,
-                "batch_size": len(requests_data),
-                "request_time_ms": request_time,
+                "batch_size": int(len(requests_data)),
+                "request_time_ms": float(request_time),
                 "error": str(e),
             }
 
     def analyze_results(self, results: list[dict[str, Any]]) -> dict[str, Any]:
         """Анализ результатов тестирования."""
         if not results:
-            return {"error": "No results to analyze"}
+            return {"error": "No results to analyze", "total_tests": 0, "failed_tests": 0}  # ✅ FIX: Добавлен failed_tests
 
         successful = [r for r in results if r.get("success", False)]
         failed = [r for r in results if not r.get("success", False)]
@@ -234,6 +264,8 @@ class MLAPITester:
         if not successful:
             return {
                 "total_tests": len(results),
+                "successful_tests": 0,
+                "failed_tests": len(failed),  # ✅ FIX
                 "success_rate": 0.0,
                 "errors": [r.get("error", "Unknown error") for r in failed],
             }
@@ -251,29 +283,37 @@ class MLAPITester:
         for sev in severities:
             severity_counts[sev] = severity_counts.get(sev, 0) + 1
 
-        import numpy as np
-
+        # ✅ FIX: Правильный анализ
         analysis = {
-            "total_tests": len(results),
-            "successful_tests": len(successful),
-            "failed_tests": len(failed),
-            "success_rate": len(successful) / len(results) * 100,
-            "latency_stats": {
-                "request_time_p50_ms": float(np.percentile(request_times, 50)) if request_times else 0,
-                "request_time_p90_ms": float(np.percentile(request_times, 90)) if request_times else 0,
-                "request_time_p99_ms": float(np.percentile(request_times, 99)) if request_times else 0,
-                "api_time_p90_ms": float(np.percentile(api_times, 90)) if api_times else 0,
-                "target_p90_ms": 100,
-                "meets_target": (np.percentile(request_times, 90) < 100) if request_times else False,
-            },
-            "prediction_stats": {
-                "ensemble_score_mean": float(np.mean(scores)) if scores else 0,
-                "ensemble_score_std": float(np.std(scores)) if scores else 0,
-                "confidence_mean": float(np.mean(confidences)) if confidences else 0,
-                "severity_distribution": severity_counts,
-            },
-            "errors": [r.get("error", "Unknown") for r in failed] if failed else [],
+            "total_tests": int(len(results)),
+            "successful_tests": int(len(successful)),
+            "failed_tests": int(len(failed)),  # ✅ FIX: Обязательное поле!
+            "success_rate": float(len(successful) / len(results) * 100),
         }
+        
+        # Latency stats (только если есть данные)
+        if request_times:
+            analysis["latency_stats"] = {
+                "request_time_p50_ms": float(np.percentile(request_times, 50)),
+                "request_time_p90_ms": float(np.percentile(request_times, 90)),
+                "request_time_p99_ms": float(np.percentile(request_times, 99)),
+                "api_time_p90_ms": float(np.percentile(api_times, 90)) if api_times else 0.0,
+                "target_p90_ms": 100,
+                "meets_target": bool(np.percentile(request_times, 90) < 100),
+            }
+        
+        # Prediction stats (только если есть данные)
+        if scores:
+            analysis["prediction_stats"] = {
+                "ensemble_score_mean": float(np.mean(scores)),
+                "ensemble_score_std": float(np.std(scores)),
+                "confidence_mean": float(np.mean(confidences)) if confidences else 0.0,
+                "severity_distribution": {str(k): int(v) for k, v in severity_counts.items()},
+            }
+        
+        # Ошибки
+        if failed:
+            analysis["errors"] = [str(r.get("error", "Unknown")) for r in failed]
 
         return analysis
 
@@ -314,7 +354,7 @@ async def main():
 
     for cycle_id in df["cycle"].unique()[: args.cycles]:
         cycle_df = df[df["cycle"] == cycle_id]
-        request = tester.convert_cycle_to_sensor_batch(cycle_df, cycle_id)
+        request = tester.convert_cycle_to_sensor_batch(cycle_df, int(cycle_id))  # ✅ FIX: int()
         requests_data.append(request)
 
     logger.info("Prepared requests", count=len(requests_data))
@@ -329,19 +369,19 @@ async def main():
 
         # Если batch успешен, извлекаем индивидуальные результаты
         if batch_result.get("success") and batch_result.get("results"):
-            for _i, individual_result in enumerate(batch_result["results"]):  # i → _i
+            for individual_result in batch_result["results"]:
                 if isinstance(individual_result, dict) and "ensemble_score" in individual_result:
                     results.append(
                         {
                             "success": True,
-                            "request_time_ms": batch_result["request_time_ms"] / len(requests_data),
-                            "api_processing_time_ms": individual_result.get("total_processing_time_ms", 0),
-                            "ensemble_score": individual_result.get("ensemble_score", 0),
-                            "severity": individual_result.get("prediction", {}).get("severity", "unknown"),
-                            "confidence": individual_result.get("prediction", {}).get("confidence", 0),
-                            "models_used": len(individual_result.get("ml_predictions", [])),  # обновлено поле
-                            "features_extracted": individual_result.get("features_extracted", 0),
-                            "cache_hit": individual_result.get("cache_hit", False),
+                            "request_time_ms": float(batch_result["request_time_ms"] / len(requests_data)),
+                            "api_processing_time_ms": float(individual_result.get("total_processing_time_ms", 0)),
+                            "ensemble_score": float(individual_result.get("ensemble_score", 0)),
+                            "severity": str(individual_result.get("prediction", {}).get("severity", "unknown")),
+                            "confidence": float(individual_result.get("prediction", {}).get("confidence", 0)),
+                            "models_used": int(len(individual_result.get("ml_predictions", []))),
+                            "features_extracted": int(individual_result.get("features_extracted", 0)),
+                            "cache_hit": bool(individual_result.get("cache_hit", False)),
                         }
                     )
     else:
@@ -385,7 +425,8 @@ async def main():
         print(f"  Average Confidence: {pred['confidence_mean']:.3f}")
         print("  Severity Distribution:")
         for severity, count in pred["severity_distribution"].items():
-            print(f"    {severity}: {count} ({count / analysis['successful_tests'] * 100:.1f}%)")
+            percentage = (count / analysis['successful_tests'] * 100) if analysis['successful_tests'] > 0 else 0
+            print(f"    {severity}: {count} ({percentage:.1f}%)")
 
     if analysis.get("errors"):
         print("\n❌ ERRORS:")
@@ -404,11 +445,11 @@ async def main():
             "batch_mode": args.batch,
             "timestamp": datetime.now(UTC).isoformat(),
         },
-        "analysis": analysis,
-        "raw_results": results[:10],  # Первые 10 результатов для детального анализа
+        "analysis": sanitize_for_json(analysis),  # ✅ FIX: Safe serialization
+        "raw_results": sanitize_for_json(results[:10]),  # Первые 10 результатов для детального анализа
     }
 
-    with report_path.open("w") as f:  # Path.open вместо open()
+    with report_path.open("w") as f:
         json.dump(full_report, f, indent=2)
 
     print(f"\n📄 Full report saved to: {report_path}")
