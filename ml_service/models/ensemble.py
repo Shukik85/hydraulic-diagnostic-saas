@@ -1,6 +1,6 @@
 """
 Ensemble Model for Hydraulic Systems Anomaly Detection
-Enterprise ensemble с fallback стратегиями
+Dynamic features + fail-soft model errors
 """
 
 from __future__ import annotations
@@ -51,7 +51,7 @@ class EnsembleModel:
         self.load_start_time = time.time()
         logger.info("Loading ensemble models", model_path=str(settings.model_path))
         tasks = [self._load_catboost_model(), self._load_xgboost_model(), self._load_random_forest_model(), self._load_adaptive_model()]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
         loaded_models = [name for name, model in self.models.items() if model.is_loaded]
         if len(loaded_models) < 1:
             raise RuntimeError(f"No models loaded: {loaded_models}")
@@ -95,11 +95,27 @@ class EnsembleModel:
         if not self.is_loaded:
             raise RuntimeError("Models not loaded")
 
-        # Жестко требуем 1D numpy вектор
+        # Ensure 1D and soft-adjust length to first model's expectation
         if not isinstance(features, np.ndarray):
             features = np.asarray(features, dtype=float)
         if features.ndim != 1:
             features = features.ravel()
+
+        expected = None
+        for m in self.models.values():
+            if m.is_loaded:
+                expected = int(m.metadata.get("features_count", features.size))
+                break
+        expected = expected or features.size
+
+        if features.size != expected:
+            logger.warning("Adjusting feature vector length", got=int(features.size), expected=expected)
+            if features.size > expected:
+                features = features[:expected]
+            else:
+                features = np.pad(features, (0, expected - features.size), constant_values=0.0)
+
+        logger.info("Ensemble received vector", len=int(features.size), nonzero=int(np.count_nonzero(features)))
 
         start_time = time.time()
         for strategy_name, model_names in self.fallback_strategies.items():
@@ -117,13 +133,25 @@ class EnsembleModel:
                             "prediction_score": float(pred.get("score", 0.5)),
                             "confidence": float(pred.get("confidence", 0.0)),
                             "processing_time_ms": float(pred.get("processing_time_ms", 0.0)),
-                            "features_used": int(len(features)),
+                            "features_used": int(features.size),
                         })
                     except Exception as e:
                         logger.warning("Model prediction failed", model=name, error=str(e))
-                if not individual_predictions:
+                        # Fail-soft: добавляем error-запись, чтобы стратегия могла продолжиться
+                        individual_predictions.append({
+                            "ml_model": name,
+                            "version": getattr(model, "version", "v1"),
+                            "prediction_score": 0.5,
+                            "confidence": 0.0,
+                            "processing_time_ms": 0.0,
+                            "features_used": int(features.size),
+                            "error": str(e),
+                        })
+                # Оставляем только валидные предсказания без error
+                valid = [p for p in individual_predictions if "error" not in p]
+                if not valid:
                     continue
-                result = self._calculate_ensemble_score(individual_predictions)
+                result = self._calculate_ensemble_score(valid)
                 inference_time = (time.time() - start_time) * 1000
                 self.performance_metrics["predictions_total"] += 1
                 self.performance_metrics["inference_times"].append(inference_time)
@@ -131,13 +159,13 @@ class EnsembleModel:
                 logger.info(
                     "Ensemble prediction",
                     strategy_used=strategy_name,
-                    features_extracted=len(features),
+                    features_extracted=int(features.size),
                     inference_time_ms=inference_time,
-                    models_used=len(individual_predictions),
+                    models_used=len(valid),
                 )
                 return {
                     **result,
-                    "individual_predictions": individual_predictions,
+                    "individual_predictions": valid,
                     "total_processing_time_ms": inference_time,
                     "cache_hit": False,
                     "strategy_used": strategy_name,
@@ -182,7 +210,6 @@ class EnsembleModel:
         }
 
     async def warmup(self, warmup_samples: int = 10) -> None:
-        """🔥 Прогрев моделей для оптимизации первого запроса."""
         logger.info("Warming up ensemble models", samples=warmup_samples)
         dummy_features = np.random.rand(warmup_samples, 25)
         for i in range(warmup_samples):
@@ -199,44 +226,6 @@ class EnsembleModel:
 
     def is_ready(self) -> bool:
         return self.is_loaded and len([m for m in self.models.values() if m.is_loaded]) >= 1
-
-    def get_loaded_models(self) -> list[str]:
-        return [name for name, model in self.models.items() if model.is_loaded]
-
-    def get_model_info(self) -> dict[str, Any]:
-        model_info = {}
-        for name, model in self.models.items():
-            if model.is_loaded:
-                model_info[name] = {
-                    "name": MODEL_CONFIG[name]["name"],
-                    "version": model.version,
-                    "description": MODEL_CONFIG[name]["description"],
-                    "accuracy_target": MODEL_CONFIG[name]["accuracy_target"],
-                    "weight": MODEL_CONFIG[name]["weight"],
-                    "is_loaded": True,
-                }
-            else:
-                model_info[name] = {
-                    "name": MODEL_CONFIG[name]["name"],
-                    "is_loaded": False,
-                    "error": "Failed to load",
-                }
-        return model_info
-
-    def get_performance_metrics(self) -> dict[str, Any]:
-        if not self.performance_metrics["inference_times"]:
-            return {"predictions_total": 0}
-        times = self.performance_metrics["inference_times"]
-        return {
-            "predictions_total": self.performance_metrics["predictions_total"],
-            "average_response_time_ms": np.mean(times),
-            "p95_response_time_ms": np.percentile(times, 95),
-            "p99_response_time_ms": np.percentile(times, 99),
-            "min_response_time_ms": np.min(times),
-            "max_response_time_ms": np.max(times),
-            "average_accuracy": np.mean(self.performance_metrics["accuracy_scores"]) if self.performance_metrics["accuracy_scores"] else 0.0,
-            "fallback_usage": self.performance_metrics["fallback_usage"],
-        }
 
     async def cleanup(self) -> None:
         logger.info("Cleaning up ensemble models")
