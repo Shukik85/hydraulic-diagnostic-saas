@@ -1,15 +1,19 @@
 """
-Random Forest Model for Hydraulic Systems
-Enterprise Random Forest с 99.6% accuracy target
+RandomForest Anomaly Detection Model
 """
 
+from __future__ import annotations
+
 import time
+from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 import structlog
+from sklearn.ensemble import RandomForestClassifier
 
-from config import MODEL_CONFIG
+from config import settings
 
 from .base_model import BaseMLModel
 
@@ -17,111 +21,60 @@ logger = structlog.get_logger()
 
 
 class RandomForestModel(BaseMLModel):
-    """
-    Random Forest Classifier для robust предсказаний.
+    def __init__(self, model_name: str = "random_forest"):
+        super().__init__(model_name)
+        self.model: RandomForestClassifier | None = None
+        self.metadata["features_count"] = 25
 
-    Особенности:
-    - Ensemble method с множеством decision trees
-    - Устойчивость к оверфиттингу
-    - Feature importance analysis
-    - 99.6% accuracy target
-    - <20ms среднее время inference
-    """
-
-    def __init__(self):
-        super().__init__("random_forest", MODEL_CONFIG["random_forest"]["file"])
-        self.n_estimators = 150
-        self.max_depth = 10
-        self.min_samples_split = 5
-        self.feature_importances_ = None
-
-    async def predict(self, features: np.ndarray) -> dict[str, Any]:
-        """
-        Random Forest предсказание.
-
-        Args:
-            features: Массив признаков
-
-        Returns:
-            Dict с score, confidence, processing_time_ms
-        """
-        if not self.is_loaded:
-            raise RuntimeError("RandomForest model not loaded")
-
-        if not self.validate_features(features):
-            raise ValueError("Invalid features for RandomForest model")
-
+    async def load(self) -> None:
         start_time = time.time()
+        model_path = Path(settings.model_path) / "random_forest_model.joblib"
+        logger.info("Loading random_forest model", path=str(model_path))
 
         try:
-            if features.ndim == 1:
-                features = features.reshape(1, -1)
-
-            # Random Forest предсказание
-            if hasattr(self.model, "predict_proba"):
-                # Классификация
-                probabilities = self.model.predict_proba(features)[0]
-                anomaly_score = probabilities[1] if len(probabilities) > 1 else probabilities[0]
-
-                # Уверенность на основе распределения вероятностей
-                max_prob = max(probabilities)
-                confidence = min(0.996, max_prob * 1.1)
-
-            elif hasattr(self.model, "decision_function"):
-                # Anomaly detection
-                decision_score = self.model.decision_function(features)[0]
-                anomaly_score = self._normalize_anomaly_score(decision_score)
-                confidence = min(0.996, 0.8 + abs(decision_score) * 0.2)
-
+            if model_path.exists():
+                model_data = joblib.load(model_path)
+                self.model = model_data["model"]
+                if "features_count" in model_data:
+                    self.metadata["features_count"] = int(model_data["features_count"])
+                logger.info("Real RandomForest model loaded")
             else:
-                # Fallback
-                prediction = self.model.predict(features)[0]
-                anomaly_score = 0.75 if prediction == -1 else 0.25
-                confidence = 0.8
+                logger.warning("Model file not found, creating mock model", path=str(model_path))
+                await self._create_mock_model()
 
-            processing_time = time.time() - start_time
-            self.update_stats(processing_time)
-
-            # Feature importance (если доступно)
-            feature_importance_score = 0.0
-            if hasattr(self.model, "feature_importances_"):
-                self.feature_importances_ = self.model.feature_importances_
-                feature_importance_score = np.mean(self.feature_importances_)
-
-            result = {
-                "score": float(anomaly_score),
-                "confidence": float(confidence),
-                "processing_time_ms": processing_time * 1000,
-                "model_specific": {
-                    "n_estimators": self.n_estimators,
-                    "max_depth": self.max_depth,
-                    "feature_importance_avg": float(feature_importance_score),
-                    "trees_used": self.n_estimators,
-                },
-            }
-
-            logger.debug(
-                "RandomForest prediction completed",
-                score=anomaly_score,
-                confidence=confidence,
-                processing_time_ms=processing_time * 1000,
+            self.is_loaded = True
+            self.load_time = time.time() - start_time
+            self.version = "v1.0.0-rf"
+            logger.info(
+                "RandomForest model loaded",
+                load_time_seconds=self.load_time,
+                version=self.version,
+                features_count=self.metadata.get("features_count"),
             )
-
-            return result
-
         except Exception as e:
-            processing_time = time.time() - start_time
-            logger.error(
-                "RandomForest prediction failed",
-                error=str(e),
-                processing_time_ms=processing_time * 1000,
-            )
+            logger.error("Failed to load RandomForest model", error=str(e))
             raise
 
-    def _normalize_anomaly_score(self, decision_score: float) -> float:
-        """Нормализация anomaly score."""
-        # Преобразование decision_function в [0, 1]
-        if decision_score < 0:
-            return 0.5 + abs(decision_score) * 0.4  # Аномалия
-        else:
-            return max(0.0, 0.5 - decision_score * 0.4)  # Норма
+    async def _create_mock_model(self) -> None:
+        logger.info("Creating mock random_forest model for development")
+        self.model = RandomForestClassifier(n_estimators=10, random_state=42)
+        mock_x = np.random.rand(200, self.metadata.get("features_count", 25))
+        mock_y = np.random.binomial(1, 0.05, 200)
+        self.model.fit(mock_x, mock_y)
+
+    async def predict(self, features: np.ndarray) -> dict[str, Any]:
+        if not self.is_loaded or self.model is None:
+            raise RuntimeError("Model not loaded")
+
+        features = self._ensure_vector(features)
+        start_time = time.time()
+        try:
+            proba = self.model.predict_proba(features.reshape(1, -1))
+            score = float(proba[0, 1] if proba.shape[1] > 1 else proba[0, 0])
+            threshold = settings.prediction_threshold
+            confidence = min(0.95, 0.8 + abs(score - threshold) * 0.3)
+            processing_time = (time.time() - start_time) * 1000
+            return {"score": score, "confidence": confidence, "processing_time_ms": processing_time}
+        except Exception as e:
+            logger.error("RandomForest prediction failed", error=str(e))
+            raise
