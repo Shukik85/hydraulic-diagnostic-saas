@@ -1,12 +1,12 @@
 """
 Feature Engineering for Hydraulic Systems Diagnostics
-Enterprise feature extraction с 25+ признаками
+Enterprise feature extraction with resampling & gap handling
 """
 
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,6 @@ from config import FEATURE_CONFIG, settings
 logger = structlog.get_logger()
 
 
-# Enterprise: flexible sensor type mapping and unit conversion
 SENSOR_TYPE_MAPPING: dict[str, list[str]] = {
     "pressure": ["pressure", "press", "hydraulic_pressure", "ps", "ps1", "ps2", "ps3", "ps4", "ps5", "ps6"],
     "temperature": ["temperature", "temp", "ts", "ts1", "ts2", "ts3", "ts4", "coolant_temp"],
@@ -32,55 +31,30 @@ SENSOR_TYPE_MAPPING: dict[str, list[str]] = {
 }
 
 UNIT_CONVERSIONS = {
-    "pressure": {
-        "bar": 1.0,
-        "psi": 0.0689476,  # psi->bar
-        "kpa": 0.01,       # kPa->bar
-        "mpa": 10.0,       # MPa->bar
-    },
-    "temperature": {
-        "c": lambda x: x,
-        "f": lambda x: (x - 32) * 5.0 / 9.0,
-        "k": lambda x: x - 273.15,
-    },
-    "flow": {
-        "l/min": 1.0,
-        "lpm": 1.0,
-        "m3/h": 16.6667,  # m3/h -> l/min
-    },
-    "vibration": {
-        "mm/s": 1.0,
-    },
+    "pressure": {"bar": 1.0, "psi": 0.0689476, "kpa": 0.01, "mpa": 10.0},
+    "temperature": {"c": lambda x: x, "f": lambda x: (x - 32) * 5.0 / 9.0, "k": lambda x: x - 273.15},
+    "flow": {"l/min": 1.0, "lpm": 1.0, "m3/h": 16.6667},
+    "vibration": {"mm/s": 1.0},
 }
 
-INDUSTRIAL_DEFAULTS = {
-    "temperature_mean": 40.0,
-    "flow_mean": 10.0,
-    "vibration_rms": 0.5,
-}
+INDUSTRIAL_DEFAULTS = {"temperature_mean": 40.0, "flow_mean": 10.0, "vibration_rms": 0.5}
 
 
 class FeatureEngineer:
-    """
-    Enterprise feature engineering для гидравлических систем.
-
-    Извлекает 25+ признаков:
-    - Sensor features: mean, std, max, min
-    - Derived features: gradients, ratios, correlations
-    - Window features: trends, seasonality, stationarity
-    """
-
     def __init__(self):
         self.feature_cache = {}
         self.sampling_frequency = settings.sampling_frequency_hz
         self.window_size = int(settings.feature_window_minutes * 60 * self.sampling_frequency)
+        # Resample params
+        self.base_hz = getattr(settings, "feature_base_hz", 20)
+        self.gap_small_ms = getattr(settings, "gap_small_ms", 250)
+        self.gap_medium_s = getattr(settings, "gap_medium_s", 3)
 
     def _canonical_type(self, raw_type: str) -> str:
         rt = (raw_type or "").lower()
         for canonical, aliases in SENSOR_TYPE_MAPPING.items():
             if rt in aliases:
                 return canonical
-        # быстрые хелперы для UCI префиксов (ps1..ps6, ts1..ts4, fs1..fs2, vs1, ce, cp, se, eps1)
         if rt.startswith("ps"):
             return "pressure"
         if rt.startswith("ts"):
@@ -89,7 +63,7 @@ class FeatureEngineer:
             return "flow"
         if rt.startswith("vs"):
             return "vibration"
-        return rt  # as-is
+        return rt
 
     def _convert_unit(self, value: float, unit: str | None, canonical: str) -> float:
         if unit is None:
@@ -101,214 +75,157 @@ class FeatureEngineer:
             return float(factor(value) if callable(factor) else value * factor)
         return float(value)
 
-    async def extract_features(
-        self, sensor_data: SensorDataBatch, feature_groups: list[str] | None = None
-    ) -> FeatureVector:
+    def _estimate_fs(self, ts: pd.Series) -> float:
+        if len(ts) < 3:
+            return float(self.base_hz)
+        diffs = ts.sort_values().diff().dropna().dt.total_seconds().values
+        if len(diffs) == 0:
+            return float(self.base_hz)
+        med = np.median(diffs)
+        return float(1.0 / med) if med > 0 else float(self.base_hz)
+
+    def _resample_series(self, df: pd.DataFrame, sensor_type: str) -> Tuple[pd.Series, float, float]:
+        s = df[df["sensor_type"] == sensor_type][["timestamp", "value"]].copy()
+        if s.empty:
+            return pd.Series(dtype=float), 0.0, 0.0
+        s = s.set_index("timestamp").sort_index()
+        fs_est = self._estimate_fs(s.index.to_series())
+        # Target grid
+        rule_ms = int(1000 / self.base_hz)
+        grid = pd.date_range(start=s.index.min(), end=s.index.max(), freq=f"{rule_ms}ms")
+        # Down/Up sample
+        if fs_est >= self.base_hz:
+            # downsample: бинируем по grid с mean
+            res = s.resample(f"{rule_ms}ms").mean().reindex(grid)
+        else:
+            # upsample: интерполяция
+            res = s.reindex(grid).interpolate(method="time")
+        # Gap handling
+        diffs_ms = res.index.to_series().diff().dt.total_seconds().fillna(0) * 1000
+        # Простая метрика покрытия
+        coverage = float(res["value"].notna().sum() / max(len(res), 1))
+        # Малые дыры — интерполяция уже сделана; средние — ffill/bfill лимитированно
+        res_ff = res["value"].ffill(limit=int(self.gap_medium_s * self.base_hz))
+        res_fb = res_ff.bfill(limit=int(self.gap_medium_s * self.base_hz))
+        return res_fb, fs_est, coverage
+
+    def _build_resampled_table(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, float]]:
+        # Определяем общий диапазон времени по всем сенсорам
+        tmin = df["timestamp"].min()
+        tmax = df["timestamp"].max()
+        if pd.isna(tmin) or pd.isna(tmax) or tmin == tmax:
+            return pd.DataFrame(), {}
+        rule_ms = int(1000 / self.base_hz)
+        grid = pd.date_range(start=tmin, end=tmax, freq=f"{rule_ms}ms")
+        table = pd.DataFrame(index=grid)
+        coverages: Dict[str, float] = {}
+        for st in ["pressure", "temperature", "flow", "vibration", "motor_power", "cooling_efficiency", "cooling_power", "system_efficiency"]:
+            series, fs_est, cov = self._resample_series(df, st)
+            table[st] = series.reindex(grid)
+            coverages[st] = cov
+        return table, coverages
+
+    async def extract_features(self, sensor_data: SensorDataBatch, feature_groups: list[str] | None = None) -> FeatureVector:
         start_time = time.time()
         if feature_groups is None:
             feature_groups = ["sensor_features", "derived_features", "window_features"]
-
-        # Build DataFrame with canonical sensor types and unit conversion
+        # Canonicalize & unit convert
         data = []
         for r in sensor_data.readings:
             ctype = self._canonical_type(r.sensor_type)
             val = self._convert_unit(r.value, getattr(r, "unit", None), ctype)
-            data.append({
-                "timestamp": pd.to_datetime(r.timestamp),
-                "sensor_type": ctype,
-                "value": val,
-                "unit": getattr(r, "unit", None),
-                "component_id": r.component_id,
-            })
-        df = pd.DataFrame(data).sort_values("timestamp")
-
-        # Диагностика входа
-        try:
-            logger.info(
-                "FeatureEngineer input",
-                system_id=str(sensor_data.system_id),
-                sensor_types=list(map(str, df["sensor_type"].unique())),
-                total=len(df),
-            )
-        except Exception:
-            pass
-
+            data.append({"timestamp": pd.to_datetime(r.timestamp), "sensor_type": ctype, "value": val, "unit": getattr(r, "unit", None), "component_id": r.component_id})
+        raw = pd.DataFrame(data).sort_values("timestamp")
+        logger.info("FeatureEngineer input", system_id=str(sensor_data.system_id), sensor_types=list(map(str, raw["sensor_type"].unique())), total=len(raw))
+        # Resample to base grid
+        resampled, coverages = self._build_resampled_table(raw)
         features: dict[str, float] = {}
         feature_names: list[str] = []
 
-        # Группы
-        if "sensor_features" in feature_groups:
-            features.update(self._extract_sensor_features(df))
-            feature_names.extend(FEATURE_CONFIG["sensor_features"])
-
-        if "derived_features" in feature_groups:
-            derived = self._extract_derived_features(df)
-            features.update(derived)
-            feature_names.extend(FEATURE_CONFIG["derived_features"])
-
-        if "window_features" in feature_groups:
-            win = self._extract_window_features(df)
-            features.update(win)
-            feature_names.extend(FEATURE_CONFIG["window_features"])
-
-        # Качество данных
-        data_quality_score = self._calculate_data_quality(df)
-        extraction_time = (time.time() - start_time) * 1000
-
-        logger.debug(
-            "Feature extraction completed",
-            features_count=len(features),
-            extraction_time_ms=extraction_time,
-            data_quality=data_quality_score,
-        )
-
-        return FeatureVector(
-            features=features,
-            feature_names=feature_names,
-            extraction_time_ms=extraction_time,
-            data_quality_score=data_quality_score,
-        )
-
-    def _extract_sensor_features(self, df: pd.DataFrame) -> dict[str, float]:
-        features: dict[str, float] = {}
-
         def safe_stats(series: pd.Series, name_prefix: str) -> None:
-            if len(series) > 0:
-                features[f"{name_prefix}_mean"] = float(series.mean())
-                features[f"{name_prefix}_std"] = float(series.std())
-                features[f"{name_prefix}_max"] = float(series.max())
-                features[f"{name_prefix}_min"] = float(series.min())
+            ser = series.dropna()
+            if len(ser) > 0:
+                features[f"{name_prefix}_mean"] = float(ser.mean())
+                features[f"{name_prefix}_std"] = float(ser.std())
+                features[f"{name_prefix}_max"] = float(ser.max())
+                features[f"{name_prefix}_min"] = float(ser.min())
             else:
-                # enterprise defaults
-                defaults = {
-                    f"{name_prefix}_mean": INDUSTRIAL_DEFAULTS.get(f"{name_prefix}_mean", 0.0),
-                    f"{name_prefix}_std": 0.0,
-                    f"{name_prefix}_max": 0.0,
-                    f"{name_prefix}_min": 0.0,
-                }
+                defaults = {f"{name_prefix}_mean": INDUSTRIAL_DEFAULTS.get(f"{name_prefix}_mean", 0.0), f"{name_prefix}_std": 0.0, f"{name_prefix}_max": 0.0, f"{name_prefix}_min": 0.0}
                 features.update(defaults)
 
-        # Канонические ряды
-        pressure = df[df["sensor_type"] == "pressure"]["value"]
-        temperature = df[df["sensor_type"] == "temperature"]["value"]
-        flow = df[df["sensor_type"] == "flow"]["value"]
-        vibration = df[df["sensor_type"] == "vibration"]["value"]
-        motor_power = df[df["sensor_type"] == "motor_power"]["value"]
-        ce = df[df["sensor_type"] == "cooling_efficiency"]["value"]
-        cp = df[df["sensor_type"] == "cooling_power"]["value"]
-        se = df[df["sensor_type"] == "system_efficiency"]["value"]
+        # Sensor features
+        if "sensor_features" in feature_groups and not resampled.empty:
+            safe_stats(resampled.get("pressure", pd.Series(dtype=float)), "pressure")
+            safe_stats(resampled.get("temperature", pd.Series(dtype=float)), "temperature")
+            safe_stats(resampled.get("flow", pd.Series(dtype=float)), "flow")
+            vib = resampled.get("vibration", pd.Series(dtype=float)).dropna()
+            features["vibration_rms"] = float(np.sqrt(np.mean(vib.values ** 2))) if len(vib) > 0 else INDUSTRIAL_DEFAULTS.get("vibration_rms", 0.0)
+            features["system_efficiency"] = float(resampled.get("system_efficiency", pd.Series(dtype=float)).dropna().mean() or 0.0)
+            features["cooling_efficiency"] = float(resampled.get("cooling_efficiency", pd.Series(dtype=float)).dropna().mean() or 0.0)
+            features["cooling_power"] = float(resampled.get("cooling_power", pd.Series(dtype=float)).dropna().mean() or 0.0)
+            features["motor_power_mean"] = float(resampled.get("motor_power", pd.Series(dtype=float)).dropna().mean() or 0.0)
 
-        safe_stats(pressure, "pressure")
-        safe_stats(temperature, "temperature")
-        safe_stats(flow, "flow")
-
-        # Вибрации — RMS
-        if len(vibration) > 0:
-            features["vibration_rms"] = float(np.sqrt(np.mean(vibration.values ** 2)))
-        else:
-            features["vibration_rms"] = INDUSTRIAL_DEFAULTS.get("vibration_rms", 0.0)
-
-        # Энергоэффективность и охлаждение
-        features["system_efficiency"] = float(se.mean()) if len(se) > 0 else 0.0
-        features["cooling_efficiency"] = float(ce.mean()) if len(ce) > 0 else 0.0
-        features["cooling_power"] = float(cp.mean()) if len(cp) > 0 else 0.0
-        features["motor_power_mean"] = float(motor_power.mean()) if len(motor_power) > 0 else 0.0
-
-        return features
-
-    def _extract_derived_features(self, df: pd.DataFrame) -> dict[str, float]:
-        features: dict[str, float] = {}
-
-        try:
-            # Градиенты (упрощенные)
-            def gradient(series: pd.Series) -> float:
-                if len(series) > 1:
-                    return float(np.mean(np.gradient(series.values)))
+        # Derived
+        if "derived_features" in feature_groups and not resampled.empty:
+            def gradient(ser: pd.Series) -> float:
+                ser = ser.dropna()
+                if len(ser) > 1:
+                    return float(np.mean(np.gradient(ser.values)))
                 return 0.0
-
-            pressure = df[df["sensor_type"] == "pressure"]["value"]
-            temperature = df[df["sensor_type"] == "temperature"]["value"]
-            flow = df[df["sensor_type"] == "flow"]["value"]
-
-            features["pressure_gradient"] = gradient(pressure)
-            features["temperature_gradient"] = gradient(temperature)
-            features["flow_gradient"] = gradient(flow)
-
-            # Корреляция температура↔давление (на приведенных длинах)
-            p = pressure.values
-            t = temperature.values
-            n = min(len(p), len(t))
-            if n > 2:
-                corr = np.corrcoef(p[:n], t[:n])[0, 1]
+            p = resampled.get("pressure", pd.Series(dtype=float))
+            t = resampled.get("temperature", pd.Series(dtype=float))
+            f = resampled.get("flow", pd.Series(dtype=float))
+            features["pressure_gradient"] = gradient(p)
+            features["temperature_gradient"] = gradient(t)
+            features["flow_gradient"] = gradient(f)
+            # Корреляции на общем отрезке
+            min_len = min(p.dropna().shape[0], t.dropna().shape[0])
+            if min_len >= int(getattr(settings, "min_overlap_seconds_for_corr", 5) * self.base_hz):
+                p_v = p.dropna().values[:min_len]
+                t_v = t.dropna().values[:min_len]
+                corr = np.corrcoef(p_v, t_v)[0, 1]
                 features["temp_pressure_correlation"] = float(0.0 if np.isnan(corr) else corr)
             else:
                 features["temp_pressure_correlation"] = 0.0
-
-            # Отношение давления к потоку
-            p_mean = float(pressure.mean()) if len(pressure) > 0 else 0.0
-            f_mean = float(flow.mean()) if len(flow) > 0 else 0.0
+            p_mean = float(p.dropna().mean()) if p.dropna().size > 0 else 0.0
+            f_mean = float(f.dropna().mean()) if f.dropna().size > 0 else 0.0
             features["pressure_flow_ratio"] = float(p_mean / max(f_mean, 1e-3))
 
-            # Rolling anomaly proxy → убран, не нужен в canonical-25 напрямую
-        except Exception as e:
-            logger.warning("Derived features warning", error=str(e))
-            for name in ["pressure_gradient", "temperature_gradient", "flow_gradient", "temp_pressure_correlation", "pressure_flow_ratio"]:
-                features.setdefault(name, 0.0)
-
-        return features
-
-    def _extract_window_features(self, df: pd.DataFrame) -> dict[str, float]:
-        features: dict[str, float] = {}
-        try:
-            # Тренд по давлению
-            pressure = df[df["sensor_type"] == "pressure"]["value"]
-            if len(pressure) > 2:
-                values = pressure.values
-                idx = np.arange(len(values))
-                slope, _, _, _, _ = stats.linregress(idx, values)
+        # Window features
+        if "window_features" in feature_groups and not resampled.empty:
+            p = resampled.get("pressure", pd.Series(dtype=float)).dropna()
+            if len(p) > 2:
+                idx = np.arange(len(p))
+                slope, _, _, _, _ = stats.linregress(idx, p.values)
                 features["trend_slope"] = float(slope)
             else:
                 features["trend_slope"] = 0.0
-
-            # Автокорреляция лаг-1 по давлению
-            if len(pressure) > 10:
-                arr = pressure.values
+            if len(p) > 10:
+                arr = p.values
                 autocorr = np.corrcoef(arr[:-1], arr[1:])[0, 1]
                 features["autocorrelation_lag1"] = float(0.0 if np.isnan(autocorr) else autocorr)
             else:
                 features["autocorrelation_lag1"] = 0.0
-
-            # Сезонность по температуре (упрощенно: отношение max spectral power к total)
-            temperature = df[df["sensor_type"] == "temperature"]["value"]
-            if len(temperature) > 20:
-                fft = np.fft.fft(temperature.values)
+            t = resampled.get("temperature", pd.Series(dtype=float)).dropna()
+            if len(t) > 20:
+                fft = np.fft.fft(t.values)
                 power = np.abs(fft) ** 2
                 dom = float(np.max(power[1:])) if len(power) > 1 else 0.0
                 tot = float(np.sum(power[1:])) if len(power) > 1 else 1.0
                 features["seasonality_score"] = float(min(1.0, dom / max(tot, 1e-6)))
             else:
                 features["seasonality_score"] = 0.0
-        except Exception as e:
-            logger.warning("Window features warning", error=str(e))
-            for name in ["trend_slope", "autocorrelation_lag1", "seasonality_score"]:
-                features.setdefault(name, 0.0)
 
-        return features
+        # Coverage → влияет на уверенность (можно учесть в Ensemble позже)
+        for k, cov in coverages.items():
+            features[f"coverage_{k}"] = float(cov)
+        cov_keys = [k for k in ["pressure", "temperature", "flow", "vibration"] if k in coverages]
+        if cov_keys:
+            features["global_coverage"] = float(np.mean([coverages[k] for k in cov_keys]))
+        else:
+            features["global_coverage"] = 0.0
 
-    def _calculate_data_quality(self, df: pd.DataFrame) -> float:
-        if len(df) == 0:
-            return 0.0
-        quality = []
-        expected = ["pressure", "temperature", "flow", "vibration"]
-        available = df["sensor_type"].unique()
-        completeness = len([s for s in expected if s in available]) / len(expected)
-        quality.append(completeness)
-        missing = df["value"].isna().sum()
-        quality.append(1.0 - (missing / max(len(df), 1)))
-        try:
-            z = np.abs(stats.zscore(df["value"].dropna()))
-            outlier_ratio = 1.0 - (len(z[z > 4]) / max(len(z), 1))
-        except Exception:
-            outlier_ratio = 1.0
-        quality.append(outlier_ratio)
-        return float(np.mean(quality))
+        extraction_time = (time.time() - start_time) * 1000
+        logger.debug("Feature extraction completed", features_count=len(features), extraction_time_ms=extraction_time, data_quality=features.get("global_coverage", 0.0))
+
+        return FeatureVector(features=features, feature_names=list(features.keys()), extraction_time_ms=extraction_time, data_quality_score=float(features.get("global_coverage", 0.0)))
