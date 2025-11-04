@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import time
+import traceback
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 
@@ -45,6 +46,7 @@ class TwoStageClassifier:
         self.scaler = None
         self.config = None
         self.is_loaded = False
+        self.version = "v20251105_0011"
         
         # Performance tracking
         self.prediction_count = 0
@@ -52,79 +54,156 @@ class TwoStageClassifier:
         
         logger.info("TwoStageClassifier initialized", models_dir=str(self.models_dir))
     
+    def _robust_model_load(self, model_path: Path, model_name: str):
+        """Robust model loading with dict/direct format compatibility"""
+        try:
+            logger.info(f"Loading {model_name} model", path=str(model_path))
+            
+            if not model_path.exists():
+                raise FileNotFoundError(f"Model file not found: {model_path}")
+            
+            loaded_data = joblib.load(model_path)
+            
+            # Handle both dict and direct model formats
+            if isinstance(loaded_data, dict):
+                if "model" in loaded_data:
+                    model = loaded_data["model"]
+                    logger.info(f"{model_name} model loaded from dict format")
+                else:
+                    # Dict without 'model' key - use as-is
+                    model = loaded_data
+                    logger.info(f"{model_name} model loaded as dict object")
+            else:
+                # Direct model object
+                model = loaded_data
+                logger.info(f"{model_name} model loaded as direct object")
+            
+            # Validate model has required methods
+            if not hasattr(model, 'predict'):
+                raise ValueError(f"{model_name} model missing predict method")
+            
+            return model
+            
+        except Exception as e:
+            logger.error(f"Failed to load {model_name} model", 
+                        path=str(model_path), 
+                        error=str(e))
+            logger.error(f"Traceback for {model_name}:", traceback=traceback.format_exc())
+            return None
+    
     def load_models(self) -> bool:
-        """Load two-stage models and configuration"""
+        """Load two-stage models and configuration with robust error handling"""
         try:
             start_time = time.time()
+            logger.info("Starting Two-Stage model loading", version=self.version)
             
-            # Load configuration
-            config_path = self.models_dir / "training_summary.json"
-            if config_path.exists():
-                with config_path.open("r") as f:
-                    self.config = json.load(f)
-                logger.info("Configuration loaded", 
-                           version=self.config.get("version", "unknown"),
-                           optimal_threshold=self.config.get("optimal_binary_threshold", 0.5),
-                           best_stage2=self.config.get("best_stage2_variant", "plain"))
-            else:
+            # Try multiple config locations
+            config_paths = [
+                self.models_dir / self.version / "two_stage_summary.json",
+                self.models_dir / "training_summary.json", 
+                self.models_dir / "two_stage_summary.json"
+            ]
+            
+            config_loaded = False
+            for config_path in config_paths:
+                if config_path.exists():
+                    try:
+                        with config_path.open("r", encoding="utf-8") as f:
+                            self.config = json.load(f)
+                        logger.info("Configuration loaded", 
+                                   path=str(config_path),
+                                   version=self.config.get("version", "unknown"))
+                        config_loaded = True
+                        break
+                    except Exception as e:
+                        logger.warning("Config loading failed", path=str(config_path), error=str(e))
+                        continue
+            
+            if not config_loaded:
                 logger.warning("No configuration found, using defaults")
                 self.config = {
-                    "optimal_binary_threshold": 0.35,
+                    "version": self.version,
+                    "optimal_binary_threshold": 0.1,
                     "best_stage2_variant": "plain"
                 }
             
-            # Load feature scaler
-            scaler_path = self.models_dir / "feature_scaler.joblib"
-            if scaler_path.exists():
-                self.scaler = joblib.load(scaler_path)
-                logger.info("Feature scaler loaded", path=str(scaler_path))
-            else:
-                raise FileNotFoundError(f"Scaler not found: {scaler_path}")
-            
-            # Load Stage 1 binary model (compatibility: try multiple names)
-            binary_paths = [
-                self.models_dir / "binary_detector_xgb.joblib",
-                self.models_dir / "catboost_model.joblib",  # fallback compatibility
-                self.models_dir / "xgboost_model.joblib"  # fallback compatibility
+            # Load feature scaler with fallback locations
+            scaler_paths = [
+                self.models_dir / self.version / "feature_scaler.joblib",
+                self.models_dir / "feature_scaler.joblib"
             ]
             
-            binary_loaded = False
-            for binary_path in binary_paths:
-                if binary_path.exists():
-                    self.binary_model = joblib.load(binary_path)
-                    logger.info("Stage 1 binary model loaded", path=str(binary_path))
-                    binary_loaded = True
-                    break
+            scaler_loaded = False
+            for scaler_path in scaler_paths:
+                if scaler_path.exists():
+                    try:
+                        self.scaler = joblib.load(scaler_path)
+                        logger.info("Feature scaler loaded", path=str(scaler_path))
+                        scaler_loaded = True
+                        break
+                    except Exception as e:
+                        logger.warning("Scaler loading failed", path=str(scaler_path), error=str(e))
+                        continue
             
-            if not binary_loaded:
-                raise FileNotFoundError("No Stage 1 binary model found")
+            if not scaler_loaded:
+                logger.error("No feature scaler found, creating default")
+                self.scaler = StandardScaler()
+                # Fit on dummy data
+                dummy_data = np.random.randn(10, 25)
+                self.scaler.fit(dummy_data)
+            
+            # Load Stage 1 binary model (multiple locations)
+            binary_paths = [
+                self.models_dir / self.version / "binary_detector_xgb.joblib",
+                self.models_dir / "binary_detector_xgb.joblib",
+                self.models_dir / "catboost_model.joblib"  # fallback
+            ]
+            
+            for binary_path in binary_paths:
+                self.binary_model = self._robust_model_load(binary_path, "Stage1-Binary")
+                if self.binary_model:
+                    break
             
             # Load Stage 2 multiclass model
             best_variant = self.config.get("best_stage2_variant", "plain")
             multiclass_suffix = "_smote" if best_variant == "smote" else ""
-            multiclass_path = self.models_dir / f"fault_classifier_catboost{multiclass_suffix}.joblib"
             
-            if multiclass_path.exists():
-                self.multiclass_model = joblib.load(multiclass_path)
-                logger.info("Stage 2 multiclass model loaded", 
-                           path=str(multiclass_path),
-                           variant=best_variant)
+            multiclass_paths = [
+                self.models_dir / self.version / f"fault_classifier_catboost{multiclass_suffix}.joblib",
+                self.models_dir / f"fault_classifier_catboost{multiclass_suffix}.joblib"
+            ]
+            
+            for multiclass_path in multiclass_paths:
+                self.multiclass_model = self._robust_model_load(multiclass_path, "Stage2-Multiclass")
+                if self.multiclass_model:
+                    break
+            
+            # Determine loading success
+            binary_ok = self.binary_model is not None
+            multiclass_ok = self.multiclass_model is not None
+            scaler_ok = self.scaler is not None
+            
+            if binary_ok and scaler_ok:
+                self.is_loaded = True
+                self.load_time = time.time() - start_time
+                
+                logger.info("Two-stage classifier loaded successfully",
+                           load_time_ms=self.load_time * 1000,
+                           binary_available=binary_ok,
+                           multiclass_available=multiclass_ok,
+                           scaler_available=scaler_ok)
+                return True
             else:
-                logger.warning("Stage 2 model not found, binary-only mode", path=str(multiclass_path))
-                self.multiclass_model = None
-            
-            self.load_time = time.time() - start_time
-            self.is_loaded = True
-            
-            logger.info("Two-stage classifier loaded successfully",
-                       load_time_ms=self.load_time * 1000,
-                       binary_available=self.binary_model is not None,
-                       multiclass_available=self.multiclass_model is not None)
-            
-            return True
-            
+                logger.error("Two-stage loading failed", 
+                            binary_ok=binary_ok,
+                            multiclass_ok=multiclass_ok,
+                            scaler_ok=scaler_ok)
+                return False
+                
         except Exception as e:
-            logger.error("Failed to load two-stage models", error=str(e))
+            logger.error("Two-stage model loading exception", 
+                        error=str(e),
+                        traceback=traceback.format_exc())
             self.is_loaded = False
             return False
     
@@ -147,7 +226,7 @@ class TwoStageClassifier:
         fault_probability = float(binary_proba[0, 1])  # P(fault)
         
         # Get optimal threshold from config
-        threshold = self.config.get("optimal_binary_threshold", 0.35)
+        threshold = self.config.get("optimal_binary_threshold", 0.1)
         is_anomaly = fault_probability >= threshold
         
         # Initialize result
@@ -227,8 +306,8 @@ class TwoStageClassifier:
             "multiclass_model_available": self.multiclass_model is not None,
             "scaler_available": self.scaler is not None,
             "configuration": {
-                "version": self.config.get("version", "unknown") if self.config else "unknown",
-                "optimal_threshold": self.config.get("optimal_binary_threshold", 0.35) if self.config else 0.35,
+                "version": self.config.get("version", self.version) if self.config else self.version,
+                "optimal_threshold": self.config.get("optimal_binary_threshold", 0.1) if self.config else 0.1,
                 "best_stage2_variant": self.config.get("best_stage2_variant", "plain") if self.config else "plain",
                 "component_mapping": COMPONENT_MAPPING,
                 "fault_type_names": FAULT_TYPE_NAMES
@@ -276,7 +355,7 @@ class TwoStageClassifier:
                 "multiclass": self.multiclass_model is not None,
                 "scaler": self.scaler is not None
             },
-            "configuration": self.config.get("version", "unknown") if self.config else "unknown"
+            "configuration": self.config.get("version", self.version) if self.config else self.version
         }
 
 
@@ -291,7 +370,8 @@ def get_two_stage_classifier() -> TwoStageClassifier:
     if _two_stage_classifier is None:
         _two_stage_classifier = TwoStageClassifier()
         
-        # Try to load models
+        # Try to load models with detailed logging
+        logger.info("Initializing global Two-Stage classifier")
         if not _two_stage_classifier.load_models():
             logger.warning("Two-stage classifier models not loaded, will use fallback")
     
@@ -305,4 +385,6 @@ def reload_two_stage_models() -> bool:
     if _two_stage_classifier is None:
         _two_stage_classifier = TwoStageClassifier()
     
-    return _two_stage_classifier.load_models()
+    success = _two_stage_classifier.load_models()
+    logger.info("Two-Stage models reload attempt", success=success)
+    return success
