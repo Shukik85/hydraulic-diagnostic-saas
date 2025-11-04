@@ -4,6 +4,11 @@ Two-Stage Classifier Service for Enhanced Anomaly Detection
 Stage 1: Binary anomaly detection (normal vs fault) - High Recall
 Stage 2: Multi-class fault classification (pump/valve/cooling) - High Precision
 Provides actionable insights with component mapping and confidence scoring
+
+Enterprise Features:
+- Feature contract validation for production compatibility
+- Graceful degradation on contract mismatches
+- Detailed compatibility reporting
 """
 
 from __future__ import annotations
@@ -48,11 +53,68 @@ class TwoStageClassifier:
         self.is_loaded = False
         self.version = "v20251105_0011"
         
+        # Enterprise feature contract validation
+        self.feature_contract = None
+        self.contract_compatible = False
+        self.compatibility_reason = "not_validated"
+        
         # Performance tracking
         self.prediction_count = 0
         self.load_time = None
         
         logger.info("TwoStageClassifier initialized", models_dir=str(self.models_dir))
+    
+    def _load_feature_contract(self) -> Dict[str, Any]:
+        """Load enterprise feature contract for compatibility validation"""
+        contract_path = self.models_dir / "features_contract.json"
+        
+        try:
+            if contract_path.exists():
+                with contract_path.open("r", encoding="utf-8") as f:
+                    contract = json.load(f)
+                
+                logger.info("Feature contract loaded",
+                           contract_version=contract.get("contract_version", "unknown"),
+                           features_count=contract.get("features_count", 0))
+                
+                return contract
+            else:
+                logger.warning("No feature contract found", path=str(contract_path))
+                return None
+                
+        except Exception as e:
+            logger.error("Feature contract loading failed", 
+                        path=str(contract_path), 
+                        error=str(e))
+            return None
+    
+    def _validate_contract_compatibility(self, contract: Dict[str, Any]) -> tuple[bool, str]:
+        """Validate Two-Stage models compatibility with feature contract"""
+        if not contract:
+            return False, "feature_contract_missing"
+        
+        try:
+            # Check feature count compatibility
+            contract_features = contract.get("features_count", 0)
+            if contract_features != 25:
+                return False, f"feature_count_mismatch: contract={contract_features}, expected=25"
+            
+            # Check scaler compatibility if loaded
+            if self.scaler and hasattr(self.scaler, 'n_features_in_'):
+                scaler_features = self.scaler.n_features_in_
+                if scaler_features != contract_features:
+                    return False, f"scaler_mismatch: scaler={scaler_features}, contract={contract_features}"
+            
+            # Check config compatibility
+            if self.config:
+                config_features = self.config.get("features_count", 0)
+                if config_features > 0 and config_features != contract_features:
+                    return False, f"config_mismatch: config={config_features}, contract={contract_features}"
+            
+            return True, "compatible"
+            
+        except Exception as e:
+            return False, f"validation_error: {str(e)}"
     
     def _robust_model_load(self, model_path: Path, model_name: str):
         """Robust model loading with dict/direct format compatibility"""
@@ -92,10 +154,13 @@ class TwoStageClassifier:
             return None
     
     def load_models(self) -> bool:
-        """Load two-stage models and configuration with robust error handling"""
+        """Load two-stage models with enterprise feature contract validation"""
         try:
             start_time = time.time()
             logger.info("Starting Two-Stage model loading", version=self.version)
+            
+            # Load and validate feature contract first
+            self.feature_contract = self._load_feature_contract()
             
             # Try multiple config locations
             config_paths = [
@@ -124,7 +189,8 @@ class TwoStageClassifier:
                 self.config = {
                     "version": self.version,
                     "optimal_binary_threshold": 0.1,
-                    "best_stage2_variant": "plain"
+                    "best_stage2_variant": "plain",
+                    "features_count": 25
                 }
             
             # Load feature scaler with fallback locations
@@ -138,7 +204,9 @@ class TwoStageClassifier:
                 if scaler_path.exists():
                     try:
                         self.scaler = joblib.load(scaler_path)
-                        logger.info("Feature scaler loaded", path=str(scaler_path))
+                        logger.info("Feature scaler loaded", 
+                                   path=str(scaler_path),
+                                   n_features=getattr(self.scaler, 'n_features_in_', 'unknown'))
                         scaler_loaded = True
                         break
                     except Exception as e:
@@ -148,9 +216,18 @@ class TwoStageClassifier:
             if not scaler_loaded:
                 logger.error("No feature scaler found, creating default")
                 self.scaler = StandardScaler()
-                # Fit on dummy data
-                dummy_data = np.random.randn(10, 25)
+                # Fit on dummy data with contract features count
+                features_count = self.feature_contract.get("features_count", 25) if self.feature_contract else 25
+                dummy_data = np.random.randn(10, features_count)
                 self.scaler.fit(dummy_data)
+            
+            # Validate feature contract compatibility
+            self.contract_compatible, self.compatibility_reason = self._validate_contract_compatibility(self.feature_contract)
+            
+            if not self.contract_compatible:
+                logger.error("Feature contract validation failed",
+                            reason=self.compatibility_reason)
+                # Continue loading for graceful degradation, but mark as incompatible
             
             # Load Stage 1 binary model (multiple locations)
             binary_paths = [
@@ -183,7 +260,8 @@ class TwoStageClassifier:
             multiclass_ok = self.multiclass_model is not None
             scaler_ok = self.scaler is not None
             
-            if binary_ok and scaler_ok:
+            # Loading success requires models + scaler + contract compatibility
+            if binary_ok and scaler_ok and self.contract_compatible:
                 self.is_loaded = True
                 self.load_time = time.time() - start_time
                 
@@ -191,13 +269,15 @@ class TwoStageClassifier:
                            load_time_ms=self.load_time * 1000,
                            binary_available=binary_ok,
                            multiclass_available=multiclass_ok,
-                           scaler_available=scaler_ok)
+                           contract_compatible=self.contract_compatible)
                 return True
             else:
                 logger.error("Two-stage loading failed", 
                             binary_ok=binary_ok,
                             multiclass_ok=multiclass_ok,
-                            scaler_ok=scaler_ok)
+                            scaler_ok=scaler_ok,
+                            contract_compatible=self.contract_compatible,
+                            compatibility_reason=self.compatibility_reason)
                 return False
                 
         except Exception as e:
@@ -205,6 +285,7 @@ class TwoStageClassifier:
                         error=str(e),
                         traceback=traceback.format_exc())
             self.is_loaded = False
+            self.compatibility_reason = f"loading_exception: {str(e)}"
             return False
     
     def predict(self, features: np.ndarray) -> Dict[str, Any]:
@@ -212,11 +293,19 @@ class TwoStageClassifier:
         if not self.is_loaded:
             raise RuntimeError("Models not loaded. Call load_models() first.")
         
+        if not self.contract_compatible:
+            raise RuntimeError(f"Feature contract incompatible: {self.compatibility_reason}")
+        
         start_time = time.time()
         
         # Ensure features are 2D
         if features.ndim == 1:
             features = features.reshape(1, -1)
+        
+        # Validate input feature count
+        expected_features = self.feature_contract.get("features_count", 25) if self.feature_contract else 25
+        if features.shape[1] != expected_features:
+            raise ValueError(f"Input feature count mismatch: got {features.shape[1]}, expected {expected_features}")
         
         # Scale features
         features_scaled = self.scaler.transform(features)
@@ -297,7 +386,7 @@ class TwoStageClassifier:
         return result
     
     def get_model_info(self) -> Dict[str, Any]:
-        """Get information about loaded models"""
+        """Get comprehensive model information including contract compatibility"""
         return {
             "is_loaded": self.is_loaded,
             "load_time_ms": self.load_time * 1000 if self.load_time else None,
@@ -305,6 +394,13 @@ class TwoStageClassifier:
             "binary_model_available": self.binary_model is not None,
             "multiclass_model_available": self.multiclass_model is not None,
             "scaler_available": self.scaler is not None,
+            "contract_compatibility": {
+                "compatible": self.contract_compatible,
+                "reason": self.compatibility_reason,
+                "contract_version": self.feature_contract.get("contract_version") if self.feature_contract else None,
+                "expected_features": self.feature_contract.get("features_count") if self.feature_contract else None,
+                "scaler_features": getattr(self.scaler, 'n_features_in_', None) if self.scaler else None
+            },
             "configuration": {
                 "version": self.config.get("version", self.version) if self.config else self.version,
                 "optimal_threshold": self.config.get("optimal_binary_threshold", 0.1) if self.config else 0.1,
@@ -349,13 +445,18 @@ class TwoStageClassifier:
         return {
             "prediction_count": self.prediction_count,
             "is_loaded": self.is_loaded,
+            "contract_compatible": self.contract_compatible,
             "load_time_ms": self.load_time * 1000 if self.load_time else None,
             "models_available": {
                 "binary": self.binary_model is not None,
                 "multiclass": self.multiclass_model is not None,
                 "scaler": self.scaler is not None
             },
-            "configuration": self.config.get("version", self.version) if self.config else self.version
+            "configuration": self.config.get("version", self.version) if self.config else self.version,
+            "compatibility_status": {
+                "compatible": self.contract_compatible,
+                "reason": self.compatibility_reason
+            }
         }
 
 
@@ -386,5 +487,8 @@ def reload_two_stage_models() -> bool:
         _two_stage_classifier = TwoStageClassifier()
     
     success = _two_stage_classifier.load_models()
-    logger.info("Two-Stage models reload attempt", success=success)
+    logger.info("Two-Stage models reload attempt", 
+               success=success,
+               contract_compatible=_two_stage_classifier.contract_compatible,
+               compatibility_reason=_two_stage_classifier.compatibility_reason)
     return success
