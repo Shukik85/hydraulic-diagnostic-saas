@@ -52,7 +52,7 @@ class SensorDataBatch(BaseModel):
     """Пакет данных с датчиков."""
 
     system_id: UUID = Field(..., description="ID гидравлической системы")
-    readings: list[SensorReading] = Field(..., min_items=1, max_items=1000)
+    readings: list[SensorReading] = Field(..., min_items=1, max_items=5000)
     metadata: dict[str, Any] | None = Field(None, description="Дополнительные метаданные")
 
     @validator("readings")
