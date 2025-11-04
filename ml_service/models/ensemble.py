@@ -227,6 +227,45 @@ class EnsembleModel:
     def is_ready(self) -> bool:
         return self.is_loaded and len([m for m in self.models.values() if m.is_loaded]) >= 1
 
+    def get_loaded_models(self) -> list[str]:
+        """Возвращает список загруженных моделей (требуется для /ready endpoint)"""
+        return [name for name, model in self.models.items() if model.is_loaded]
+
+    def get_model_info(self) -> dict[str, Any]:
+        model_info = {}
+        for name, model in self.models.items():
+            if model.is_loaded:
+                model_info[name] = {
+                    "name": MODEL_CONFIG[name]["name"],
+                    "version": model.version,
+                    "description": MODEL_CONFIG[name]["description"],
+                    "accuracy_target": MODEL_CONFIG[name]["accuracy_target"],
+                    "weight": MODEL_CONFIG[name]["weight"],
+                    "is_loaded": True,
+                }
+            else:
+                model_info[name] = {
+                    "name": MODEL_CONFIG[name]["name"],
+                    "is_loaded": False,
+                    "error": "Failed to load",
+                }
+        return model_info
+
+    def get_performance_metrics(self) -> dict[str, Any]:
+        if not self.performance_metrics["inference_times"]:
+            return {"predictions_total": 0}
+        times = self.performance_metrics["inference_times"]
+        return {
+            "predictions_total": self.performance_metrics["predictions_total"],
+            "average_response_time_ms": np.mean(times),
+            "p95_response_time_ms": np.percentile(times, 95),
+            "p99_response_time_ms": np.percentile(times, 99),
+            "min_response_time_ms": np.min(times),
+            "max_response_time_ms": np.max(times),
+            "average_accuracy": np.mean(self.performance_metrics["accuracy_scores"]) if self.performance_metrics["accuracy_scores"] else 0.0,
+            "fallback_usage": self.performance_metrics["fallback_usage"],
+        }
+
     async def cleanup(self) -> None:
         logger.info("Cleaning up ensemble models")
         for model in self.models.values():
