@@ -16,6 +16,7 @@ from services.cache_service import CacheService
 from services.feature_engineering import FeatureEngineer
 from services.monitoring import metrics
 from services.utils.features import adaptive_project, build_feature_cache_key
+from services.adaptive_threshold_service import AdaptiveThresholdService
 
 from .schemas import (
     BatchPredictionRequest,
@@ -35,6 +36,9 @@ from .schemas import (
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+# Global adaptive threshold service (will be initialized in main.py)
+adaptive_thresholds: AdaptiveThresholdService | None = None
 
 
 def get_ensemble_model() -> EnsembleModel:
@@ -60,7 +64,6 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
     fv = await feature_engineer.extract_features(req.sensor_data)
 
     # 2) Adaptive projection: строим вектор из всех доступных признаков
-    #   expected_size возьмём у первой загруженной модели (если есть)
     expected_size = None
     try:
         for m in ensemble.models.values():
@@ -71,12 +74,14 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
         expected_size = 25
 
     vector, used_names = adaptive_project(fv, expected_size=expected_size)
+    coverage = fv.data_quality_score  # from FeatureEngineer
 
     logger.info(
         "Ensemble input vector",
         len=int(vector.size),
         nonzero=int(np.count_nonzero(vector)),
         expected_size=expected_size,
+        coverage=coverage,
     )
 
     # 3) Cache by dynamic features
@@ -94,13 +99,32 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
 
     # 4) Predict
     result = await ensemble.predict(vector)
+    ensemble_score = float(result.get("ensemble_score", 0.5))
 
-    # 5) Build response
+    # 5) Adaptive threshold decision
+    threshold_info = {"threshold": settings.prediction_threshold, "source": "fixed", "context_key": "disabled", "confidence_multiplier": 1.0}
+    if adaptive_thresholds:
+        try:
+            threshold_info = await adaptive_thresholds.get_threshold(
+                system_id=req.sensor_data.system_id,
+                coverage=coverage
+            )
+        except Exception as e:
+            logger.warning("Adaptive threshold failed, using fixed", error=str(e))
+    
+    adaptive_threshold = threshold_info["threshold"]
+    is_anomaly_adaptive = ensemble_score > adaptive_threshold
+    confidence_multiplier = threshold_info["confidence_multiplier"]
+
+    # 6) Build response
+    base_confidence = float(result.get("confidence", 0.8))
+    adjusted_confidence = base_confidence * confidence_multiplier
+    
     prediction = AnomalyPrediction(
-        is_anomaly=bool(result.get("is_anomaly", False)),
-        anomaly_score=float(result.get("ensemble_score", 0.5)),
+        is_anomaly=is_anomaly_adaptive,
+        anomaly_score=ensemble_score,
         severity=str(result.get("severity", "normal")),
-        confidence=float(result.get("confidence", 0.8)),
+        confidence=adjusted_confidence,
         affected_components=[],
         anomaly_type=None,
     )
@@ -127,12 +151,32 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
         system_id=req.sensor_data.system_id,
         prediction=prediction,
         ml_predictions=ml_predictions,
-        ensemble_score=float(result.get("ensemble_score", 0.5)),
+        ensemble_score=ensemble_score,
         total_processing_time_ms=float(result.get("total_processing_time_ms", processing_time)),
         features_extracted=int(vector.size),
         cache_hit=False,
         trace_id=trace_id,
+        # Новые поля для adaptive thresholds
+        threshold_used=adaptive_threshold,
+        threshold_source=threshold_info["source"],
+        baseline_context={
+            "context_key": threshold_info["context_key"],
+            "coverage": coverage,
+            "confidence_multiplier": confidence_multiplier
+        }
     )
+
+    # 7) Update baseline (async)
+    if adaptive_thresholds:
+        try:
+            # Не ждём результата — background update
+            asyncio.create_task(adaptive_thresholds.update_baseline(
+                system_id=req.sensor_data.system_id,
+                score=ensemble_score,
+                coverage=coverage
+            ))
+        except Exception as e:
+            logger.warning("Baseline update task failed", error=str(e))
 
     if cache_key and settings.cache_predictions:
         await cache.save_prediction(cache_key, response.model_dump())
