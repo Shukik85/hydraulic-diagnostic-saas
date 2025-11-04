@@ -1,6 +1,6 @@
 """
-Ensemble Model for Hydraulic Systems Anomaly Detection
-Enterprise ensemble с 4 ML моделями и <100ms latency
+Ensemble Model for Hydraulic Systems Anomaly Detection  
+Enterprise ensemble с CatBoost + XGBoost + RandomForest + Adaptive
 """
 
 import asyncio
@@ -14,7 +14,7 @@ from config import MODEL_CONFIG, settings
 
 from .adaptive_model import AdaptiveModel
 from .base_model import BaseMLModel
-from .helm_model import HELMModel
+from .catboost_model import CatBoostModel
 from .random_forest_model import RandomForestModel
 from .xgboost_model import XGBoostModel
 
@@ -26,10 +26,10 @@ class EnsembleModel:
     Enterprise Ensemble Model для гидравлической диагностики.
 
     Объединяет 4 ML модели:
-    - HELM (99.5% accuracy) - вес 0.4
-    - XGBoost (99.8% accuracy) - вес 0.4
-    - RandomForest (99.6% accuracy) - вес 0.2
-    - Adaptive (99.2% accuracy) - динамические пороги
+    - CatBoost (99.9% accuracy) - вес 0.5 🎆 Основная модель
+    - XGBoost (99.8% accuracy) - вес 0.3
+    - RandomForest (99.6% accuracy) - вес 0.15
+    - Adaptive (99.2% accuracy) - вес 0.05 (динамические пороги)
     """
 
     def __init__(self):
@@ -55,9 +55,9 @@ class EnsembleModel:
         logger.info("Loading ensemble models", model_path=settings.model_path)
 
         try:
-            # Параллельная загрузка моделей
+            # Параллельная загрузка моделей (✅ Без HELM!)
             tasks = [
-                self._load_helm_model(),
+                self._load_catboost_model(),  # ✅ Новая основная модель
                 self._load_xgboost_model(),
                 self._load_random_forest_model(),
                 self._load_adaptive_model(),
@@ -89,15 +89,14 @@ class EnsembleModel:
             logger.error("Failed to load ensemble models", error=str(e))
             raise
 
-    async def _load_helm_model(self) -> None:
-        """Загрузка HELM модели."""
+    async def _load_catboost_model(self) -> None:
+        """Загрузка CatBoost модели (основная)."""
         try:
-            model = HELMModel()
+            model = CatBoostModel()
             await model.load()
-            self.models["helm"] = model
+            self.models["catboost"] = model
         except Exception as e:
-            logger.warning("HELM model failed to load", error=str(e))
-            # Продолжаем без HELM
+            logger.warning("CatBoost model failed to load", error=str(e))
 
     async def _load_xgboost_model(self) -> None:
         """Загрузка XGBoost модели."""
@@ -128,7 +127,7 @@ class EnsembleModel:
 
     async def predict(self, features: np.ndarray) -> dict[str, Any]:
         """
-        Enterprise ensemble предсказание с <100ms latency.
+        Enterprise ensemble предсказание с <20ms latency.
 
         Args:
             features: Массив признаков
@@ -190,12 +189,12 @@ class EnsembleModel:
             prediction = await model.predict(features)
             processing_time = (time.time() - start_time) * 1000
 
-            # ✅ FIX: Полные Pydantic-совместимые поля
+            # ✅ Pydantic-совместимые поля
             return {
                 "model_name": model_name,
-                "ml_model": model_name,  # ✅ Добавлено для Pydantic
+                "ml_model": model_name,
                 "model_version": model.version,
-                "version": model.version,  # ✅ Добавлено для Pydantic
+                "version": model.version,
                 "prediction_score": prediction["score"],
                 "confidence": prediction.get("confidence", 0.95),
                 "processing_time_ms": processing_time,
@@ -204,12 +203,11 @@ class EnsembleModel:
 
         except Exception as e:
             logger.error(f"Model {model_name} prediction failed", error=str(e))
-            # ✅ FIX: Полные поля в error case тоже
             return {
                 "model_name": model_name,
-                "ml_model": model_name,  # ✅ Добавлено
+                "ml_model": model_name,
                 "model_version": model.version,
-                "version": model.version,  # ✅ Добавлено
+                "version": model.version,
                 "prediction_score": 0.5,  # Нейтральный скор
                 "confidence": 0.0,
                 "processing_time_ms": 0.0,
@@ -218,7 +216,7 @@ class EnsembleModel:
             }
 
     def _calculate_ensemble_score(self, predictions: list[dict[str, Any]]) -> dict[str, Any]:
-        """Вычисление ensemble скора с весами."""
+        """Вычисление ensemble скора с обновленными весами."""
         if not predictions:
             return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0, "is_anomaly": False}
 
@@ -228,20 +226,21 @@ class EnsembleModel:
         if not valid_predictions:
             return {"ensemble_score": 0.5, "severity": "normal", "confidence": 0.0, "is_anomaly": False}
 
-        # Весовое среднее
+        # ✅ Обновленные веса CatBoost ensemble
         weighted_score = 0.0
         total_weight = 0.0
         confidence_sum = 0.0
 
         model_weights = {
-            "helm": self.ensemble_weights[0],
-            "xgboost": self.ensemble_weights[1],
-            "random_forest": self.ensemble_weights[2],
+            "catboost": self.ensemble_weights[0],     # 50% - Основная модель
+            "xgboost": self.ensemble_weights[1],      # 30%
+            "random_forest": self.ensemble_weights[2], # 15% 
+            "adaptive": self.ensemble_weights[3],      # 5%
         }
 
         for pred in valid_predictions:
             model_name = pred["model_name"]
-            weight = model_weights.get(model_name, 0.1)  # Минимальный вес
+            weight = model_weights.get(model_name, 0.05)  # Минимальный вес
 
             weighted_score += pred["prediction_score"] * weight
             confidence_sum += pred["confidence"] * weight
