@@ -1,8 +1,8 @@
-"""Модуль проекта с автогенерированным докстрингом."""
+"""Celery задачи для обработки документов и индексации RAG системы."""
 
-# apps/rag_assistant/tasks.py (final mypy fixes: typed keys and correct model)
 from __future__ import annotations
 
+from collections.abc import Generator
 from collections import defaultdict
 from contextlib import contextmanager
 import logging
@@ -23,6 +23,7 @@ from .rag_service import RagAssistant
 logger = get_task_logger(__name__)
 performance_logger = logging.getLogger("performance")
 
+# Константы задач
 MAX_BATCH_SIZE = 100
 TASK_PROGRESS_UPDATE_INTERVAL = 10
 MAX_RETRIES = 3
@@ -30,12 +31,14 @@ RETRY_COUNTDOWN = 60
 
 
 @contextmanager
-def task_performance_monitor(task_name: str, **metadata):
-    """Краткое описание функции.
+def task_performance_monitor(
+    task_name: str, **metadata: Any
+) -> Generator[None, None, None]:
+    """Контекстный менеджер для мониторинга производительности задач.
 
     Args:
-        task_name (TYPE): описание.
-
+        task_name: Название задачи для логирования
+        **metadata: Дополнительные метаданные для логирования
     """
     start_time = time.time()
     try:
@@ -55,20 +58,19 @@ def task_performance_monitor(task_name: str, **metadata):
 
 @shared_task(bind=True, max_retries=MAX_RETRIES)
 def process_document_async(
-    self, document_id: int, reindex: bool = False
+    self: Any, document_id: int, reindex: bool = False
 ) -> dict[str, Any]:
-    """Краткое описание функции.
+    """Асинхронная обработка и индексация документа.
 
     Args:
-        self (TYPE): описание.
-        document_id (TYPE): описание.
-        reindex (TYPE): описание.
+        self: Контекст задачи Celery
+        document_id: ID документа для обработки
+        reindex: Флаг переиндексации
 
     Returns:
-        TYPE: описание.
-
+        Словарь с результатом выполнения задачи
     """
-    _ = self.request.id
+    task_id = self.request.id
     try:
         with task_performance_monitor(
             "process_document", document_id=document_id, reindex=reindex
@@ -186,21 +188,17 @@ def _process_documents_for_system(
     total_docs: int,
     processed: dict[str, int],
     errors: list[dict[str, Any]],
-    self,
+    self: Any,
 ) -> None:
-    """Краткое описание функции.
+    """Обрабатывает документы для конкретной системы.
 
     Args:
-        system (TYPE): описание.
-        docs (TYPE): описание.
-        total_docs (TYPE): описание.
-        processed (TYPE): описание.
-        errors (TYPE): описание.
-        self (TYPE): описание.
-
-    Returns:
-        TYPE: описание.
-
+        system: RAG система
+        docs: Список документов для обработки
+        total_docs: Общее количество документов
+        processed: Словарь с количеством обработанных документов
+        errors: Список ошибок обработки
+        self: Контекст задачи Celery
     """
     try:
         assistant = RagAssistant(system)
@@ -248,14 +246,13 @@ def _process_documents_for_system(
 def _group_documents_by_system(
     documents: list[RagDocument],
 ) -> dict[int, dict[str, Any]]:
-    """Краткое описание функции.
+    """Группирует документы по системам.
 
     Args:
-        documents (TYPE): описание.
+        documents: Список документов
 
     Returns:
-        TYPE: описание.
-
+        Словарь с группированными документами по ID системы
     """
     grouped: dict[int, dict[str, Any]] = defaultdict(
         lambda: {"system": None, "documents": []}
@@ -276,7 +273,14 @@ def _group_documents_by_system(
 
 @shared_task
 def index_documents_batch_async(document_ids: list[int]) -> dict[str, Any]:
-    """Асинхронная индексация пакета документов: запускает process_document_async для каждого документа."""
+    """Асинхронная индексация пакета документов.
+
+    Args:
+        document_ids: Список ID документов для индексации
+
+    Returns:
+        Словарь с результатом запуска задач
+    """
     results: list[str] = []
     docs = RagDocument.objects.filter(id__in=document_ids)
     for d in docs:

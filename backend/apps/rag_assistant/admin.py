@@ -1,4 +1,4 @@
-"""Production RAG Assistant Django Admin with proper FK relations."""
+"""Админка Django для приложения RAG Assistant с правильными отношениями ForeignKey."""
 
 from django.contrib import admin
 
@@ -6,7 +6,7 @@ from .models import Document, RagQueryLog, RagSystem
 
 
 class DocumentInline(admin.TabularInline):
-    """Инлайн для документов в RAG-системе."""
+    """Инлайн для документов в админке RAG-системы."""
 
     model = Document
     extra = 0
@@ -18,7 +18,7 @@ class DocumentInline(admin.TabularInline):
 
 @admin.register(RagSystem)
 class RagSystemAdmin(admin.ModelAdmin):
-    """Продовый админ для RAG-систем."""
+    """Админка для RAG-систем с оптимизациями для продакшена."""
 
     list_display = (
         "name",
@@ -34,14 +34,21 @@ class RagSystemAdmin(admin.ModelAdmin):
     inlines = (DocumentInline,)
 
     @admin.display(description="Кол-во документов")
-    def documents_count(self, obj):
-        """Подсчёт документов."""
+    def documents_count(self, obj: RagSystem) -> int:
+        """Подсчитывает количество документов в системе.
+
+        Args:
+            obj: Экземпляр RAG системы
+
+        Returns:
+            Количество документов
+        """
         return obj.documents.count()
 
 
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
-    """Продовый админ для документов."""
+    """Админка для документов с оптимизациями для продакшена."""
 
     list_display = (
         "title",
@@ -63,18 +70,32 @@ class DocumentAdmin(admin.ModelAdmin):
     list_per_page = 25
 
     def get_queryset(self, request):
-        """Оптимизация запросов."""
+        """Возвращает оптимизированный queryset с select_related.
+
+        Args:
+            request: HTTP запрос
+
+        Returns:
+            Оптимизированный QuerySet
+        """
         return super().get_queryset(request).select_related("rag_system")
 
     @admin.display(description="Превью")
-    def content_preview(self, obj):
-        """Короткое превью содержимого."""
+    def content_preview(self, obj: Document) -> str:
+        """Возвращает короткое превью содержимого документа.
+
+        Args:
+            obj: Экземпляр документа
+
+        Returns:
+            Превью содержимого (первые 100 символов)
+        """
         return obj.content[:100] + "..." if len(obj.content) > 100 else obj.content
 
 
 @admin.register(RagQueryLog)
 class RagQueryLogAdmin(admin.ModelAdmin):
-    """Продовый админ для логов запросов."""
+    """Админка для логов запросов с оптимизациями для продакшена."""
 
     list_display = ("system", "query_preview", "document", "timestamp")
     list_filter = (
@@ -88,12 +109,26 @@ class RagQueryLogAdmin(admin.ModelAdmin):
     readonly_fields = ("timestamp",)
 
     def get_queryset(self, request):
-        """Оптимизация запросов."""
+        """Возвращает оптимизированный queryset с select_related.
+
+        Args:
+            request: HTTP запрос
+
+        Returns:
+            Оптимизированный QuerySet
+        """
         return super().get_queryset(request).select_related("system", "document")
 
     @admin.display(description="Запрос")
-    def query_preview(self, obj):
-        """Короткое превью запроса."""
+    def query_preview(self, obj: RagQueryLog) -> str:
+        """Возвращает короткое превью запроса.
+
+        Args:
+            obj: Экземпляр лога запроса
+
+        Returns:
+            Превью запроса (первые 100 символов)
+        """
         return (
             obj.query_text[:100] + "..."
             if len(obj.query_text) > 100

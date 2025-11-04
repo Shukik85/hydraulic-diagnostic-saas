@@ -1,4 +1,4 @@
-"""Production RAG Assistant URLs with DRF routing and monitoring."""
+"""URLs для приложения RAG Assistant с DRF маршрутизацией и мониторингом."""
 
 from django.urls import include, path
 from rest_framework.decorators import api_view
@@ -19,10 +19,16 @@ router.register(r"documents", DocumentViewSet, basename="document")
 router.register(r"logs", RagQueryLogViewSet, basename="ragquerylog")
 
 
-# API метрики для мониторинга
 @api_view(["GET"])
 def api_metrics(request):
-    """Получение метрик API для мониторинга."""
+    """Получает метрики API для мониторинга.
+
+    Args:
+        request: HTTP запрос
+
+    Returns:
+        Ответ с метриками API
+    """
     import time
 
     from django.core.cache import cache

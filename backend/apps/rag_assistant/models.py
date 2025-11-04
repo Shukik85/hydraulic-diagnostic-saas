@@ -1,4 +1,4 @@
-"""RAG assistant models with complete type annotations."""
+"""Модели Django для приложения RAG Assistant с полными аннотациями типов."""
 
 from __future__ import annotations
 
@@ -30,6 +30,11 @@ class RagSystem(models.Model):
         ]
 
     def __str__(self) -> str:
+        """Возвращает строковое представление RAG системы.
+
+        Returns:
+            Название системы
+        """
         return str(self.name)
 
 
@@ -75,11 +80,16 @@ class Document(models.Model):
         verbose_name_plural = "Документы"
 
     def __str__(self) -> str:
+        """Возвращает строковое представление документа.
+
+        Returns:
+            Заголовок документа
+        """
         return str(self.title)
 
 
 class RagQueryLog(models.Model):
-    """Логи запросов и ответов."""
+    """Логи запросов и ответов RAG системы."""
 
     system: models.ForeignKey = models.ForeignKey(
         RagSystem, on_delete=models.CASCADE, related_name="logs"
@@ -103,4 +113,9 @@ class RagQueryLog(models.Model):
         ]
 
     def __str__(self) -> str:
+        """Возвращает строковое представление лога запроса.
+
+        Returns:
+            Строка с названием системы и временем запроса
+        """
         return f"{self.system!s} @ {self.timestamp}"

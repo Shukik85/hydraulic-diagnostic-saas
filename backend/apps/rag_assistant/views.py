@@ -1,4 +1,4 @@
-"""Production-ready RAG Assistant DRF ViewSets with optimizations."""
+"""DRF ViewSets для приложения RAG Assistant с оптимизациями для продакшена."""
 
 import logging
 import time
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class RagSystemViewSet(viewsets.ModelViewSet):
-    """Продовый ViewSet для RAG-систем с оптимизациями."""
+    """ViewSet для RAG-систем с оптимизациями для продакшена."""
 
     serializer_class = RagSystemSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -34,7 +34,11 @@ class RagSystemViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        """Оптимизированный queryset с агрегациями."""
+        """Возвращает оптимизированный queryset с агрегациями.
+
+        Returns:
+            QuerySet с аннотациями количества документов и логов
+        """
         return RagSystem.objects.annotate(
             documents_count=Count("documents", distinct=True),
             logs_count=Count("logs", distinct=True),
@@ -42,7 +46,15 @@ class RagSystemViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"])
     def stats(self, request: Any, pk: int | None = None) -> Response:
-        """Получение статистики по системе."""
+        """Возвращает статистику по RAG системе.
+
+        Args:
+            request: HTTP запрос
+            pk: ID системы
+
+        Returns:
+            Ответ со статистикой системы
+        """
         system = self.get_object()
 
         stats = {
@@ -64,7 +76,7 @@ class RagSystemViewSet(viewsets.ModelViewSet):
 
 
 class DocumentViewSet(viewsets.ModelViewSet):
-    """Продовый ViewSet для документов с валидацией."""
+    """ViewSet для документов с валидацией для продакшена."""
 
     serializer_class = DocumentSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -79,11 +91,19 @@ class DocumentViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        """Оптимизированный queryset с eager loading."""
+        """Возвращает оптимизированный queryset с eager loading.
+
+        Returns:
+            QuerySet с select_related для rag_system
+        """
         return Document.objects.select_related("rag_system").all()
 
     def perform_create(self, serializer):
-        """Кастомная логика при создании."""
+        """Выполняет кастомную логику при создании документа.
+
+        Args:
+            serializer: Сериализатор документа
+        """
         document = serializer.save()
         logger.info(
             f"Document created: {document.title} for system {document.rag_system.name}"
@@ -91,7 +111,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
 
 class RagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
-    """Продовый ReadOnly ViewSet для логов запросов."""
+    """ReadOnly ViewSet для логов запросов с оптимизациями."""
 
     serializer_class = RagQueryLogSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -106,17 +126,28 @@ class RagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
     ordering = ["-timestamp"]
 
     def get_queryset(self):
-        """Оптимизированный queryset с eager loading."""
+        """Возвращает оптимизированный queryset с eager loading.
+
+        Returns:
+            QuerySet с select_related для system и document
+        """
         return RagQueryLog.objects.select_related("system", "document").all()
 
 
 class HealthCheckView(APIView):
-    """Проверка здоровья RAG системы."""
+    """APIView для проверки здоровья RAG системы."""
 
     permission_classes = [permissions.AllowAny]
 
     def get(self, request: Any) -> Response:
-        """Простая проверка доступности."""
+        """Выполняет простую проверку доступности системы.
+
+        Args:
+            request: HTTP запрос
+
+        Returns:
+            Ответ со статусом здоровья системы
+        """
         try:
             # Проверяем базовые модели
             systems_count = RagSystem.objects.count()

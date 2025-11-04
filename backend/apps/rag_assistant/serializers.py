@@ -1,4 +1,7 @@
-"""RAG Assistant DRF serializers with production-ready validation."""
+"""DRF сериализаторы для RAG Assistant с готовой к продакшену валидацией."""
+
+import json
+from typing import Any
 
 from rest_framework import serializers
 
@@ -27,14 +30,34 @@ class RagSystemSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["created_at", "updated_at", "documents_count", "logs_count"]
 
-    def validate_name(self, value):
-        """Проверка уникальности имени."""
+    def validate_name(self, value: str) -> str:
+        """Проверяет уникальность имени системы.
+
+        Args:
+            value: Имя системы
+
+        Returns:
+            Проверенное имя системы
+
+        Raises:
+            serializers.ValidationError: Если имя пустое
+        """
         if not value or not value.strip():
             raise serializers.ValidationError("Имя системы обязательно.")
         return value.strip()
 
-    def validate_model_name(self, value):
-        """Проверка формата названия модели."""
+    def validate_model_name(self, value: str) -> str:
+        """Проверяет формат названия модели.
+
+        Args:
+            value: Название модели
+
+        Returns:
+            Проверенное название модели
+
+        Raises:
+            serializers.ValidationError: Если формат неверный
+        """
         if not value:
             return value
         # Простая проверка формата "provider/model-name"
@@ -75,8 +98,18 @@ class DocumentSerializer(serializers.ModelSerializer):
             "content_length",
         ]
 
-    def validate_title(self, value):
-        """Проверка заголовка."""
+    def validate_title(self, value: str) -> str:
+        """Проверяет заголовок документа.
+
+        Args:
+            value: Заголовок документа
+
+        Returns:
+            Проверенный заголовок
+
+        Raises:
+            serializers.ValidationError: Если заголовок пустой или слишком длинный
+        """
         if not value or not value.strip():
             raise serializers.ValidationError("Заголовок документа обязателен.")
         if len(value) > 255:
@@ -85,8 +118,18 @@ class DocumentSerializer(serializers.ModelSerializer):
             )
         return value.strip()
 
-    def validate_content(self, value):
-        """Проверка содержимого."""
+    def validate_content(self, value: str) -> str:
+        """Проверяет содержимое документа.
+
+        Args:
+            value: Содержимое документа
+
+        Returns:
+            Проверенное содержимое
+
+        Raises:
+            serializers.ValidationError: Если содержимое пустое или слишком большое
+        """
         if not value or not value.strip():
             raise serializers.ValidationError("Содержимое документа обязательно.")
         # Ограничение размера для производства (1MB)
@@ -96,19 +139,34 @@ class DocumentSerializer(serializers.ModelSerializer):
             )
         return value.strip()
 
-    def validate_metadata(self, value):
-        """Проверка метаданных."""
+    def validate_metadata(self, value: dict[str, Any]) -> dict[str, Any]:
+        """Проверяет метаданные документа.
+
+        Args:
+            value: Метаданные документа
+
+        Returns:
+            Проверенные метаданные
+
+        Raises:
+            serializers.ValidationError: Если метаданные не словарь или слишком большие
+        """
         if not isinstance(value, dict):
             raise serializers.ValidationError("Метаданные должны быть объектом JSON.")
-        # Ограничение размера метаданных
-        import json
-
-        if len(json.dumps(value).encode("utf-8")) > 64 * 1024:  # 64KB
+        # Ограничение размера метаданных (64KB)
+        if len(json.dumps(value).encode("utf-8")) > 64 * 1024:
             raise serializers.ValidationError("Метаданные не должны превышать 64KB.")
         return value
 
-    def to_representation(self, instance):
-        """Добавляем вычисляемые поля."""
+    def to_representation(self, instance: Document) -> dict[str, Any]:
+        """Добавляет вычисляемые поля при сериализации.
+
+        Args:
+            instance: Экземпляр документа
+
+        Returns:
+            Словарь с сериализованными данными
+        """
         data = super().to_representation(instance)
         data["content_length"] = len(instance.content.encode("utf-8"))
         return data
@@ -139,8 +197,15 @@ class RagQueryLogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["timestamp", "system_name", "document_title"]
 
-    def get_query_preview(self, obj):
-        """Короткое превью запроса."""
+    def get_query_preview(self, obj: RagQueryLog) -> str:
+        """Возвращает короткое превью запроса.
+
+        Args:
+            obj: Экземпляр лога запроса
+
+        Returns:
+            Превью запроса (первые 100 символов)
+        """
         if not obj.query_text:
             return ""
         return (
@@ -149,8 +214,15 @@ class RagQueryLogSerializer(serializers.ModelSerializer):
             else obj.query_text
         )
 
-    def get_response_preview(self, obj):
-        """Короткое превью ответа."""
+    def get_response_preview(self, obj: RagQueryLog) -> str:
+        """Возвращает короткое превью ответа.
+
+        Args:
+            obj: Экземпляр лога запроса
+
+        Returns:
+            Превью ответа (первые 150 символов)
+        """
         if not obj.response_text:
             return ""
         return (
@@ -159,14 +231,31 @@ class RagQueryLogSerializer(serializers.ModelSerializer):
             else obj.response_text
         )
 
-    def validate_query_text(self, value):
-        """Проверка текста запроса."""
+    def validate_query_text(self, value: str) -> str:
+        """Проверяет текст запроса.
+
+        Args:
+            value: Текст запроса
+
+        Returns:
+            Проверенный текст запроса
+
+        Raises:
+            serializers.ValidationError: Если текст запроса пустой
+        """
         if not value or not value.strip():
             raise serializers.ValidationError("Текст запроса обязателен.")
         return value.strip()
 
-    def validate_response_text(self, value):
-        """Проверка текста ответа."""
+    def validate_response_text(self, value: str | None) -> str | None:
+        """Проверяет текст ответа.
+
+        Args:
+            value: Текст ответа
+
+        Returns:
+            Проверенный текст ответа или None
+        """
         if value is None:
             return value
         return value.strip() if value.strip() else None

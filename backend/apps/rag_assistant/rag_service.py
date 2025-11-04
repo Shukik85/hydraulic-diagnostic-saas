@@ -1,4 +1,4 @@
-"""RAG Assistant service module with updated Pydantic V2 validators."""
+"""Сервисный модуль RAG Assistant с обновленными валидаторами Pydantic V2."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import tempfile
 from typing import Any
 
 import bleach  # type: ignore[import-untyped]
+import numpy as np
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -20,6 +21,7 @@ from pydantic import BaseModel, field_validator
 from .llm_factory import LLMFactory
 from .models import Document, RagQueryLog, RagSystem
 
+# Константы
 MAX_QUERY_LENGTH = 500
 MAX_CONTENT_SIZE = 50 * 1024 * 1024  # 50MB
 
@@ -33,7 +35,7 @@ LOADER_MAP: dict[str, Callable[[str], Any]] = {}
 
 
 class QueryInput(BaseModel):
-    """Input model for RAG queries with validation."""
+    """Модель ввода для RAG запросов с валидацией."""
 
     query: str
     user_id: int | None = None
@@ -41,7 +43,17 @@ class QueryInput(BaseModel):
     @field_validator("query")
     @classmethod
     def validate_query(cls, v: Any) -> str:
-        """Validate and sanitize query input."""
+        """Валидирует и очищает входной запрос.
+
+        Args:
+            v: Входное значение запроса
+
+        Returns:
+            Очищенный и валидированный запрос
+
+        Raises:
+            ValueError: Если запрос не строка или слишком длинный
+        """
         if not isinstance(v, str):
             raise ValueError("Query must be a string")
         if len(v) > MAX_QUERY_LENGTH:
@@ -54,14 +66,24 @@ class QueryInput(BaseModel):
     @field_validator("user_id")
     @classmethod
     def validate_user_id(cls, v: Any) -> int | None:
-        """Validate user ID input."""
+        """Валидирует ID пользователя.
+
+        Args:
+            v: Входное значение ID пользователя
+
+        Returns:
+            Валидированный ID пользователя или None
+
+        Raises:
+            ValueError: Если ID пользователя не целое число
+        """
         if v is not None and not isinstance(v, int):
             raise ValueError("User ID must be an integer")
         return v
 
 
 class DocumentInput(BaseModel):
-    """Input model for documents with validation."""
+    """Модель ввода для документов с валидацией."""
 
     content: str
     format: str
@@ -70,7 +92,17 @@ class DocumentInput(BaseModel):
     @field_validator("content")
     @classmethod
     def validate_content(cls, v: Any) -> str:
-        """Validate and sanitize document content."""
+        """Валидирует и очищает содержимое документа.
+
+        Args:
+            v: Входное значение содержимого
+
+        Returns:
+            Очищенное и валидированное содержимое
+
+        Raises:
+            ValueError: Если содержимое не строка или слишком большое
+        """
         if not isinstance(v, str):
             raise ValueError("Content must be a string")
         if len(v.encode("utf-8")) > MAX_CONTENT_SIZE:
@@ -82,7 +114,17 @@ class DocumentInput(BaseModel):
     @field_validator("format")
     @classmethod
     def validate_format(cls, v: Any) -> str:
-        """Validate document format."""
+        """Валидирует формат документа.
+
+        Args:
+            v: Входное значение формата
+
+        Returns:
+            Валидированный формат
+
+        Raises:
+            ValueError: Если формат не строка
+        """
         if not isinstance(v, str):
             raise ValueError("Format must be a string")
         return v.strip().lower()
@@ -90,7 +132,17 @@ class DocumentInput(BaseModel):
     @field_validator("metadata")
     @classmethod
     def validate_metadata(cls, v: Any) -> dict[str, Any]:
-        """Validate and sanitize metadata."""
+        """Валидирует и очищает метаданные.
+
+        Args:
+            v: Входное значение метаданных
+
+        Returns:
+            Очищенные метаданные
+
+        Raises:
+            ValueError: Если метаданные не словарь
+        """
         if not isinstance(v, dict):
             raise ValueError("Metadata must be a dictionary")
         sanitized_metadata: dict[str, Any] = {}
@@ -105,31 +157,39 @@ class DocumentInput(BaseModel):
 
 
 class CacheStats:
-    """Cache statistics management."""
+    """Управление статистикой кэша."""
 
     @staticmethod
     def increment_hit() -> None:
-        """Increment cache hit counter."""
+        """Увеличивает счетчик попаданий в кэш."""
         stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         stats["hits"] = stats.get("hits", 0) + 1
         cache.set(CACHE_STATS_KEY, stats)
 
     @staticmethod
     def increment_miss() -> None:
-        """Increment cache miss counter."""
+        """Увеличивает счетчик промахов кэша."""
         stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         stats["misses"] = stats.get("misses", 0) + 1
         cache.set(CACHE_STATS_KEY, stats)
 
     @staticmethod
     def get_stats() -> dict[str, int]:
-        """Get cache statistics."""
+        """Возвращает статистику кэша.
+
+        Returns:
+            Словарь с количеством попаданий и промахов
+        """
         stats: dict[str, int] = cache.get(CACHE_STATS_KEY, {"hits": 0, "misses": 0})
         return stats
 
     @staticmethod
     def get_hit_rate() -> float:
-        """Calculate cache hit rate."""
+        """Вычисляет процент попаданий в кэш.
+
+        Returns:
+            Процент попаданий от 0.0 до 1.0
+        """
         stats = CacheStats.get_stats()
         total = stats.get("hits", 0) + stats.get("misses", 0)
         return (stats.get("hits", 0) / total) if total > 0 else 0.0
@@ -139,7 +199,14 @@ class RagAssistant:
     """RAG (Retrieval-Augmented Generation) Assistant."""
 
     def __init__(self, system: RagSystem):
-        """Initialize RAG Assistant with system configuration."""
+        """Инициализирует RAG Assistant с конфигурацией системы.
+
+        Args:
+            system: Конфигурация RAG системы
+
+        Raises:
+            TypeError: Если system не экземпляр RagSystem
+        """
         if not isinstance(system, RagSystem):
             raise TypeError("system must be an instance of RagSystem")
 
@@ -150,19 +217,40 @@ class RagAssistant:
     def _get_cache_key(
         self, key_type: str, identifier: str, version: str = CACHE_VERSION
     ) -> str:
-        """Generate cache key for storing/retrieving data."""
+        """Генерирует ключ кэша для хранения/получения данных.
+
+        Args:
+            key_type: Тип ключа (faq, search, etc.)
+            identifier: Идентификатор данных
+            version: Версия кэша
+
+        Returns:
+            Сгенерированный ключ кэша
+        """
         sys_id = getattr(self.system, "pk", None)
         return f"rag:{sys_id}:{key_type}:{identifier}:{version}"
 
     def _cache_faq_answer(self, question: str, answer: str) -> None:
-        """Cache FAQ answer for future retrieval."""
+        """Кэширует ответ FAQ для будущего использования.
+
+        Args:
+            question: Вопрос
+            answer: Ответ
+        """
         cache_key = self._get_cache_key(
             "faq", hashlib.sha256(question.encode()).hexdigest()
         )
         cache.set(cache_key, answer, timeout=FAQ_ANSWER_TTL)
 
     def _get_cached_faq_answer(self, question: str) -> str | None:
-        """Retrieve cached FAQ answer if exists."""
+        """Получает кэшированный ответ FAQ если существует.
+
+        Args:
+            question: Вопрос
+
+        Returns:
+            Кэшированный ответ или None
+        """
         cache_key = self._get_cache_key(
             "faq", hashlib.sha256(question.encode()).hexdigest()
         )
@@ -174,7 +262,11 @@ class RagAssistant:
         return None
 
     def _build_retriever(self) -> Callable[[str], list[dict[str, Any]]]:
-        """Build document retriever function."""
+        """Строит функцию извлечения документов.
+
+        Returns:
+            Функция извлечения документов
+        """
         from .rag_core import default_local_orchestrator
 
         orchestrator = default_local_orchestrator()
@@ -184,7 +276,14 @@ class RagAssistant:
         docs_list: list[str] = (getattr(vindex, "metadata", None) or {}).get("docs", [])
 
         def _retrieve(question: str) -> list[dict[str, Any]]:
-            """Retrieve relevant documents for question."""
+            """Извлекает релевантные документы для вопроса.
+
+            Args:
+                question: Вопрос пользователя
+
+            Returns:
+                Список релевантных документов
+            """
             q_emb = self._encode([question])
             _, indices = vindex.search(q_emb, k=4)
             results: list[dict[str, Any]] = []
@@ -196,17 +295,26 @@ class RagAssistant:
 
         return _retrieve
 
-    def _encode(self, texts: list[str]):
-        """Encode texts to embeddings."""
-        emb = self.embedder.embed_documents(texts)
-        import numpy as np
+    def _encode(self, texts: list[str]) -> np.ndarray:
+        """Кодирует тексты в эмбеддинги.
 
+        Args:
+            texts: Список текстов для кодирования
+
+        Returns:
+            Массив нормализованных эмбеддингов
+        """
+        emb = self.embedder.embed_documents(texts)
         arr = np.array(emb, dtype="float32")
         norms = np.linalg.norm(arr, axis=1, keepdims=True) + 1e-12
         return (arr / norms).astype("float32")
 
-    def _build_chain(self):
-        """Build RAG processing chain."""
+    def _build_chain(self) -> Any:
+        """Строит цепочку обработки RAG.
+
+        Returns:
+            Собранная цепочка RAG
+        """
         prompt = ChatPromptTemplate.from_template(
             """
             You are a helpful assistant for hydraulic diagnostics.
@@ -227,7 +335,14 @@ class RagAssistant:
         retriever_fn = self._build_retriever()
 
         def format_docs(docs: list[dict[str, Any]]) -> str:
-            """Format retrieved documents for context."""
+            """Форматирует извлеченные документы для контекста.
+
+            Args:
+                docs: Список извлеченных документов
+
+            Returns:
+                Отформатированный контекст
+            """
             return "\n\n".join(str(d["content"]) for d in docs if d.get("content"))
 
         return (
@@ -242,7 +357,18 @@ class RagAssistant:
         )
 
     def answer(self, query: str, user_id: int | None = None) -> str:
-        """Generate answer for user query using RAG."""
+        """Генерирует ответ на пользовательский запрос используя RAG.
+
+        Args:
+            query: Запрос пользователя
+            user_id: ID пользователя (опционально)
+
+        Returns:
+            Сгенерированный ответ
+
+        Raises:
+            ValidationError: Если валидация запроса не удалась
+        """
         cached_answer = self._get_cached_faq_answer(query)
         if cached_answer is not None:
             self._log_query(query, cached_answer, user_id)
@@ -262,7 +388,13 @@ class RagAssistant:
 
     @transaction.atomic
     def _log_query(self, query: str, response: str, user_id: int | None = None) -> None:
-        """Log query and response to database."""
+        """Логирует запрос и ответ в базу данных.
+
+        Args:
+            query: Запрос пользователя
+            response: Ответ системы
+            user_id: ID пользователя (опционально)
+        """
         RagQueryLog.objects.create(
             system=self.system,
             query_text=query,
@@ -271,7 +403,11 @@ class RagAssistant:
         )
 
     def get_cache_stats(self) -> dict[str, Any]:
-        """Get cache performance statistics."""
+        """Возвращает статистику производительности кэша.
+
+        Returns:
+            Словарь со статистикой кэша
+        """
         stats = CacheStats.get_stats()
         hit_rate = CacheStats.get_hit_rate()
         return {
@@ -282,23 +418,22 @@ class RagAssistant:
         }
 
     def clear_cache_stats(self) -> None:
-        """Clear cache statistics."""
+        """Очищает статистику кэша."""
         cache.delete(CACHE_STATS_KEY)
 
 
 def tmp_file_for(doc: Document) -> str:
-    """Create temporary file for document processing.
+    """Создает временный файл для обработки документа.
 
     Args:
-        doc: Document instance to create file for.
+        doc: Экземпляр документа для создания файла
 
     Returns:
-        str: Path to created temporary file.
+        Путь к созданному временному файлу
 
     Raises:
-        TypeError: If doc is not a Document instance.
-        ValueError: If document format or content is missing/invalid.
-
+        TypeError: Если doc не экземпляр Document
+        ValueError: Если формат или содержимое документа отсутствуют/невалидны
     """
     if not isinstance(doc, Document):
         raise TypeError("doc must be an instance of Document")

@@ -1,7 +1,4 @@
-"""Модуль проекта с автогенерированным докстрингом."""
-
-# apps/rag_assistant/optimized_views.py
-# ОПТИМИЗИРОВАННЫЕ VIEWSETS ДЛЯ RAG ASSISTANT
+"""Оптимизированные DRF ViewSets для приложения RAG Assistant."""
 
 import logging
 import time
@@ -17,8 +14,6 @@ from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
-
-from core.pagination import LargeResultsSetPagination, StandardResultsSetPagination
 
 from .models import Document, RagQueryLog, RagSystem
 from .rag_service import RagAssistant
@@ -36,15 +31,16 @@ class AIOperationThrottle(UserRateThrottle):
 
 
 class OptimizedDocumentViewSet(viewsets.ModelViewSet):
-    """Оптимизированный ViewSet для документов с:
+    """Оптимизированный ViewSet для документов.
+
+    Включает:
     - select_related/prefetch_related для оптимизации запросов
     - кеширование списков на 5 минут
     - разные поля для list и detail вьюх
-    - async обработка через Celery.
+    - async обработка через Celery
     """
 
     serializer_class = DocumentSerializer
-    pagination_class = StandardResultsSetPagination
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -57,7 +53,11 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
     throttle_classes = [UserRateThrottle, AnonRateThrottle]
 
     def get_queryset(self):
-        """Оптимизированные запросы с select_related."""
+        """Возвращает оптимизированные запросы с select_related.
+
+        Returns:
+            QuerySet с оптимизированными полями в зависимости от действия
+        """
         queryset = Document.objects.select_related("rag_system")
 
         # Разные поля для разных действий
@@ -86,12 +86,30 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
     @method_decorator(cache_page(60 * 5))  # 5 минут кеш
     @method_decorator(vary_on_headers("User-Agent", "Accept-Language"))
     def list(self, request, *args, **kwargs):
-        """Оптимизированный list с кешированием."""
+        """Возвращает список документов с кешированием.
+
+        Args:
+            request: HTTP запрос
+            *args: Дополнительные аргументы
+            **kwargs: Дополнительные ключевые аргументы
+
+        Returns:
+            Ответ со списком документов
+        """
         return super().list(request, *args, **kwargs)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        """Создание документа с async обработкой."""
+        """Создает документ с async обработкой.
+
+        Args:
+            request: HTTP запрос
+            *args: Дополнительные аргументы
+            **kwargs: Дополнительные ключевые аргументы
+
+        Returns:
+            Ответ с созданным документом и ID задачи
+        """
         start_time = time.time()
 
         serializer = self.get_serializer(data=request.data)
@@ -128,7 +146,15 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated],
     )
     def reindex(self, request, pk=None):
-        """Переиндексация конкретного документа."""
+        """Выполняет переиндексацию конкретного документа.
+
+        Args:
+            request: HTTP запрос
+            pk: ID документа
+
+        Returns:
+            Ответ с информацией о запущенной задаче
+        """
         document = self.get_object()
 
         # Запускаем асинхронную переиндексацию
@@ -150,7 +176,17 @@ class OptimizedDocumentViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated],
     )
     def batch_reindex(self, request):
-        """Пакетная переиндексация документов."""
+        """Выполняет пакетную переиндексацию документов.
+
+        Args:
+            request: HTTP запрос
+
+        Returns:
+            Ответ с информацией о запущенной задаче
+
+        Raises:
+            Response с ошибкой: Если список документов пуст или слишком большой
+        """
         document_ids = request.data.get("document_ids", [])
 
         if not document_ids:
@@ -200,7 +236,6 @@ class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
         )
     ).annotate(document_count=Count("id"))
     serializer_class = RagSystemSerializer
-    pagination_class = StandardResultsSetPagination
     filter_backends = [
         DjangoFilterBackend,
         filters.SearchFilter,
@@ -212,6 +247,16 @@ class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
 
     @method_decorator(cache_page(60 * 10))  # 10 минут кеш
     def list(self, request, *args, **kwargs):
+        """Возвращает список RAG систем с кешированием.
+
+        Args:
+            request: HTTP запрос
+            *args: Дополнительные аргументы
+            **kwargs: Дополнительные ключевые аргументы
+
+        Returns:
+            Ответ со списком систем
+        """
         return super().list(request, *args, **kwargs)
 
     @action(
@@ -221,7 +266,18 @@ class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
         permission_classes=[permissions.IsAuthenticated],
     )
     def query(self, request, pk=None):
-        """Оптимизированный запрос к RAG системе."""
+        """Выполняет оптимизированный запрос к RAG системе.
+
+        Args:
+            request: HTTP запрос
+            pk: ID системы
+
+        Returns:
+            Ответ с результатом запроса
+
+        Raises:
+            Response с ошибкой: Если текст запроса отсутствует или произошла ошибка
+        """
         start_time = time.time()
 
         system = self.get_object()
@@ -295,12 +351,12 @@ class OptimizedRagSystemViewSet(viewsets.ModelViewSet):
 
 
 class OptimizedRagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
-    """Оптимизированный ViewSet для логов RAG запросов
+    """Оптимизированный ViewSet для логов RAG запросов.
+
     ReadOnly - только чтение, создание через RAG service.
     """
 
     serializer_class = RagQueryLogSerializer
-    pagination_class = LargeResultsSetPagination  # Большая пагинация для логов
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ["system", "user"]
     ordering_fields = ["timestamp"]
@@ -308,7 +364,11 @@ class OptimizedRagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        """Оптимизированные запросы для логов."""
+        """Возвращает оптимизированные запросы для логов.
+
+        Returns:
+            QuerySet с оптимизированными полями в зависимости от действия
+        """
         queryset = RagQueryLog.objects.select_related("system", "document")
 
         # Ограничиваем доступ для обычных пользователей
@@ -325,4 +385,14 @@ class OptimizedRagQueryLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     @method_decorator(cache_page(60 * 2))  # 2 минуты кеш для логов
     def list(self, request, *args, **kwargs):
+        """Возвращает список логов запросов с кешированием.
+
+        Args:
+            request: HTTP запрос
+            *args: Дополнительные аргументы
+            **kwargs: Дополнительные ключевые аргументы
+
+        Returns:
+            Ответ со списком логов
+        """
         return super().list(request, *args, **kwargs)

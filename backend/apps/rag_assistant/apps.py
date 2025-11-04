@@ -1,4 +1,4 @@
-"""Модуль проекта с автогенерированным докстрингом."""
+"""Конфигурация приложения Django для RAG Assistant."""
 
 import logging
 
@@ -8,12 +8,17 @@ logger = logging.getLogger(__name__)
 
 
 class RagAssistantConfig(AppConfig):
+    """Конфигурация приложения RAG Assistant."""
+
     default_auto_field = "django.db.models.BigAutoField"
     name = "apps.rag_assistant"
     verbose_name = "RAG Ассистент"
 
     def ready(self):
-        """Инициализация приложения."""
+        """Выполняет инициализацию приложения при запуске Django.
+
+        Проверяет зависимости и настраивает сигналы.
+        """
         try:
             # Импорт сигналов
             pass
@@ -28,7 +33,10 @@ class RagAssistantConfig(AppConfig):
             print(f"❌ Ошибка инициализации RAG Ассистента: {e}")
 
     def _check_dependencies(self):
-        """Проверка необходимых зависимостей."""
+        """Проверяет наличие необходимых зависимостей.
+
+        Выводит предупреждения об отсутствующих пакетах.
+        """
         required_packages = ["sentence_transformers", "sklearn", "numpy", "pandas"]
 
         missing_packages = []
