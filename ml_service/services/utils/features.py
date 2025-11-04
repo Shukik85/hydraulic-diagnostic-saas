@@ -7,27 +7,27 @@ from typing import Iterable
 import numpy as np
 
 from api.schemas import FeatureVector
-from .feature_names_25 import EXPECTED_FEATURE_NAMES_25
 
 
-def vector_from_feature_vector(fv: FeatureVector) -> np.ndarray:
-    """Сохранено для обратной совместимости — просто собирает по fv.feature_names.
-    Не использовать для моделей напрямую (используйте project_features_25).
+def adaptive_project(fv: FeatureVector, expected_size: int | None = None) -> tuple[np.ndarray, list[str]]:
+    """Адаптивно формирует вектор признаков из всего доступного FeatureVector.
+    - Стабильный порядок: алфавитная сортировка имен
+    - Если expected_size задан: pad/truncate до нужной длины
+    - Возвращает (vector, used_feature_names)
     """
-    if not fv.feature_names:
-        raise ValueError("feature_names is empty")
-    vector = np.array([fv.features[name] for name in fv.feature_names], dtype=float)
-    return vector.ravel()
+    names = sorted(fv.feature_names or list(fv.features.keys()))
+    values = [float(fv.features.get(n, 0.0)) for n in names]
+    vec = np.asarray(values, dtype=float).ravel()
 
-
-def project_features_25(fv: FeatureVector) -> np.ndarray:
-    """Проецирует FeatureVector на фиксированный порядок из 25 признаков.
-    Отсутствующие признаки заполняются 0.0.
-    """
-    out = np.zeros(len(EXPECTED_FEATURE_NAMES_25), dtype=float)
-    for i, name in enumerate(EXPECTED_FEATURE_NAMES_25):
-        out[i] = float(fv.features.get(name, 0.0))
-    return out
+    if expected_size is not None:
+        if vec.size > expected_size:
+            vec = vec[:expected_size]
+            names = names[:expected_size]
+        elif vec.size < expected_size:
+            pad = expected_size - vec.size
+            vec = np.pad(vec, (0, pad), constant_values=0.0)
+            names = names + [f"__pad_{i}" for i in range(pad)]
+    return vec, names
 
 
 def build_feature_cache_key(vector: np.ndarray, names: Iterable[str], prefix: str = "ml_pred:") -> str:
