@@ -126,7 +126,7 @@ class EnsembleModel:
         except Exception as e:
             logger.warning("Adaptive model failed to load", error=str(e))
 
-    async def predict(self, features: np.ndarray) -> dict[str, Any]:  # ✅ FIX ARG002: убрал _use_cache
+    async def predict(self, features: np.ndarray) -> dict[str, Any]:
         """
         Enterprise ensemble предсказание с <100ms latency.
 
@@ -190,9 +190,12 @@ class EnsembleModel:
             prediction = await model.predict(features)
             processing_time = (time.time() - start_time) * 1000
 
+            # ✅ FIX: Полные Pydantic-совместимые поля
             return {
                 "model_name": model_name,
+                "ml_model": model_name,  # ✅ Добавлено для Pydantic
                 "model_version": model.version,
+                "version": model.version,  # ✅ Добавлено для Pydantic
                 "prediction_score": prediction["score"],
                 "confidence": prediction.get("confidence", 0.95),
                 "processing_time_ms": processing_time,
@@ -201,9 +204,12 @@ class EnsembleModel:
 
         except Exception as e:
             logger.error(f"Model {model_name} prediction failed", error=str(e))
+            # ✅ FIX: Полные поля в error case тоже
             return {
                 "model_name": model_name,
+                "ml_model": model_name,  # ✅ Добавлено
                 "model_version": model.version,
+                "version": model.version,  # ✅ Добавлено
                 "prediction_score": 0.5,  # Нейтральный скор
                 "confidence": 0.0,
                 "processing_time_ms": 0.0,
@@ -258,7 +264,7 @@ class EnsembleModel:
         return {
             "ensemble_score": final_score,
             "severity": severity,
-            "is_anomaly": final_score > settings.prediction_threshold,  # ✅ FIX 2: добавлен is_anomaly
+            "is_anomaly": final_score > settings.prediction_threshold,
             "confidence": final_confidence,
         }
 
@@ -282,7 +288,7 @@ class EnsembleModel:
 
         for i in range(warmup_samples):
             try:
-                await self.predict(dummy_features[i])  # ✅ FIX: убрал use_cache=False
+                await self.predict(dummy_features[i])
             except Exception as e:
                 logger.warning(f"Warmup sample {i} failed", error=str(e))
 
