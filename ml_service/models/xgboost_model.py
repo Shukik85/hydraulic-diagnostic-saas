@@ -1,15 +1,19 @@
 """
-XGBoost Model for Hydraulic Systems Diagnostics
-Enterprise XGBoost с 99.8% accuracy target
+XGBoost Anomaly Detection Model
 """
 
+from __future__ import annotations
+
 import time
+from pathlib import Path
 from typing import Any
 
+import joblib
 import numpy as np
 import structlog
+from xgboost import XGBClassifier
 
-from config import MODEL_CONFIG
+from config import settings
 
 from .base_model import BaseMLModel
 
@@ -17,89 +21,70 @@ logger = structlog.get_logger()
 
 
 class XGBoostModel(BaseMLModel):
-    """
-    XGBoost Classifier для обнаружения аномалий.
+    def __init__(self, model_name: str = "xgboost"):
+        super().__init__(model_name)
+        self.model: XGBClassifier | None = None
+        self.metadata["features_count"] = 25
 
-    Особенности:
-    - Gradient boosting для сложных взаимодействий
-    - Оптимизация GPU (optional)
-    - 99.8% accuracy target
-    - <25ms среднее время inference
-    """
-
-    def __init__(self):
-        super().__init__("xgboost", MODEL_CONFIG["xgboost"]["file"])
-        self.n_estimators = 100
-        self.max_depth = 6
-        self.learning_rate = 0.1
-
-    async def predict(self, features: np.ndarray) -> dict[str, Any]:
-        """
-        XGBoost предсказание с gradient boosting.
-
-        Args:
-            features: Массив признаков
-
-        Returns:
-            Dict с score, confidence, processing_time_ms
-        """
-        if not self.is_loaded:
-            raise RuntimeError("XGBoost model not loaded")
-
-        if not self.validate_features(features):
-            raise ValueError("Invalid features for XGBoost model")
-
+    async def load(self) -> None:
         start_time = time.time()
+        model_path = Path(settings.model_path) / "xgboost_model.joblib"
+        logger.info("Loading xgboost model", path=str(model_path))
 
         try:
-            if features.ndim == 1:
-                features = features.reshape(1, -1)
-
-            # XGBoost предсказание
-            # Для mock используем IsolationForest
-            if hasattr(self.model, "predict_proba"):
-                probabilities = self.model.predict_proba(features)[0]
-                anomaly_score = probabilities[1] if len(probabilities) > 1 else probabilities[0]
-            elif hasattr(self.model, "decision_function"):
-                decision_score = self.model.decision_function(features)[0]
-                anomaly_score = self._sigmoid_transform(decision_score)
+            if model_path.exists():
+                model_data = joblib.load(model_path)
+                self.model = model_data["model"]
+                if "features_count" in model_data:
+                    self.metadata["features_count"] = int(model_data["features_count"])
+                logger.info("Real XGBoost model loaded")
             else:
-                # Fallback к simple prediction
-                prediction = self.model.predict(features)[0]
-                anomaly_score = 0.8 if prediction == -1 else 0.2
+                logger.warning("Model file not found, creating mock model", path=str(model_path))
+                await self._create_mock_model()
 
-            # Высокая уверенность для XGBoost
-            confidence = min(0.998, 0.85 + abs(anomaly_score - 0.5) * 0.3)
-
-            processing_time = time.time() - start_time
-            self.update_stats(processing_time)
-
-            result = {
-                "score": float(anomaly_score),
-                "confidence": float(confidence),
-                "processing_time_ms": processing_time * 1000,
-                "model_specific": {
-                    "boosting_rounds": self.n_estimators,
-                    "max_depth": self.max_depth,
-                    "feature_importance": "calculated",  # TODO: реальная оценка
-                    "gpu_used": False,
-                },
-            }
-
-            logger.debug(
-                "XGBoost prediction completed",
-                score=anomaly_score,
-                confidence=confidence,
-                processing_time_ms=processing_time * 1000,
+            self.is_loaded = True
+            self.load_time = time.time() - start_time
+            self.version = "v1.0.0-xgb"
+            logger.info(
+                "XGBoost model loaded",
+                load_time_seconds=self.load_time,
+                version=self.version,
+                features_count=self.metadata.get("features_count"),
             )
-
-            return result
-
         except Exception as e:
-            processing_time = time.time() - start_time
-            logger.error("XGBoost prediction failed", error=str(e), processing_time_ms=processing_time * 1000)
+            logger.error("Failed to load XGBoost model", error=str(e))
             raise
 
-    def _sigmoid_transform(self, x: float) -> float:
-        """Сигмоидное преобразование."""
-        return 1.0 / (1.0 + np.exp(-x * 1.5))
+    async def _create_mock_model(self) -> None:
+        from sklearn.ensemble import RandomForestClassifier
+
+        logger.info("Creating mock xgboost model for development")
+        # Используем простой RF как мок, чтобы не тянуть xgboost тренинг
+        self.model = RandomForestClassifier(n_estimators=10, random_state=42)
+        mock_x = np.random.rand(200, self.metadata.get("features_count", 25))
+        mock_y = np.random.binomial(1, 0.05, 200)
+        self.model.fit(mock_x, mock_y)
+
+    async def predict(self, features: np.ndarray) -> dict[str, Any]:
+        if not self.is_loaded or self.model is None:
+            raise RuntimeError("Model not loaded")
+
+        features = self._ensure_vector(features)
+        start_time = time.time()
+        try:
+            proba = getattr(self.model, "predict_proba", None)
+            if proba:
+                p = proba(features.reshape(1, -1))
+                score = float(p[0, 1] if p.shape[1] > 1 else p[0, 0])
+            else:
+                # fallback через predict
+                pred = self.model.predict(features.reshape(1, -1))
+                score = float(pred[0])
+
+            threshold = settings.prediction_threshold
+            confidence = min(0.95, 0.8 + abs(score - threshold) * 0.3)
+            processing_time = (time.time() - start_time) * 1000
+            return {"score": score, "confidence": confidence, "processing_time_ms": processing_time}
+        except Exception as e:
+            logger.error("XGBoost prediction failed", error=str(e))
+            raise
