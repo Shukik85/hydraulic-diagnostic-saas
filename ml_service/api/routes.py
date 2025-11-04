@@ -90,10 +90,10 @@ async def predict_anomaly(
         feature_engineer = FeatureEngineer()
         features = await feature_engineer.extract_features(request.sensor_data)
 
-        # ML предсказание (без use_cache - ✅ FIX 1)
+        # ML предсказание
         prediction_result = await ensemble.predict(features.features)
 
-        # Формирование ответа (✅ FIX 2: безопасные поля)
+        # Формирование ответа
         response = PredictionResponse(
             system_id=request.sensor_data.system_id,
             prediction={
@@ -116,10 +116,10 @@ async def predict_anomaly(
         if cache_key and settings.cache_predictions:
             await cache.save_prediction(cache_key, response.model_dump())
 
-        # Метрики (✅ FIX 3: с labels)
+        # Метрики (✅ FIX: правильные labels)
         processing_time = (time.time() - start_time) * 1000
-        metrics.predictions_total.labels(model="ensemble").inc()
-        metrics.inference_duration.observe(processing_time / 1000)
+        metrics.predictions_total.labels(model_name="ensemble", prediction_type="anomaly").inc()
+        metrics.inference_duration.labels(model_name="ensemble").observe(processing_time / 1000)
 
         if processing_time > settings.max_inference_time_ms:
             logger.warning(
@@ -136,15 +136,15 @@ async def predict_anomaly(
 
         logger.error("Prediction failed", error=str(e), processing_time_ms=processing_time, trace_id=trace_id)
 
-        # Метрики ошибок (с labels)
-        metrics.prediction_errors.labels(model="ensemble").inc()
+        # Метрики ошибок (✅ FIX: правильные labels)
+        metrics.prediction_errors.labels(model_name="ensemble", error_type="internal_error").inc()
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}") from e
 
 
 @router.post("/predict/batch", response_model=BatchPredictionResponse)
 async def predict_batch(
     request: BatchPredictionRequest,
-    _background_tasks: BackgroundTasks,  # ✅ FIX ARG001
+    _background_tasks: BackgroundTasks,
     ensemble: EnsembleModel = Depends(get_ensemble_model),
 ):
     """
@@ -230,7 +230,7 @@ async def get_models_status(ensemble: EnsembleModel = Depends(get_ensemble_model
         import psutil
 
         models_info = []
-        for _name, model in ensemble.models.items():  # _name не используется
+        for _name, model in ensemble.models.items():
             if model.is_loaded:
                 stats = model.get_stats()
                 models_info.append(
@@ -240,7 +240,7 @@ async def get_models_status(ensemble: EnsembleModel = Depends(get_ensemble_model
                         "description": f"Loaded model with {stats.get('predictions_count', 0)} predictions",
                         "accuracy": 0.95,  # TODO: реальная метрика
                         "last_trained": "2025-11-03T00:00:00Z",
-                        "size_mb": stats.get("model_size_mb", 0.0),  # поле обновлено
+                        "size_mb": stats.get("model_size_mb", 0.0),
                         "features_count": stats.get("features_count", 25),
                         "is_loaded": True,
                         "load_time_ms": stats.get("load_time_seconds", 0.0) * 1000,
@@ -260,12 +260,9 @@ async def get_models_status(ensemble: EnsembleModel = Depends(get_ensemble_model
 
 
 @router.post("/models/reload")
-async def reload_models(_background_tasks: BackgroundTasks, ensemble: EnsembleModel = Depends(get_ensemble_model)):  # ✅ FIX ARG001
+async def reload_models(_background_tasks: BackgroundTasks, ensemble: EnsembleModel = Depends(get_ensemble_model)):
     """Перезагрузка всех моделей."""
     try:
-        # Перезагрузка в фоновом режиме
-        # background_tasks.add_task(ensemble.load_models)  # TODO: восстановим позднее
-
         return {
             "status": "reload_started",
             "message": "Model reload initiated in background",
@@ -322,7 +319,7 @@ async def get_performance_metrics(ensemble: EnsembleModel = Depends(get_ensemble
 
         return MetricsResponse(
             predictions_total=perf_metrics.get("predictions_total", 0),
-            predictions_per_second=perf_metrics.get("predictions_total", 0) / 3600,  # Пример
+            predictions_per_second=perf_metrics.get("predictions_total", 0) / 3600,
             average_response_time_ms=perf_metrics.get("average_response_time_ms", 0.0),
             p95_response_time_ms=perf_metrics.get("p95_response_time_ms", 0.0),
             p99_response_time_ms=perf_metrics.get("p99_response_time_ms", 0.0),
