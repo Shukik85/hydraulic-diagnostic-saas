@@ -1,7 +1,4 @@
-"""
-Pydantic schemas for ML Inference API
-Enterprise схемы для гидравлической диагностики
-"""
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
@@ -239,8 +236,8 @@ class ConfigUpdateRequest(BaseModel):
     @validator("ensemble_weights")
     def validate_ensemble_weights(cls, v):
         if v is not None:
-            if len(v) != 3:
-                raise ValueError("Ensemble weights must have exactly 3 values")
+            if len(v) != 4:  # ✅ 4 модели: catboost, xgboost, random_forest, adaptive
+                raise ValueError("Ensemble weights must have exactly 4 values")
             if abs(sum(v) - 1.0) > 0.01:
                 raise ValueError("Ensemble weights must sum to 1.0")
         return v
