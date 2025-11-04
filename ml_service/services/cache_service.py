@@ -3,6 +3,8 @@ Redis Cache Service for ML Predictions
 Enterprise кеширование предсказаний с TTL
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import time
@@ -86,8 +88,7 @@ class CacheService:
             return False
 
     async def generate_cache_key(self, sensor_data: SensorDataBatch) -> str:
-        """Генерация ключа кеша на основе данных."""
-        # Создаем хеш от сенсорных данных
+        """Генерация ключа кеша на основе данных (сырой батч, для обратной совместимости)."""
         cache_data = {
             "system_id": str(sensor_data.system_id),
             "readings_count": len(sensor_data.readings),
@@ -100,9 +101,19 @@ class CacheService:
 
         return f"{self.cache_prefix}{cache_hash}"
 
+    async def generate_cache_key_from_features(self, vector: list[float] | Any, names: list[str]) -> str:
+        """Генерация ключа кеша на основе нормализованных признаков."""
+        try:
+            rounded = [round(float(v), 6) for v in vector]
+        except Exception as e:
+            raise ValueError(f"invalid feature vector for cache key: {e}") from e
+
+        payload = {"names": names, "values": rounded}
+        digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:24]
+        return f"{self.cache_prefix}{digest}"
+
     def _hash_values(self, values: list) -> str:
         """Хеширование числовых значений с округлением."""
-        # Округляем до 2 знаков для устойчивости кеша
         rounded_values = [round(v, 2) for v in values]
         values_string = json.dumps(rounded_values, sort_keys=True)
         return hashlib.md5(values_string.encode()).hexdigest()[:8]
@@ -114,22 +125,18 @@ class CacheService:
 
         try:
             if self.is_mock:
-                # Mock cache
                 if cache_key in self.mock_cache:
                     cached_data = self.mock_cache[cache_key]
-                    # Проверяем TTL
                     if time.time() - cached_data["cached_at"] < settings.cache_ttl_seconds:
                         self.hit_count += 1
                         logger.debug("Mock cache hit", key=cache_key)
                         return cached_data["data"]
                     else:
-                        # TTL истек
                         del self.mock_cache[cache_key]
 
                 self.miss_count += 1
                 return None
 
-            # Real Redis
             cached_data = await self.redis.get(cache_key)
 
             if cached_data:
@@ -153,7 +160,6 @@ class CacheService:
             return False
 
         try:
-            # Добавляем метаданные кеша
             cache_data = {
                 **prediction,
                 "cached_at": time.time(),
@@ -161,12 +167,10 @@ class CacheService:
             }
 
             if self.is_mock:
-                # Mock cache с TTL
                 self.mock_cache[cache_key] = {"data": cache_data, "cached_at": time.time()}
                 logger.debug("Prediction cached to mock", key=cache_key, ttl=settings.cache_ttl_seconds)
                 return True
 
-            # Real Redis
             await self.redis.set(cache_key, json.dumps(cache_data, default=str), ex=settings.cache_ttl_seconds)
 
             logger.debug("Prediction cached", key=cache_key, ttl=settings.cache_ttl_seconds)
@@ -197,8 +201,7 @@ class CacheService:
         try:
             if self.is_mock:
                 if pattern:
-                    # Очищаем по паттерну
-                    keys_to_delete = [k for k in self.mock_cache if pattern in k]  # ✅ Исправил SIM118
+                    keys_to_delete = [k for k in self.mock_cache if pattern in k]
                     for k in keys_to_delete:
                         del self.mock_cache[k]
                     return len(keys_to_delete)
@@ -215,7 +218,6 @@ class CacheService:
                 if keys:
                     return await self.redis.delete(*keys)
             else:
-                # Очистка всех ML предсказаний
                 keys = await self.redis.keys(f"{self.cache_prefix}*")
                 if keys:
                     return await self.redis.delete(*keys)
