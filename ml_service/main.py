@@ -21,6 +21,8 @@ from models.ensemble import EnsembleModel
 from services.cache_service import CacheService
 from services.health_check import HealthCheckService
 from services.monitoring import setup_metrics
+from services.adaptive_threshold_service import AdaptiveThresholdService
+from api import routes  # for setting global adaptive_thresholds
 
 # Настройка логирования
 logger = structlog.get_logger()
@@ -29,12 +31,13 @@ logger = structlog.get_logger()
 ensemble_model: EnsembleModel | None = None
 cache_service: CacheService | None = None
 health_service: HealthCheckService | None = None
+adaptive_thresholds: AdaptiveThresholdService | None = None
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """Управление жизненным циклом приложения (prod)."""
-    global ensemble_model, cache_service, health_service
+    global ensemble_model, cache_service, health_service, adaptive_thresholds
 
     logger.info("Starting ML Inference Service", version=settings.version)
 
@@ -44,6 +47,12 @@ async def lifespan(_app: FastAPI):
         await cache_service.connect()
 
         health_service = HealthCheckService()
+        
+        # Initialize adaptive thresholds
+        adaptive_thresholds = AdaptiveThresholdService(cache_service=cache_service)
+        
+        # Set global reference in routes module
+        routes.adaptive_thresholds = adaptive_thresholds
 
         # Загрузка ML моделей
         logger.info("Loading ML models", model_path=settings.model_path)
@@ -130,17 +139,34 @@ async def health_check():
 async def readiness_check():
     """Проверка готовности к обработке запросов."""
     if not ensemble_model or not ensemble_model.is_ready():
-        raise HTTPException(status_code=503, detail="Models not ready")
+        return JSONResponse(
+            content={
+                "ready": False,
+                "reason": "Models not loaded",
+                "models_loaded": ensemble_model.get_loaded_models() if ensemble_model else [],
+            },
+            status_code=503,
+        )
 
     if not cache_service or not await cache_service.is_connected():
-        raise HTTPException(status_code=503, detail="Cache service not ready")
+        return JSONResponse(
+            content={
+                "ready": False,
+                "reason": "Cache service not ready",
+            },
+            status_code=503,
+        )
 
-    return {
+    ready_data = {
         "ready": True,
         "models_loaded": ensemble_model.get_loaded_models(),
-        "cache_connected": await cache_service.is_connected(),
-        "timestamp": time.time(),
+        "ensemble_ready": ensemble_model.is_ready(),
+        "cache_ready": await cache_service.is_connected(),
+        "adaptive_thresholds_ready": adaptive_thresholds is not None,
+        "uptime_seconds": time.time() - (getattr(app.state, "start_time", time.time())),
     }
+
+    return JSONResponse(content=ready_data, status_code=200)
 
 
 @app.get("/info")
@@ -160,23 +186,13 @@ async def service_info():
             "cache_enabled": settings.cache_predictions,
             "cache_ttl": settings.cache_ttl_seconds,
         },
+        "adaptive_thresholds": {
+            "enabled": getattr(settings, "adaptive_thresholds_enabled", True),
+            "adaptation_rate": getattr(settings, "threshold_adaptation_rate", 0.05),
+            "target_fpr": getattr(settings, "target_fpr", 0.10),
+        },
         "timestamp": time.time(),
     }
-
-
-# Глобальные dependency функции
-
-
-def get_ensemble_model() -> EnsembleModel:
-    if not ensemble_model:
-        raise HTTPException(status_code=503, detail="Ensemble model not loaded")
-    return ensemble_model
-
-
-def get_cache_service() -> CacheService:
-    if not cache_service:
-        raise HTTPException(status_code=503, detail="Cache service not initialized")
-    return cache_service
 
 
 # Глобальный обработчик ошибок (структурированный ответ)
