@@ -8,14 +8,14 @@ from typing import Union
 import numpy as np
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
+from fastapi.responses import JSONResponse
 
 from config import settings
 from models.ensemble import EnsembleModel
 from services.cache_service import CacheService
 from services.feature_engineering import FeatureEngineer
 from services.monitoring import metrics
-from services.utils.features import project_features_25, build_feature_cache_key
-from services.utils.feature_names_25 import EXPECTED_FEATURE_NAMES_25
+from services.utils.features import adaptive_project, build_feature_cache_key
 
 from .schemas import (
     BatchPredictionRequest,
@@ -37,10 +37,8 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 
-# Dependency injection
 def get_ensemble_model() -> EnsembleModel:
     from main import ensemble_model
-
     if not ensemble_model or not ensemble_model.is_ready():
         raise HTTPException(status_code=503, detail="Ensemble model not ready")
     return ensemble_model
@@ -48,7 +46,6 @@ def get_ensemble_model() -> EnsembleModel:
 
 def get_cache_service() -> CacheService:
     from main import cache_service
-
     if not cache_service:
         raise HTTPException(status_code=503, detail="Cache service not available")
     return cache_service
@@ -58,15 +55,34 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
     start_time = time.time()
     trace_id = str(uuid.uuid4())
 
-    # Извлечение признаков
+    # 1) Feature extraction (flexible)
     feature_engineer = FeatureEngineer()
     fv = await feature_engineer.extract_features(req.sensor_data)
-    vector = project_features_25(fv)  # строго 25 признаков и порядок
 
-    # Кеш по признакам
+    # 2) Adaptive projection: строим вектор из всех доступных признаков
+    #   expected_size возьмём у первой загруженной модели (если есть)
+    expected_size = None
+    try:
+        for m in ensemble.models.values():
+            if m.is_loaded:
+                expected_size = int(m.metadata.get("features_count", 25))
+                break
+    except Exception:
+        expected_size = 25
+
+    vector, used_names = adaptive_project(fv, expected_size=expected_size)
+
+    logger.info(
+        "Ensemble input vector",
+        len=int(vector.size),
+        nonzero=int(np.count_nonzero(vector)),
+        expected_size=expected_size,
+    )
+
+    # 3) Cache by dynamic features
     cache_key = None
     if req.use_cache and settings.cache_predictions:
-        cache_key = build_feature_cache_key(vector, EXPECTED_FEATURE_NAMES_25)
+        cache_key = build_feature_cache_key(vector, used_names)
         cached = await cache.get_prediction(cache_key)
         if cached:
             logger.info("Cache hit", trace_id=trace_id, cache_key=cache_key)
@@ -76,10 +92,10 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
             cached["cache_hit"] = True
             return PredictionResponse(**cached)
 
-    # Предсказание
+    # 4) Predict
     result = await ensemble.predict(vector)
 
-    # Сборка ответа
+    # 5) Build response
     prediction = AnomalyPrediction(
         is_anomaly=bool(result.get("is_anomaly", False)),
         anomaly_score=float(result.get("ensemble_score", 0.5)),
@@ -99,7 +115,7 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
                     prediction_score=float(p.get("prediction_score", p.get("score", 0.5))),
                     confidence=float(p.get("confidence", 0.0)),
                     processing_time_ms=float(p.get("processing_time_ms", 0.0)),
-                    features_used=int(p.get("features_used", len(vector))),
+                    features_used=int(p.get("features_used", int(vector.size))),
                 )
             )
         except Exception as e:
@@ -113,7 +129,7 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
         ml_predictions=ml_predictions,
         ensemble_score=float(result.get("ensemble_score", 0.5)),
         total_processing_time_ms=float(result.get("total_processing_time_ms", processing_time)),
-        features_extracted=int(len(vector)),
+        features_extracted=int(vector.size),
         cache_hit=False,
         trace_id=trace_id,
     )
@@ -144,10 +160,8 @@ async def predict_anomaly(
     try:
         return await _predict_core(request, ensemble, cache)
     except Exception as e:
-        # Возвращаем структурированную ошибку вместо HTTP 500
         err = ErrorResponse(error=str(e), error_code="PREDICTION_FAILED", trace_id=str(uuid.uuid4()))
-        # Но по контракту эндпоинт объявлен как PredictionResponse — поэтому поднимаем 500, пока не изменим спецификацию
-        raise HTTPException(status_code=500, detail=err.model_dump()) from e
+        return JSONResponse(status_code=500, content=err.model_dump(mode="json"))
 
 
 @router.post("/predict/batch", response_model=BatchPredictionResponse)
