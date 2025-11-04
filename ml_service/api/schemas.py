@@ -53,6 +53,14 @@ class AnomalyPrediction(BaseModel):
     anomaly_type: Optional[str] = None
 
 
+class TwoStageInfo(BaseModel):
+    """Information about two-stage classification results"""
+    stage1_score: float = Field(ge=0.0, le=1.0, description="Binary anomaly probability")
+    stage2_confidence: float = Field(ge=0.0, le=1.0, description="Multiclass confidence")
+    fault_class: int = Field(ge=0, description="Predicted fault class (0=normal, 1-3=fault types)")
+    processing_time_ms: float = Field(ge=0.0, description="Two-stage processing time")
+
+
 class PredictionRequest(BaseModel):
     sensor_data: SensorDataBatch
     use_cache: bool = True
@@ -67,10 +75,12 @@ class PredictionResponse(BaseResponse):
     total_processing_time_ms: float = Field(ge=0.0)
     features_extracted: int = Field(ge=1)
     cache_hit: bool = False
-    # Новые поля для adaptive thresholds
+    # Adaptive thresholds fields
     threshold_used: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     threshold_source: Optional[str] = None
     baseline_context: Optional[Dict[str, Any]] = None
+    # Two-stage enhancement fields
+    two_stage_info: Optional[TwoStageInfo] = None
 
 
 class ErrorResponse(BaseResponse):
@@ -116,6 +126,8 @@ class ConfigResponse(BaseResponse):
     adaptive_thresholds_enabled: Optional[bool] = None
     threshold_adaptation_rate: Optional[float] = None
     target_fpr: Optional[float] = None
+    # Two-stage config
+    two_stage_enabled: Optional[bool] = None
 
 
 class ConfigUpdateRequest(BaseModel):
@@ -126,6 +138,8 @@ class ConfigUpdateRequest(BaseModel):
     adaptive_thresholds_enabled: Optional[bool] = None
     threshold_adaptation_rate: Optional[float] = Field(None, ge=0.001, le=0.5)
     target_fpr: Optional[float] = Field(None, ge=0.01, le=0.50)
+    # Two-stage updates
+    two_stage_enabled: Optional[bool] = None
 
     @field_validator('ensemble_weights')
     @classmethod
