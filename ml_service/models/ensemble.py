@@ -1,6 +1,6 @@
 """
 Ensemble Model for Hydraulic Systems Anomaly Detection
-Enterprise ensemble c fallback стратегиями
+Enterprise ensemble с fallback стратегиями
 """
 
 from __future__ import annotations
@@ -103,7 +103,6 @@ class EnsembleModel:
 
         start_time = time.time()
         for strategy_name, model_names in self.fallback_strategies.items():
-            strategy_start = time.time()
             try:
                 available = [(name, self.models[name]) for name in model_names if name in self.models and self.models[name].is_loaded]
                 if not available:
@@ -180,6 +179,63 @@ class EnsembleModel:
             "severity": severity,
             "is_anomaly": final_score > settings.prediction_threshold,
             "confidence": final_confidence,
+        }
+
+    async def warmup(self, warmup_samples: int = 10) -> None:
+        """🔥 Прогрев моделей для оптимизации первого запроса."""
+        logger.info("Warming up ensemble models", samples=warmup_samples)
+        dummy_features = np.random.rand(warmup_samples, 25)
+        for i in range(warmup_samples):
+            try:
+                result = await self.predict(dummy_features[i])
+                logger.debug(
+                    f"Warmup sample {i} completed",
+                    strategy=result.get("strategy_used", "unknown"),
+                    time_ms=result.get("total_processing_time_ms", 0),
+                )
+            except Exception as e:
+                logger.warning(f"Warmup sample {i} failed", error=str(e))
+        logger.info("Model warmup completed", fallback_usage=self.performance_metrics["fallback_usage"])
+
+    def is_ready(self) -> bool:
+        return self.is_loaded and len([m for m in self.models.values() if m.is_loaded]) >= 1
+
+    def get_loaded_models(self) -> list[str]:
+        return [name for name, model in self.models.items() if model.is_loaded]
+
+    def get_model_info(self) -> dict[str, Any]:
+        model_info = {}
+        for name, model in self.models.items():
+            if model.is_loaded:
+                model_info[name] = {
+                    "name": MODEL_CONFIG[name]["name"],
+                    "version": model.version,
+                    "description": MODEL_CONFIG[name]["description"],
+                    "accuracy_target": MODEL_CONFIG[name]["accuracy_target"],
+                    "weight": MODEL_CONFIG[name]["weight"],
+                    "is_loaded": True,
+                }
+            else:
+                model_info[name] = {
+                    "name": MODEL_CONFIG[name]["name"],
+                    "is_loaded": False,
+                    "error": "Failed to load",
+                }
+        return model_info
+
+    def get_performance_metrics(self) -> dict[str, Any]:
+        if not self.performance_metrics["inference_times"]:
+            return {"predictions_total": 0}
+        times = self.performance_metrics["inference_times"]
+        return {
+            "predictions_total": self.performance_metrics["predictions_total"],
+            "average_response_time_ms": np.mean(times),
+            "p95_response_time_ms": np.percentile(times, 95),
+            "p99_response_time_ms": np.percentile(times, 99),
+            "min_response_time_ms": np.min(times),
+            "max_response_time_ms": np.max(times),
+            "average_accuracy": np.mean(self.performance_metrics["accuracy_scores"]) if self.performance_metrics["accuracy_scores"] else 0.0,
+            "fallback_usage": self.performance_metrics["fallback_usage"],
         }
 
     async def cleanup(self) -> None:
