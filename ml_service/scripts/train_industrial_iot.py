@@ -39,6 +39,7 @@ PRODUCTION_PARAMS = {
         "random_seed": 42,
         "verbose": False,
         "allow_writing_files": False,
+        "thread_count": 8,
     },
     "xgboost": {
         "n_estimators": 800,
@@ -48,7 +49,7 @@ PRODUCTION_PARAMS = {
         "subsample": 0.8,
         "colsample_bytree": 0.8,
         "random_state": 42,
-        "n_jobs": -1,
+        "n_jobs": 8,
         "objective": "multi:softprob",
         "tree_method": "hist",
     },
@@ -60,7 +61,7 @@ PRODUCTION_PARAMS = {
         "max_features": "sqrt",
         "bootstrap": True,
         "random_state": 42,
-        "n_jobs": -1,
+        "n_jobs": 8,
         "class_weight": "balanced",
     },
 }
@@ -137,7 +138,6 @@ class IndustrialIoTTrainer:
         logger.info("Training XGBoost model")
         start = time.time()
         model = XGBClassifier(**PRODUCTION_PARAMS["xgboost"])
-        # Compatibility: some versions accept early_stopping_rounds, but we keep it simple
         model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
         y_pred = model.predict(X_val)
         acc = accuracy_score(y_val, y_pred)
