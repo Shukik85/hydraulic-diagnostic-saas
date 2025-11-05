@@ -1,0 +1,58 @@
+# Modbus TCP Simulator for Development
+# Uses baetyltech/modbus-simulator - reliable Docker Hub image
+#
+# Usage:
+#   docker compose -f docker/simulators/modbus/docker-compose.modbus.yml up -d
+#
+# Test with:
+#   python test_modbus_simple.py (HOST="127.0.0.1", PORT=1502, UNIT_ID=1)
+
+version: '3.8'
+
+services:
+  modbus-simulator:
+    image: baetyltech/modbus-simulator:latest
+    container_name: modbus-sim-dev
+    restart: unless-stopped
+    
+    ports:
+      - "1502:502"  # Modbus TCP port
+    
+    environment:
+      # Modbus configuration
+      MODBUS_UNIT_ID: "1"
+      MODBUS_PORT: "502"
+      
+      # Pre-configure some holding registers for testing
+      # Format may vary by simulator - check image documentation
+      HOLDING_REGISTERS_INIT: "true"
+    
+    # Health check to ensure simulator is responsive
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 502 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Resource limits for development
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  default:
+    name: hydraulic-dev-network
+    external: true
