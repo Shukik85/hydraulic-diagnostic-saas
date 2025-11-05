@@ -2,7 +2,7 @@
 Celery Tasks for Sensor Data Collection.
 
 Implements periodic Modbus polling, data validation, storage in TimescaleDB,
-and integration with ML service for anomaly detection.
+and integration with ML service using UCI Hydraulic dataset format.
 """
 
 import asyncio
@@ -41,7 +41,13 @@ sensor_read_duration = Histogram(
 ml_predictions_total = Counter(
     'ml_predictions_total',
     'Total number of ML predictions made',
-    ['status']
+    ['status', 'model_type']
+)
+
+ml_prediction_confidence = Histogram(
+    'ml_prediction_confidence',
+    'ML prediction confidence scores',
+    ['model_type', 'prediction']
 )
 
 active_sensor_nodes = Gauge(
@@ -424,13 +430,13 @@ def store_sensor_readings(readings: List[SensorReading], node: SensorNode) -> in
 @shared_task(bind=True, max_retries=2)
 def analyze_sensor_data_ml(self, node_id: int, reading_ids: List[int]):
     """
-    Analyze sensor readings using ML service for anomaly detection.
+    Analyze sensor readings using ML service with UCI Hydraulic format.
     
     Args:
         node_id: SensorNode ID
         reading_ids: List of SensorReading IDs to analyze
     """
-    logger.info(f"🤖 Starting ML analysis for node {node_id}")
+    logger.info(f"🤖 Starting UCI Hydraulic ML analysis for node {node_id}")
     
     try:
         # Get node and readings
@@ -444,33 +450,52 @@ def analyze_sensor_data_ml(self, node_id: int, reading_ids: List[int]):
             logger.warning(f"⚠️ No good quality readings found for ML analysis")
             return {"status": "no_good_readings", "node_id": node_id}
         
-        # Prepare features for ML service
-        features = prepare_ml_features(readings)
+        # Prepare features in UCI Hydraulic format
+        features = prepare_ml_features_uci(readings)
         
-        # Call ML service
-        ml_result = call_ml_service(features, node.name)
+        # Call ML service with UCI format
+        ml_result = call_ml_service_uci(features, node.name)
         
         if ml_result.get('success'):
-            # Store ML results (if you have DiagnosticReport model)
-            # store_ml_results(node, readings, ml_result)
+            # Update metrics
+            model_type = ml_result.get('model_used', 'ensemble')
+            prediction = ml_result.get('prediction', 'unknown')
+            confidence = ml_result.get('confidence', 0.0)
             
-            ml_predictions_total.labels(status='success').inc()
+            ml_predictions_total.labels(
+                status='success', 
+                model_type=model_type
+            ).inc()
+            
+            ml_prediction_confidence.labels(
+                model_type=model_type,
+                prediction=prediction
+            ).observe(confidence)
+            
+            # Store ML results (enhanced with UCI metadata)
+            # store_uci_ml_results(node, readings, ml_result)
             
             logger.info(
-                f"✅ ML analysis completed for node {node.name}: "
-                f"prediction={ml_result.get('prediction')}, "
-                f"confidence={ml_result.get('confidence'):.3f}"
+                f"✅ UCI ML analysis completed for node {node.name}: "
+                f"prediction={prediction}, confidence={confidence:.3f}, "
+                f"model={model_type}"
             )
             
             return {
                 "status": "success",
                 "node_id": node_id,
-                "prediction": ml_result.get('prediction'),
-                "confidence": ml_result.get('confidence'),
+                "prediction": prediction,
+                "confidence": confidence,
+                "model_used": model_type,
+                "uci_features_count": len(features.get('features', {})),
                 "readings_analyzed": readings.count()
             }
         else:
-            ml_predictions_total.labels(status='failed').inc()
+            ml_predictions_total.labels(
+                status='failed', 
+                model_type='unknown'
+            ).inc()
+            
             logger.warning(f"⚠️ ML service returned error: {ml_result.get('error')}")
             
             return {
@@ -480,7 +505,11 @@ def analyze_sensor_data_ml(self, node_id: int, reading_ids: List[int]):
             }
             
     except Exception as e:
-        ml_predictions_total.labels(status='error').inc()
+        ml_predictions_total.labels(
+            status='error', 
+            model_type='unknown'
+        ).inc()
+        
         logger.error(f"💥 ML analysis failed for node {node_id}: {e}")
         
         # Retry with backoff
@@ -491,74 +520,206 @@ def analyze_sensor_data_ml(self, node_id: int, reading_ids: List[int]):
         )
 
 
-def prepare_ml_features(readings) -> Dict[str, Any]:
+def prepare_ml_features_uci(readings) -> Dict[str, Any]:
     """
-    Convert sensor readings to ML service input format.
+    Convert sensor readings to UCI Hydraulic dataset format.
+    
+    UCI Hydraulic features:
+    - PS1..PS6: Pressure sensors (bar)
+    - TS1..TS4: Temperature sensors (°C)  
+    - FS1..FS2: Flow sensors (L/min)
+    - VS1: Vibration sensor (mm/s)
+    - EPS1: Motor power (% or scaled)
+    - CE, CP, SE: Efficiency metrics (optional)
     
     Args:
         readings: QuerySet of SensorReading instances
         
     Returns:
-        Dict with features for ML service
+        Dict with UCI-formatted features for ML service
     """
-    features = {
-        "timestamp": readings.first().timestamp.isoformat(),
-        "sensors": {}
+    # Initialize UCI feature structure
+    uci_features = {
+        # Pressure sensors (6 channels in UCI dataset)
+        "PS1": None, "PS2": None, "PS3": None, "PS4": None, "PS5": None, "PS6": None,
+        # Temperature sensors (4 channels in UCI dataset)  
+        "TS1": None, "TS2": None, "TS3": None, "TS4": None,
+        # Flow sensors (2 channels in UCI dataset)
+        "FS1": None, "FS2": None,
+        # Vibration sensor (1 channel)
+        "VS1": None,
+        # Motor/Power metrics
+        "EPS1": None,  # Motor power consumption
+        # Efficiency metrics (optional, can be computed)
+        "CE": None,    # Cooling efficiency  
+        "CP": None,    # Cooling power
+        "SE": None     # Stability efficiency
     }
     
+    # Map our demo sensor readings to UCI format
     for reading in readings:
         sensor_name = reading.sensor_config.name.lower().replace(' ', '_')
-        features["sensors"][sensor_name] = {
-            "value": float(reading.processed_value),
-            "unit": reading.sensor_config.unit,
-            "quality": reading.quality,
-            "register_address": reading.sensor_config.register_address
-        }
+        value = float(reading.processed_value)
+        unit = reading.sensor_config.unit.lower()
+        
+        # Map based on sensor name and characteristics
+        if "pressure" in sensor_name:
+            # System Pressure -> PS1 (primary pressure sensor)
+            if uci_features["PS1"] is None:
+                uci_features["PS1"] = value
+            elif uci_features["PS2"] is None:  # Additional pressure sensors
+                uci_features["PS2"] = value
+                
+        elif "temperature" in sensor_name:
+            # Oil Temperature -> TS1 (primary temperature sensor)  
+            if uci_features["TS1"] is None:
+                uci_features["TS1"] = value
+            elif uci_features["TS2"] is None:  # Additional temperature sensors
+                uci_features["TS2"] = value
+                
+        elif "flow" in sensor_name:
+            # Flow Rate -> FS1 (primary flow sensor)
+            if uci_features["FS1"] is None:
+                uci_features["FS1"] = value
+            elif uci_features["FS2"] is None:  # Secondary flow sensor
+                uci_features["FS2"] = value
+                
+        elif "vibration" in sensor_name:
+            # Vibration Level -> VS1
+            uci_features["VS1"] = value
+            
+        elif "speed" in sensor_name or "motor" in sensor_name:
+            # Motor Speed -> EPS1 (convert RPM to power % approximation)
+            # Normalize typical motor speed (1500 RPM) to 0-100% scale
+            normalized_power = min(100.0, max(0.0, value / 1500.0 * 100.0))
+            uci_features["EPS1"] = normalized_power
     
-    logger.debug(f"🧮 Prepared ML features: {len(features['sensors'])} sensors")
-    return features
+    # Compute efficiency metrics if we have enough data
+    if uci_features["PS1"] and uci_features["FS1"] and uci_features["TS1"]:
+        # Cooling Efficiency (CE): simplified metric based on temp/pressure ratio
+        if uci_features["PS1"] > 0:
+            uci_features["CE"] = min(100.0, (100 - uci_features["TS1"]) / uci_features["PS1"] * 1000)
+        
+        # Cooling Power (CP): flow * pressure efficiency proxy
+        if uci_features["FS1"] > 0:
+            uci_features["CP"] = uci_features["PS1"] * uci_features["FS1"] / 100.0
+            
+        # Stability Efficiency (SE): inverse of vibration if available
+        if uci_features["VS1"] is not None and uci_features["VS1"] > 0:
+            uci_features["SE"] = max(0.0, 100.0 - (uci_features["VS1"] * 10))
+    
+    # Remove None values (some models may require this)
+    clean_features = {k: v for k, v in uci_features.items() if v is not None}
+    
+    logger.debug(f"🧠 Prepared UCI features: {len(clean_features)} active channels")
+    logger.debug(f"📊 Features: {list(clean_features.keys())}")
+    
+    return {
+        "tag": "REAL_UCI_HYDRAULIC_DATA",
+        "timestamp": readings.first().timestamp.isoformat(),
+        "node_id": readings.first().sensor_config.node_id,
+        "features": clean_features,
+        "metadata": {
+            "total_sensors": len(readings),
+            "feature_mapping": {
+                "pressure_sensors": [k for k in clean_features.keys() if k.startswith('PS')],
+                "temperature_sensors": [k for k in clean_features.keys() if k.startswith('TS')], 
+                "flow_sensors": [k for k in clean_features.keys() if k.startswith('FS')],
+                "vibration_sensors": [k for k in clean_features.keys() if k.startswith('VS')],
+                "power_sensors": [k for k in clean_features.keys() if k.startswith('EPS')]
+            }
+        }
+    }
 
 
-def call_ml_service(features: Dict[str, Any], node_name: str) -> Dict[str, Any]:
+def call_ml_service_uci(features: Dict[str, Any], node_name: str) -> Dict[str, Any]:
     """
-    Call ML service for anomaly detection.
+    Call ML service for UCI Hydraulic anomaly detection.
+    
+    Enhanced for real UCI models with proper error handling and retries.
     
     Args:
-        features: Prepared sensor features
+        features: Prepared UCI features
         node_name: Node name for context
         
     Returns:
-        ML service response dict
+        ML service response dict with UCI-specific fields
     """
     try:
-        # ML service endpoint (from settings or default)
+        # ML service configuration
         ml_service_url = getattr(
             settings, 
             'ML_SERVICE_URL', 
             'http://ml-service:8001'
         )
         
+        # Check if service supports UCI-specific endpoint
+        predict_endpoint = getattr(
+            settings,
+            'ML_PREDICT_ENDPOINT', 
+            '/predict'  # Could be /predict/uci or /predict/v2
+        )
+        
+        # Prepare request payload for real models
+        payload = {
+            **features,  # Includes tag, timestamp, features, metadata
+            "request_id": f"{node_name}_{int(time.time())}",
+            "model_preference": getattr(settings, 'ML_MODEL_PREFERENCE', 'ensemble'),
+            "confidence_threshold": getattr(settings, 'ML_CONFIDENCE_THRESHOLD', 0.7)
+        }
+        
+        # Make request with extended timeout for model inference
         response = requests.post(
-            f"{ml_service_url}/predict",
-            json=features,
-            timeout=5.0,
+            f"{ml_service_url}{predict_endpoint}",
+            json=payload,
+            timeout=15.0,  # Extended for real model inference
             headers={
                 "Content-Type": "application/json",
-                "X-Node-Name": node_name
+                "X-Node-Name": node_name,
+                "X-Data-Format": "UCI-Hydraulic",
+                "X-Request-Source": "celery-ingestion"
             }
         )
         
         response.raise_for_status()
         result = response.json()
         
-        logger.debug(f"🤖 ML service response: {result}")
+        # Enhanced logging for real models
+        model_info = result.get('model_info', {})
+        logger.info(
+            f"🤖 UCI ML response: prediction={result.get('prediction')}, "
+            f"confidence={result.get('confidence', 0):.3f}, "
+            f"model={model_info.get('primary_model', 'unknown')}"
+        )
+        
+        # Log additional UCI-specific metrics if available
+        if 'feature_importance' in result:
+            top_features = result['feature_importance'][:3]  # Top 3 features
+            logger.debug(f"📊 Top features: {top_features}")
         
         return {
             "success": True,
             "prediction": result.get('prediction', 'normal'),
             "confidence": result.get('confidence', 0.0),
             "anomaly_score": result.get('anomaly_score', 0.0),
-            "features_used": len(features['sensors'])
+            "model_used": model_info.get('primary_model', 'ensemble'),
+            "model_version": model_info.get('version', 'unknown'),
+            "features_used": len(features.get('features', {})),
+            "processing_time_ms": result.get('processing_time_ms', 0),
+            "uci_specific": {
+                "fault_probability": result.get('fault_probability', 0.0),
+                "component_health": result.get('component_health', {}),
+                "maintenance_recommendation": result.get('maintenance_recommendation'),
+                "feature_importance": result.get('feature_importance', [])
+            }
+        }
+        
+    except requests.exceptions.Timeout:
+        logger.warning(f"⏰ ML service timeout for {node_name} (models may be training)")
+        return {
+            "success": False,
+            "error": "ML service timeout - models may be training",
+            "retry_recommended": True
         }
         
     except requests.exceptions.RequestException as e:
@@ -567,6 +728,7 @@ def call_ml_service(features: Dict[str, Any], node_name: str) -> Dict[str, Any]:
             "success": False,
             "error": f"Request failed: {e}"
         }
+        
     except Exception as e:
         logger.error(f"💥 Unexpected ML service error: {e}")
         return {
@@ -656,3 +818,102 @@ def sensor_health_check():
     except Exception as e:
         logger.error(f"💥 Health check failed: {e}")
         raise
+
+
+@shared_task
+def timescaledb_maintenance():
+    """
+    Perform TimescaleDB maintenance operations.
+    
+    Includes:
+    - Hypertable compression policy updates
+    - Statistics refresh
+    - Chunk analysis
+    """
+    logger.info("🔧 Starting TimescaleDB maintenance")
+    
+    try:
+        from django.db import connection
+        
+        maintenance_results = {}
+        
+        # Update compression policies
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT compress_chunk(i, if_not_compressed => true) 
+                FROM show_chunks('sensors_reading') i
+                WHERE age(now(), range_end) > INTERVAL '1 day';
+            """)
+            
+            # Get hypertable stats
+            cursor.execute("""
+                SELECT 
+                    hypertable_name,
+                    num_chunks,
+                    table_size,
+                    index_size,
+                    total_size
+                FROM timescaledb_information.hypertables_size
+                WHERE hypertable_name = 'sensors_reading';
+            """)
+            
+            stats = cursor.fetchone()
+            if stats:
+                maintenance_results['hypertable_stats'] = {
+                    'num_chunks': stats[1],
+                    'table_size_bytes': stats[2],
+                    'index_size_bytes': stats[3],
+                    'total_size_bytes': stats[4]
+                }
+        
+        logger.info(f"✅ TimescaleDB maintenance completed: {maintenance_results}")
+        return maintenance_results
+        
+    except Exception as e:
+        logger.error(f"💥 TimescaleDB maintenance failed: {e}")
+        raise
+
+
+@shared_task  
+def debug_sensor_status():
+    """Debug task for development - logs sensor system status."""
+    if not settings.DEBUG:
+        return {"status": "debug_only"}
+    
+    try:
+        nodes_count = SensorNode.objects.filter(is_active=True).count()
+        recent_readings = SensorReading.objects.filter(
+            timestamp__gte=timezone.now() - timedelta(minutes=5)
+        ).count()
+        
+        logger.info(
+            f"🐛 Debug status: {nodes_count} active nodes, "
+            f"{recent_readings} readings in last 5 min"
+        )
+        
+        return {
+            "active_nodes": nodes_count,
+            "recent_readings": recent_readings,
+            "timestamp": timezone.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.warning(f"🐛 Debug status error: {e}")
+        return {"status": "error", "error": str(e)}
+
+
+# Legacy function for backward compatibility
+def prepare_ml_features(readings) -> Dict[str, Any]:
+    """
+    Legacy feature preparation - redirects to UCI format.
+    Maintains backward compatibility while using new UCI format.
+    """
+    return prepare_ml_features_uci(readings)
+
+
+def call_ml_service(features: Dict[str, Any], node_name: str) -> Dict[str, Any]:
+    """
+    Legacy ML service call - redirects to UCI format.
+    Maintains backward compatibility while using new UCI format.
+    """
+    return call_ml_service_uci(features, node_name)
