@@ -96,8 +96,8 @@ def load_raw_align() -> pd.DataFrame:
         series[k] = series[k].iloc[:min_len].reset_index(drop=True)
 
     df = pd.DataFrame(series)
-    # Synthetic Timestamp @10 Hz (100ms intervals)
-    ts = pd.date_range("2025-01-01", periods=min_len, freq="100L")
+    # Synthetic Timestamp @10 Hz (100ms intervals) - fix deprecated 'L' 
+    ts = pd.date_range("2025-01-01", periods=min_len, freq="100ms")
     df.insert(0, "Timestamp", ts)
     
     logger.info(f"Created dataframe with {len(df)} rows and columns: {list(df.columns)}")
@@ -111,11 +111,29 @@ def apply_profile_labels(df: pd.DataFrame) -> pd.DataFrame:
         try:
             logger.info(f"Loading profile from {profile_path}")
             prof = pd.read_csv(profile_path, sep="\s+", header=None, engine="python")
+            
+            # Handle profile length mismatch - interpolate/repeat profile to match sensor length
+            if len(prof) != len(df):
+                logger.warning(f"Profile length {len(prof)} != sensor length {len(df)}, interpolating...")
+                
+                # Create index mapping from profile to sensor data
+                profile_indices = np.linspace(0, len(prof)-1, len(df))
+                
+                # Interpolate each profile column
+                prof_aligned = pd.DataFrame()
+                for col_idx in range(prof.shape[1]):
+                    prof_values = prof.iloc[:, col_idx].values
+                    # Use nearest neighbor interpolation for categorical data like flags
+                    aligned_values = prof_values[np.round(profile_indices).astype(int)]
+                    prof_aligned[col_idx] = aligned_values
+                
+                prof = prof_aligned
+            
             prof = prof.iloc[:len(df)].reset_index(drop=True)
             
             # Assume columns: load, cooler, vib_flag, p_set, fault_flag
-            vib_flag = prof.iloc[:,2] if prof.shape[1] >= 3 else 0
-            fault_flag = prof.iloc[:,4] if prof.shape[1] >= 5 else 0
+            vib_flag = prof.iloc[:,2] if prof.shape[1] >= 3 else pd.Series(np.zeros(len(df)))
+            fault_flag = prof.iloc[:,4] if prof.shape[1] >= 5 else pd.Series(np.zeros(len(df)))
             
             # Binary fault: fault_flag>0 OR vib_flag>0
             fault_bin = ((fault_flag>0) | (vib_flag>0)).astype(int)
