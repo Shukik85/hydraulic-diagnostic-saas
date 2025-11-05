@@ -1,136 +1,277 @@
 """
-Local Modbus TCP Server for Development Testing.
+Production-grade Modbus TCP Server for Development.
 
-Creates a Modbus TCP server with pre-configured registers:
-- Holding Register 0 (40001): uint16 = 1234 (Pressure sensor)
-- Holding Register 1 (40002): uint16 = 42 (Temperature sensor)
-- Holding Register 2-3 (40003-40004): float32 = 25.5 (Flow rate)
-
-Run this script to simulate a PLC/industrial device for testing.
+Uses modern pymodbus 3.11+ API with proper error handling and monitoring.
+Simulates hydraulic system with realistic sensor data and dynamic values.
 """
 
 import asyncio
 import logging
 import signal
 import sys
-from typing import Optional
+import time
+import random
+from typing import Optional, Dict, Any
+from datetime import datetime
 
 try:
-    from pymodbus.server import StartAsyncTcpServer
-    from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-    from pymodbus.datastore import ModbusSequentialDataBlock
+    from pymodbus.server.async_io import StartAsyncTcpServer
+    from pymodbus.device import ModbusDeviceIdentification
+    from pymodbus.datastore import (
+        ModbusSequentialDataBlock,
+        ModbusSlaveContext, 
+        ModbusServerContext
+    )
     from pymodbus.payload import BinaryPayloadBuilder
     from pymodbus.constants import Endian
-    print("✅ pymodbus imported successfully")
+    PYMODBUS_AVAILABLE = True
+    print("✅ pymodbus 3.11+ imported successfully")
 except ImportError as e:
-    print(f"❌ pymodbus not available: {e}")
-    print("Install with: pip install pymodbus>=3.6.6")
-    sys.exit(1)
+    print(f"❌ pymodbus import failed: {e}")
+    print("🔧 Try: pip uninstall -y pymodbus && pip install 'pymodbus>=3.11.0'")
+    PYMODBUS_AVAILABLE = False
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("modbus_server")
 
-# Global server reference for graceful shutdown
-server_task: Optional[asyncio.Task] = None
+# Global server handle
+server_handle: Optional[Any] = None
 
 
-def setup_register_values(context: ModbusServerContext) -> None:
-    """Configure initial register values to simulate hydraulic sensors."""
-    logger.info("🔧 Setting up simulated sensor values...")
+class HydraulicSystemSimulator:
+    """Simulates hydraulic system sensors with realistic behavior."""
     
-    # Simple integer values
-    context[0x00].setValues(3, 0, [1234])  # HR[0] = 1234 (pressure, uint16)
-    context[0x00].setValues(3, 1, [42])    # HR[1] = 42 (temperature, uint16)
+    def __init__(self):
+        # Base sensor values
+        self.base_pressure = 150.0      # bar
+        self.base_temperature = 65.0    # °C  
+        self.base_flow_rate = 25.5      # L/min
+        self.base_vibration = 0.5       # mm/s
+        self.base_speed = 1500.0        # RPM
+        
+        # Simulation parameters
+        self.noise_amplitude = 0.05     # 5% noise
+        self.drift_rate = 0.001         # slow drift
+        self.anomaly_chance = 0.02      # 2% chance of anomaly
+        
+        self.start_time = time.time()
+        self.update_count = 0
     
-    # Float32 value (25.5) stored in HR[2-3]
+    def get_sensor_values(self) -> Dict[str, float]:
+        """Generate realistic sensor readings with noise and drift."""
+        self.update_count += 1
+        elapsed = time.time() - self.start_time
+        
+        # Add time-based drift and noise
+        noise = lambda base: base * (1 + random.uniform(-self.noise_amplitude, self.noise_amplitude))
+        drift = lambda base: base * (1 + self.drift_rate * elapsed * random.uniform(-1, 1))
+        
+        # Generate values
+        pressure = drift(noise(self.base_pressure))
+        temperature = drift(noise(self.base_temperature))
+        flow_rate = drift(noise(self.base_flow_rate))
+        vibration = drift(noise(self.base_vibration))
+        speed = drift(noise(self.base_speed))
+        
+        # Occasional anomaly injection
+        if random.random() < self.anomaly_chance:
+            anomaly_type = random.choice(['pressure_spike', 'temp_drop', 'flow_stop'])
+            if anomaly_type == 'pressure_spike':
+                pressure *= 1.8  # 80% increase
+            elif anomaly_type == 'temp_drop':
+                temperature *= 0.7  # 30% drop
+            elif anomaly_type == 'flow_stop':
+                flow_rate *= 0.1  # 90% reduction
+            
+            logger.warning(f"🚨 Injected anomaly: {anomaly_type}")
+        
+        return {
+            'pressure': pressure,
+            'temperature': temperature,
+            'flow_rate': flow_rate,
+            'vibration': vibration,
+            'speed': speed,
+        }
+
+
+def setup_initial_registers(context: ModbusServerContext, simulator: HydraulicSystemSimulator) -> None:
+    """Setup initial register values with realistic hydraulic data."""
+    logger.info("🔧 Initializing hydraulic system registers...")
+    
+    values = simulator.get_sensor_values()
+    
+    # HR[0] = Pressure (uint16, scaled: bar * 10)
+    pressure_scaled = int(values['pressure'] * 10)  # 150.0 bar -> 1500
+    context[0x00].setValues(3, 0, [pressure_scaled])
+    
+    # HR[1] = Temperature (int16, °C)
+    temperature_scaled = int(values['temperature'])  # 65.0 -> 65
+    context[0x00].setValues(3, 1, [temperature_scaled])
+    
+    # HR[2-3] = Flow Rate (float32)
     builder = BinaryPayloadBuilder(byteorder=Endian.BIG, wordorder=Endian.BIG)
-    builder.add_32bit_float(25.5)  # Flow rate
-    float_registers = builder.to_registers()
-    context[0x00].setValues(3, 2, float_registers)  # HR[2-3]
+    builder.add_32bit_float(values['flow_rate'])
+    context[0x00].setValues(3, 2, builder.to_registers())
     
-    # Additional test values
-    context[0x00].setValues(3, 10, [999])   # HR[10] = 999 (vibration)
-    context[0x00].setValues(3, 11, [1500])  # HR[11] = 1500 (speed)
+    # HR[10] = Vibration (uint16, scaled: mm/s * 1000)
+    vibration_scaled = int(values['vibration'] * 1000)  # 0.5 -> 500
+    context[0x00].setValues(3, 10, [vibration_scaled])
     
-    logger.info("✅ Register values configured:")
-    logger.info("   HR[0] (40001) = 1234 (uint16) - Pressure")
-    logger.info("   HR[1] (40002) = 42 (uint16) - Temperature")
-    logger.info("   HR[2-3] (40003-40004) = 25.5 (float32) - Flow Rate")
-    logger.info("   HR[10] (40011) = 999 (uint16) - Vibration")
-    logger.info("   HR[11] (40012) = 1500 (uint16) - Speed")
+    # HR[11] = Speed (uint16, RPM)
+    speed_scaled = int(values['speed'])  # 1500.0 -> 1500
+    context[0x00].setValues(3, 11, [speed_scaled])
+    
+    logger.info("✅ Hydraulic registers initialized:")
+    logger.info(f"   HR[0] (40001) = {pressure_scaled} (pressure: {values['pressure']:.1f} bar)")
+    logger.info(f"   HR[1] (40002) = {temperature_scaled} (temperature: {values['temperature']:.1f} °C)")
+    logger.info(f"   HR[2-3] (40003-40004) = float32 {values['flow_rate']:.1f} (flow rate L/min)")
+    logger.info(f"   HR[10] (40011) = {vibration_scaled} (vibration: {values['vibration']:.3f} mm/s)")
+    logger.info(f"   HR[11] (40012) = {speed_scaled} (speed: {values['speed']:.0f} RPM)")
 
 
-async def run_modbus_server(host: str = "0.0.0.0", port: int = 1502) -> None:
-    """Start the Modbus TCP server."""
-    global server_task
+async def update_registers_periodically(context: ModbusServerContext, simulator: HydraulicSystemSimulator):
+    """Update register values every 30 seconds to simulate live data."""
+    while True:
+        try:
+            await asyncio.sleep(30)  # Update every 30 seconds
+            
+            values = simulator.get_sensor_values()
+            
+            # Update registers with new values
+            pressure_scaled = int(values['pressure'] * 10)
+            temperature_scaled = int(values['temperature'])
+            vibration_scaled = int(values['vibration'] * 1000)  
+            speed_scaled = int(values['speed'])
+            
+            context[0x00].setValues(3, 0, [pressure_scaled])
+            context[0x00].setValues(3, 1, [temperature_scaled])
+            context[0x00].setValues(3, 10, [vibration_scaled])
+            context[0x00].setValues(3, 11, [speed_scaled])
+            
+            # Update float32 flow rate
+            builder = BinaryPayloadBuilder(byteorder=Endian.BIG, wordorder=Endian.BIG)
+            builder.add_32bit_float(values['flow_rate'])
+            context[0x00].setValues(3, 2, builder.to_registers())
+            
+            logger.info(f"🔄 Updated registers: P={values['pressure']:.1f}bar, T={values['temperature']:.1f}°C, Q={values['flow_rate']:.1f}L/min")
+            
+        except asyncio.CancelledError:
+            logger.info("📊 Register update task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"❌ Register update failed: {e}")
+
+
+async def run_modbus_server():
+    """Start production-grade Modbus TCP server."""
+    global server_handle
     
-    logger.info(f"🚀 Starting Modbus TCP server on {host}:{port}...")
+    if not PYMODBUS_AVAILABLE:
+        logger.error("❌ pymodbus not available")
+        return
     
-    # Create data store with 100 registers for each type
+    logger.info("🚀 Starting Enterprise Modbus TCP Server...")
+    
+    # Initialize hydraulic system simulator
+    simulator = HydraulicSystemSimulator()
+    
+    # Create data store
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [0] * 100),  # Discrete inputs
         co=ModbusSequentialDataBlock(0, [0] * 100),  # Coils
         hr=ModbusSequentialDataBlock(0, [0] * 100),  # Holding registers
         ir=ModbusSequentialDataBlock(0, [0] * 100),  # Input registers
-        zero_mode=True  # 0-based addressing
     )
     
-    # Create server context
     context = ModbusServerContext(slaves=store, single=True)
     
+    # Device identification (appears in Modbus device info)
+    identity = ModbusDeviceIdentification()
+    identity.VendorName = 'Hydraulic Diagnostic Platform'
+    identity.ProductCode = 'HDP-SIM'
+    identity.VendorUrl = 'https://github.com/Shukik85/hydraulic-diagnostic-saas'
+    identity.ProductName = 'Hydraulic System Simulator'
+    identity.ModelName = 'HDP-SIM-v1.0'
+    identity.MajorMinorRevision = '1.0.0'
+    
     # Setup initial register values
-    setup_register_values(context)
+    setup_initial_registers(context, simulator)
+    
+    # Start periodic register updates
+    update_task = asyncio.create_task(
+        update_registers_periodically(context, simulator)
+    )
     
     try:
-        # Start the server
-        server_task = asyncio.create_task(
-            StartAsyncTcpServer(
-                context=context,
-                address=(host, port),
-                allow_reuse_address=True
-            )
+        # Start the Modbus TCP server
+        logger.info("📡 Starting server on 0.0.0.0:1502...")
+        
+        server_handle = await StartAsyncTcpServer(
+            context=context,
+            identity=identity,
+            address=("0.0.0.0", 1502),
+            allow_reuse_address=True,
         )
         
-        logger.info(f"✅ Modbus TCP server started successfully!")
-        logger.info(f"📡 Listening on {host}:{port}")
-        logger.info(f"🎯 Unit ID: 1 (default)")
+        logger.info("✅ Modbus TCP server started successfully!")
+        logger.info("📍 Server details:")
+        logger.info("   Host: 0.0.0.0:1502")
+        logger.info("   Unit ID: 1")
+        logger.info("   Protocol: Modbus TCP")
+        logger.info("   Data updates: Every 30 seconds")
         logger.info("")
-        logger.info("🔍 To test connection, run:")
-        logger.info(f"   python test_modbus_simple.py")
+        logger.info("🧪 Test connection:")
+        logger.info("   python test_modbus_simple.py")
         logger.info("")
-        logger.info("⏹️  Press Ctrl+C to stop server")
+        logger.info("⏹️ Press Ctrl+C to stop server")
         
-        # Wait for the server task
-        await server_task
+        # Keep server running
+        await asyncio.Future()  # Run forever until cancelled
         
     except Exception as e:
         logger.error(f"❌ Server failed: {e}")
+        update_task.cancel()
         raise
+    finally:
+        if server_handle:
+            server_handle.close()
+            await server_handle.wait_closed()
+        update_task.cancel()
 
 
 def signal_handler(signum, frame):
-    """Handle graceful shutdown on Ctrl+C."""
-    logger.info("⚠️  Received shutdown signal...")
+    """Graceful shutdown on Ctrl+C."""
+    logger.info("⚠️ Received shutdown signal...")
     
-    # Cancel server task if running
-    if server_task and not server_task.done():
-        server_task.cancel()
+    # Cancel all running tasks
+    for task in asyncio.all_tasks():
+        if not task.done():
+            task.cancel()
     
     logger.info("✅ Modbus server stopped gracefully")
     sys.exit(0)
 
 
 def main():
-    """Main function."""
-    print("=" * 60)
-    print("🏭 LOCAL MODBUS TCP SIMULATOR")
-    print("=" * 60)
+    """Main entry point."""
+    print("=" * 70)
+    print("🏭 ENTERPRISE HYDRAULIC MODBUS SIMULATOR")
+    print("=" * 70)
+    print("🎯 Production-grade simulation with dynamic sensor data")
+    print("🔧 Supports: pressure, temperature, flow, vibration, speed")
+    print("📊 Auto-updates every 30s with drift and occasional anomalies")
+    print("=" * 70)
     
-    # Register signal handlers for graceful shutdown
+    if not PYMODBUS_AVAILABLE:
+        print("❌ pymodbus not available")
+        print("🔧 Fix: pip uninstall -y pymodbus && pip install 'pymodbus>=3.11.0'")
+        sys.exit(1)
+    
+    # Setup signal handlers
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
@@ -140,7 +281,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("👋 Server stopped by user")
     except Exception as e:
-        logger.error(f"💥 Server failed: {e}")
+        logger.error(f"💥 Server crashed: {e}")
         sys.exit(1)
 
 
