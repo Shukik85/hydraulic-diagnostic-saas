@@ -2,6 +2,7 @@
 """
 Quick Modbus TCP Test with Automatic Server.
 
+Uses correct pymodbus 3.11+ imports and API.
 Starts a local Modbus server and immediately tests it.
 Perfect for development and CI testing.
 """
@@ -23,7 +24,8 @@ logger = logging.getLogger(__name__)
 async def modbus_test_server():
     """Context manager that starts and stops Modbus server for testing."""
     try:
-        from pymodbus.server.async_io import StartAsyncTcpServer
+        # FIXED: Correct imports for pymodbus 3.11+
+        from pymodbus.server import StartAsyncTcpServer
         from pymodbus.datastore import (
             ModbusSequentialDataBlock,
             ModbusSlaveContext,
@@ -49,7 +51,7 @@ async def modbus_test_server():
         
         logger.info("🚀 Starting test Modbus server on port 1502...")
         
-        # Start server
+        # Start server - FIXED API call
         server = await StartAsyncTcpServer(
             context=context,
             address=("127.0.0.1", 1502),
