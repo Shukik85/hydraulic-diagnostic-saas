@@ -89,6 +89,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "allow"  # Allow extra fields from .env
         json_encoders = {
             Path: str  # Converts Path to string when serializing
         }
