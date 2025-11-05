@@ -1,0 +1,110 @@
+{
+  "test_timestamp": 1762375723.286694,
+  "individual_models": {
+    "catboost": {
+      "model_name": "catboost",
+      "load_success": true,
+      "load_time_ms": 158.77699851989746,
+      "prediction_success": true,
+      "avg_latency_ms": 0.7207822799682617,
+      "p95_latency_ms": 1.5037298202514648,
+      "errors": [],
+      "predictions_made": 50,
+      "feature_compatibility": true,
+      "confidence_range": [
+        0.8194046449661255,
+        0.943089469075203
+      ],
+      "score_range": [
+        0.12303510308265686,
+        0.9999427795410156
+      ]
+    },
+    "xgboost": {
+      "model_name": "xgboost",
+      "load_success": true,
+      "load_time_ms": 143.99957656860352,
+      "prediction_success": true,
+      "avg_latency_ms": 50.324363708496094,
+      "p95_latency_ms": 53.33119630813598,
+      "errors": [],
+      "predictions_made": 50,
+      "feature_compatibility": true,
+      "confidence_range": [
+        0.7,
+        0.95
+      ],
+      "score_range": [
+        0.025,
+        0.9225
+      ]
+    },
+    "random_forest": {
+      "model_name": "random_forest",
+      "load_success": true,
+      "load_time_ms": 3642.2228813171387,
+      "prediction_success": true,
+      "avg_latency_ms": 27.47354507446289,
+      "p95_latency_ms": 37.26938962936401,
+      "errors": [],
+      "predictions_made": 50,
+      "feature_compatibility": true,
+      "confidence_range": [
+        0.7785,
+        0.95
+      ],
+      "score_range": [
+        0.004136791007610508,
+        0.8652707391945803
+      ]
+    },
+    "adaptive": {
+      "model_name": "adaptive",
+      "load_success": true,
+      "load_time_ms": 42.90628433227539,
+      "prediction_success": true,
+      "avg_latency_ms": 6.479949951171875,
+      "p95_latency_ms": 7.640838623046875,
+      "errors": [],
+      "predictions_made": 50,
+      "feature_compatibility": true,
+      "confidence_range": [
+        0.6000737749954104,
+        0.6353463169632361
+      ],
+      "score_range": [
+        0.4710714652957061,
+        0.5353463169632362
+      ]
+    }
+  },
+  "ensemble_results": {
+    "model_name": "ensemble",
+    "load_success": true,
+    "models_loaded": [
+      "catboost",
+      "xgboost",
+      "random_forest",
+      "adaptive"
+    ],
+    "load_time_ms": 3405.4746627807617,
+    "prediction_success": true,
+    "avg_latency_ms": 120.82273960113525,
+    "p95_latency_ms": 127.80578136444092,
+    "consensus_strength": 0.4187230038035742,
+    "fallback_strategies": [
+      "primary",
+      "gradient_boost",
+      "ensemble_only",
+      "emergency"
+    ],
+    "errors": [],
+    "weight_adjustments": false
+  },
+  "summary": {
+    "total_models_tested": 4,
+    "models_passed": 4,
+    "models_failed": 0,
+    "overall_success": true
+  }
+}
