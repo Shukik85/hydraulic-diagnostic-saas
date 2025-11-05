@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # SSL Certificate Generation for Modbus TCP Server
-# Generates self-signed certificates for development testing
+# Fixed for Git Bash on Windows compatibility
 
 set -e
 
 CERTS_DIR="./certs"
-CONFIG_FILE="openssl.cnf"
+CONFIG_FILE="./openssl.cnf"
 
 # Colors for output
 RED='\033[0;31m'
@@ -26,11 +26,11 @@ else
     echo -e "${YELLOW}⚠️  Certificates directory already exists${NC}"
 fi
 
-# Create OpenSSL configuration
+# Create OpenSSL configuration file
 cat > "$CONFIG_FILE" << 'EOL'
 [req]
 distinguished_name = req_distinguished_name
-req_extensions = v3_req
+x509_extensions = v3_req
 prompt = no
 
 [req_distinguished_name]
@@ -57,9 +57,9 @@ EOL
 
 echo -e "${GREEN}✅ Created OpenSSL configuration${NC}"
 
-# Generate private key
-echo -e "${BLUE}🔑 Generating private key...${NC}"
-openssl genpkey -algorithm RSA -out "$CERTS_DIR/server.key" -pkcs8 -pkcs8opt "$CERTS_DIR/server.key" 2048
+# Generate private key (simple RSA, no PKCS8 complications)
+echo -e "${BLUE}🔑 Generating RSA private key...${NC}"
+openssl genrsa -out "$CERTS_DIR/server.key" 2048
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Private key generated: $CERTS_DIR/server.key${NC}"
@@ -68,7 +68,7 @@ else
     exit 1
 fi
 
-# Generate certificate signing request
+# Generate certificate signing request (using config file to avoid Git Bash path issues)
 echo -e "${BLUE}📝 Generating certificate signing request...${NC}"
 openssl req -new -key "$CERTS_DIR/server.key" -out "$CERTS_DIR/server.csr" -config "$CONFIG_FILE"
 
@@ -79,7 +79,7 @@ else
     exit 1
 fi
 
-# Generate self-signed certificate (valid for 1 year)
+# Generate self-signed certificate (1 year validity)
 echo -e "${BLUE}🏆 Generating self-signed certificate...${NC}"
 openssl x509 -req -in "$CERTS_DIR/server.csr" -signkey "$CERTS_DIR/server.key" -out "$CERTS_DIR/server.crt" -days 365 -extensions v3_req -extfile "$CONFIG_FILE"
 
@@ -90,23 +90,27 @@ else
     exit 1
 fi
 
-# Set proper permissions
+# Set proper permissions (important for security)
 chmod 600 "$CERTS_DIR/server.key"
 chmod 644 "$CERTS_DIR/server.crt"
+
+echo -e "${GREEN}🔒 Certificate permissions set${NC}"
 
 # Cleanup temporary files
 rm -f "$CONFIG_FILE" "$CERTS_DIR/server.csr"
 
+# Show certificate details
 echo -e "${GREEN}🎉 SSL certificates generated successfully!${NC}"
 echo -e "${BLUE}📋 Certificate details:${NC}"
-openssl x509 -in "$CERTS_DIR/server.crt" -text -noout | grep -E "Subject:|DNS:|IP Address:|Not Before:|Not After"
+openssl x509 -in "$CERTS_DIR/server.crt" -text -noout | grep -A5 "Subject:"
+openssl x509 -in "$CERTS_DIR/server.crt" -text -noout | grep -A10 "X509v3 Subject Alternative Name:"
 
 echo -e "\n${BLUE}📁 Generated files:${NC}"
 ls -la "$CERTS_DIR/"
 
 echo -e "\n${YELLOW}⚡ Next steps:${NC}"
-echo -e "${YELLOW}   1. Update server_config.json with TLS enabled${NC}"
-echo -e "${YELLOW}   2. Restart Modbus server: docker-compose up -d${NC}"
+echo -e "${YELLOW}   1. Verify server_config.json has TLS enabled${NC}"
+echo -e "${YELLOW}   2. Start Modbus server with TLS: docker-compose up -d${NC}"
 echo -e "${YELLOW}   3. Test secure connection${NC}"
 
 echo -e "\n${GREEN}✅ Ready for secure Modbus TCP communication!${NC}"
