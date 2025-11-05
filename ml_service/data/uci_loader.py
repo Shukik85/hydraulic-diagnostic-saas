@@ -25,32 +25,75 @@ class UCIHydraulicLoader:
         self.feature_names = []
         self.scaler = StandardScaler()
         
-    def load_data(self, filename: str = "industrial_fault_detection_data_1000.csv") -> pd.DataFrame:
-        """Load industrial IoT data from CSV."""
+    def find_data_file(self, filename: str) -> Path:
+        """Auto-search for data file in multiple locations."""
         
-        file_path = self.data_path / filename
+        # Search paths in priority order
+        search_paths = [
+            self.data_path / filename,  # Original path
+            Path("ml_service/data/industrial_iot") / filename,  # RAW export path
+            Path("data/industrial_iot") / filename,  # Alternative path
+            Path("./") / filename,  # Current directory
+        ]
         
-        if not file_path.exists():
-            logger.error(f"Data file not found: {file_path}")
-            raise FileNotFoundError(f"Data file not found: {file_path}")
+        for path in search_paths:
+            if path.exists():
+                logger.info(f"Found data file at: {path}")
+                return path
         
-        logger.info(f"Loading UCI Hydraulic data from {file_path}")
+        # If not found, show all attempted paths
+        attempted_paths = [str(p) for p in search_paths]
+        logger.error(f"Data file '{filename}' not found in any of: {attempted_paths}")
+        raise FileNotFoundError(f"Data file '{filename}' not found. Searched: {attempted_paths}")
         
-        # Load CSV data
-        df = pd.read_csv(file_path)
+    def load_data(self, filename: str = "Industrial_fault_detection.csv") -> pd.DataFrame:
+        """Load industrial IoT data from CSV with auto-path detection."""
         
-        # Parse timestamp
-        df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+        # First try the newer large dataset, then fallback to smaller
+        fallback_files = [
+            "Industrial_fault_detection.csv",
+            "industrial_fault_detection_data_1000.csv",
+        ]
         
-        logger.info(f"Loaded {len(df)} samples with columns: {list(df.columns)}")
-        logger.info(f"Date range: {df['Timestamp'].min()} to {df['Timestamp'].max()}")
+        if filename not in fallback_files:
+            fallback_files.insert(0, filename)
         
-        # Check fault label distribution
-        fault_counts = df['Fault Label'].value_counts().sort_index()
-        logger.info(f"Fault label distribution: {dict(fault_counts)}")
+        df = None
+        for try_filename in fallback_files:
+            try:
+                file_path = self.find_data_file(try_filename)
+                logger.info(f"Loading UCI Hydraulic data from {file_path}")
+                
+                # Load CSV data
+                df = pd.read_csv(file_path)
+                
+                # Parse timestamp
+                if 'Timestamp' in df.columns:
+                    df['Timestamp'] = pd.to_datetime(df['Timestamp'])
+                
+                logger.info(f"✅ Loaded {len(df)} samples from {try_filename}")
+                logger.info(f"   Columns: {list(df.columns)}")
+                
+                if 'Timestamp' in df.columns:
+                    logger.info(f"   Date range: {df['Timestamp'].min()} to {df['Timestamp'].max()}")
+                
+                # Check fault label distribution
+                if 'Fault Label' in df.columns:
+                    fault_counts = df['Fault Label'].value_counts().sort_index()
+                    logger.info(f"   Fault distribution: {dict(fault_counts)}")
+                
+                self.df = df
+                return df
+                
+            except FileNotFoundError:
+                logger.warning(f"File not found: {try_filename}, trying next...")
+                continue
+            except Exception as e:
+                logger.error(f"Error loading {try_filename}: {e}")
+                continue
         
-        self.df = df
-        return df
+        # If we get here, no file was found
+        raise FileNotFoundError(f"No valid data files found from: {fallback_files}")
     
     def engineer_features(self, window_minutes: int = 5) -> Tuple[np.ndarray, List[str]]:
         """Engineer features from time series data."""
@@ -60,21 +103,42 @@ class UCIHydraulicLoader:
         
         logger.info(f"Engineering features with {window_minutes}-minute windows")
         
-        # Sort by timestamp
-        df_sorted = self.df.sort_values('Timestamp').reset_index(drop=True)
+        # Sort by timestamp if available
+        if 'Timestamp' in self.df.columns:
+            df_sorted = self.df.sort_values('Timestamp').reset_index(drop=True)
+        else:
+            df_sorted = self.df.copy()
+            # Create synthetic timestamp if missing
+            df_sorted['Timestamp'] = pd.date_range("2025-01-01", periods=len(df_sorted), freq="100ms")
         
         # Create rolling windows for feature engineering
         feature_data = []
         feature_names = []
         
-        # Base sensor features (current values)
-        sensor_features = {
-            'vibration': 'Vibration (mm/s)',
-            'temperature': 'Temperature (°C)', 
-            'pressure': 'Pressure (bar)',
-            'rms_vibration': 'RMS Vibration',
-            'mean_temp': 'Mean Temp'
-        }
+        # Detect sensor features from columns
+        sensor_features = {}
+        for col in df_sorted.columns:
+            if col not in ['Timestamp', 'Fault Label']:
+                # Map column names to standardized names
+                if 'vibration' in col.lower() or 'VS' in col:
+                    sensor_features['vibration'] = col
+                elif 'temperature' in col.lower() or 'TS' in col:
+                    sensor_features['temperature'] = col
+                elif 'pressure' in col.lower() or 'PS' in col:
+                    sensor_features['pressure'] = col
+                elif 'rms' in col.lower():
+                    sensor_features['rms_vibration'] = col
+                elif 'mean' in col.lower() and 'temp' in col.lower():
+                    sensor_features['mean_temp'] = col
+        
+        # If standard mapping fails, use first few numeric columns
+        if not sensor_features:
+            numeric_cols = df_sorted.select_dtypes(include=[np.number]).columns
+            numeric_cols = [col for col in numeric_cols if col not in ['Fault Label']]
+            for i, col in enumerate(numeric_cols[:5]):  # Take first 5 numeric columns
+                sensor_features[f'sensor_{i+1}'] = col
+        
+        logger.info(f"Detected sensor features: {sensor_features}")
         
         # Add current sensor values
         for feature_name, column_name in sensor_features.items():
@@ -103,17 +167,25 @@ class UCIHydraulicLoader:
         ]
         feature_names.extend(derived_features)
         
-        # Set timestamp as index for rolling operations
-        df_sorted.set_index('Timestamp', inplace=True)
+        # Set timestamp as index for rolling operations if available
+        if 'Timestamp' in df_sorted.columns:
+            df_sorted.set_index('Timestamp', inplace=True)
         
         # Calculate rolling statistics
         rolling_stats = {}
         for feature_name, column_name in sensor_features.items():
-            rolling_series = df_sorted[column_name].rolling(rolling_window, min_periods=1)
-            rolling_stats[f"rolling_mean_{feature_name}"] = rolling_series.mean()
-            rolling_stats[f"rolling_std_{feature_name}"] = rolling_series.std().fillna(0)
-            rolling_stats[f"rolling_min_{feature_name}"] = rolling_series.min()
-            rolling_stats[f"rolling_max_{feature_name}"] = rolling_series.max()
+            if column_name in df_sorted.columns:
+                if 'Timestamp' in self.df.columns:
+                    rolling_series = df_sorted[column_name].rolling(rolling_window, min_periods=1)
+                else:
+                    # Use sample-based window if no timestamp
+                    window_samples = int(window_minutes * 60 * 10)  # Assume 10Hz
+                    rolling_series = df_sorted[column_name].rolling(window_samples, min_periods=1)
+                
+                rolling_stats[f"rolling_mean_{feature_name}"] = rolling_series.mean()
+                rolling_stats[f"rolling_std_{feature_name}"] = rolling_series.std().fillna(0)
+                rolling_stats[f"rolling_min_{feature_name}"] = rolling_series.min()
+                rolling_stats[f"rolling_max_{feature_name}"] = rolling_series.max()
         
         # Build feature matrix
         n_samples = len(df_sorted)
@@ -124,23 +196,51 @@ class UCIHydraulicLoader:
         
         # Current sensor values
         for feature_name, column_name in sensor_features.items():
-            X[:, feature_idx] = df_sorted[column_name].values
+            if column_name in df_sorted.columns:
+                X[:, feature_idx] = df_sorted[column_name].values
             feature_idx += 1
         
         # Rolling statistics
         for feature_name, column_name in sensor_features.items():
             for stat_type in ['mean', 'std', 'min', 'max']:
                 stat_key = f"rolling_{stat_type}_{feature_name}"
-                X[:, feature_idx] = rolling_stats[stat_key].values
+                if stat_key in rolling_stats:
+                    X[:, feature_idx] = rolling_stats[stat_key].values
                 feature_idx += 1
         
         # Derived features
-        vibration_col = df_sorted['Vibration (mm/s)'].values
-        pressure_col = df_sorted['Pressure (bar)'].values
-        temperature_col = df_sorted['Temperature (°C)'].values
+        # Get main sensor columns or use first available
+        vibration_col = None
+        pressure_col = None
+        temperature_col = None
+        
+        for feature_name, column_name in sensor_features.items():
+            if 'vibration' in feature_name and column_name in df_sorted.columns:
+                vibration_col = df_sorted[column_name].values
+            elif 'pressure' in feature_name and column_name in df_sorted.columns:
+                pressure_col = df_sorted[column_name].values
+            elif 'temperature' in feature_name and column_name in df_sorted.columns:
+                temperature_col = df_sorted[column_name].values
+        
+        # Use fallbacks if main sensors not found
+        if vibration_col is None and sensor_features:
+            first_sensor = list(sensor_features.values())[0]
+            vibration_col = df_sorted[first_sensor].values if first_sensor in df_sorted.columns else np.ones(n_samples)
+        
+        if pressure_col is None and len(sensor_features) > 1:
+            second_sensor = list(sensor_features.values())[1] 
+            pressure_col = df_sorted[second_sensor].values if second_sensor in df_sorted.columns else np.ones(n_samples) * 160
+        elif pressure_col is None:
+            pressure_col = np.ones(n_samples) * 160
+            
+        if temperature_col is None and len(sensor_features) > 2:
+            third_sensor = list(sensor_features.values())[2]
+            temperature_col = df_sorted[third_sensor].values if third_sensor in df_sorted.columns else np.ones(n_samples) * 60
+        elif temperature_col is None:
+            temperature_col = np.ones(n_samples) * 60
         
         # Pressure-vibration ratio
-        X[:, feature_idx] = pressure_col / (vibration_col + 1e-6)
+        X[:, feature_idx] = pressure_col / (np.abs(vibration_col) + 1e-6)
         feature_idx += 1
         
         # Temperature-pressure ratio
@@ -153,12 +253,32 @@ class UCIHydraulicLoader:
         feature_idx += 1
         
         # Pressure stability (inverse of std in window)
-        pressure_rolling_std = rolling_stats["rolling_std_pressure"].values
+        pressure_key = None
+        for feature_name, column_name in sensor_features.items():
+            if 'pressure' in feature_name:
+                pressure_key = f"rolling_std_{feature_name}"
+                break
+        
+        if pressure_key and pressure_key in rolling_stats:
+            pressure_rolling_std = rolling_stats[pressure_key].values
+        else:
+            pressure_rolling_std = np.ones(n_samples) * 0.1
+            
         X[:, feature_idx] = 1.0 / (pressure_rolling_std + 1e-6)
         feature_idx += 1
         
         # Temperature stability
-        temp_rolling_std = rolling_stats["rolling_std_temperature"].values
+        temp_key = None
+        for feature_name, column_name in sensor_features.items():
+            if 'temperature' in feature_name:
+                temp_key = f"rolling_std_{feature_name}"
+                break
+                
+        if temp_key and temp_key in rolling_stats:
+            temp_rolling_std = rolling_stats[temp_key].values
+        else:
+            temp_rolling_std = np.ones(n_samples) * 0.1
+            
         X[:, feature_idx] = 1.0 / (temp_rolling_std + 1e-6)
         feature_idx += 1
         
@@ -176,7 +296,11 @@ class UCIHydraulicLoader:
         if self.df is None:
             raise ValueError("Data not loaded. Call load_data() first.")
         
-        labels = self.df['Fault Label'].values
+        if 'Fault Label' not in self.df.columns:
+            logger.warning("No 'Fault Label' column found, creating dummy labels")
+            labels = np.zeros(len(self.df))
+        else:
+            labels = self.df['Fault Label'].values
         
         if binary_classification:
             # Convert multi-class to binary: 0 = normal, 1 = any fault
@@ -191,7 +315,7 @@ class UCIHydraulicLoader:
             return labels
     
     def load_and_prepare_production_data(self, 
-                                       filename: str = "industrial_fault_detection_data_1000.csv",
+                                       filename: str = "Industrial_fault_detection.csv",
                                        window_minutes: int = 5,
                                        binary_classification: bool = True,
                                        test_size: float = 0.2,
@@ -200,7 +324,7 @@ class UCIHydraulicLoader:
         
         logger.info("Starting UCI Hydraulic data preparation pipeline")
         
-        # Load raw data
+        # Load raw data with auto-search
         self.load_data(filename)
         
         # Engineer features
@@ -250,8 +374,8 @@ class UCIHydraulicLoader:
                 "binary_classification": binary_classification,
                 "class_distribution": dict(zip(*np.unique(y, return_counts=True))),
                 "date_range": {
-                    "start": str(self.df['Timestamp'].min()),
-                    "end": str(self.df['Timestamp'].max())
+                    "start": str(self.df['Timestamp'].min()) if 'Timestamp' in self.df.columns else "N/A",
+                    "end": str(self.df['Timestamp'].max()) if 'Timestamp' in self.df.columns else "N/A"
                 }
             }
         }
@@ -278,7 +402,7 @@ class UCIHydraulicLoader:
 
 
 def load_uci_hydraulic_data(data_path: str = "./data/industrial_iot",
-                           filename: str = "industrial_fault_detection_data_1000.csv",
+                           filename: str = "Industrial_fault_detection.csv",
                            window_minutes: int = 5) -> Dict[str, np.ndarray]:
     """Convenience function to load UCI hydraulic data."""
     
