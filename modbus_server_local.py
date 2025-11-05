@@ -1,8 +1,11 @@
 """
-Production-grade Modbus TCP Server for Development.
+Enterprise Modbus TCP Server for Hydraulic System Simulation.
 
-Uses modern pymodbus 3.11+ API with proper error handling and monitoring.
-Simulates hydraulic system with realistic sensor data and dynamic values.
+Uses correct pymodbus 3.11+ API with production-grade features:
+- Dynamic sensor values with realistic drift and noise
+- Automatic anomaly injection (2% chance)
+- Comprehensive logging and monitoring
+- Graceful shutdown handling
 """
 
 import asyncio
@@ -15,7 +18,8 @@ from typing import Optional, Dict, Any
 from datetime import datetime
 
 try:
-    from pymodbus.server.async_io import StartAsyncTcpServer
+    # FIXED: Correct imports for pymodbus 3.11+
+    from pymodbus.server import StartAsyncTcpServer
     from pymodbus.device import ModbusDeviceIdentification
     from pymodbus.datastore import (
         ModbusSequentialDataBlock,
@@ -28,7 +32,7 @@ try:
     print("✅ pymodbus 3.11+ imported successfully")
 except ImportError as e:
     print(f"❌ pymodbus import failed: {e}")
-    print("🔧 Try: pip uninstall -y pymodbus && pip install 'pymodbus>=3.11.0'")
+    print("🔧 Fix: pip uninstall -y pymodbus && pip install 'pymodbus>=3.11.0'")
     PYMODBUS_AVAILABLE = False
 
 # Configure logging
@@ -36,65 +40,86 @@ logging.basicConfig(
     level=logging.INFO, 
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("modbus_server")
+logger = logging.getLogger("hydraulic_sim")
 
 # Global server handle
 server_handle: Optional[Any] = None
 
 
 class HydraulicSystemSimulator:
-    """Simulates hydraulic system sensors with realistic behavior."""
+    """Enterprise-grade hydraulic system simulator with realistic behavior."""
     
     def __init__(self):
-        # Base sensor values
-        self.base_pressure = 150.0      # bar
-        self.base_temperature = 65.0    # °C  
-        self.base_flow_rate = 25.5      # L/min
-        self.base_vibration = 0.5       # mm/s
-        self.base_speed = 1500.0        # RPM
+        # Baseline sensor values (typical hydraulic system)
+        self.base_pressure = 150.0      # bar (typical working pressure)
+        self.base_temperature = 65.0    # °C (normal operating temperature)
+        self.base_flow_rate = 25.5      # L/min (pump flow rate)
+        self.base_vibration = 0.5       # mm/s (acceptable vibration level)
+        self.base_speed = 1500.0        # RPM (pump/motor speed)
         
         # Simulation parameters
-        self.noise_amplitude = 0.05     # 5% noise
-        self.drift_rate = 0.001         # slow drift
-        self.anomaly_chance = 0.02      # 2% chance of anomaly
+        self.noise_amplitude = 0.05     # 5% noise around baseline
+        self.drift_rate = 0.001         # slow drift over time
+        self.anomaly_chance = 0.02      # 2% chance of anomaly per update
         
         self.start_time = time.time()
         self.update_count = 0
+        self.last_anomaly = None
     
     def get_sensor_values(self) -> Dict[str, float]:
-        """Generate realistic sensor readings with noise and drift."""
+        """Generate realistic sensor readings with noise, drift, and anomalies."""
         self.update_count += 1
         elapsed = time.time() - self.start_time
         
-        # Add time-based drift and noise
-        noise = lambda base: base * (1 + random.uniform(-self.noise_amplitude, self.noise_amplitude))
-        drift = lambda base: base * (1 + self.drift_rate * elapsed * random.uniform(-1, 1))
+        # Add time-based drift and random noise
+        def add_noise(base_value):
+            return base_value * (1 + random.uniform(-self.noise_amplitude, self.noise_amplitude))
         
-        # Generate values
-        pressure = drift(noise(self.base_pressure))
-        temperature = drift(noise(self.base_temperature))
-        flow_rate = drift(noise(self.base_flow_rate))
-        vibration = drift(noise(self.base_vibration))
-        speed = drift(noise(self.base_speed))
+        def add_drift(base_value):
+            return base_value * (1 + self.drift_rate * elapsed * random.uniform(-1, 1))
         
-        # Occasional anomaly injection
+        # Generate base values with noise and drift
+        pressure = add_drift(add_noise(self.base_pressure))
+        temperature = add_drift(add_noise(self.base_temperature))
+        flow_rate = add_drift(add_noise(self.base_flow_rate))
+        vibration = add_drift(add_noise(self.base_vibration))
+        speed = add_drift(add_noise(self.base_speed))
+        
+        # Inject realistic anomalies occasionally
         if random.random() < self.anomaly_chance:
-            anomaly_type = random.choice(['pressure_spike', 'temp_drop', 'flow_stop'])
-            if anomaly_type == 'pressure_spike':
-                pressure *= 1.8  # 80% increase
-            elif anomaly_type == 'temp_drop':
-                temperature *= 0.7  # 30% drop
-            elif anomaly_type == 'flow_stop':
-                flow_rate *= 0.1  # 90% reduction
+            anomaly_type = random.choice([
+                'pressure_spike', 'pressure_drop', 'temp_rise', 
+                'temp_drop', 'flow_blockage', 'cavitation'
+            ])
             
-            logger.warning(f"🚨 Injected anomaly: {anomaly_type}")
+            if anomaly_type == 'pressure_spike':
+                pressure *= 1.8  # Hydraulic spike
+            elif anomaly_type == 'pressure_drop':
+                pressure *= 0.3  # Major leak
+            elif anomaly_type == 'temp_rise':
+                temperature *= 1.4  # Overheating
+            elif anomaly_type == 'temp_drop':
+                temperature *= 0.8  # Cooler malfunction
+            elif anomaly_type == 'flow_blockage':
+                flow_rate *= 0.1  # Blocked filter
+            elif anomaly_type == 'cavitation':
+                flow_rate *= 1.5  # Pump cavitation
+                vibration *= 3.0  # Increased vibration
+            
+            self.last_anomaly = {
+                'type': anomaly_type,
+                'timestamp': datetime.now(),
+                'update_count': self.update_count
+            }
+            
+            logger.warning(f"🚨 Hydraulic anomaly injected: {anomaly_type}")
         
         return {
-            'pressure': pressure,
-            'temperature': temperature,
-            'flow_rate': flow_rate,
-            'vibration': vibration,
-            'speed': speed,
+            'pressure': max(0, pressure),           # Pressure can't be negative
+            'temperature': max(-40, temperature),   # Reasonable temperature range
+            'flow_rate': max(0, flow_rate),         # Flow can't be negative
+            'vibration': max(0, vibration),         # Vibration can't be negative
+            'speed': max(0, speed),                 # Speed can't be negative
         }
 
 
@@ -134,7 +159,7 @@ def setup_initial_registers(context: ModbusServerContext, simulator: HydraulicSy
 
 
 async def update_registers_periodically(context: ModbusServerContext, simulator: HydraulicSystemSimulator):
-    """Update register values every 30 seconds to simulate live data."""
+    """Update register values every 30 seconds to simulate live hydraulic data."""
     while True:
         try:
             await asyncio.sleep(30)  # Update every 30 seconds
@@ -157,7 +182,12 @@ async def update_registers_periodically(context: ModbusServerContext, simulator:
             builder.add_32bit_float(values['flow_rate'])
             context[0x00].setValues(3, 2, builder.to_registers())
             
-            logger.info(f"🔄 Updated registers: P={values['pressure']:.1f}bar, T={values['temperature']:.1f}°C, Q={values['flow_rate']:.1f}L/min")
+            # Log updates with anomaly info
+            status = f"P={values['pressure']:.1f}bar, T={values['temperature']:.1f}°C, Q={values['flow_rate']:.1f}L/min"
+            if simulator.last_anomaly and simulator.update_count - simulator.last_anomaly['update_count'] < 2:
+                status += f" [ANOMALY: {simulator.last_anomaly['type']}]"
+            
+            logger.info(f"🔄 Register update #{simulator.update_count}: {status}")
             
         except asyncio.CancelledError:
             logger.info("📊 Register update task cancelled")
@@ -167,19 +197,19 @@ async def update_registers_periodically(context: ModbusServerContext, simulator:
 
 
 async def run_modbus_server():
-    """Start production-grade Modbus TCP server."""
+    """Start enterprise-grade Modbus TCP server."""
     global server_handle
     
     if not PYMODBUS_AVAILABLE:
         logger.error("❌ pymodbus not available")
         return
     
-    logger.info("🚀 Starting Enterprise Modbus TCP Server...")
+    logger.info("🚀 Starting Enterprise Hydraulic Modbus Server...")
     
     # Initialize hydraulic system simulator
     simulator = HydraulicSystemSimulator()
     
-    # Create data store
+    # Create data store with all register types
     store = ModbusSlaveContext(
         di=ModbusSequentialDataBlock(0, [0] * 100),  # Discrete inputs
         co=ModbusSequentialDataBlock(0, [0] * 100),  # Coils
@@ -223,13 +253,15 @@ async def run_modbus_server():
         logger.info("   Unit ID: 1")
         logger.info("   Protocol: Modbus TCP")
         logger.info("   Data updates: Every 30 seconds")
+        logger.info("   Anomaly injection: 2% chance per update")
         logger.info("")
         logger.info("🧪 Test connection:")
+        logger.info("   python modbus_quick_test.py")
         logger.info("   python test_modbus_simple.py")
         logger.info("")
         logger.info("⏹️ Press Ctrl+C to stop server")
         
-        # Keep server running
+        # Keep server running indefinitely
         await asyncio.Future()  # Run forever until cancelled
         
     except Exception as e:
@@ -241,6 +273,7 @@ async def run_modbus_server():
             server_handle.close()
             await server_handle.wait_closed()
         update_task.cancel()
+        logger.info("✅ Server cleanup completed")
 
 
 def signal_handler(signum, frame):
@@ -264,14 +297,15 @@ def main():
     print("🎯 Production-grade simulation with dynamic sensor data")
     print("🔧 Supports: pressure, temperature, flow, vibration, speed")
     print("📊 Auto-updates every 30s with drift and occasional anomalies")
+    print("🚨 Anomaly injection: pressure spikes, leaks, overheating, cavitation")
     print("=" * 70)
     
     if not PYMODBUS_AVAILABLE:
         print("❌ pymodbus not available")
-        print("🔧 Fix: pip uninstall -y pymodbus && pip install 'pymodbus>=3.11.0'")
+        print("🔧 Fix: pip install -r requirements-modbus.txt")
         sys.exit(1)
     
-    # Setup signal handlers
+    # Setup signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
