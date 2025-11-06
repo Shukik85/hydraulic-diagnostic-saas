@@ -50,6 +50,9 @@ class User(AbstractUser):
     if TYPE_CHECKING:
         hydraulic_systems: RelatedManager[HydraulicSystem]
 
+    class Meta:
+        db_table = "users_user"
+
     def __str__(self) -> str:
         return f"{self.get_full_name() or self.username} ({self.email})"
 
