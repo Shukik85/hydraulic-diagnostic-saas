@@ -6,11 +6,21 @@ Enterprise конфигурация для гидравлической диаг
 from pathlib import Path
 
 from pydantic import Field, validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """ML Service Settings with enterprise defaults."""
+    
+    # Pydantic v2 configuration - fix protected namespace warnings
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="allow",
+        protected_namespaces=("settings_",),  # Fix model_ prefix conflicts
+        json_encoders={Path: str}  # Convert Path to string
+    )
 
     # Application
     app_name: str = "Hydraulic ML Inference Service"
@@ -45,7 +55,7 @@ class Settings(BaseSettings):
     metrics_port: int = Field(default=9090, env="METRICS_PORT")
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
 
-    # Health Checks
+    # Health Checks - fixed namespace conflict
     health_check_interval: int = Field(default=30, env="HEALTH_CHECK_INTERVAL")
     model_warmup_timeout: int = Field(default=60, env="MODEL_WARMUP_TIMEOUT")
 
@@ -85,14 +95,6 @@ class Settings(BaseSettings):
         if v.upper() not in valid_levels:
             raise ValueError(f"Log level must be one of {valid_levels}")
         return v.upper()
-
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
-        extra = "allow"  # Allow extra fields from .env
-        json_encoders = {
-            Path: str  # Converts Path to string when serializing
-        }
 
 
 # Global settings instance
