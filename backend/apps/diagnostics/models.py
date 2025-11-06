@@ -379,6 +379,15 @@ class DiagnosticReport(models.Model):
 
     description: models.TextField = models.TextField(blank=True, default="")
 
+    created_by: models.ForeignKey = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_diagnostic_reports",
+        db_index=True,
+    )
+
     created_at: models.DateTimeField = models.DateTimeField(
         default=timezone.now, db_index=True
     )
