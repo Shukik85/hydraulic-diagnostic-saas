@@ -92,6 +92,7 @@ ehthumbs.db
 .temp/
 temp/
 tmp/
+certs/
 
 # ML / Data Science specific
 *.pkl
