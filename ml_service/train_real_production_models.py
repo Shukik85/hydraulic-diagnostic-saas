@@ -160,11 +160,11 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
     
     def train_xgboost_real(self, X_train: np.ndarray, y_train: np.ndarray,
                           X_val: np.ndarray, y_val: np.ndarray) -> Dict[str, Any]:
-        """Train XGBoost on REAL data."""
+        """Train XGBoost on REAL data - FIXED early stopping."""
         
         console.print("\n🚀 Training XGBoost on REAL UCI data...")
         
-        # Hyperparameter optimization
+        # Hyperparameter optimization - REMOVED early_stopping_rounds from grid
         param_grid = {
             'n_estimators': [200, 300, 500],
             'max_depth': [3, 5, 7, 9],
@@ -173,12 +173,11 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
             'colsample_bytree': [0.8, 0.9, 1.0]
         }
         
-        # Base model
+        # Base model - NO early_stopping_rounds in constructor
         xgb_base = xgb.XGBClassifier(
             random_state=42,
             eval_metric='auc',
-            verbosity=0,
-            early_stopping_rounds=50
+            verbosity=0
         )
         
         # Grid search with cross-validation
@@ -190,12 +189,28 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         console.print("   🔍 Hyperparameter optimization on REAL data...")
         grid_search.fit(X_train, y_train)
         
-        # Best model
-        best_model = grid_search.best_estimator_
+        # Best model - train with early stopping separately
+        best_params = grid_search.best_params_
+        
+        # Create final model with early stopping
+        final_model = xgb.XGBClassifier(
+            **best_params,
+            random_state=42,
+            eval_metric='auc',
+            verbosity=0
+        )
+        
+        # Train final model with validation set for early stopping
+        final_model.fit(
+            X_train, y_train,
+            eval_set=[(X_val, y_val)],
+            early_stopping_rounds=50,
+            verbose=False
+        )
         
         # Evaluate on validation set
-        y_val_pred = best_model.predict(X_val)
-        y_val_pred_proba = best_model.predict_proba(X_val)[:, 1]
+        y_val_pred = final_model.predict(X_val)
+        y_val_pred_proba = final_model.predict_proba(X_val)[:, 1]
         
         # Calculate metrics
         auc_score = roc_auc_score(y_val, y_val_pred_proba)
@@ -203,14 +218,14 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         accuracy = accuracy_score(y_val, y_val_pred)
         
         training_metrics = {
-            "best_params": grid_search.best_params_,
+            "best_params": best_params,
             "best_cv_score": grid_search.best_score_,
             "validation_auc": auc_score,
             "validation_accuracy": accuracy,
             "validation_precision": precision,
             "validation_recall": recall,
             "validation_f1": f1,
-            "feature_importance": best_model.feature_importances_.tolist(),
+            "feature_importance": final_model.feature_importances_.tolist(),
             "data_source": "REAL_UCI_HYDRAULIC_DATA"  # Mark as real!
         }
         
@@ -219,7 +234,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         console.print(f"   ✅ REAL Data Val F1: {f1:.4f}")
         
         return {
-            "model": best_model,
+            "model": final_model,
             "scaler": None,  # Already scaled
             "training_metrics": training_metrics,
             "features_count": X_train.shape[1]
@@ -546,7 +561,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
 🚫 NO MORE MOCK MODELS - ONLY REAL TRAINED MODELS!""",
             title="🔥 REAL Data Training Summary",
             style=status_style
-        ))
+        )
         
         self.console.print(summary_panel)
     
@@ -566,7 +581,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         # Training tasks
         training_tasks = [
             ("catboost", self.train_catboost_real),
-            ("xgboost", self.train_xgboost_real),
+            ("xgboost", self.train_xgboost_real),  # Fixed early stopping
             ("random_forest", self.train_random_forest_real),
             ("adaptive", self.train_adaptive_real)
         ]
