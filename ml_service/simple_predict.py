@@ -22,9 +22,16 @@ from contextlib import asynccontextmanager
 structlog.configure(processors=[structlog.dev.ConsoleRenderer(colors=True)])
 logger = structlog.get_logger()
 
-# Metrics
-prediction_counter = Counter('ml_predictions_total', ['model', 'result'])
-prediction_latency = Histogram('ml_prediction_duration_seconds')
+# Prometheus Metrics - with required documentation parameter
+prediction_counter = Counter(
+    'ml_predictions_total', 
+    'Total number of predictions made',
+    ['model', 'result']
+)
+prediction_latency = Histogram(
+    'ml_prediction_duration_seconds',
+    'Time spent processing prediction requests'
+)
 
 
 class PredictRequest(BaseModel):
@@ -251,6 +258,7 @@ async def metrics():
 
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run(
         "simple_predict:app",
         host="0.0.0.0",
