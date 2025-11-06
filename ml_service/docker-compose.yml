@@ -1,12 +1,10 @@
-version: '3.8'
-
 services:
-  # ML Training service
+  # ML Training service (GPU)
   ml-trainer:
     build:
       context: .
       dockerfile: Dockerfile
-      target: base-gpu  # GPU-capable image
+      target: base-gpu
     container_name: hdx-ml-trainer
     volumes:
       - ./models:/app/models
@@ -14,6 +12,15 @@ services:
       - ./data:/app/data
     environment:
       - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     profiles:
       - training
       - gpu
@@ -21,7 +28,7 @@ services:
     networks:
       - ml-network
 
-  # ML Training (CPU only)
+  # ML Training service (CPU)
   ml-trainer-cpu:
     build:
       context: .
@@ -53,8 +60,17 @@ services:
       - ./reports:/app/reports:ro
     environment:
       - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       - MODEL_PATH=/app/models
       - REPORTS_PATH=/app/reports
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     profiles:
       - inference
       - gpu
