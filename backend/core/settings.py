@@ -49,6 +49,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.users.apps.UsersConfig",
+    "apps.sensors.apps.SensorsConfig",
     "apps.diagnostics.apps.DiagnosticsConfig",
     "apps.rag_assistant.apps.RagAssistantConfig",
 ]
