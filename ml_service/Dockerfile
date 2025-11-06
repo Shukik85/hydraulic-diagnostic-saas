@@ -1,50 +1,30 @@
 # ML Service - CPU/GPU ready container
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04 as base-gpu
 
-# Install Python 3.11
+# Install Python 3.11 and system dependencies
 RUN apt-get update && apt-get install -y \
     python3.11 python3.11-dev python3.11-venv \
     python3-pip curl build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Python 3.11 as default
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
-RUN update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-
-# Install ML dependencies
-RUN pip install --upgrade pip setuptools wheel
-
-# Core ML packages with GPU support
-RUN pip install \
-    catboost==1.2.7 \
-    xgboost==2.0.3 \
-    scikit-learn==1.5.2 \
-    numpy==1.26.4 \
-    pandas==2.2.3 \
-    joblib==1.4.2
-
-# FastAPI and async
-RUN pip install \
-    fastapi==0.115.4 \
-    uvicorn[standard]==0.32.0 \
-    pydantic==2.9.2 \
-    aiohttp==3.10.10
-
-# Observability
-RUN pip install \
-    structlog==24.4.0 \
-    rich==13.9.2 \
-    prometheus-client==0.21.0
-
-# Production
-RUN pip install \
-    gunicorn==23.0.0 \
-    python-multipart==0.0.12
+# Set Python 3.11 as default and pin pip
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 && \
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 WORKDIR /app
 
-# Copy ML service code
-COPY . .
+# Copy requirements first for better layer caching
+COPY requirements.txt /app/requirements.txt
+
+# Install all dependencies from requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /app/requirements.txt
+
+# Verify imports during build (fails build if broken)
+RUN python -c "import joblib,catboost,xgboost,sklearn,numpy,pandas,fastapi; print('✅ Build-time imports OK')"
+
+# Copy application code
+COPY . /app
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
@@ -60,26 +40,18 @@ FROM python:3.11-slim as base-cpu
 
 RUN apt-get update && apt-get install -y curl build-essential && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install \
-    catboost==1.2.7 \
-    xgboost==2.0.3 \
-    scikit-learn==1.5.2 \
-    numpy==1.26.4 \
-    pandas==2.2.3 \
-    joblib==1.4.2 \
-    fastapi==0.115.4 \
-    uvicorn[standard]==0.32.0 \
-    pydantic==2.9.2 \
-    aiohttp==3.10.10 \
-    structlog==24.4.0 \
-    rich==13.9.2 \
-    prometheus-client==0.21.0 \
-    gunicorn==23.0.0 \
-    python-multipart==0.0.12
-
 WORKDIR /app
-COPY . .
+
+# Copy requirements and install
+COPY requirements.txt /app/requirements.txt
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r /app/requirements.txt
+
+# Verify imports
+RUN python -c "import joblib,catboost,xgboost,sklearn,numpy,pandas,fastapi; print('✅ CPU build-time imports OK')"
+
+# Copy application code
+COPY . /app
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8001/healthz || exit 1
