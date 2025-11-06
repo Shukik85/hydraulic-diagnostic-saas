@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # ML Training service
+  ml-trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base-gpu  # GPU-capable image
+    container_name: hdx-ml-trainer
+    volumes:
+      - ./models:/app/models
+      - ./reports:/app/reports
+      - ./data:/app/data
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    profiles:
+      - training
+      - gpu
+    command: python train_real_production_models.py --gpu
+    networks:
+      - ml-network
+
+  # ML Training (CPU only)
+  ml-trainer-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base-cpu
+    container_name: hdx-ml-trainer-cpu
+    volumes:
+      - ./models:/app/models
+      - ./reports:/app/reports
+      - ./data:/app/data
+    profiles:
+      - training
+      - cpu
+    command: python train_real_production_models.py
+    networks:
+      - ml-network
+
+  # ML Inference service (GPU)
+  ml-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base-gpu
+    container_name: hdx-ml-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./models:/app/models:ro
+      - ./reports:/app/reports:ro
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - MODEL_PATH=/app/models
+      - REPORTS_PATH=/app/reports
+    profiles:
+      - inference
+      - gpu
+    command: python -m uvicorn simple_predict:app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - ml-network
+
+  # ML Inference service (CPU)
+  ml-service-cpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: base-cpu
+    container_name: hdx-ml-service-cpu
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./models:/app/models:ro
+      - ./reports:/app/reports:ro
+    environment:
+      - MODEL_PATH=/app/models
+      - REPORTS_PATH=/app/reports
+    profiles:
+      - inference
+      - cpu
+    command: python -m uvicorn simple_predict:app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - ml-network
+
+networks:
+  ml-network:
+    driver: bridge
+
+volumes:
+  models-data:
+    driver: local
+  reports-data:
+    driver: local
