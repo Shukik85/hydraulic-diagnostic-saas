@@ -135,7 +135,7 @@ if (-not $backendReady) {
     
     Write-Host "🚑 Attempting to fix DRF Spectacular errors..." -ForegroundColor Yellow
     docker-compose exec backend python manage.py fix_drf_spectacular_errors
-else {
+} else {
     Write-Host "🎉 SUCCESS! All services are running correctly" -ForegroundColor Green
     Write-Host "" 
     Write-Host "Available services:" -ForegroundColor Cyan
