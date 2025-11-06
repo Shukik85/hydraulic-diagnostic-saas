@@ -160,11 +160,11 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
     
     def train_xgboost_real(self, X_train: np.ndarray, y_train: np.ndarray,
                           X_val: np.ndarray, y_val: np.ndarray) -> Dict[str, Any]:
-        """Train XGBoost on REAL data - FIXED early stopping."""
+        """Train XGBoost on REAL data - compatible with older sklearn API."""
         
         console.print("\n🚀 Training XGBoost on REAL UCI data...")
         
-        # Hyperparameter optimization - REMOVED early_stopping_rounds from grid
+        # Hyperparameter optimization (без early stopping в GridSearch)
         param_grid = {
             'n_estimators': [200, 300, 500],
             'max_depth': [3, 5, 7, 9],
@@ -173,14 +173,12 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
             'colsample_bytree': [0.8, 0.9, 1.0]
         }
         
-        # Base model - NO early_stopping_rounds in constructor
         xgb_base = xgb.XGBClassifier(
             random_state=42,
             eval_metric='auc',
             verbosity=0
         )
         
-        # Grid search with cross-validation
         grid_search = GridSearchCV(
             xgb_base, param_grid, cv=3, scoring='roc_auc',
             n_jobs=-1, verbose=0
@@ -189,10 +187,9 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         console.print("   🔍 Hyperparameter optimization on REAL data...")
         grid_search.fit(X_train, y_train)
         
-        # Best model - train with early stopping separately
         best_params = grid_search.best_params_
         
-        # Create final model with early stopping
+        # Финальная модель: раннюю остановку задаём через set_params, а не через fit()
         final_model = xgb.XGBClassifier(
             **best_params,
             random_state=42,
@@ -200,19 +197,23 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
             verbosity=0
         )
         
-        # Train final model with validation set for early stopping
+        # Критично: включаем раннюю остановку как параметр модели для старых версий
+        try:
+            final_model.set_params(early_stopping_rounds=50)
+        except Exception:
+            # Если версия не поддерживает параметр — просто продолжаем без него
+            pass
+        
+        # Обучение: передаём только eval_set
         final_model.fit(
             X_train, y_train,
             eval_set=[(X_val, y_val)],
-            early_stopping_rounds=50,
             verbose=False
         )
         
-        # Evaluate on validation set
         y_val_pred = final_model.predict(X_val)
         y_val_pred_proba = final_model.predict_proba(X_val)[:, 1]
         
-        # Calculate metrics
         auc_score = roc_auc_score(y_val, y_val_pred_proba)
         precision, recall, f1, _ = precision_recall_fscore_support(y_val, y_val_pred, average='binary')
         accuracy = accuracy_score(y_val, y_val_pred)
@@ -226,7 +227,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
             "validation_recall": recall,
             "validation_f1": f1,
             "feature_importance": final_model.feature_importances_.tolist(),
-            "data_source": "REAL_UCI_HYDRAULIC_DATA"  # Mark as real!
+            "data_source": "REAL_UCI_HYDRAULIC_DATA"
         }
         
         console.print(f"   ✅ REAL Data CV AUC: {grid_search.best_score_:.4f}")
@@ -235,7 +236,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         
         return {
             "model": final_model,
-            "scaler": None,  # Already scaled
+            "scaler": None,
             "training_metrics": training_metrics,
             "features_count": X_train.shape[1]
         }
@@ -246,7 +247,6 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         
         console.print("\n🌲 Training Random Forest on REAL UCI data...")
         
-        # Hyperparameter optimization
         param_grid = {
             'n_estimators': [200, 300, 500],
             'max_depth': [10, 15, 20, None],
@@ -255,7 +255,6 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
             'max_features': ['sqrt', 'log2', None]
         }
         
-        # Base model
         rf_base = RandomForestClassifier(
             random_state=42,
             oob_score=True,
@@ -263,7 +262,6 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
             n_jobs=-1
         )
         
-        # Grid search with cross-validation
         grid_search = GridSearchCV(
             rf_base, param_grid, cv=3, scoring='roc_auc',
             n_jobs=-1, verbose=0
@@ -272,14 +270,11 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         console.print("   🔍 Hyperparameter optimization on REAL data...")
         grid_search.fit(X_train, y_train)
         
-        # Best model
         best_model = grid_search.best_estimator_
         
-        # Evaluate on validation set
         y_val_pred = best_model.predict(X_val)
         y_val_pred_proba = best_model.predict_proba(X_val)[:, 1]
         
-        # Calculate metrics
         auc_score = roc_auc_score(y_val, y_val_pred_proba)
         precision, recall, f1, _ = precision_recall_fscore_support(y_val, y_val_pred, average='binary')
         accuracy = accuracy_score(y_val, y_val_pred)
@@ -294,7 +289,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
             "validation_f1": f1,
             "oob_score": best_model.oob_score_,
             "feature_importance": best_model.feature_importances_.tolist(),
-            "data_source": "REAL_UCI_HYDRAULIC_DATA"  # Mark as real!
+            "data_source": "REAL_UCI_HYDRAULIC_DATA"
         }
         
         console.print(f"   ✅ REAL Data CV AUC: {grid_search.best_score_:.4f}")
@@ -304,7 +299,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         
         return {
             "model": best_model,
-            "scaler": None,  # Already scaled
+            "scaler": None,
             "training_metrics": training_metrics,
             "features_count": X_train.shape[1]
         }
@@ -315,12 +310,10 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         
         console.print("\n🔄 Training Adaptive model on REAL UCI data...")
         
-        # For Isolation Forest, use only normal samples for training
         X_normal = X_train[y_train == 0]
         
         console.print(f"   📊 Training on {len(X_normal)} REAL normal samples")
         
-        # Hyperparameter optimization
         param_grid = {
             'n_estimators': [100, 200, 300],
             'contamination': [0.05, 0.1, 0.15, 0.2, 0.25],
@@ -333,13 +326,10 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         
         console.print("   🔍 Hyperparameter optimization on REAL data...")
         
-        # Manual grid search for Isolation Forest
         for n_est in param_grid['n_estimators']:
             for contam in param_grid['contamination']:
                 for max_feat in param_grid['max_features']:
-                    
                     try:
-                        # Train model
                         model = IsolationForest(
                             n_estimators=n_est,
                             contamination=contam,
@@ -347,52 +337,36 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
                             random_state=42,
                             n_jobs=-1
                         )
-                        
-                        model.fit(X_normal)  # Train on REAL normal samples
-                        
-                        # Predict on validation set
+                        model.fit(X_normal)
                         anomaly_scores = model.decision_function(X_val)
-                        
-                        # Calculate AUC using anomaly scores  
-                        auc = roc_auc_score(y_val, -anomaly_scores)  # Negative for correct direction
-                        
+                        auc = roc_auc_score(y_val, -anomaly_scores)
                         if auc > best_score:
                             best_score = auc
-                            best_params = {
-                                'n_estimators': n_est,
-                                'contamination': contam,
-                                'max_features': max_feat
-                            }
+                            best_params = {'n_estimators': n_est, 'contamination': contam, 'max_features': max_feat}
                             best_model = model
                     except Exception:
                         continue
         
-        # Final evaluation
         if best_model is not None:
             anomaly_scores = best_model.decision_function(X_val)
             y_val_pred_binary = best_model.predict(X_val)
             y_val_pred = (y_val_pred_binary == -1).astype(int)
-            
             auc_score = roc_auc_score(y_val, -anomaly_scores)
             precision, recall, f1, _ = precision_recall_fscore_support(y_val, y_val_pred, average='binary')
             accuracy = accuracy_score(y_val, y_val_pred)
         else:
-            # Fallback if optimization failed
             best_model = IsolationForest(
                 n_estimators=200,
-                contamination=0.15,  # Estimated from data distribution
+                contamination=0.15,
                 random_state=42
             )
             best_model.fit(X_normal)
-            
             anomaly_scores = best_model.decision_function(X_val)
             y_val_pred_binary = best_model.predict(X_val)
             y_val_pred = (y_val_pred_binary == -1).astype(int)
-            
             auc_score = roc_auc_score(y_val, -anomaly_scores)
             precision, recall, f1, _ = precision_recall_fscore_support(y_val, y_val_pred, average='binary')
             accuracy = accuracy_score(y_val, y_val_pred)
-            
             best_params = {'n_estimators': 200, 'contamination': 0.15, 'max_features': 1.0}
             best_score = auc_score
         
@@ -405,7 +379,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
             "validation_recall": recall,
             "validation_f1": f1,
             "training_samples": len(X_normal),
-            "data_source": "REAL_UCI_HYDRAULIC_DATA"  # Mark as real!
+            "data_source": "REAL_UCI_HYDRAULIC_DATA"
         }
         
         console.print(f"   ✅ REAL Data Val AUC: {best_score:.4f}")
@@ -414,7 +388,7 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         
         return {
             "base_model": best_model,
-            "scaler": None,  # Already scaled
+            "scaler": None,
             "training_metrics": training_metrics,
             "features_count": X_train.shape[1]
         }
@@ -428,75 +402,41 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         
         for model_name, model_data in self.trained_models.items():
             console.print(f"   Testing {model_name} on REAL data...")
-            
             try:
                 if model_name == 'adaptive':
-                    # Special handling for Isolation Forest
                     model = model_data['base_model']
                     anomaly_scores = model.decision_function(X_test)
                     y_pred_binary = model.predict(X_test)
                     y_pred = (y_pred_binary == -1).astype(int)
-                    y_pred_proba = (-anomaly_scores + 1) / 2  # Convert to 0-1 range
+                    y_pred_proba = (-anomaly_scores + 1) / 2
                 else:
                     model = model_data['model']
                     y_pred = model.predict(X_test)
                     y_pred_proba = model.predict_proba(X_test)[:, 1]
-                
-                # Calculate metrics on REAL test data
                 auc_score = roc_auc_score(y_test, y_pred_proba)
                 precision, recall, f1, _ = precision_recall_fscore_support(y_test, y_pred, average='binary')
                 accuracy = accuracy_score(y_test, y_pred)
-                
-                test_results[model_name] = {
-                    "test_auc": auc_score,
-                    "test_accuracy": accuracy,
-                    "test_precision": precision,
-                    "test_recall": recall,
-                    "test_f1": f1,
-                    "data_source": "REAL_UCI_HYDRAULIC_TEST_DATA"
-                }
-                
+                test_results[model_name] = {"test_auc": auc_score, "test_accuracy": accuracy, "test_precision": precision, "test_recall": recall, "test_f1": f1, "data_source": "REAL_UCI_HYDRAULIC_TEST_DATA"}
                 console.print(f"     ✅ REAL Test AUC: {auc_score:.4f}, F1: {f1:.4f}")
-                
             except Exception as e:
                 console.print(f"     ❌ Error testing {model_name} on REAL data: {e}")
                 test_results[model_name] = {"error": str(e)}
-        
         return test_results
     
     def save_real_trained_models(self) -> None:
         """Save all REAL trained models to disk."""
-        
         console.print("\n💾 Saving REAL trained models...")
-        
         for model_name, model_data in self.trained_models.items():
             try:
-                # Prepare data for saving - MARK AS REAL!
-                save_data = {
-                    **model_data,
-                    "training_timestamp": time.time(),
-                    "model_version": "1.0.0-production-REAL",
-                    "dataset_info": "REAL UCI Hydraulic System Industrial IoT Data",
-                    "data_source": "REAL_UCI_HYDRAULIC_DATA",
-                    "dataset_details": self.data_info,
-                    "is_mock_model": False,  # Explicitly mark as NOT mock
-                    "training_method": "hyperparameter_optimization_on_real_data"
-                }
-                
-                # Save to file - REPLACE the mock model!
+                save_data = {**model_data, "training_timestamp": time.time(), "model_version": "1.0.0-production-REAL", "dataset_info": "REAL UCI Hydraulic System Industrial IoT Data", "data_source": "REAL_UCI_HYDRAULIC_DATA", "dataset_details": self.data_info, "is_mock_model": False, "training_method": "hyperparameter_optimization_on_real_data"}
                 model_path = self.models_dir / f"{model_name}_model.joblib"
                 joblib.dump(save_data, model_path)
-                
                 console.print(f"   ✅ REAL {model_name} saved to {model_path}")
                 console.print(f"      🔍 Size: {model_path.stat().st_size / 1024:.1f} KB")
-                
             except Exception as e:
                 console.print(f"   ❌ Failed to save REAL {model_name}: {e}")
     
     def display_real_training_summary(self, test_results: Dict[str, Any]) -> None:
-        """Display comprehensive REAL training summary."""
-        
-        # Training Results Table
         training_table = Table(title="🏆 REAL Production Model Training Results (UCI Data)")
         training_table.add_column("Model", style="cyan")
         training_table.add_column("CV AUC", style="green")
@@ -506,49 +446,19 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
         training_table.add_column("Test Accuracy", style="blue")
         training_table.add_column("Data Source", style="bold")
         training_table.add_column("Status", style="bold")
-        
         for model_name in self.trained_models.keys():
             train_metrics = self.trained_models[model_name]['training_metrics']
             test_metrics = test_results.get(model_name, {})
-            
             if 'error' not in test_metrics:
-                training_table.add_row(
-                    model_name,
-                    f"{train_metrics.get('best_cv_score', 0):.4f}",
-                    f"{train_metrics.get('validation_auc', 0):.4f}",
-                    f"{test_metrics.get('test_auc', 0):.4f}",
-                    f"{test_metrics.get('test_f1', 0):.4f}",
-                    f"{test_metrics.get('test_accuracy', 0):.4f}",
-                    "REAL UCI DATA",
-                    "✅ SUCCESS"
-                )
+                training_table.add_row(model_name, f"{train_metrics.get('best_cv_score', 0):.4f}", f"{train_metrics.get('validation_auc', 0):.4f}", f"{test_metrics.get('test_auc', 0):.4f}", f"{test_metrics.get('test_f1', 0):.4f}", f"{test_metrics.get('test_accuracy', 0):.4f}", "REAL UCI DATA", "✅ SUCCESS")
             else:
-                training_table.add_row(
-                    model_name,
-                    "N/A",
-                    "N/A", 
-                    "N/A",
-                    "N/A",
-                    "N/A",
-                    "ERROR",
-                    "❌ FAILED"
-                )
-        
+                training_table.add_row(model_name, "N/A", "N/A", "N/A", "N/A", "N/A", "ERROR", "❌ FAILED")
         self.console.print(training_table)
-        
-        # Summary Panel
         successful_models = len([m for m in test_results.values() if 'error' not in m])
         total_models = len(self.trained_models)
-        
-        if successful_models == total_models:
-            status_text = f"🎉 ALL {total_models} MODELS TRAINED ON REAL DATA!"
-            status_style = "green"
-        else:
-            status_text = f"⚠️ {successful_models}/{total_models} models trained on REAL data"
-            status_style = "yellow"
-        
-        summary_panel = Panel(
-            f"""🏭 REAL Dataset: {self.data_info['total_samples']:,} samples from UCI Hydraulic System
+        status_text = f"🎉 ALL {total_models} MODELS TRAINED ON REAL DATA!" if successful_models == total_models else f"⚠️ {successful_models}/{total_models} models trained on REAL data"
+        status_style = "green" if successful_models == total_models else "yellow"
+        summary_panel = Panel(f"""🏭 REAL Dataset: {self.data_info['total_samples']:,} samples from UCI Hydraulic System
 📊 Features: {self.data_info['n_features']} engineered from REAL sensor data
 🕰️ Time Window: {self.data_info['window_minutes']} minutes rolling statistics
 📈 Date Range: {self.data_info['date_range']['start']} to {self.data_info['date_range']['end']}
@@ -558,82 +468,41 @@ Date Range: {data['data_info']['date_range']['start']} to {data['data_info']['da
 
 ⚡ Models trained with hyperparameter optimization on REAL data!
 💾 Saved to: {self.models_dir}
-🚫 NO MORE MOCK MODELS - ONLY REAL TRAINED MODELS!""",
-            title="🔥 REAL Data Training Summary",
-            style=status_style
-        )
-        
+🚫 NO MORE MOCK MODELS - ONLY REAL TRAINED MODELS!""", title="🔥 REAL Data Training Summary", style=status_style)
         self.console.print(summary_panel)
     
     async def train_all_models_on_real_data(self) -> None:
-        """Train all models on REAL UCI data."""
-        
-        self.console.print(Panel.fit(
-            "🔥 REAL Production Model Training - UCI Hydraulic Data",
-            style="bold red"
-        ))
-        
-        # Load REAL data
+        self.console.print(Panel.fit("🔥 REAL Production Model Training - UCI Hydraulic Data", style="bold red"))
         data = self.load_real_data()
         X_train, X_val, X_test = data['X_train'], data['X_val'], data['X_test']
         y_train, y_val, y_test = data['y_train'], data['y_val'], data['y_test']
-        
-        # Training tasks
-        training_tasks = [
-            ("catboost", self.train_catboost_real),
-            ("xgboost", self.train_xgboost_real),  # Fixed early stopping
-            ("random_forest", self.train_random_forest_real),
-            ("adaptive", self.train_adaptive_real)
-        ]
-        
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TimeRemainingColumn(),
-            console=self.console
-        ) as progress:
-            
+        training_tasks = [("catboost", self.train_catboost_real), ("xgboost", self.train_xgboost_real), ("random_forest", self.train_random_forest_real), ("adaptive", self.train_adaptive_real)]
+        with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), BarColumn(), TimeRemainingColumn(), console=self.console) as progress:
             overall_task = progress.add_task("Training on REAL data...", total=len(training_tasks))
-            
             for model_name, train_func in training_tasks:
                 model_task = progress.add_task(f"Training {model_name} on REAL data...", total=None)
-                
                 try:
                     trained_model = train_func(X_train, y_train, X_val, y_val)
                     self.trained_models[model_name] = trained_model
-                    
                     progress.update(model_task, description=f"✅ {model_name} - REAL DATA TRAINED")
-                    
                 except Exception as e:
                     progress.update(model_task, description=f"❌ {model_name} - REAL DATA FAILED: {str(e)}")
                     console.print(f"\n💥 Error training {model_name} on REAL data: {e}")
-                
                 progress.advance(overall_task)
                 progress.remove_task(model_task)
-        
-        # Evaluate on REAL test set
         if self.trained_models:
             test_results = self.evaluate_on_test_set(X_test, y_test)
-            
-            # Save REAL models
             self.save_real_trained_models()
-            
-            # Display results
             self.display_real_training_summary(test_results)
         else:
             console.print("❌ No models were successfully trained on REAL data!")
 
 
 async def main():
-    """Main REAL training pipeline."""
     trainer = RealProductionModelTrainer()
-    
     try:
         await trainer.train_all_models_on_real_data()
-        
-        console.print(Panel(
-            """🎉 REAL Production model training completed!
+        console.print(Panel("""🎉 REAL Production model training completed!
 
 🔥 ALL MODELS TRAINED ON ACTUAL UCI HYDRAULIC DATA!
 🚫 NO MORE MOCK MODELS!
@@ -643,13 +512,8 @@ async def main():
    2. Run 'python scripts/test_models.py' - comprehensive testing
    3. Deploy to production with confidence!
    
-💪 REAL DATA = REAL CONFIDENCE!""",
-            title="✅ Mission Accomplished",
-            style="bold green"
-        ))
-        
+💪 REAL DATA = REAL CONFIDENCE!""", title="✅ Mission Accomplished", style="bold green"))
         return 0
-        
     except KeyboardInterrupt:
         console.print("\n❌ Training interrupted by user")
         return 1
