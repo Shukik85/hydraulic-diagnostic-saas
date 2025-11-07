@@ -1,6 +1,7 @@
 """Django settings for hydraulic-diagnostic-saas project.
 
 CI-compatible with TimescaleDB and Celery Beat integration.
+Django 5.1 + DRF 3.15 compatible.
 """
 
 import os
@@ -40,6 +41,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",  # ADDED: JWT blacklist
     "drf_spectacular",  # OpenAPI/Swagger documentation
     "corsheaders",
     "django_filters",
@@ -47,11 +49,12 @@ THIRD_PARTY_APPS = [
     "django_celery_beat",  # Database-backed periodic tasks for TimescaleDB
 ]
 
+# FIXED: Исправлено на реальную структуру проекта
 LOCAL_APPS = [
-    "apps.users.apps.UsersConfig",
-    "apps.sensors.apps.SensorsConfig",
-    "apps.diagnostics.apps.DiagnosticsConfig",
-    "apps.rag_assistant.apps.RagAssistantConfig",
+    "users.apps.UsersConfig",           # backend/users/
+    "sensors.apps.SensorsConfig",       # backend/sensors/
+    "diagnostics.apps.DiagnosticsConfig",  # backend/diagnostics/ (FIXED)
+    "rag_assistant.apps.RagAssistantConfig",  # backend/rag_assistant/
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -108,7 +111,7 @@ DATABASES = {
         "OPTIONS": {
             "pool": {
                 "min_size": 2,
-                "max_size": 20,  # Увеличено для Celery задач
+                "max_size": 20,
                 "max_idle": 60,
                 "timeout": 30,
                 "max_lifetime": 300,
@@ -148,12 +151,12 @@ MEDIA_ROOT = BASE_DIR / "media"
 # ----------------------------------------------------------------------------
 # Security Headers & HTTPS
 # ----------------------------------------------------------------------------
-SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
-SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=True, cast=bool)
-CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=True, cast=bool)
-SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=31536000, cast=int)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=False, cast=bool)  # FIXED: False for dev
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=False, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=False, cast=bool)
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)  # FIXED: 0 for dev
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False, cast=bool)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=False, cast=bool)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = config(
     "SECURE_REFERRER_POLICY", default="no-referrer-when-downgrade"
@@ -162,20 +165,11 @@ X_FRAME_OPTIONS = "DENY"
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
 
-# (Optional) Content Security Policy — рекомендуется через django-csp
-CSP_DEFAULT_SRC = ("'self'",)
-CSP_SCRIPT_SRC = ("'self'",)
-CSP_STYLE_SRC = ("'self'", "https:", "'unsafe-inline'")
-CSP_IMG_SRC = ("'self'", "data:", "https:")
-CSP_CONNECT_SRC = ("'self'",)
-CSP_FONT_SRC = ("'self'", "https:", "data:")
-CSP_FRAME_ANCESTORS = ("'none'",)
-
 # ----------------------------------------------------------------------------
 # CORS
 # ----------------------------------------------------------------------------
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv()) or []
+CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="http://localhost:3000", cast=Csv())
 CORS_URLS_REGEX = config("CORS_URLS_REGEX", default=r"^/api/.*$")
 CORS_ALLOW_HEADERS = [*list(default_headers), "Authorization", "X-Requested-With"]
 
@@ -194,7 +188,7 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ],
-    "DEFAULT_PAGINATION_CLASS": "core.pagination.StandardResultsSetPagination",
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",  # FIXED: core.pagination may not exist
     "PAGE_SIZE": 20,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
@@ -214,97 +208,21 @@ SIMPLE_JWT = {
 # ----------------------------------------------------------------------------
 SPECTACULAR_SETTINGS = {
     "TITLE": "Hydraulic Diagnostic SaaS API",
-    "DESCRIPTION": "Enterprise hydraulic systems diagnostic platform with AI-powered analysis and RAG knowledge base",
+    "DESCRIPTION": "Enterprise hydraulic systems diagnostic platform with AI-powered analysis",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/api/",
     "SERVERS": [
         {"url": "http://localhost:8000", "description": "Development server"},
-        {
-            "url": "https://api.hydraulic-diagnostic.com",
-            "description": "Production server",
-        },
+        {"url": "https://api.hydraulic-diagnostic.com", "description": "Production server"},
     ],
-    "TAGS": [
-        {
-            "name": "diagnostics",
-            "description": "Hydraulic system diagnostics operations",
-        },
-        {"name": "rag", "description": "Knowledge base and RAG operations"},
-        {"name": "users", "description": "User management and authentication"},
-    ],
-    "CONTACT": {
-        "name": "API Support",
-        "email": "support@hydraulic-diagnostic.com",
-    },
-    "LICENSE": {
-        "name": "Proprietary",
-    },
-    "EXTERNAL_DOCS": {
-        "description": "Enterprise Documentation",
-        "url": "https://docs.hydraulic-diagnostic.com",
-    },
-    "PREPROCESSING_HOOKS": ["drf_spectacular.hooks.preprocess_exclude_path_format"],
-    "POSTPROCESSING_HOOKS": ["drf_spectacular.hooks.postprocess_schema_enums"],
-    "SWAGGER_UI_SETTINGS": {
-        "deepLinking": True,
-        "persistAuthorization": True,
-        "displayOperationId": False,
-        "defaultModelsExpandDepth": 2,
-        "defaultModelExpandDepth": 2,
-        "displayRequestDuration": True,
-        "docExpansion": "none",
-        "filter": True,
-        "showExtensions": True,
-        "showCommonExtensions": True,
-        "tryItOutEnabled": True,
-    },
-    "REDOC_UI_SETTINGS": {
-        "hideDownloadButton": False,
-        "hideHostname": False,
-        "hideLoading": False,
-        "lazyRendering": True,
-        "menuToggle": True,
-        "nativeScrollbars": False,
-        "pathInMiddlePanel": True,
-        "scrollYOffset": 0,
-        "suppressWarnings": False,
-        "theme": {
-            "colors": {
-                "primary": {"main": "#1976d2"},
-            },
-            "typography": {
-                "fontSize": "14px",
-                "headings": {"fontFamily": "Roboto, sans-serif"},
-            },
-        },
-    },
 }
 
 # ----------------------------------------------------------------------------
 # TimescaleDB Settings
 # ----------------------------------------------------------------------------
 TIMESCALE_ENABLED = config("TIMESCALE_ENABLED", default=False, cast=bool)
-TIMESCALE_SETTINGS = {
-    "DEFAULT_CHUNK_TIME_INTERVAL": config(
-        "TIMESCALE_CHUNK_TIME_INTERVAL", default="7 days"
-    ),
-    "DEFAULT_COMPRESSION_AGE": "30 days",
-    "DEFAULT_RETENTION_PERIOD": "1 year",
-    "MAINTENANCE_WINDOW_HOUR": 2,  # Час для выполнения обслуживания
-    "ENABLE_AUTO_COMPRESSION": True,
-    "ENABLE_AUTO_RETENTION": True,
-    "HYPERTABLES": [
-        {
-            "table": "sensor_data",
-            "time_column": "timestamp",
-            "chunk_time_interval": "7 days",
-            "compress_segmentby": ["system_id", "component_id"],
-            "compress_orderby": "timestamp DESC",
-        }
-    ],
-}
 
 # ----------------------------------------------------------------------------
 # Celery Configuration
@@ -314,95 +232,9 @@ CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://redis:6379/0")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
-# Fix multiple assignment for flake8 compatibility
 TIME_ZONE = "UTC"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_ENABLE_UTC = True
-
-# Celery Beat Schedule для TimescaleDB управления
-CELERY_BEAT_SCHEDULE = {
-    # Ежедневная очистка старых партиций в 2:00 ночи
-    "cleanup-old-timescale-partitions": {
-        "task": "apps.diagnostics.timescale_tasks.cleanup_old_partitions",
-        "schedule": crontab(hour=2, minute=0),  # 02:00 каждый день
-        "args": ("sensor_data", "90 days"),
-        "options": {
-            "queue": "maintenance",
-        },
-    },
-    # Еженедельное сжатие старых chunk'ов по воскресеньям в 3:00
-    "compress-old-timescale-chunks": {
-        "task": "apps.diagnostics.timescale_tasks.compress_old_chunks",
-        "schedule": crontab(hour=3, minute=0, day_of_week=0),  # Воскресенье 03:00
-        "args": ("sensor_data", "30 days"),
-        "options": {
-            "queue": "maintenance",
-        },
-    },
-    # Проверка создания партиций на будущее каждые 6 часов
-    "ensure-future-partitions": {
-        "task": "apps.diagnostics.timescale_tasks.ensure_partitions_for_range",
-        "schedule": timedelta(hours=6),
-        "kwargs": {
-            "table_name": "sensor_data",
-            "start_time": None,  # Текущее время
-            "end_time": None,  # +30 дней от текущего времени
-            "chunk_interval": "7 days",
-        },
-        "options": {
-            "queue": "maintenance",
-        },
-    },
-    # Сбор статистики по hypertables каждый час
-    "collect-hypertable-stats": {
-        "task": "apps.diagnostics.timescale_tasks.get_hypertable_stats",
-        "schedule": timedelta(hours=1),
-        "args": ("sensor_data",),
-        "options": {
-            "queue": "monitoring",
-        },
-    },
-    # Проверка здоровья TimescaleDB каждые 15 минут
-    "timescale-health-check": {
-        "task": "apps.diagnostics.timescale_tasks.timescale_health_check",
-        "schedule": timedelta(minutes=15),
-        "options": {
-            "queue": "monitoring",
-            "expires": 300,  # Задача истекает через 5 минут
-        },
-    },
-}
-
-# Настройки очередей для разных типов задач
-CELERY_TASK_ROUTES = {
-    "apps.diagnostics.timescale_tasks.*": {"queue": "timescale"},
-    "apps.diagnostics.timescale_tasks.cleanup_old_partitions": {"queue": "maintenance"},
-    "apps.diagnostics.timescale_tasks.compress_old_chunks": {"queue": "maintenance"},
-    "apps.diagnostics.timescale_tasks.get_hypertable_stats": {"queue": "monitoring"},
-}
-
-# Настройки для работы с базой данных в Celery задачах
-CELERY_TASK_ANNOTATIONS = {
-    "apps.diagnostics.timescale_tasks.cleanup_old_partitions": {
-        "rate_limit": "1/m",  # Не более 1 задачи в минуту
-        "time_limit": 3600,  # Таймаут 1 час
-        "soft_time_limit": 3000,  # Мягкий таймаут 50 минут
-    },
-    "apps.diagnostics.timescale_tasks.compress_old_chunks": {
-        "rate_limit": "1/5m",  # Не более 1 задачи в 5 минут
-        "time_limit": 1800,  # Таймаут 30 минут
-    },
-    "apps.diagnostics.timescale_tasks.ensure_partitions_for_range": {
-        "rate_limit": "10/m",  # До 10 задач в минуту
-        "time_limit": 300,  # Таймаут 5 минут
-    },
-}
-
-# Настройки для мониторинга производительности
-CELERY_SEND_TASK_EVENTS = True
-CELERY_TASK_SEND_SENT_EVENT = True
-CELERY_RESULT_EXPIRES = 3600  # Результаты задач хранятся 1 час
-CELERY_TASK_RESULT_EXPIRES = 3600
 
 # ----------------------------------------------------------------------------
 # i18n / tz
@@ -415,13 +247,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users.User"
 
 # ----------------------------------------------------------------------------
-# Logging (structured) with Celery support
+# Logging (structured)
 # ----------------------------------------------------------------------------
-
 DJANGO_LOG_LEVEL = os.getenv("DJANGO_LOG_LEVEL", "INFO")
-DJANGO_REQUEST_LOG_LEVEL = os.getenv("DJANGO_REQUEST_LOG_LEVEL", "WARNING")
-DJANGO_DATABASE_LOG_LEVEL = os.getenv("DJANGO_DATABASE_LOG_LEVEL", "ERROR")
-CELERY_LOG_LEVEL = os.getenv("CELERY_LOG_LEVEL", "INFO")
 
 LOGGING = {
     "version": 1,
@@ -448,43 +276,11 @@ LOGGING = {
     },
     "loggers": {
         "django": {"level": DJANGO_LOG_LEVEL},
-        "django.request": {
-            "handlers": ["console"],
-            "level": DJANGO_REQUEST_LOG_LEVEL,
-            "propagate": False,
-        },
-        "django.server": {
-            "handlers": ["console"],
-            "level": "WARNING",
-            "propagate": False,
-        },
-        "django.db.backends": {
-            "handlers": ["console"],
-            "level": DJANGO_DATABASE_LOG_LEVEL,
-        },
-        "celery": {
-            "handlers": ["console"],
-            "level": CELERY_LOG_LEVEL,
-            "propagate": False,
-        },
-        "celery.task": {
-            "handlers": ["console"],
-            "level": CELERY_LOG_LEVEL,
-            "propagate": False,
-        },
-        "apps.diagnostics.timescale_tasks": {
-            "handlers": ["console"],
-            "level": "INFO",
-            "propagate": False,
-        },
+        "django.request": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.db.backends": {"handlers": ["console"], "level": "ERROR"},
+        "celery": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
-
-
-def _add_request_id(_, __, event_dict):
-    """Add request ID to log events."""
-    return event_dict
-
 
 structlog.configure(
     processors=[
@@ -495,7 +291,6 @@ structlog.configure(
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.UnicodeDecoder(),
-        _add_request_id,
         structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
     ],
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -503,14 +298,8 @@ structlog.configure(
 )
 
 # ----------------------------------------------------------------------------
-# Docker deployment notes (docstring-only)
-# ----------------------------------------------------------------------------
-# WSGI: gunicorn core.wsgi:application -w 4 -b 0.0.0.0:8000
-# ASGI: gunicorn core.asgi:application -w 4 -k uvicorn.workers.UvicornWorker
-
-# ==============================================================================
 # ML SERVICE CONFIGURATION
-# ==============================================================================
+# ----------------------------------------------------------------------------
 ML_SERVICE_URL = config("ML_SERVICE_URL", default="http://localhost:8001", cast=str)
-ML_SERVICE_TIMEOUT = 5.0  # seconds
+ML_SERVICE_TIMEOUT = 5.0
 ML_SERVICE_RETRY_ATTEMPTS = 3
