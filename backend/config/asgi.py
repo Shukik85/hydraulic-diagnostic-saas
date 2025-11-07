@@ -4,7 +4,7 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 # Если Channels и diagnostics.routing доступны — используем их, иначе чистый ASGI
 try:

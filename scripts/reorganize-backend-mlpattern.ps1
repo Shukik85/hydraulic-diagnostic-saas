@@ -48,7 +48,7 @@ foreach ($app in $newApps) {
 }
 
 # Rename core -> config
-if (Test-Path $oldCoreDir -and -not (Test-Path $newConfigDir)) {
+if ((Test-Path $oldCoreDir) -and (!(Test-Path $newConfigDir))) {
     Write-Host "[RENAME] $oldCoreDir -> $newConfigDir" -ForegroundColor Cyan
     if (-not $DryRun) {
         Rename-Item -Path $oldCoreDir -NewName 'config'
@@ -107,7 +107,12 @@ if (Test-Path $settingsPY) {
 # ------------- UPDATE manage.py/asgi/wsgi -------------
 $updateEntry = @('manage.py','asgi.py','wsgi.py')
 foreach ($entry in $updateEntry) {
-    $cands = @(Join-Path $newConfigDir $entry, Join-Path $oldCoreDir $entry, Join-Path $backendDir $entry)
+    $cands = @(
+    (Join-Path $newConfigDir $entry),
+    (Join-Path $oldCoreDir $entry),
+    (Join-Path $backendDir $entry)
+)
+
     foreach ($cand in $cands) {
         if (Test-Path $cand) {
             $content = Get-Content $cand -Raw -Encoding UTF8
@@ -133,7 +138,7 @@ foreach ($dir in $pycacheDirs) {
 Write-Host "\n[INFO] New directory structure (top-2 levels):" -ForegroundColor Yellow
 Get-ChildItem $backendDir -Recurse -Directory | Where-Object { $_.FullName -notmatch '\.git|__pycache__|\.venv|node_modules|\.pytest_cache' } |
     Select-Object -First 20 | ForEach-Object {
-        $relativePath = $_.FullName.Replace($backendDir+"\", "")
+    $relativePath = $_.FullName.Replace("$backendDir\", "")
         Write-Host "  $relativePath" -ForegroundColor Cyan
     }
 
