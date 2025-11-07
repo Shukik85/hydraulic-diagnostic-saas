@@ -1,4 +1,4 @@
-# ===============================================================================
+﻿# ===============================================================================
 # GPU Full Ensemble Training Script (Windows PowerShell)
 # Trains all 4 models with enterprise-grade configuration
 # ===============================================================================
@@ -63,7 +63,7 @@ try {
     set -e
     export PYTHONWARNINGS='ignore::UserWarning:pydantic._internal._fields'
     source /opt/venv/bin/activate
-    python train_real_production_models.py --gpu 2>&1 | tee $log
+    python scripts/train/train_production.py --gpu 2>&1 | tee $log
     "
     
     $trainingEnd = Get-Date

@@ -1,4 +1,4 @@
-# Hydraulic Diagnostic ML Service 🔥
+﻿# Hydraulic Diagnostic ML Service 🔥
 
 **Enterprise ML микросервис для диагностики гидравлических систем**
 
@@ -94,9 +94,9 @@ ml_service/
 │   └── requirements.txt           # Python dependencies
 │
 └── 📚 Documentation
-    ├── production_plan.md          # Deployment timeline
-    ├── TRAINING.md                # Model training guide
-    └── TESTING.md                 # Testing procedures
+    ├── docs/production_plan.md          # Deployment timeline
+    ├── docs/training.md                # Model training guide
+    └── docs/testing.md                 # Testing procedures
 ```
 
 ## 🐳 Docker Deployment

@@ -1,4 +1,4 @@
-# Hydraulic ML Service - Container Operations
+﻿# Hydraulic ML Service - Container Operations
 # Use GPU by default, CPU as fallback
 
 .PHONY: help build train serve test clean
@@ -25,7 +25,7 @@ train-cpu: ## Train models (CPU fast)
 
 train-only: ## Train single model (usage: make train-only MODEL=xgboost)
 	@if [ -z "$(MODEL)" ]; then echo "Usage: make train-only MODEL=catboost|xgboost|random_forest|adaptive"; exit 1; fi
-	docker compose --profile training --profile gpu run --rm ml-trainer python train_real_production_models.py --gpu --only $(MODEL)
+	docker compose --profile training --profile gpu run --rm ml-trainer python scripts/train/train_production.py --gpu --only $(MODEL)
 
 train-dataset: ## Build dataset from RAW
 	docker compose --profile training run --rm ml-trainer python make_uci_dataset.py
@@ -75,7 +75,7 @@ dev-serve: ## Run inference locally (no container)
 	python simple_predict.py
 
 dev-train: ## Run training locally (no container)
-	python train_real_production_models.py --gpu
+	python scripts/train/train_production.py --gpu
 
 dev-test: ## Test local service
 	@echo "Testing local service at http://localhost:8001"

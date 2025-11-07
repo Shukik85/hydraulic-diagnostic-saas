@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Simplified ML Prediction Service
 Standalone FastAPI service for containerized deployment

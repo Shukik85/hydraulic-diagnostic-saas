@@ -1,4 +1,4 @@
-"""
+﻿"""
 ML Inference Service - FastAPI Application (Production-ready)
 Enterprise гидравлическая диагностика с ML
 """
@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
 
 from api.routes import router as api_router
-from config import ANOMALY_THRESHOLDS, settings
+from src.config import ANOMALY_THRESHOLDS, settings
 from models.ensemble import EnsembleModel
 from services.cache_service import CacheService
 from services.health_check import HealthCheckService

@@ -1,4 +1,4 @@
-# ===============================================================================
+﻿# ===============================================================================
 # XGBoost GPU Safe Training Script (Windows PowerShell)
 # GTX 1650 SUPER compatibility fixes applied
 # ===============================================================================
@@ -60,7 +60,7 @@ try {
     
     # Run XGBoost with GPU compatibility fixes
     echo '🚀 Starting XGBoost GPU training with GTX 1650 SUPER fixes...'
-    python train_real_production_models.py --gpu --only xgboost 2>&1 | tee $log
+    python scripts/train/train_production.py --gpu --only xgboost 2>&1 | tee $log
     "
     
     $trainingEnd = Get-Date
@@ -91,7 +91,7 @@ try {
         Write-Host "" 
         
         Write-Host "🚑 Fallback options:" -ForegroundColor Yellow
-        Write-Host "1. CPU XGBoost: python train_real_production_models.py --only xgboost" -ForegroundColor White
+        Write-Host "1. CPU XGBoost: python scripts/train/train_production.py --only xgboost" -ForegroundColor White
         Write-Host "2. Use CatBoost primary: Already trained with AUC 1.0000" -ForegroundColor White
         Write-Host "3. Check GPU: nvidia-smi" -ForegroundColor White
         
@@ -115,7 +115,7 @@ try {
         source /opt/venv/bin/activate
         pip show pydantic-settings > /dev/null 2>&1 || pip install pydantic-settings==2.6.1
         echo '🚑 Fallback: XGBoost CPU training...'
-        python train_real_production_models.py --only xgboost 2>&1 | tee reports/xgboost_cpu_fallback_$ts.log
+        python scripts/train/train_production.py --only xgboost 2>&1 | tee reports/xgboost_cpu_fallback_$ts.log
         "
         
         if ($LASTEXITCODE -eq 0) {
