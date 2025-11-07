@@ -74,8 +74,8 @@ class BaseMLModel(ABC):
             await self._create_mock_model()
 
     async def _create_mock_model(self) -> None:
-        from sklearn.ensemble import IsolationForest
         import numpy as np
+        from sklearn.ensemble import IsolationForest
 
         logger.info(f"Creating mock {self.model_name} model for development")
         self.model = IsolationForest(contamination=0.1, random_state=42)

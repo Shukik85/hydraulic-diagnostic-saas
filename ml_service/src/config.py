@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """ML Service Settings with enterprise defaults."""
-    
+
     # Pydantic v2 configuration - fix protected namespace warnings
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="allow",
         protected_namespaces=("settings_",),  # Fix model_ prefix conflicts
-        json_encoders={Path: str}  # Convert Path to string
+        json_encoders={Path: str},  # Convert Path to string
     )
 
     # Application

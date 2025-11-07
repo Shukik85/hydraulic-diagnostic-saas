@@ -2,12 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
 
 import numpy as np
-
-from api.schemas import FeatureVector
-from config import settings
 
 
 class CacheServiceFeatureMixin:

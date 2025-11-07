@@ -14,6 +14,7 @@ print("=" * 40)
 print("\n1️⃣ Testing core dependencies...")
 try:
     import numpy as np
+
     print("   ✅ numpy")
 except ImportError as e:
     print(f"   ❌ numpy: {e}")
@@ -21,12 +22,14 @@ except ImportError as e:
 
 try:
     import pandas as pd
+
     print("   ✅ pandas")
 except ImportError as e:
     print(f"   ❌ pandas: {e}")
 
 try:
     import sklearn
+
     print("   ✅ scikit-learn")
 except ImportError as e:
     print(f"   ❌ scikit-learn: {e}")
@@ -34,6 +37,7 @@ except ImportError as e:
 
 try:
     import xgboost as xgb
+
     print("   ✅ xgboost")
 except ImportError as e:
     print(f"   ❌ xgboost: {e}")
@@ -41,6 +45,7 @@ except ImportError as e:
 
 try:
     import catboost as cb
+
     print("   ✅ catboost")
 except ImportError as e:
     print(f"   ❌ catboost: {e}")
@@ -48,6 +53,7 @@ except ImportError as e:
 
 try:
     import joblib
+
     print("   ✅ joblib")
 except ImportError as e:
     print(f"   ❌ joblib: {e}")
@@ -55,6 +61,7 @@ except ImportError as e:
 
 try:
     import structlog
+
     print("   ✅ structlog")
 except ImportError as e:
     print(f"   ❌ structlog: {e}")
@@ -64,6 +71,7 @@ except ImportError as e:
 print("\n2️⃣ Testing configuration...")
 try:
     from config import settings
+
     print("   ✅ config.settings")
     print(f"   📝 Model path: {settings.model_path}")
     print(f"   🎯 Prediction threshold: {settings.prediction_threshold}")
@@ -77,6 +85,7 @@ except Exception as e:
 print("\n3️⃣ Testing model imports...")
 try:
     from models.base_model import BaseMLModel
+
     print("   ✅ BaseMLModel")
 except ImportError as e:
     print(f"   ❌ BaseMLModel: {e}")
@@ -84,6 +93,7 @@ except ImportError as e:
 
 try:
     from models.catboost_model import CatBoostModel
+
     print("   ✅ CatBoostModel")
 except ImportError as e:
     print(f"   ❌ CatBoostModel: {e}")
@@ -91,6 +101,7 @@ except ImportError as e:
 
 try:
     from models.xgboost_model import XGBoostModel
+
     print("   ✅ XGBoostModel")
 except ImportError as e:
     print(f"   ❌ XGBoostModel: {e}")
@@ -98,6 +109,7 @@ except ImportError as e:
 
 try:
     from models.random_forest_model import RandomForestModel
+
     print("   ✅ RandomForestModel")
 except ImportError as e:
     print(f"   ❌ RandomForestModel: {e}")
@@ -105,6 +117,7 @@ except ImportError as e:
 
 try:
     from models.adaptive_model import AdaptiveModel
+
     print("   ✅ AdaptiveModel")
 except ImportError as e:
     print(f"   ❌ AdaptiveModel: {e}")
@@ -112,6 +125,7 @@ except ImportError as e:
 
 try:
     from models.ensemble import EnsembleModel
+
     print("   ✅ EnsembleModel")
 except ImportError as e:
     print(f"   ❌ EnsembleModel: {e}")
@@ -120,12 +134,8 @@ except ImportError as e:
 # Test models package
 print("\n4️⃣ Testing models package...")
 try:
-    from models import (
-        AVAILABLE_MODELS,
-        MODEL_REGISTRY,
-        check_model_availability,
-        create_model
-    )
+    from models import AVAILABLE_MODELS, MODEL_REGISTRY, check_model_availability, create_model
+
     print("   ✅ models package imports")
     print(f"   📊 Available models: {AVAILABLE_MODELS}")
 except ImportError as e:
@@ -156,14 +166,14 @@ except Exception as e:
 print("\n7️⃣ Checking file structure...")
 required_files = [
     "models/__init__.py",
-    "models/base_model.py", 
+    "models/base_model.py",
     "models/catboost_model.py",
     "models/xgboost_model.py",
     "models/random_forest_model.py",
     "models/adaptive_model.py",
     "models/ensemble.py",
     "config.py",
-    "main.py"
+    "main.py",
 ]
 
 for file_path in required_files:

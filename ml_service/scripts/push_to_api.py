@@ -151,9 +151,9 @@ class MLAPITester:
                 "system_id": str(cycle_df["system_id"].iloc[0]),
                 "readings": readings,
                 "metadata": {
-                    "source": "UCI_Hydraulic", 
-                    "cycle": int(cycle_id), 
-                    "sensors_count": int(len(readings))
+                    "source": "UCI_Hydraulic",
+                    "cycle": int(cycle_id),
+                    "sensors_count": int(len(readings)),
                 },  # ✅ FIX: Приводим все к int/str
             },
             "prediction_type": "anomaly",
@@ -168,12 +168,10 @@ class MLAPITester:
         try:
             # ✅ FIX: JSON-safe serialization
             safe_request = sanitize_for_json(request_data)
-            
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.api_base}/api/v1/predict", 
-                    json=safe_request, 
-                    headers={"Content-Type": "application/json"}
+                    f"{self.api_base}/api/v1/predict", json=safe_request, headers={"Content-Type": "application/json"}
                 )
 
                 request_time = (time.time() - start_time) * 1000  # ms
@@ -256,7 +254,11 @@ class MLAPITester:
     def analyze_results(self, results: list[dict[str, Any]]) -> dict[str, Any]:
         """Анализ результатов тестирования."""
         if not results:
-            return {"error": "No results to analyze", "total_tests": 0, "failed_tests": 0}  # ✅ FIX: Добавлен failed_tests
+            return {
+                "error": "No results to analyze",
+                "total_tests": 0,
+                "failed_tests": 0,
+            }  # ✅ FIX: Добавлен failed_tests
 
         successful = [r for r in results if r.get("success", False)]
         failed = [r for r in results if not r.get("success", False)]
@@ -290,7 +292,7 @@ class MLAPITester:
             "failed_tests": int(len(failed)),  # ✅ FIX: Обязательное поле!
             "success_rate": float(len(successful) / len(results) * 100),
         }
-        
+
         # Latency stats (только если есть данные)
         if request_times:
             analysis["latency_stats"] = {
@@ -301,7 +303,7 @@ class MLAPITester:
                 "target_p90_ms": 100,
                 "meets_target": bool(np.percentile(request_times, 90) < 100),
             }
-        
+
         # Prediction stats (только если есть данные)
         if scores:
             analysis["prediction_stats"] = {
@@ -310,7 +312,7 @@ class MLAPITester:
                 "confidence_mean": float(np.mean(confidences)) if confidences else 0.0,
                 "severity_distribution": {str(k): int(v) for k, v in severity_counts.items()},
             }
-        
+
         # Ошибки
         if failed:
             analysis["errors"] = [str(r.get("error", "Unknown")) for r in failed]
@@ -425,7 +427,7 @@ async def main():
         print(f"  Average Confidence: {pred['confidence_mean']:.3f}")
         print("  Severity Distribution:")
         for severity, count in pred["severity_distribution"].items():
-            percentage = (count / analysis['successful_tests'] * 100) if analysis['successful_tests'] > 0 else 0
+            percentage = (count / analysis["successful_tests"] * 100) if analysis["successful_tests"] > 0 else 0
             print(f"    {severity}: {count} ({percentage:.1f}%)")
 
     if analysis.get("errors"):

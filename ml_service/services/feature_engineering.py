@@ -6,7 +6,6 @@ Enterprise feature extraction with resampling & gap handling
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -14,7 +13,7 @@ import structlog
 from scipy import stats
 
 from api.schemas import FeatureVector, SensorDataBatch
-from config import FEATURE_CONFIG, settings
+from config import settings
 
 logger = structlog.get_logger()
 
@@ -84,7 +83,7 @@ class FeatureEngineer:
         med = np.median(diffs)
         return float(1.0 / med) if med > 0 else float(self.base_hz)
 
-    def _resample_series(self, df: pd.DataFrame, sensor_type: str) -> Tuple[pd.Series, float, float]:
+    def _resample_series(self, df: pd.DataFrame, sensor_type: str) -> tuple[pd.Series, float, float]:
         s = df[df["sensor_type"] == sensor_type][["timestamp", "value"]].copy()
         if s.empty:
             return pd.Series(dtype=float), 0.0, 0.0
@@ -109,7 +108,7 @@ class FeatureEngineer:
         res_fb = res_ff.bfill(limit=int(self.gap_medium_s * self.base_hz))
         return res_fb, fs_est, coverage
 
-    def _build_resampled_table(self, df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[str, float]]:
+    def _build_resampled_table(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, float]]:
         # Определяем общий диапазон времени по всем сенсорам
         tmin = df["timestamp"].min()
         tmax = df["timestamp"].max()
@@ -118,14 +117,25 @@ class FeatureEngineer:
         rule_ms = int(1000 / self.base_hz)
         grid = pd.date_range(start=tmin, end=tmax, freq=f"{rule_ms}ms")
         table = pd.DataFrame(index=grid)
-        coverages: Dict[str, float] = {}
-        for st in ["pressure", "temperature", "flow", "vibration", "motor_power", "cooling_efficiency", "cooling_power", "system_efficiency"]:
+        coverages: dict[str, float] = {}
+        for st in [
+            "pressure",
+            "temperature",
+            "flow",
+            "vibration",
+            "motor_power",
+            "cooling_efficiency",
+            "cooling_power",
+            "system_efficiency",
+        ]:
             series, fs_est, cov = self._resample_series(df, st)
             table[st] = series.reindex(grid)
             coverages[st] = cov
         return table, coverages
 
-    async def extract_features(self, sensor_data: SensorDataBatch, feature_groups: list[str] | None = None) -> FeatureVector:
+    async def extract_features(
+        self, sensor_data: SensorDataBatch, feature_groups: list[str] | None = None
+    ) -> FeatureVector:
         start_time = time.time()
         if feature_groups is None:
             feature_groups = ["sensor_features", "derived_features", "window_features"]
@@ -134,9 +144,22 @@ class FeatureEngineer:
         for r in sensor_data.readings:
             ctype = self._canonical_type(r.sensor_type)
             val = self._convert_unit(r.value, getattr(r, "unit", None), ctype)
-            data.append({"timestamp": pd.to_datetime(r.timestamp), "sensor_type": ctype, "value": val, "unit": getattr(r, "unit", None), "component_id": r.component_id})
+            data.append(
+                {
+                    "timestamp": pd.to_datetime(r.timestamp),
+                    "sensor_type": ctype,
+                    "value": val,
+                    "unit": getattr(r, "unit", None),
+                    "component_id": r.component_id,
+                }
+            )
         raw = pd.DataFrame(data).sort_values("timestamp")
-        logger.info("FeatureEngineer input", system_id=str(sensor_data.system_id), sensor_types=list(map(str, raw["sensor_type"].unique())), total=len(raw))
+        logger.info(
+            "FeatureEngineer input",
+            system_id=str(sensor_data.system_id),
+            sensor_types=list(map(str, raw["sensor_type"].unique())),
+            total=len(raw),
+        )
         # Resample to base grid
         resampled, coverages = self._build_resampled_table(raw)
         features: dict[str, float] = {}
@@ -150,7 +173,12 @@ class FeatureEngineer:
                 features[f"{name_prefix}_max"] = float(ser.max())
                 features[f"{name_prefix}_min"] = float(ser.min())
             else:
-                defaults = {f"{name_prefix}_mean": INDUSTRIAL_DEFAULTS.get(f"{name_prefix}_mean", 0.0), f"{name_prefix}_std": 0.0, f"{name_prefix}_max": 0.0, f"{name_prefix}_min": 0.0}
+                defaults = {
+                    f"{name_prefix}_mean": INDUSTRIAL_DEFAULTS.get(f"{name_prefix}_mean", 0.0),
+                    f"{name_prefix}_std": 0.0,
+                    f"{name_prefix}_max": 0.0,
+                    f"{name_prefix}_min": 0.0,
+                }
                 features.update(defaults)
 
         # Sensor features
@@ -159,19 +187,33 @@ class FeatureEngineer:
             safe_stats(resampled.get("temperature", pd.Series(dtype=float)), "temperature")
             safe_stats(resampled.get("flow", pd.Series(dtype=float)), "flow")
             vib = resampled.get("vibration", pd.Series(dtype=float)).dropna()
-            features["vibration_rms"] = float(np.sqrt(np.mean(vib.values ** 2))) if len(vib) > 0 else INDUSTRIAL_DEFAULTS.get("vibration_rms", 0.0)
-            features["system_efficiency"] = float(resampled.get("system_efficiency", pd.Series(dtype=float)).dropna().mean() or 0.0)
-            features["cooling_efficiency"] = float(resampled.get("cooling_efficiency", pd.Series(dtype=float)).dropna().mean() or 0.0)
-            features["cooling_power"] = float(resampled.get("cooling_power", pd.Series(dtype=float)).dropna().mean() or 0.0)
-            features["motor_power_mean"] = float(resampled.get("motor_power", pd.Series(dtype=float)).dropna().mean() or 0.0)
+            features["vibration_rms"] = (
+                float(np.sqrt(np.mean(vib.values**2)))
+                if len(vib) > 0
+                else INDUSTRIAL_DEFAULTS.get("vibration_rms", 0.0)
+            )
+            features["system_efficiency"] = float(
+                resampled.get("system_efficiency", pd.Series(dtype=float)).dropna().mean() or 0.0
+            )
+            features["cooling_efficiency"] = float(
+                resampled.get("cooling_efficiency", pd.Series(dtype=float)).dropna().mean() or 0.0
+            )
+            features["cooling_power"] = float(
+                resampled.get("cooling_power", pd.Series(dtype=float)).dropna().mean() or 0.0
+            )
+            features["motor_power_mean"] = float(
+                resampled.get("motor_power", pd.Series(dtype=float)).dropna().mean() or 0.0
+            )
 
         # Derived
         if "derived_features" in feature_groups and not resampled.empty:
+
             def gradient(ser: pd.Series) -> float:
                 ser = ser.dropna()
                 if len(ser) > 1:
                     return float(np.mean(np.gradient(ser.values)))
                 return 0.0
+
             p = resampled.get("pressure", pd.Series(dtype=float))
             t = resampled.get("temperature", pd.Series(dtype=float))
             f = resampled.get("flow", pd.Series(dtype=float))
@@ -226,6 +268,16 @@ class FeatureEngineer:
             features["global_coverage"] = 0.0
 
         extraction_time = (time.time() - start_time) * 1000
-        logger.debug("Feature extraction completed", features_count=len(features), extraction_time_ms=extraction_time, data_quality=features.get("global_coverage", 0.0))
+        logger.debug(
+            "Feature extraction completed",
+            features_count=len(features),
+            extraction_time_ms=extraction_time,
+            data_quality=features.get("global_coverage", 0.0),
+        )
 
-        return FeatureVector(features=features, feature_names=list(features.keys()), extraction_time_ms=extraction_time, data_quality_score=float(features.get("global_coverage", 0.0)))
+        return FeatureVector(
+            features=features,
+            feature_names=list(features.keys()),
+            extraction_time_ms=extraction_time,
+            data_quality_score=float(features.get("global_coverage", 0.0)),
+        )

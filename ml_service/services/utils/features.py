@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
 import hashlib
-from typing import Iterable
+import json
+from collections.abc import Iterable
 
 import numpy as np
 

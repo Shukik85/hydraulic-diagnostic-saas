@@ -1,4 +1,4 @@
-﻿"""
+"""
 ML Inference Service - FastAPI Application (Production-ready)
 Enterprise гидравлическая диагностика с ML
 """
@@ -15,14 +15,14 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
 
+from api import routes  # for setting global adaptive_thresholds
 from api.routes import router as api_router
-from src.config import ANOMALY_THRESHOLDS, settings
 from models.ensemble import EnsembleModel
+from services.adaptive_threshold_service import AdaptiveThresholdService
 from services.cache_service import CacheService
 from services.health_check import HealthCheckService
 from services.monitoring import setup_metrics
-from services.adaptive_threshold_service import AdaptiveThresholdService
-from api import routes  # for setting global adaptive_thresholds
+from src.config import ANOMALY_THRESHOLDS, settings
 
 # Настройка логирования
 logger = structlog.get_logger()
@@ -47,10 +47,10 @@ async def lifespan(_app: FastAPI):
         await cache_service.connect()
 
         health_service = HealthCheckService()
-        
+
         # Initialize adaptive thresholds
         adaptive_thresholds = AdaptiveThresholdService(cache_service=cache_service)
-        
+
         # Set global reference in routes module
         routes.adaptive_thresholds = adaptive_thresholds
 

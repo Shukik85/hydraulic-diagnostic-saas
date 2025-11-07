@@ -2,6 +2,7 @@
 """
 Make UCI dataset from RAW and export tidy CSV.
 """
+
 import sys
 from pathlib import Path
 
@@ -16,7 +17,7 @@ if __name__ == "__main__":
     print("📊 Build report:")
     print(f"   Status: {r['status']}")
     print(f"   Rows: {r['rows']}")
-    if r['errors']:
+    if r["errors"]:
         print(f"   Errors: {r['errors']}")
     else:
         print("   ✅ No errors")

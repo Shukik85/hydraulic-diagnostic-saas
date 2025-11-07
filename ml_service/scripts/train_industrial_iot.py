@@ -96,9 +96,7 @@ def train_and_save_models():
     logger.info("=== SINGLE-STAGE TRAINING FOR ENSEMBLE ===")
     X, y, feature_names = load_data()
 
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
     # Scaling
     scaler = StandardScaler()

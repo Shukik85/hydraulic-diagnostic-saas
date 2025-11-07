@@ -41,11 +41,11 @@ class CatBoostModel(BaseMLModel):
         try:
             if model_path.exists():
                 loaded_data = joblib.load(model_path)
-                
+
                 # ✅ ROBUST LOADING - handles both formats
                 if isinstance(loaded_data, dict) and "model" in loaded_data:
                     # New format with metadata
-                    self.model = loaded_data["model"] 
+                    self.model = loaded_data["model"]
                     self.scaler = loaded_data.get("scaler", StandardScaler())
                     self.feature_importance_ = loaded_data.get("feature_importance")
                     self.training_metrics = loaded_data.get("training_metrics", {})
@@ -55,11 +55,11 @@ class CatBoostModel(BaseMLModel):
                     # Direct model object (legacy/simple format)
                     self.model = loaded_data
                     logger.warning("Direct model loaded, creating compatible scaler")
-                    
+
                     # Create compatible scaler
                     self.scaler = StandardScaler()
-                    expected_features = getattr(self.model, 'n_features_in_', getattr(self.model, 'n_features_', 25))
-                    mock_data = np.random.randn(10, expected_features) 
+                    expected_features = getattr(self.model, "n_features_in_", getattr(self.model, "n_features_", 25))
+                    mock_data = np.random.randn(10, expected_features)
                     self.scaler.fit(mock_data)
                     self.metadata["features_count"] = expected_features
 
