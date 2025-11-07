@@ -1,19 +1,32 @@
-"""Модуль проекта с автогенерированным докстрингом."""
+"""Django app configuration for diagnostics application."""
 
 from django.apps import AppConfig
 
 
 class DiagnosticsConfig(AppConfig):
+    """Configuration for diagnostics application."""
+    
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.diagnostics"
-    verbose_name = "Диагностические Системы"
+    name = "diagnostics"  # FIXED: было apps.diagnostics
+    verbose_name = "Hydraulic Diagnostics"
 
-    def ready(self):
-        """Инициализация при запуске приложения."""
+    def ready(self) -> None:
+        """Initialize application when Django starts.
+        
+        This is called when Django starts. Use it to:
+        - Register signals
+        - Import models
+        - Initialize caches
+        - Setup connections
+        """
+        # Import signals (if any)
         try:
-            # Импорт AI системы для инициализации
-            # from .ai_engine import ai_engine
-            # from .rag_system import rag_system
-            print("✅ AI Engine и RAG система инициализированы")
-        except Exception as e:
-            print(f"❌ Ошибка инициализации AI/RAG: {e}")
+            import diagnostics.signals  # noqa: F401
+        except ImportError:
+            pass
+        
+        # Register admin customizations
+        try:
+            from diagnostics import admin_quarantine  # noqa: F401
+        except ImportError:
+            pass
