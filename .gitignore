@@ -167,3 +167,8 @@ target/
 pids
 pip-log.txt
 pip-delete-this-directory.txt
+
+# Backup directories
+*_backup_*/
+*.backup/
+backups/
