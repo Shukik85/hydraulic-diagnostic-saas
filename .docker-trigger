@@ -1,5 +1,0 @@
-# Docker container code reload trigger
-# This file forces containers to reload Python modules
-# Updated: 2025-11-06 18:20 MSK
-# Fixes: drf_spectacular.E001 criticality field error
-
