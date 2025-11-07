@@ -25,15 +25,16 @@ from diagnostics.models_quarantine import QuarantinedReading
 
 logger = logging.getLogger(__name__)
 
-# Import validation config
+# FIXED: Import validation config from correct location
 try:
-    from project.settings.sensor_validation import (
+    from config.sensor_validation import (  # CHANGED: project.settings -> config
         SENSOR_VALUE_RANGES,
         QUALITY_THRESHOLDS,
         TIMESTAMP_VALIDATION,
     )
 except ImportError:
     # Fallback defaults if config not found
+    logger.warning("sensor_validation config not found, using defaults")
     SENSOR_VALUE_RANGES = {}
     QUALITY_THRESHOLDS = {"poor": 50}
     TIMESTAMP_VALIDATION = {"max_future_offset": 300, "max_past_offset": 157680000}
@@ -197,7 +198,7 @@ def ingest_sensor_data_bulk(
                     valid_readings.append(SensorData(
                         system=system,
                         timestamp=reading['timestamp'],
-                        sensor_type=reading.get('sensor_type', 'pressure'),  # Map from unit or explicit field
+                        sensor_type=reading.get('sensor_type', 'pressure'),
                         value=reading['value'],
                         unit=reading['unit'],
                         is_critical=reading.get('quality', 100) < QUALITY_THRESHOLDS.get('acceptable', 70),
