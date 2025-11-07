@@ -1,96 +1,63 @@
-interface LoginCredentials {
-  email: string
-  password: string
-}
+/**
+ * useApi.ts — универсальный API client для Hydraulic Diagnostic Platform
+ * Типизировано по OpenAPI v3.1.0
+ */
+import { ref } from 'vue'
+import { useStorage } from '@vueuse/core'
+import type {
+  ApiRequestOptions,
+  ApiResponse,
+  ErrorResponse,
+  isErrorResponse,
+  getErrorMessage
+} from '../types/api'
 
-export const useApi = () => {
-  const config = useRuntimeConfig()
-  const accessToken = useCookie<string | null>('access-token', { httpOnly: false, default: () => null })
-  const refreshToken = useCookie<string | null>('refresh-token', { httpOnly: true, default: () => null })
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+
+export function useApi() {
+  // Access tokens храним в localStorage (JWT)
+  const token = useStorage<string | null>('auth_token', null)
   
-  const isAuthenticated = computed(() => !!accessToken.value)
-  
-  const createHeaders = (): Record<string, string> => {
+  async function request<T>(
+    endpoint: string,
+    options: ApiRequestOptions & { method?: 'GET'|'POST'|'PUT'|'PATCH'|'DELETE', body?: any } = {}
+  ): Promise<ApiResponse<T> | ErrorResponse> {
+    const url = endpoint.startsWith('http') ? endpoint : API_URL + endpoint
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...options.headers
     }
-    
-    if (accessToken.value) {
-      headers['Authorization'] = `Bearer ${accessToken.value}`
-    }
-    
-    return headers
-  }
-  
-  const api = $fetch.create({
-    baseURL: config.public.apiBase,
-    headers: createHeaders()
-  })
-  
-  const login = async (credentials: LoginCredentials) => {
-    const response = await api<any>('/auth/login/', {
-      method: 'POST',
-      body: credentials
-    })
-    
-    if (response.access && response.refresh) {
-      accessToken.value = response.access
-      refreshToken.value = response.refresh
-    }
-    
-    return response.user || response
-  }
-  
-  const register = async (userData: any) => {
-    return await api<any>('/auth/register/', {
-      method: 'POST',
-      body: userData
-    })
-  }
-  
-  const logout = async () => {
+    if (token.value) headers['Authorization'] = `Bearer ${token.value}`
+
     try {
-      await api('/auth/logout/', { method: 'POST' })
-    } finally {
-      accessToken.value = null
-      refreshToken.value = null
+      const init: RequestInit = {
+        method: options.method || 'GET',
+        headers,
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        signal: options.signal
+      }
+      const res = await fetch(url, init)
+      const text = await res.text()
+      let data
+      try { data = text ? JSON.parse(text) : null } catch { data = text }
+      if (res.ok) {
+        return { data, status: res.status, headers: parseHeaders(res.headers) }
+      } else {
+        return { error: data.error || { message: text, code: res.status }, status: res.status }
+      }
+    } catch (err) {
+      return { error: { message: getErrorMessage(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' }, status: 0 }
     }
   }
-  
-  const getCurrentUser = async () => {
-    return await api<any>('/auth/user/')
+
+  function parseHeaders(headers: Headers): Record<string, string> {
+    const result: Record<string, string> = {}
+    headers.forEach((v, k) => { result[k] = v })
+    return result
   }
-  
-  const updateUser = async (userData: any) => {
-    return await api<any>('/auth/user/', {
-      method: 'PATCH',
-      body: userData
-    })
-  }
-  
-  const refreshAccessToken = async () => {
-    if (!refreshToken.value) throw new Error('No refresh token')
-    
-    const response = await api<any>('/auth/refresh/', {
-      method: 'POST',
-      body: { refresh: refreshToken.value }
-    })
-    
-    if (response.access) {
-      accessToken.value = response.access
-    }
-    
-    return response
-  }
-  
+
   return {
-    isAuthenticated,
-    login,
-    register,
-    logout,
-    getCurrentUser,
-    updateUser,
-    refreshAccessToken,
-    api
+    request,
+    token
   }
 }
