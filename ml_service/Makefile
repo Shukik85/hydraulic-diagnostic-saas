@@ -1,4 +1,4 @@
-﻿# Hydraulic ML Service - Container Operations
+# Hydraulic ML Service - Container Operations
 # Use GPU by default, CPU as fallback
 
 .PHONY: help build train serve test clean
@@ -30,12 +30,31 @@ train-only: ## Train single model (usage: make train-only MODEL=xgboost)
 train-dataset: ## Build dataset from RAW
 	docker compose --profile training run --rm ml-trainer python make_uci_dataset.py
 
+# ONNX Export targets
+onnx-export: ## Export all models to ONNX format
+	@echo "Exporting models to ONNX..."
+	python scripts/onnx/export_to_onnx.py --models-dir ./models --output-dir ./models/onnx
+
+onnx-export-docker: ## Export models to ONNX inside Docker
+	docker compose --profile inference run --rm ml-service python scripts/onnx/export_to_onnx.py --models-dir ./models --output-dir ./models/onnx
+
+onnx-validate: ## Validate ONNX models
+	@echo "Validating ONNX models..."
+	@if [ -f "./models/onnx/onnx_export_report.json" ]; then cat ./models/onnx/onnx_export_report.json | jq; else echo "No ONNX export report found. Run 'make onnx-export' first."; fi
+
 # Inference targets
 serve: ## Start ML inference service (GPU)
 	docker compose --profile inference --profile gpu up -d ml-service
 
 serve-cpu: ## Start ML inference service (CPU)
 	docker compose --profile inference --profile cpu up -d ml-service-cpu
+
+serve-onnx: ## Start ONNX optimized service (ultra-fast)
+	@echo "Starting ONNX optimized service on port 8002..."
+	python onnx_predict.py
+
+serve-onnx-docker: ## Start ONNX service in Docker
+	docker compose --profile inference run --rm -p 8002:8002 ml-service python onnx_predict.py
 
 stop: ## Stop ML service
 	docker compose --profile inference down
@@ -47,6 +66,18 @@ test-predict: ## Test prediction endpoint
 		-H "Content-Type: application/json" \
 		-d '{"features": [150.0, 65.0, 42.0, 89.0, 12.0, 78.0, 34.0, 56.0, 23.0, 91.0, 67.0, 45.0, 88.0, 29.0, 73.0, 51.0, 94.0, 37.0, 62.0, 19.0, 85.0, 48.0, 76.0, 33.0, 59.0]}' | jq
 
+test-onnx: ## Test ONNX optimized endpoint
+	@echo "Testing ONNX endpoint (port 8002)..."
+	curl -X POST http://localhost:8002/predict \
+		-H "Content-Type: application/json" \
+		-d '{"features": [150.0, 65.0, 42.0, 89.0, 12.0, 78.0, 34.0, 56.0, 23.0, 91.0, 67.0, 45.0, 88.0, 29.0, 73.0, 51.0, 94.0, 37.0, 62.0, 19.0, 85.0, 48.0, 76.0, 33.0, 59.0]}' | jq
+
+test-onnx-fast: ## Test ONNX fast endpoint (CatBoost only)
+	@echo "Testing ONNX fast endpoint..."
+	curl -X POST http://localhost:8002/predict/fast \
+		-H "Content-Type: application/json" \
+		-d '{"features": [150.0, 65.0, 42.0, 89.0, 12.0, 78.0, 34.0, 56.0, 23.0, 91.0, 67.0, 45.0, 88.0, 29.0, 73.0, 51.0, 94.0, 37.0, 62.0, 19.0, 85.0, 48.0, 76.0, 33.0, 59.0]}' | jq
+
 test-health: ## Test health endpoints
 	@echo "Testing health endpoints..."
 	curl http://localhost:8001/healthz | jq
@@ -55,6 +86,10 @@ test-health: ## Test health endpoints
 
 test-metrics: ## Show Prometheus metrics
 	curl http://localhost:8001/metrics
+
+benchmark-onnx: ## Benchmark ONNX vs native inference
+	@echo "Running benchmark: ONNX vs Native..."
+	python scripts/onnx/benchmark_onnx.py
 
 # Utility targets
 logs: ## Show ML service logs
@@ -74,6 +109,9 @@ clean: ## Clean containers and images
 dev-serve: ## Run inference locally (no container)
 	python simple_predict.py
 
+dev-serve-onnx: ## Run ONNX inference locally
+	python onnx_predict.py
+
 dev-train: ## Run training locally (no container)
 	python scripts/train/train_production.py --gpu
 
@@ -83,6 +121,8 @@ dev-test: ## Test local service
 
 # E2E targets
 e2e: build train serve test-predict ## Full E2E: build -> train -> serve -> test
+
+e2e-onnx: build train onnx-export serve-onnx test-onnx ## Full E2E with ONNX optimization
 
 # Production deployment helpers
 deploy-models: ## Deploy models to production (copy to volume)
