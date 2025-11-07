@@ -1,0 +1,49 @@
+# Production ONNX Inference Service
+# Usage: docker compose -f deploy/docker-compose.production.yml up -d
+
+services:
+  ml-onnx-inference:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: base-gpu
+    image: hydraulic-ml-onnx:prod
+    container_name: ml-onnx-prod
+    ports:
+      - "8002:8002"
+    volumes:
+      - ../models/onnx:/app/models/onnx:ro
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - MODEL_PATH=/app/models/onnx
+      - LOG_LEVEL=WARNING
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 2G
+          cpus: '4'
+    command: python onnx_predict.py
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - production
+    labels:
+      - "com.hydraulic.service=ml-inference"
+      - "com.hydraulic.tier=production"
+      - "com.hydraulic.version=onnx"
+
+networks:
+  production:
+    driver: bridge
