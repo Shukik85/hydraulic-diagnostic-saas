@@ -507,3 +507,10 @@ structlog.configure(
 # ----------------------------------------------------------------------------
 # WSGI: gunicorn core.wsgi:application -w 4 -b 0.0.0.0:8000
 # ASGI: gunicorn core.asgi:application -w 4 -k uvicorn.workers.UvicornWorker
+
+# ==============================================================================
+# ML SERVICE CONFIGURATION
+# ==============================================================================
+ML_SERVICE_URL = config("ML_SERVICE_URL", default="http://localhost:8001", cast=str)
+ML_SERVICE_TIMEOUT = 5.0  # seconds
+ML_SERVICE_RETRY_ATTEMPTS = 3
