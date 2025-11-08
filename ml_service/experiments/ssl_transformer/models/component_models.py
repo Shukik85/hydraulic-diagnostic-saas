@@ -90,7 +90,7 @@ class ComponentGNN(nn.Module):
             edge_index = torch.cat([edge_index, edge_index.flip(0)], dim=1).to(x.device)
         
         # GAT layers
-        for gat, bn in zip(self.gat_layers, self.batch_norms):
+        for gat, bn in zip(self.gat_layers, self.batch_norms, strict=True):
             h = gat(h, edge_index)
             h = bn(h)
             h = F.relu(h)

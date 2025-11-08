@@ -2,9 +2,9 @@
 Extract Component-Level Data from BIM Excavator Logs
 Creates universal component datasets for transfer learning
 """
-import pandas as pd
 from pathlib import Path
-from typing import List
+
+import pandas as pd
 
 
 def extract_cylinder_data(excavator_df: pd.DataFrame, cylinder_name: str) -> pd.DataFrame:
@@ -156,13 +156,13 @@ def main():
     
     # Statistics
     print("\n✅ Extraction complete!")
-    print(f"\n📊 Cylinder Dataset:")
+    print("\n📊 Cylinder Dataset:")
     print(f"   Samples: {len(cylinder_dataset):,}")
     print(f"   Features: {len(cylinder_dataset.columns)}")
     print(f"   Faults: {cylinder_dataset['fault_any'].sum()} ({cylinder_dataset['fault_any'].mean()*100:.2f}%)")
     print(f"   Saved to: {cylinder_path}")
     
-    print(f"\n📊 Pump Dataset:")
+    print("\n📊 Pump Dataset:")
     print(f"   Samples: {len(pump_dataset):,}")
     print(f"   Features: {len(pump_dataset.columns)}")
     print(f"   Faults: {pump_dataset['fault_any'].sum()} ({pump_dataset['fault_any'].mean()*100:.2f}%)")
