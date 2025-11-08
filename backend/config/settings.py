@@ -129,7 +129,6 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
         "LOCATION": REDIS_URL,
         "OPTIONS": {
-            "client_class": "django_redis.client.DefaultClient",
             "retry_on_timeout": True,
         },
         "TIMEOUT": 300,
@@ -303,3 +302,4 @@ structlog.configure(
 ML_SERVICE_URL = config("ML_SERVICE_URL", default="http://localhost:8001", cast=str)
 ML_SERVICE_TIMEOUT = 5.0
 ML_SERVICE_RETRY_ATTEMPTS = 3
+

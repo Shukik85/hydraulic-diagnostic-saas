@@ -43,22 +43,15 @@ class Migration(migrations.Migration):
                 migrate_data => TRUE
             );
             """,
-            reverse_sql="""
-            -- Откат hypertable невозможен без потери данных
-            -- Рекомендуется делать backup перед миграцией
-            """,
+            reverse_sql="",  # Откат hypertable сложен
         ),
-        # 4. Добавляем индексы для производительности
+        # 4. Добавляем индексы ТОЛЬКО на timestamp (sensor_id добавим позже)
         migrations.RunSQL(
             sql="""
-            CREATE INDEX IF NOT EXISTS idx_sensordata_sensor_timestamp
-            ON diagnostics_sensordata (sensor_id, timestamp DESC);
-
             CREATE INDEX IF NOT EXISTS idx_sensordata_timestamp
             ON diagnostics_sensordata (timestamp DESC);
             """,
             reverse_sql="""
-            DROP INDEX IF EXISTS idx_sensordata_sensor_timestamp;
             DROP INDEX IF EXISTS idx_sensordata_timestamp;
             """,
         ),
