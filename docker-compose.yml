@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15
+    image: timescale/timescaledb:latest-pg15
     container_name: hdx-postgres
     restart: unless-stopped
     environment:
@@ -37,7 +37,7 @@ services:
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_SETTINGS_MODULE: config.settings
     volumes:
       - ./backend:/app/backend  # ← монтируй код С ХОСТА!
     ports:
@@ -59,11 +59,11 @@ services:
       context: .
       dockerfile: Dockerfile.light
     container_name: hdx-celery
-    command: ["/entrypoint.sh", "celery", "-A", "core", "worker", "-l", "info"]
+    command: ["/entrypoint.sh", "celery", "-A", "config", "worker", "-l", "info"]
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_SETTINGS_MODULE: config.settings
     volumes:
       - .:/app
     depends_on:
@@ -77,11 +77,11 @@ services:
       context: .
       dockerfile: Dockerfile.light
     container_name: hdx-celery-beat
-    command: ["/entrypoint.sh", "celery", "-A", "core", "beat", "-l", "info"]
+    command: ["/entrypoint.sh", "celery", "-A", "config", "beat", "-l", "info"]
     env_file:
       - .env
     environment:
-      DJANGO_SETTINGS_MODULE: core.settings
+      DJANGO_SETTINGS_MODULE: config.settings
     volumes:
       - .:/app
     depends_on:
