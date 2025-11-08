@@ -30,7 +30,7 @@ ollama>=0.2.1,<0.3.0
 # WebSocket Support
 channels>=4.0.0,<5.0.0
 daphne>=4.0.0,<5.0.0
-channels-redis>=4.1.0,<5.0.0
+channels-redis>=4.3.0
 
 # Monitoring and Error Tracking
 sentry-sdk[django]>=1.40.0,<2.0.0

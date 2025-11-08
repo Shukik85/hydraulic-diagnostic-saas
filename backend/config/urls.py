@@ -80,3 +80,4 @@ if not settings.DEBUG:
             },
             status=500,
         )
+
