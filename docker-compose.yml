@@ -39,7 +39,7 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: core.settings
     volumes:
-      - .:/app
+      - ./backend:/app/backend  # ← монтируй код С ХОСТА!
     ports:
       - "8000:8000"
     depends_on:
