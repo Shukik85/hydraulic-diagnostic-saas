@@ -8,7 +8,7 @@ from celery.utils.log import get_task_logger
 from decouple import config
 
 # Устанавливаем Django settings module
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
 # Создаем Celery app
 app = Celery("hydraulic_diagnostic")
@@ -34,9 +34,9 @@ app.conf.update(
     task_max_retries=3,
     # Маршрутизация задач по очередям
     task_routes={
-        "apps.rag_assistant.tasks.*": {"queue": "ai_tasks"},
-        "apps.diagnostics.tasks.*": {"queue": "diagnostics"},
-        "apps.users.tasks.*": {"queue": "users"},
+        "rag_assistant.tasks.*": {"queue": "ai_tasks"},
+        "diagnostics.tasks.*": {"queue": "diagnostics"},
+        "users.tasks.*": {"queue": "users"},
     },
     # Мониторинг
     worker_send_task_events=True,

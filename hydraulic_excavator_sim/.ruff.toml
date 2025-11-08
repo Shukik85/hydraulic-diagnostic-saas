@@ -1,0 +1,2 @@
+[lint]
+ignore = ["UP017"]  # Allow timezone.utc instead of datetime.UTC for Python 3.11 compatibility
