@@ -11,7 +11,7 @@ class RagAssistantConfig(AppConfig):
     """Конфигурация приложения RAG Assistant."""
 
     default_auto_field = "django.db.models.BigAutoField"
-    name = "apps.rag_assistant"
+    name = "rag_assistant"
     verbose_name = "RAG Ассистент"
 
     def ready(self):

@@ -73,7 +73,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "core.urls"
+ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
@@ -93,8 +93,8 @@ TEMPLATES = [
 # ----------------------------------------------------------------------------
 # ASGI / WSGI
 # ----------------------------------------------------------------------------
-WSGI_APPLICATION = "core.wsgi.application"
-ASGI_APPLICATION = "core.asgi.application"
+WSGI_APPLICATION = "config.wsgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 
 # ----------------------------------------------------------------------------
 # Database: PostgreSQL with TimescaleDB support

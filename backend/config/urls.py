@@ -42,9 +42,9 @@ urlpatterns = [
         name="redoc",
     ),
     # API endpoints
-    path("api/users/", include("apps.users.urls")),
-    path("api/diagnostics/", include("apps.diagnostics.urls")),
-    path("api/rag/", include("apps.rag_assistant.urls")),
+    path("api/users/", include("users.urls")),
+    path("api/diagnostics/", include("diagnostics.urls")),
+    path("api/rag/", include("rag_assistant.urls")),
 ]
 
 # Static files serving in development
