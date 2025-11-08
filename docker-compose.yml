@@ -57,7 +57,7 @@ services:
   celery:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.light
     container_name: hdx-celery
     command: ["/entrypoint.sh", "celery", "-A", "core", "worker", "-l", "info"]
     env_file:
@@ -75,7 +75,7 @@ services:
   beat:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.light
     container_name: hdx-celery-beat
     command: ["/entrypoint.sh", "celery", "-A", "core", "beat", "-l", "info"]
     env_file:
