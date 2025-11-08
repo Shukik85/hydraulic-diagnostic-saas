@@ -1,149 +1,146 @@
 <template>
-  <div class="digital-twin">
-    <div ref="container" class="canvas-container">
-      <canvas ref="canvas"></canvas>
-      <div v-if="isLoading" class="loading-overlay">
-        <div class="spinner"></div>
-        <p>Loading Digital Twin...</p>
-      </div>
-    </div>
-    
-    <div class="control-panel">
-      <h2>🎮 Equipment Controls</h2>
-      
-      <div class="control-group">
-        <label>
-          <span class="label-icon">⬆️</span>
-          Boom Position
-        </label>
-        <input 
-          type="range" 
-          v-model.number="boomTarget" 
-          min="0" 
-          max="100"
-          @input="onBoomMove"
-          class="control-slider"
-        />
-        <div class="value-display">
-          {{ equipment.cylinder_boom.position.toFixed(1) }}%
+  <ClientOnly>
+    <div v-if="mounted" class="digital-twin">
+      <div ref="container" class="canvas-container">
+        <canvas ref="canvas"></canvas>
+        <div v-if="isLoading" class="loading-overlay">
+          <div class="spinner"></div>
+          <p>Loading Digital Twin...</p>
         </div>
       </div>
       
-      <div class="control-group">
-        <label>
-          <span class="label-icon">↘️</span>
-          Stick Position
-        </label>
-        <input 
-          type="range" 
-          v-model.number="stickTarget" 
-          min="0" 
-          max="100"
-          @input="onStickMove"
-          class="control-slider"
-        />
-        <div class="value-display">
-          {{ equipment.cylinder_stick.position.toFixed(1) }}%
-        </div>
-      </div>
-      
-      <div class="control-group">
-        <label>
-          <span class="label-icon">🪣</span>
-          Bucket Angle
-        </label>
-        <input 
-          type="range" 
-          v-model.number="bucketTarget" 
-          min="0" 
-          max="100"
-          @input="onBucketMove"
-          class="control-slider"
-        />
-        <div class="value-display">
-          {{ equipment.cylinder_bucket.position.toFixed(1) }}°
-        </div>
-      </div>
-
-      <div class="quick-actions">
-        <button @click="resetPosition" class="btn-secondary">
-          🔄 Reset
-        </button>
-        <button @click="simulateFault" class="btn-danger">
-          ⚠️ Fault
-        </button>
-      </div>
-    </div>
-    
-    <div class="sensor-dashboard">
-      <h2>📊 Live Sensors</h2>
-      
-      <div class="sensor-grid">
-        <div class="sensor-card" :class="{ fault: equipment.pump.fault }">
-          <div class="sensor-header">
-            <div class="sensor-icon">💧</div>
-            <h3>Pump</h3>
-          </div>
-          <div class="sensor-values">
-            <div class="sensor-row">
-              <span class="label">RPM:</span>
-              <span class="value">{{ equipment.pump.speed_rpm.toFixed(0) }}</span>
-            </div>
-            <div class="sensor-row">
-              <span class="label">Pressure:</span>
-              <span class="value">{{ equipment.pump.pressure_outlet.toFixed(1) }} bar</span>
-            </div>
-          </div>
+      <div class="control-panel">
+        <h2>🎮 Controls</h2>
+        
+        <div class="control-group">
+          <label><span class="label-icon">⬆️</span> Boom</label>
+          <input type="range" v-model.number="boomTarget" min="0" max="100" @input="onBoomMove" class="control-slider" />
+          <div class="value-display">{{ equipment.cylinder_boom.position.toFixed(1) }}%</div>
         </div>
         
-        <div class="sensor-card" :class="{ fault: equipment.cylinder_boom.fault }">
-          <div class="sensor-header">
-            <div class="sensor-icon">🔧</div>
-            <h3>Boom Cyl</h3>
-          </div>
-          <div class="sensor-values">
-            <div class="sensor-row">
-              <span class="label">Position:</span>
-              <span class="value">{{ equipment.cylinder_boom.position.toFixed(1) }}%</span>
+        <div class="control-group">
+          <label><span class="label-icon">↘️</span> Stick</label>
+          <input type="range" v-model.number="stickTarget" min="0" max="100" @input="onStickMove" class="control-slider" />
+          <div class="value-display">{{ equipment.cylinder_stick.position.toFixed(1) }}%</div>
+        </div>
+        
+        <div class="control-group">
+          <label><span class="label-icon">🪣</span> Bucket</label>
+          <input type="range" v-model.number="bucketTarget" min="0" max="100" @input="onBucketMove" class="control-slider" />
+          <div class="value-display">{{ equipment.cylinder_bucket.position.toFixed(1) }}°</div>
+        </div>
+
+        <div class="quick-actions">
+          <button @click="resetPosition" class="btn-secondary">🔄 Reset</button>
+          <button @click="simulateFault" class="btn-danger">⚠️ Fault</button>
+        </div>
+      </div>
+      
+      <div class="sensor-dashboard">
+        <h2>📊 Live Sensors</h2>
+        <div class="sensor-grid">
+          <div class="sensor-card">
+            <div class="sensor-header">
+              <div class="sensor-icon">💧</div>
+              <h3>Pump</h3>
             </div>
-            <div class="sensor-row">
-              <span class="label">Pressure:</span>
-              <span class="value">{{ equipment.cylinder_boom.pressure.toFixed(1) }} bar</span>
+            <div class="sensor-values">
+              <div class="sensor-row">
+                <span class="label">RPM:</span>
+                <span class="value">{{ equipment.pump.speed_rpm.toFixed(0) }}</span>
+              </div>
+              <div class="sensor-row">
+                <span class="label">Pressure:</span>
+                <span class="value">{{ equipment.pump.pressure_outlet.toFixed(1) }} bar</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="sensor-card" :class="{ fault: equipment.cylinder_boom.fault }">
+            <div class="sensor-header">
+              <div class="sensor-icon">🔧</div>
+              <h3>Boom Cyl</h3>
+            </div>
+            <div class="sensor-values">
+              <div class="sensor-row">
+                <span class="label">Pos:</span>
+                <span class="value">{{ equipment.cylinder_boom.position.toFixed(1) }}%</span>
+              </div>
+              <div class="sensor-row">
+                <span class="label">Press:</span>
+                <span class="value" :class="{ warning: equipment.cylinder_boom.pressure > 200 }">
+                  {{ equipment.cylinder_boom.pressure.toFixed(1) }} bar
+                </span>
+              </div>
+              <div class="sensor-row">
+                <span class="label">Temp:</span>
+                <span class="value">{{ equipment.cylinder_boom.temperature.toFixed(1) }}°C</span>
+              </div>
+            </div>
+            <div v-if="equipment.cylinder_boom.fault" class="fault-badge">⚠️ FAULT</div>
+          </div>
+
+          <div class="sensor-card">
+            <div class="sensor-header">
+              <div class="sensor-icon">🔩</div>
+              <h3>Stick Cyl</h3>
+            </div>
+            <div class="sensor-values">
+              <div class="sensor-row">
+                <span class="label">Pos:</span>
+                <span class="value">{{ equipment.cylinder_stick.position.toFixed(1) }}%</span>
+              </div>
+              <div class="sensor-row">
+                <span class="label">Press:</span>
+                <span class="value">{{ equipment.cylinder_stick.pressure.toFixed(1) }} bar</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sensor-card">
+            <div class="sensor-header">
+              <div class="sensor-icon">🪣</div>
+              <h3>Bucket Cyl</h3>
+            </div>
+            <div class="sensor-values">
+              <div class="sensor-row">
+                <span class="label">Pos:</span>
+                <span class="value">{{ equipment.cylinder_bucket.position.toFixed(1) }}°</span>
+              </div>
+              <div class="sensor-row">
+                <span class="label">Press:</span>
+                <span class="value">{{ equipment.cylinder_bucket.pressure.toFixed(1) }} bar</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
+      
+      <Transition name="slide-up">
+        <div v-if="latestPrediction" class="prediction-panel" :class="latestPrediction.fault_detected ? 'fault' : 'normal'">
+          <div class="prediction-content">
+            <div class="status-icon">{{ latestPrediction.fault_detected ? '🔴' : '🟢' }}</div>
+            <div class="prediction-details">
+              <h3>{{ latestPrediction.fault_detected ? 'Fault Detected' : 'Normal' }}</h3>
+              <div class="confidence-text">Confidence: {{ (latestPrediction.confidence * 100).toFixed(1) }}%</div>
+              <div class="reasoning">{{ latestPrediction.reasoning }}</div>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </div>
-    
-    <Transition name="slide-up">
-      <div v-if="latestPrediction" class="prediction-panel" :class="latestPrediction.fault_detected ? 'fault' : 'normal'">
-        <div class="prediction-content">
-          <div class="status-icon">
-            {{ latestPrediction.fault_detected ? '🔴' : '🟢' }}
-          </div>
-          <div class="prediction-details">
-            <h3>{{ latestPrediction.fault_detected ? 'Fault Detected' : 'Normal' }}</h3>
-            <div class="confidence-text">
-              Confidence: {{ (latestPrediction.confidence * 100).toFixed(1) }}%
-            </div>
-            <div class="reasoning">
-              {{ latestPrediction.reasoning }}
-            </div>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </div>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { useDigitalTwin } from '~/composables/useDigitalTwin'
 
 const container = ref<HTMLDivElement>()
 const canvas = ref<HTMLCanvasElement>()
+const mounted = ref(false)
 const isLoading = ref(true)
 
 const { equipment, latestPrediction, updatePhysics, moveBoom, moveStick, moveBucket } = useDigitalTwin()
@@ -160,23 +157,42 @@ let basePart: THREE.Mesh
 let boomPart: THREE.Mesh
 let stickPart: THREE.Mesh
 let bucketPart: THREE.Mesh
+let boomCylinder: THREE.Group
+let animationId: number
+let lastTime = Date.now()
 
-onMounted(() => {
-  initThreeJS()
-  createExcavator()
-  startAnimationLoop()
-  setTimeout(() => { isLoading.value = false }, 500)
+onMounted(async () => {
+  mounted.value = true
+  await nextTick()
+  
+  if (!container.value || !canvas.value) {
+    console.error('Container not ready')
+    return
+  }
+  
+  try {
+    initThreeJS()
+    createExcavator()
+    createCylinders()
+    startAnimation()
+    setTimeout(() => { isLoading.value = false }, 300)
+  } catch (error) {
+    console.error('Init failed:', error)
+  }
 })
 
 function initThreeJS() {
   scene = new THREE.Scene()
   scene.background = new THREE.Color(0x1a1a2e)
   
-  camera = new THREE.PerspectiveCamera(50, container.value!.clientWidth / container.value!.clientHeight, 0.1, 1000)
+  const width = container.value!.clientWidth
+  const height = container.value!.clientHeight
+  
+  camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000)
   camera.position.set(20, 15, 20)
   
   renderer = new THREE.WebGLRenderer({ canvas: canvas.value!, antialias: true })
-  renderer.setSize(container.value!.clientWidth, container.value!.clientHeight)
+  renderer.setSize(width, height)
   renderer.shadowMap.enabled = true
   
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.4)
@@ -190,54 +206,50 @@ function initThreeJS() {
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   
-  const groundGeometry = new THREE.PlaneGeometry(100, 100)
-  const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x2d3436 })
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial)
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(100, 100),
+    new THREE.MeshStandardMaterial({ color: 0x2d3436 })
+  )
   ground.rotation.x = -Math.PI / 2
   ground.receiveShadow = true
   scene.add(ground)
 }
 
 function createExcavator() {
-  const catYellow = 0xffb302
+  const yellow = 0xffb302
+  const mat = (color: number) => new THREE.MeshStandardMaterial({ 
+    color, metalness: 0.4, roughness: 0.6 
+  })
   
-  const baseGeometry = new THREE.BoxGeometry(5, 2, 4)
-  const baseMaterial = new THREE.MeshStandardMaterial({ color: catYellow })
-  basePart = new THREE.Mesh(baseGeometry, baseMaterial)
-  basePart.position.y = 1
+  basePart = new THREE.Mesh(new THREE.BoxGeometry(4, 1.5, 3), mat(yellow))
+  basePart.position.y = 0.75
   basePart.castShadow = true
   scene.add(basePart)
   
-  const boomGeometry = new THREE.BoxGeometry(10, 0.8, 0.8)
-  const boomMaterial = new THREE.MeshStandardMaterial({ color: catYellow })
-  boomPart = new THREE.Mesh(boomGeometry, boomMaterial)
-  boomPart.position.set(5, 2.5, 0)
+  boomPart = new THREE.Mesh(new THREE.BoxGeometry(8, 0.8, 0.8), mat(yellow))
+  boomPart.position.set(4, 0, 0)
   boomPart.castShadow = true
   
   const boomPivot = new THREE.Object3D()
-  boomPivot.position.set(0, 2.5, 0)
+  boomPivot.position.set(0, 2, 0)
   boomPivot.add(boomPart)
   basePart.add(boomPivot)
   
-  const stickGeometry = new THREE.BoxGeometry(7, 0.6, 0.6)
-  const stickMaterial = new THREE.MeshStandardMaterial({ color: catYellow })
-  stickPart = new THREE.Mesh(stickGeometry, stickMaterial)
-  stickPart.position.set(3.5, 0, 0)
+  stickPart = new THREE.Mesh(new THREE.BoxGeometry(6, 0.6, 0.6), mat(yellow))
+  stickPart.position.set(3, 0, 0)
   stickPart.castShadow = true
   
   const stickPivot = new THREE.Object3D()
-  stickPivot.position.set(10, 0, 0)
+  stickPivot.position.set(8, 0, 0)
   stickPivot.add(stickPart)
   boomPart.add(stickPivot)
   
-  const bucketGeometry = new THREE.BoxGeometry(2.5, 2, 2.5)
-  const bucketMaterial = new THREE.MeshStandardMaterial({ color: 0x555555 })
-  bucketPart = new THREE.Mesh(bucketGeometry, bucketMaterial)
-  bucketPart.position.set(3, 0, 0)
+  bucketPart = new THREE.Mesh(new THREE.BoxGeometry(2, 1.8, 2), mat(0x555555))
+  bucketPart.position.set(2.5, 0, 0)
   bucketPart.castShadow = true
   
   const bucketPivot = new THREE.Object3D()
-  bucketPivot.position.set(7, 0, 0)
+  bucketPivot.position.set(6, 0, 0)
   bucketPivot.add(bucketPart)
   stickPart.add(bucketPivot)
   
@@ -246,19 +258,42 @@ function createExcavator() {
   ;(bucketPart as any).pivot = bucketPivot
 }
 
-let lastTime = Date.now()
-let animationId: number
+function createCylinders() {
+  const gray = 0x888888
+  
+  boomCylinder = new THREE.Group()
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2, 0.2, 3, 16),
+    new THREE.MeshStandardMaterial({ color: gray, metalness: 0.6 })
+  )
+  body.castShadow = true
+  boomCylinder.add(body)
+  
+  const rod = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.15, 0.15, 1.5, 16),
+    new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8 })
+  )
+  rod.position.y = 2
+  rod.castShadow = true
+  boomCylinder.add(rod)
+  
+  ;(boomCylinder as any).rod = rod
+  
+  boomCylinder.position.set(1, 0.5, 0)
+  boomCylinder.rotation.z = Math.PI / 6
+  basePart.add(boomCylinder)
+}
 
-function startAnimationLoop() {
+function startAnimation() {
   function animate() {
     animationId = requestAnimationFrame(animate)
     
     const now = Date.now()
-    const deltaTime = Math.min((now - lastTime) / 1000, 0.1)
+    const delta = Math.min((now - lastTime) / 1000, 0.1)
     lastTime = now
     
-    updatePhysics(deltaTime)
-    updateExcavatorPose()
+    updatePhysics(delta)
+    updatePose()
     
     controls.update()
     renderer.render(scene, camera)
@@ -266,16 +301,15 @@ function startAnimationLoop() {
   animate()
 }
 
-function updateExcavatorPose() {
-  if (!boomPart || !stickPart || !bucketPart) return
+function updatePose() {
+  if (!boomPart) return
   
-  const now = Date.now()
   const boomAngle = (equipment.cylinder_boom.position / 100) * (Math.PI / 3)
   ;(boomPart as any).pivot.rotation.z = boomAngle
   
   if (equipment.cylinder_boom.fault) {
     (boomPart.material as THREE.MeshStandardMaterial).emissive.setHex(0xff0000)
-    (boomPart.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.3 + Math.sin(now / 300) * 0.2
+    (boomPart.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.5
   } else {
     (boomPart.material as THREE.MeshStandardMaterial).emissiveIntensity = 0
   }
@@ -285,29 +319,24 @@ function updateExcavatorPose() {
   
   const bucketAngle = (equipment.cylinder_bucket.position / 100) * (Math.PI / 4)
   ;(bucketPart as any).pivot.rotation.z = bucketAngle
+  
+  if (boomCylinder) {
+    const extension = equipment.cylinder_boom.position / 100
+    ;(boomCylinder as any).rod.position.y = 1.5 + extension * 1.5
+  }
 }
 
-async function onBoomMove() {
-  await moveBoom(boomTarget.value)
-}
-
-async function onStickMove() {
-  await moveStick(stickTarget.value)
-}
-
-async function onBucketMove() {
-  await moveBucket(bucketTarget.value)
-}
+async function onBoomMove() { await moveBoom(boomTarget.value) }
+async function onStickMove() { await moveStick(stickTarget.value) }
+async function onBucketMove() { await moveBucket(bucketTarget.value) }
 
 function resetPosition() {
   boomTarget.value = 0
   stickTarget.value = 0
   bucketTarget.value = 0
-  equipment.cylinder_boom.position = 0
-  equipment.cylinder_stick.position = 0
-  equipment.cylinder_bucket.position = 0
-  equipment.cylinder_boom.fault = false
-  equipment.cylinder_stick.fault = false
+  Object.assign(equipment.cylinder_boom, { position: 0, fault: false })
+  Object.assign(equipment.cylinder_stick, { position: 0, fault: false })
+  Object.assign(equipment.cylinder_bucket, { position: 0, fault: false })
 }
 
 function simulateFault() {
@@ -317,7 +346,7 @@ function simulateFault() {
     fault_detected: true,
     confidence: 0.95,
     fault_type: 'overpressure',
-    reasoning: 'Boom cylinder pressure exceeded safe threshold (250 bar > 200 bar)'
+    reasoning: 'Boom pressure exceeded 220 bar'
   }
   setTimeout(() => {
     equipment.cylinder_boom.fault = false
@@ -326,9 +355,9 @@ function simulateFault() {
 }
 
 onBeforeUnmount(() => {
-  cancelAnimationFrame(animationId)
-  renderer.dispose()
-  controls.dispose()
+  if (animationId) cancelAnimationFrame(animationId)
+  if (renderer) renderer.dispose()
+  if (controls) controls.dispose()
 })
 </script>
 
@@ -388,7 +417,6 @@ onBeforeUnmount(() => {
   padding: 24px;
   color: white;
   overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .control-panel h2 {
@@ -398,7 +426,7 @@ onBeforeUnmount(() => {
 }
 
 .control-group {
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .control-group label {
@@ -427,7 +455,6 @@ onBeforeUnmount(() => {
 
 .control-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  appearance: none;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -483,72 +510,63 @@ onBeforeUnmount(() => {
   border-radius: 16px;
   padding: 24px;
   color: white;
-  max-height: 400px;
+  max-height: 450px;
   overflow-y: auto;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
 .sensor-dashboard h2 {
-  margin: 0 0 20px 0;
+  margin: 0 0 16px 0;
   font-size: 18px;
-  font-weight: 700;
 }
 
 .sensor-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .sensor-card {
   background: #1f1f2e;
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: 8px;
+  padding: 12px;
   border: 2px solid transparent;
   transition: all 0.3s;
 }
 
 .sensor-card.fault {
   border-color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
   animation: pulse-border 1s infinite;
 }
 
 @keyframes pulse-border {
-  0%, 100% { 
-    border-color: #ef4444;
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
-  }
-  50% { 
-    border-color: #dc2626;
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.5);
-  }
+  0%, 100% { border-color: #ef4444; }
+  50% { border-color: #dc2626; }
 }
 
 .sensor-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .sensor-icon {
-  font-size: 28px;
+  font-size: 24px;
 }
 
 .sensor-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .sensor-values {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .sensor-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
+  padding: 4px 0;
 }
 
 .sensor-row .label {
@@ -560,6 +578,21 @@ onBeforeUnmount(() => {
   color: #10b981;
 }
 
+.sensor-row .value.warning {
+  color: #f59e0b;
+}
+
+.fault-badge {
+  margin-top: 8px;
+  padding: 6px;
+  background: #ef4444;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  text-align: center;
+  animation: pulse 1s infinite;
+}
+
 .prediction-panel {
   position: fixed;
   bottom: 30px;
@@ -567,11 +600,10 @@ onBeforeUnmount(() => {
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.95);
   border-radius: 16px;
-  padding: 24px;
+  padding: 20px;
   color: white;
-  min-width: 450px;
+  min-width: 400px;
   backdrop-filter: blur(20px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   z-index: 100;
 }
 
@@ -585,31 +617,28 @@ onBeforeUnmount(() => {
 
 .prediction-content {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   align-items: flex-start;
 }
 
 .status-icon {
-  font-size: 48px;
+  font-size: 40px;
 }
 
 .prediction-details h3 {
-  margin: 0 0 12px 0;
-  font-size: 20px;
-  font-weight: 700;
+  margin: 0 0 8px 0;
+  font-size: 18px;
 }
 
 .confidence-text {
   font-size: 14px;
-  font-weight: 600;
   color: #10b981;
   margin-bottom: 8px;
 }
 
 .reasoning {
-  font-size: 14px;
+  font-size: 13px;
   color: #9ca3af;
-  line-height: 1.6;
 }
 
 .slide-up-enter-active,
@@ -621,5 +650,10 @@ onBeforeUnmount(() => {
 .slide-up-leave-to {
   transform: translateX(-50%) translateY(100px);
   opacity: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 </style>
