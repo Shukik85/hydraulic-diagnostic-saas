@@ -1,7 +1,8 @@
-# Production dependencies
+# Production dependencies (API-only, no ML/RAG)
 -r base.txt
 
 # Production WSGI server
+# Gunicorn, без ASGI-фичей (channels запускаются отдельно)
 gunicorn>=22.0,<23.0
 
 # Static files
@@ -9,7 +10,7 @@ whitenoise>=6.8,<7.0
 
 # Monitoring and logging
 sentry-sdk[django]>=1.40.0,<2.0.0
-prometheus-client>=0.20.0
+prometheus-client>=0.20.0,<1.0.0
 
 # Security
 cryptography>=43.0,<44.0
