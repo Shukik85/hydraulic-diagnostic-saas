@@ -1,4 +1,9 @@
+version: '3.8'
+
 services:
+  # ============================================================================
+  # Database Layer
+  # ============================================================================
   db:
     image: timescale/timescaledb:latest-pg15
     container_name: hdx-postgres
@@ -9,6 +14,7 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./docker/init-timescale.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "5432:5432"
     networks:
@@ -33,37 +39,35 @@ services:
       timeout: 3s
       retries: 5
 
-  backend:
+  # ============================================================================
+  # AI/ML Layer (GPU Services)
+  # ============================================================================
+  gnn_service:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: hdx-backend
-    env_file:
-      - .env
+      dockerfile: gnn_service/Dockerfile
+    image: hdx-gnn-service:latest
+    container_name: hdx-gnn-service
+    restart: unless-stopped
     environment:
-      DJANGO_SETTINGS_MODULE: config.settings
-      ML_SERVICE_URL: http://ml_service:8001
-      RAG_SERVICE_URL: http://rag_service:8002
-      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY}
-      RAG_INTERNAL_API_KEY: ${RAG_INTERNAL_API_KEY}
+      GNN_INTERNAL_API_KEY: ${GNN_INTERNAL_API_KEY}
+      MODEL_PATH: /models/gnn_classifier_best.ckpt
+      DEVICE: cuda
+      CUDA_VISIBLE_DEVICES: 0
     volumes:
-      - ./backend:/app/backend
-    ports:
-      - "8000:8000"
+      - ./models/gnn:/models
+      - ./logs/gnn:/logs
     networks:
-      - public
-      - internal
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      ml_service:
-        condition: service_healthy
-      rag_service:
-        condition: service_healthy
+      - internal  # Internal only!
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
       timeout: 10s
       start_period: 60s
@@ -74,6 +78,7 @@ services:
       context: ./ml_service
       dockerfile: Dockerfile
     container_name: hdx-ml-service
+    restart: unless-stopped
     environment:
       ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY}
       REDIS_URL: redis://redis:6379/0
@@ -82,7 +87,7 @@ services:
       - ./ml_service/models:/app/models
       - ./ml_service/data:/app/data
     networks:
-      - internal  # Только internal network!
+      - internal
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 15s
@@ -95,6 +100,7 @@ services:
       context: ./rag_service
       dockerfile: Dockerfile
     container_name: hdx-rag-service
+    restart: unless-stopped
     environment:
       RAG_INTERNAL_API_KEY: ${RAG_INTERNAL_API_KEY}
       RAG_OLLAMA_BASE_URL: http://ollama:11434
@@ -102,7 +108,10 @@ services:
     volumes:
       - ./rag_service/data:/data
     networks:
-      - internal  # Только internal network!
+      - internal
+    depends_on:
+      ollama:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 15s
@@ -110,18 +119,89 @@ services:
       retries: 3
       start_period: 30s
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hdx-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - internal
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ============================================================================
+  # Backend Layer (Django API Gateway)
+  # ============================================================================
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: hdx-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings
+      ML_SERVICE_URL: http://ml_service:8001
+      RAG_SERVICE_URL: http://rag_service:8002
+      GNN_SERVICE_URL: http://gnn_service:8003
+      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY}
+      RAG_INTERNAL_API_KEY: ${RAG_INTERNAL_API_KEY}
+      GNN_INTERNAL_API_KEY: ${GNN_INTERNAL_API_KEY}
+    volumes:
+      - ./backend:/app/backend
+      - static_volume:/app/backend/staticfiles
+      - media_volume:/app/backend/media
+    ports:
+      - "8000:8000"
+    networks:
+      - public
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      gnn_service:
+        condition: service_healthy
+      ml_service:
+        condition: service_healthy
+      rag_service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  # ============================================================================
+  # Worker Layer (Celery)
+  # ============================================================================
   celery:
     build:
       context: .
-      dockerfile: Dockerfile.light
+      dockerfile: backend/Dockerfile
     container_name: hdx-celery
-    command: ["/entrypoint.sh", "celery", "-A", "config", "worker", "-l", "info"]
+    restart: unless-stopped
+    command: celery -A config worker -l info
     env_file:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
     volumes:
-      - .:/app
+      - ./backend:/app/backend
     networks:
       - internal
     depends_on:
@@ -133,15 +213,16 @@ services:
   beat:
     build:
       context: .
-      dockerfile: Dockerfile.light
+      dockerfile: backend/Dockerfile
     container_name: hdx-celery-beat
-    command: ["/entrypoint.sh", "celery", "-A", "config", "beat", "-l", "info"]
+    restart: unless-stopped
+    command: celery -A config beat -l info
     env_file:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
     volumes:
-      - .:/app
+      - ./backend:/app/backend
     networks:
       - internal
     depends_on:
@@ -150,12 +231,36 @@ services:
       redis:
         condition: service_healthy
 
+  # ============================================================================
+  # Frontend Layer (Nuxt 4)
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hdx-frontend
+    restart: unless-stopped
+    environment:
+      NUXT_PUBLIC_API_BASE_URL: http://backend:8000
+      NUXT_PUBLIC_WS_URL: ws://backend:8000/ws
+    ports:
+      - "3000:3000"
+    networks:
+      - public
+    depends_on:
+      - backend
+
 networks:
   public:
     driver: bridge
+    name: hdx-public
   internal:
     driver: bridge
-    internal: false  # Для dev оставляем false, в prod → true
+    name: hdx-internal
+    internal: false  # Dev: false, Prod: true
 
 volumes:
   pgdata:
+  ollama_data:
+  static_volume:
+  media_volume:
