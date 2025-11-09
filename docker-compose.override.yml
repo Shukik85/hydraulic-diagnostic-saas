@@ -1,0 +1,84 @@
+# Docker Compose override for GPU microservices
+# Merge with main docker-compose.yml
+
+version: '3.8'
+
+services:
+  # Build base GPU image first
+  base-ai-gpu:
+    build:
+      context: .
+      dockerfile: docker/base-ai-gpu.Dockerfile
+    image: hydraulic-ai-base-gpu:cuda12.4
+    profiles: ["build"]
+
+  # Ollama Service (GPU)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: hdx-ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # Ollama init (pull DeepSeek-R1)
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: hdx-ollama-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - internal
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        echo "Pulling DeepSeek-R1..."
+        sleep 10
+        ollama pull deepseek-r1:7b
+        echo "✅ DeepSeek-R1 ready"
+    restart: "no"
+
+  # ML Service (GPU)
+  ml_service:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile.gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # RAG Service (uses Ollama for LLM)
+  rag_service:
+    depends_on:
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      - RAG_OLLAMA_BASE_URL=http://ollama:11434
+      - RAG_LLM_MODEL=deepseek-r1:7b
+
+volumes:
+  ollama_models:
+    driver: local
