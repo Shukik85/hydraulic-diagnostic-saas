@@ -9,7 +9,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 
 # Настройка Django окружения
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(BASE_DIR))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 

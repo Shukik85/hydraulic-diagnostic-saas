@@ -22,10 +22,10 @@ pytest -n auto
 ## Специальные тесты
 ```bash
 # Smoke для диагностики моделей/связей
-python smoke_diagnostics.py
+python tests/smoke/smoke_diagnostics.py
 
 # RAG pipeline (FAISS + Ollama)
-python test_rag.py
+python tests/unit/test_rag.py
 ```
 
 ## Проверки качества

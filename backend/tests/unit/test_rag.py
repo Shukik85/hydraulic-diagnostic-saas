@@ -14,7 +14,7 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 import numpy as np
 
 # Инициализация Django окружения (для доступа к settings, если нужно)
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, BASE_DIR)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
