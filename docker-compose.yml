@@ -1,94 +1,40 @@
+# Updated docker-compose.yml with GNN Service
+version: '3.8'
+
 services:
-  db:
-    image: timescale/timescaledb:latest-pg15
-    container_name: hdx-postgres
+  # ... existing services (backend, ml_service, rag_service, etc.) ...
+
+  gnn_service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gnn_service
+    container_name: gnn_service
+    ports:
+      - "8003:8003"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=hydraulic_diagnostics
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./models:/app/models
+      - ./logs:/app/logs
+      - ./gnn_service:/app/gnn_service
+    networks:
+      - internal
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    depends_on:
+      - postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${DATABASE_NAME}
-      POSTGRES_USER: ${DATABASE_USER}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: hdx-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: hdx-backend
-    env_file:
-      - .env
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings
-    volumes:
-      - ./backend:/app/backend  # ← монтируй код С ХОСТА!
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
-      interval: 30s
-      timeout: 10s
-      start_period: 60s
-      retries: 3
-
-  celery:
-    build:
-      context: .
-      dockerfile: Dockerfile.light
-    container_name: hdx-celery
-    command: ["/entrypoint.sh", "celery", "-A", "config", "worker", "-l", "info"]
-    env_file:
-      - .env
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings
-    volumes:
-      - .:/app
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  beat:
-    build:
-      context: .
-      dockerfile: Dockerfile.light
-    container_name: hdx-celery-beat
-    command: ["/entrypoint.sh", "celery", "-A", "config", "beat", "-l", "info"]
-    env_file:
-      - .env
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings
-    volumes:
-      - .:/app
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-volumes:
-  pgdata:
+networks:
+  internal:
+    driver: bridge
