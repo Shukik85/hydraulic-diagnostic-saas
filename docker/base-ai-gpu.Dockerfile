@@ -48,5 +48,4 @@ RUN pip install --no-cache-dir \
     pydantic-settings==2.6.0 \
     httpx==0.27.0 \
     prometheus-client==0.21.0 \
-    structlog==24.4.0 \
-    && pip cache purge
+    structlog==24.4.0
