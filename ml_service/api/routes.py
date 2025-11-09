@@ -18,6 +18,7 @@ from services.monitoring import metrics
 from services.two_stage_classifier import get_two_stage_classifier
 from services.utils.features import adaptive_project, build_feature_cache_key
 
+from .auth import verify_internal_api_key
 from .schemas import (
     AnomalyPrediction,
     BatchPredictionRequest,
@@ -59,7 +60,7 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
     feature_engineer = FeatureEngineer()
     fv = await feature_engineer.extract_features(req.sensor_data)
 
-    # 2) Adaptive projection: строим вектор из всех доступных признаков
+    # 2) Adaptive projection
     expected_size = None
     try:
         for m in ensemble.models.values():
@@ -70,7 +71,7 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
         expected_size = 25
 
     vector, used_names = adaptive_project(fv, expected_size=expected_size)
-    coverage = fv.data_quality_score  # from FeatureEngineer
+    coverage = fv.data_quality_score
 
     logger.info(
         "Ensemble input vector",
@@ -116,7 +117,7 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
     is_anomaly_adaptive = ensemble_score > adaptive_threshold
     confidence_multiplier = threshold_info["confidence_multiplier"]
 
-    # 6) Two-stage enhancement (if anomaly detected)
+    # 6) Two-stage enhancement
     affected_components = []
     anomaly_type = None
     two_stage_info = None
@@ -127,15 +128,12 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
             if two_stage.is_loaded:
                 two_stage_result = two_stage.predict(vector)
 
-                # Override with two-stage results if available
                 if two_stage_result.get("is_anomaly"):
                     anomaly_type = two_stage_result.get("anomaly_type")
                     affected_components = two_stage_result.get("affected_components", [])
 
-                    # Enhanced confidence based on two-stage consensus
                     stage2_confidence = two_stage_result.get("multiclass_confidence", 0.0)
                     if stage2_confidence > 0:
-                        # Blend ensemble confidence with stage2 confidence
                         ensemble_confidence = confidence_multiplier
                         blended_confidence = (ensemble_confidence + stage2_confidence) / 2
                         confidence_multiplier = blended_confidence
@@ -197,7 +195,6 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
         features_extracted=int(vector.size),
         cache_hit=False,
         trace_id=trace_id,
-        # Adaptive thresholds fields
         threshold_used=adaptive_threshold,
         threshold_source=threshold_info["source"],
         baseline_context={
@@ -205,14 +202,12 @@ async def _predict_core(req: PredictionRequest, ensemble: EnsembleModel, cache: 
             "coverage": coverage,
             "confidence_multiplier": confidence_multiplier,
         },
-        # Two-stage enhancement fields (optional)
         two_stage_info=two_stage_info,
     )
 
     # 8) Update baseline (async)
     if adaptive_thresholds:
         try:
-            # Не ждём результата — background update
             asyncio.create_task(
                 adaptive_thresholds.update_baseline(
                     system_id=req.sensor_data.system_id, score=ensemble_score, coverage=coverage
@@ -239,13 +234,14 @@ async def _safe_predict_item(
         return ErrorResponse(error=str(e), error_code="PREDICTION_FAILED", trace_id=str(uuid.uuid4()))
 
 
-@router.post("/predict", response_model=PredictionResponse)
+@router.post("/predict", response_model=PredictionResponse, dependencies=[Depends(verify_internal_api_key)])
 async def predict_anomaly(
     request: PredictionRequest,
     response: Response,
     ensemble: EnsembleModel = Depends(get_ensemble_model),
     cache: CacheService = Depends(get_cache_service),
 ):
+    """Predict anomaly (internal only, requires X-Internal-API-Key)."""
     try:
         return await _predict_core(request, ensemble, cache)
     except Exception as e:
@@ -253,13 +249,14 @@ async def predict_anomaly(
         return JSONResponse(status_code=500, content=err.model_dump(mode="json"))
 
 
-@router.post("/predict/batch", response_model=BatchPredictionResponse)
+@router.post("/predict/batch", response_model=BatchPredictionResponse, dependencies=[Depends(verify_internal_api_key)])
 async def predict_batch(
     request: BatchPredictionRequest,
     _background_tasks: BackgroundTasks,
     ensemble: EnsembleModel = Depends(get_ensemble_model),
     cache: CacheService = Depends(get_cache_service),
 ):
+    """Batch prediction (internal only, requires X-Internal-API-Key)."""
     start_time = time.time()
     trace_id = str(uuid.uuid4())
 
@@ -300,10 +297,10 @@ async def predict_batch(
     )
 
 
-# Additional endpoints for two-stage system
-@router.get("/two-stage/info")
+# Two-stage endpoints (internal only)
+@router.get("/two-stage/info", dependencies=[Depends(verify_internal_api_key)])
 async def get_two_stage_info():
-    """Get information about two-stage classifier"""
+    """Get information about two-stage classifier (internal only)."""
     try:
         two_stage = get_two_stage_classifier()
         return two_stage.get_model_info()
@@ -311,9 +308,9 @@ async def get_two_stage_info():
         return JSONResponse(status_code=503, content={"error": str(e), "two_stage_available": False})
 
 
-@router.post("/two-stage/reload")
+@router.post("/two-stage/reload", dependencies=[Depends(verify_internal_api_key)])
 async def reload_two_stage():
-    """Reload two-stage models (for model updates)"""
+    """Reload two-stage models (internal only)."""
     try:
         from services.two_stage_classifier import reload_two_stage_models
 
@@ -327,15 +324,13 @@ async def reload_two_stage():
         return JSONResponse(status_code=500, content={"error": str(e), "success": False})
 
 
-@router.get("/models/performance")
+@router.get("/models/performance", dependencies=[Depends(verify_internal_api_key)])
 async def get_model_performance():
-    """Get performance statistics for all models"""
+    """Get performance statistics for all models (internal only)."""
     try:
-        # Ensemble model stats
         ensemble = get_ensemble_model()
         ensemble_info = ensemble.get_model_info()
 
-        # Two-stage stats
         two_stage_stats = {}
         try:
             two_stage = get_two_stage_classifier()
