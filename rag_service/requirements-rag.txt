@@ -1,15 +1,6 @@
-# RAG Service specific dependencies
-# Base dependencies are in base-ai-gpu image
-
-# FAISS for vector search (CPU version)
-faiss-cpu==1.8.0
-
-# LangChain
-langchain==0.2.16
-langchain-community==0.2.16
-
-# Ollama client
-ollama==0.3.1
-
-# Additional utilities
-python-dotenv==1.0.1
+faiss-cpu
+langchain
+sentence-transformers
+httpx
+structlog
+pydantic-settings
