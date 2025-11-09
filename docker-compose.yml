@@ -11,6 +11,8 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
@@ -23,6 +25,8 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    networks:
+      - internal
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -38,14 +42,25 @@ services:
       - .env
     environment:
       DJANGO_SETTINGS_MODULE: config.settings
+      ML_SERVICE_URL: http://ml_service:8001
+      RAG_SERVICE_URL: http://rag_service:8002
+      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY}
+      RAG_INTERNAL_API_KEY: ${RAG_INTERNAL_API_KEY}
     volumes:
-      - ./backend:/app/backend  # ← монтируй код С ХОСТА!
+      - ./backend:/app/backend
     ports:
       - "8000:8000"
+    networks:
+      - public
+      - internal
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      ml_service:
+        condition: service_healthy
+      rag_service:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
@@ -53,6 +68,47 @@ services:
       timeout: 10s
       start_period: 60s
       retries: 3
+
+  ml_service:
+    build:
+      context: ./ml_service
+      dockerfile: Dockerfile
+    container_name: hdx-ml-service
+    environment:
+      ML_INTERNAL_API_KEY: ${ML_INTERNAL_API_KEY}
+      REDIS_URL: redis://redis:6379/0
+      DEBUG: "false"
+    volumes:
+      - ./ml_service/models:/app/models
+      - ./ml_service/data:/app/data
+    networks:
+      - internal  # Только internal network!
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  rag_service:
+    build:
+      context: ./rag_service
+      dockerfile: Dockerfile
+    container_name: hdx-rag-service
+    environment:
+      RAG_INTERNAL_API_KEY: ${RAG_INTERNAL_API_KEY}
+      RAG_OLLAMA_BASE_URL: http://ollama:11434
+      RAG_DEBUG: "false"
+    volumes:
+      - ./rag_service/data:/data
+    networks:
+      - internal  # Только internal network!
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   celery:
     build:
@@ -66,6 +122,8 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings
     volumes:
       - .:/app
+    networks:
+      - internal
     depends_on:
       db:
         condition: service_healthy
@@ -84,11 +142,20 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings
     volumes:
       - .:/app
+    networks:
+      - internal
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+networks:
+  public:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: false  # Для dev оставляем false, в prod → true
 
 volumes:
   pgdata:
