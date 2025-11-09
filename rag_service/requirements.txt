@@ -1,0 +1,15 @@
+# RAG/AI сервис (FastAPI или отдельное ядро)
+langchain>=0.1.17,<0.2.0
+langchain-community>=0.0.38,<0.1.0
+sentence-transformers>=3.0,<6.0
+faiss-cpu>=1.7.4,<1.8.0
+ollama>=0.2.1,<0.3.0
+scikit-learn>=1.5,<2.0
+numpy>=1.24,<2.0
+pandas>=2.2,<3.0
+Pillow>=10.4,<11.0
+# Optionally, fastapi, pydantic, structlog, gunicorn, etc., if this is an API
+fastapi>=0.111,<1.0
+pydantic>=2.6,<3.0
+structlog>=24.1,<25.0
+gunicorn>=22.0,<23.0
