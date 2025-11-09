@@ -1,30 +1,24 @@
 # ============================================================================
-# Base AI GPU Image - CUDA 12.4 + PyTorch for ML & RAG services
+# Base AI GPU Image - CUDA 12.1 with pre-downloaded PyTorch wheels
 # ============================================================================
-FROM nvidia/cuda:12.4.0-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
-# Metadata
 LABEL maintainer="Aleksandr Plotnikov <a.s.plotnikov85@gmail.com>"
-LABEL description="Shared GPU base image for ML and RAG services"
-LABEL cuda.version="12.4"
+LABEL description="Shared GPU base for GNN and RAG services"
+LABEL cuda.version="12.1.1"
 
 # Environment
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1 \
     NVIDIA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
-# Install Python 3.11 and system dependencies
+# Install Python 3.11
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3.11-dev \
-    python3-pip \
-    curl \
-    git \
-    build-essential \
+    python3.11 python3.11-dev python3-pip \
+    curl git build-essential \
     && ln -sf /usr/bin/python3.11 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
@@ -33,39 +27,26 @@ WORKDIR /app
 # Upgrade pip
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install PyTorch with CUDA 12.4 support
-RUN pip install --no-cache-dir \
-    torch==2.3.0 \
-    torchvision==0.18.0 \
-    --index-url https://download.pytorch.org/whl/cu124
+# Copy pre-downloaded PyTorch wheels (FIXED PATH!)
+COPY docker/wheels/*.whl /tmp/wheels/
 
-# Install common AI/ML libraries
+# Install PyTorch from local wheels (no download!)
 RUN pip install --no-cache-dir \
-    # Core ML
+    /tmp/wheels/torch-2.3.1+cu121-cp311-cp311-linux_x86_64.whl \
+    /tmp/wheels/torchvision-0.18.1+cu121-cp311-cp311-linux_x86_64.whl \
+    && rm -rf /tmp/wheels
+
+# Install common libraries
+RUN pip install --no-cache-dir \
     numpy==1.26.4 \
+    pandas==2.2.3 \
     scipy==1.11.4 \
     scikit-learn==1.5.2 \
-    pandas==2.2.3 \
-    # FastAPI Stack
     fastapi==0.115.4 \
     uvicorn[standard]==0.32.0 \
     pydantic==2.9.2 \
     pydantic-settings==2.6.0 \
-    # Async & HTTP
     httpx==0.27.0 \
-    aiohttp==3.10.10 \
-    # Monitoring
     prometheus-client==0.21.0 \
     structlog==24.4.0 \
-    # NLP Base
-    transformers==4.44.0 \
-    sentence-transformers==3.0.1
-
-# Cleanup
-RUN pip cache purge && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Healthcheck utility
-RUN apt-get update && apt-get install -y --no-install-recommends curl && \
-    rm -rf /var/lib/apt/lists/*
+    && pip cache purge

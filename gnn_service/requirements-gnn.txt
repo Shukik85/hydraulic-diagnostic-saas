@@ -1,0 +1,41 @@
+# ============================================================================
+# GNN Service - T-GAT Self-Supervised Learning Stack
+# ============================================================================
+
+# PyTorch Geometric (CUDA 12.1)
+torch-geometric==2.4.0
+torch-scatter==2.1.2+pt23cu121 -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+torch-sparse==0.6.18+pt23cu121 -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+torch-cluster==1.6.3+pt23cu121 -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+
+# Training framework
+pytorch-lightning==2.1.0
+
+# Self-Supervised Learning utilities
+timm==0.9.12
+einops==0.7.0
+rotary-embedding-torch==0.5.3
+
+# Graph utilities
+networkx==3.2.1
+python-igraph==0.11.3
+
+# Database
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+asyncpg==0.29.0
+
+# Explainability
+captum==0.7.0
+
+# ONNX export
+onnx==1.15.0
+onnxruntime-gpu==1.16.3
+onnxsim==0.4.35
+
+# Training utilities (optional)
+# optuna==3.5.0
+# wandb==0.16.1
+
+# Additional utilities
+python-dotenv==1.0.1

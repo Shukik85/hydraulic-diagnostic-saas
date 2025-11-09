@@ -1,18 +1,51 @@
-# Docker Compose override for GPU microservices
-# Merge with main docker-compose.yml
-
+# ============================================================================
+# Docker Compose override for GNN Service + RAG + Ollama
+# ============================================================================
 version: '3.8'
 
 services:
-  # Build base GPU image first
+  # Build base GPU image
   base-ai-gpu:
     build:
       context: .
       dockerfile: docker/base-ai-gpu.Dockerfile
-    image: hydraulic-ai-base-gpu:cuda12.4
+    image: hydraulic-ai-base-gpu:cuda12.1
     profiles: ["build"]
 
-  # Ollama Service (GPU)
+  # GNN Service (T-GAT)
+  gnn_service:
+    build:
+      context: ./gnn_service
+      dockerfile: Dockerfile
+    image: hydraulic-gnn-service:tgat
+    container_name: hdx-gnn-service
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - GNN_INTERNAL_API_KEY=${GNN_INTERNAL_API_KEY}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/hydraulic_db
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./gnn_service/models:/app/models
+      - ./gnn_service/checkpoints:/app/checkpoints
+    networks:
+      - internal
+    depends_on:
+      - postgres
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  # Ollama (GPU for RAG)
   ollama:
     image: ollama/ollama:latest
     container_name: hdx-ollama
@@ -57,20 +90,7 @@ services:
         echo "✅ DeepSeek-R1 ready"
     restart: "no"
 
-  # ML Service (GPU)
-  ml_service:
-    build:
-      context: ./ml_service
-      dockerfile: Dockerfile.gpu
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
-  # RAG Service (uses Ollama for LLM)
+  # RAG Service
   rag_service:
     depends_on:
       ollama-init:
@@ -79,6 +99,18 @@ services:
       - RAG_OLLAMA_BASE_URL=http://ollama:11434
       - RAG_LLM_MODEL=deepseek-r1:7b
 
+  # Backend updates
+  backend:
+    depends_on:
+      gnn_service:
+        condition: service_healthy
+      rag_service:
+        condition: service_healthy
+
 volumes:
   ollama_models:
     driver: local
+
+networks:
+  internal:
+    driver: bridge
