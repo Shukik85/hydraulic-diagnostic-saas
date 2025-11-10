@@ -1,0 +1,289 @@
+"""Celery задачи для обработки документов и индексации RAG системы."""
+
+from __future__ import annotations
+
+from collections.abc import Generator
+from collections import defaultdict
+from contextlib import contextmanager
+import logging
+import time
+import traceback
+from typing import Any
+
+from celery import shared_task
+from celery.utils.log import get_task_logger
+from django.core.cache import cache
+from django.core.exceptions import ValidationError
+from django.db import transaction
+from django.utils import timezone
+
+from .models import Document as RagDocument, RagSystem
+from .rag_service import RagAssistant
+
+logger = get_task_logger(__name__)
+performance_logger = logging.getLogger("performance")
+
+# Константы задач
+MAX_BATCH_SIZE = 100
+TASK_PROGRESS_UPDATE_INTERVAL = 10
+MAX_RETRIES = 3
+RETRY_COUNTDOWN = 60
+
+
+@contextmanager
+def task_performance_monitor(
+    task_name: str, **metadata: Any
+) -> Generator[None, None, None]:
+    """Контекстный менеджер для мониторинга производительности задач.
+
+    Args:
+        task_name: Название задачи для логирования
+        **metadata: Дополнительные метаданные для логирования
+    """
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        duration = time.time() - start_time
+        performance_logger.info(
+            "Celery task completed",
+            extra={
+                "task_name": task_name,
+                "duration_ms": round(duration * 1000, 2),
+                "timestamp": time.time(),
+                **metadata,
+            },
+        )
+
+
+@shared_task(bind=True, max_retries=MAX_RETRIES)
+def process_document_async(
+    self: Any, document_id: int, reindex: bool = False
+) -> dict[str, Any]:
+    """Асинхронная обработка и индексация документа.
+
+    Args:
+        self: Контекст задачи Celery
+        document_id: ID документа для обработки
+        reindex: Флаг переиндексации
+
+    Returns:
+        Словарь с результатом выполнения задачи
+    """
+    task_id = self.request.id
+    try:
+        with task_performance_monitor(
+            "process_document", document_id=document_id, reindex=reindex
+        ):
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 0,
+                    "total": 100,
+                    "status": "Starting document processing...",
+                },
+            )
+            try:
+                document = RagDocument.objects.select_related("rag_system").get(
+                    id=document_id
+                )
+            except RagDocument.DoesNotExist:
+                logger.error(f"Document {document_id} not found")
+                return {"status": "error", "error": f"Document {document_id} not found"}
+
+            system = getattr(document, "rag_system", None)
+            if not isinstance(system, RagSystem):
+                logger.error("Document has no valid rag_system")
+                return {
+                    "status": "error",
+                    "error": "Document has no rag_system",
+                    "document_id": document_id,
+                }
+
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 20,
+                    "total": 100,
+                    "status": "Document loaded, initializing RAG assistant...",
+                },
+            )
+
+            assistant = RagAssistant(system)
+
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 40,
+                    "total": 100,
+                    "status": "Processing and indexing document...",
+                },
+            )
+
+            with transaction.atomic():
+                if hasattr(assistant, "index_document"):
+                    assistant.index_document(document)  # type: ignore[attr-defined]
+
+            self.update_state(
+                state="PROGRESS",
+                meta={
+                    "current": 80,
+                    "total": 100,
+                    "status": "Updating cache and metadata...",
+                },
+            )
+
+            document.updated_at = timezone.now()
+            document.save(update_fields=["updated_at"])
+
+            cache.delete_many([f"rag:{system.pk}:search:*", f"rag:{system.pk}:faq:*"])
+
+            self.update_state(
+                state="SUCCESS",
+                meta={
+                    "current": 100,
+                    "total": 100,
+                    "status": "Document processing completed successfully",
+                },
+            )
+            logger.info(
+                f"Document {document_id} processed successfully (reindex: {reindex})"
+            )
+            return {
+                "status": "success",
+                "document_id": int(document.pk),
+                "title": document.title,
+                "reindex": reindex,
+                "timestamp": time.time(),
+            }
+    except ValidationError as e:
+        logger.error(f"Validation error processing document {document_id}: {e!s}")
+        return {
+            "status": "error",
+            "error": f"Validation error: {e!s}",
+            "document_id": document_id,
+        }
+    except Exception as exc:
+        logger.error(
+            f"Error processing document {document_id}: {exc!s}\n{traceback.format_exc()}"
+        )
+        if self.request.retries < MAX_RETRIES:
+            logger.info(
+                f"Retrying document processing {document_id} (attempt {self.request.retries + 1})"
+            )
+            raise self.retry(
+                countdown=RETRY_COUNTDOWN * (self.request.retries + 1), exc=exc
+            )
+        return {
+            "status": "error",
+            "error": str(exc),
+            "document_id": document_id,
+            "retries_exhausted": True,
+        }
+
+
+def _process_documents_for_system(
+    system: RagSystem,
+    docs: list[RagDocument],
+    total_docs: int,
+    processed: dict[str, int],
+    errors: list[dict[str, Any]],
+    self: Any,
+) -> None:
+    """Обрабатывает документы для конкретной системы.
+
+    Args:
+        system: RAG система
+        docs: Список документов для обработки
+        total_docs: Общее количество документов
+        processed: Словарь с количеством обработанных документов
+        errors: Список ошибок обработки
+        self: Контекст задачи Celery
+    """
+    try:
+        assistant = RagAssistant(system)
+        for doc in docs:
+            try:
+                with transaction.atomic():
+                    if hasattr(assistant, "index_document"):
+                        assistant.index_document(doc)  # type: ignore[attr-defined]
+                processed["count"] += 1
+                if processed["count"] % TASK_PROGRESS_UPDATE_INTERVAL == 0:
+                    progress_percent = int((processed["count"] / total_docs) * 100)
+                    self.update_state(
+                        state="PROGRESS",
+                        meta={
+                            "current": processed["count"],
+                            "total": total_docs,
+                            "percent": progress_percent,
+                            "status": f"Processed {processed['count']}/{total_docs} documents",
+                        },
+                    )
+            except Exception as e:
+                error_info = {
+                    "document_id": int(doc.pk),
+                    "document_title": doc.title,
+                    "error": str(e),
+                    "system_id": int(system.pk),
+                }
+                errors.append(error_info)
+                logger.error(f"Error processing document {doc.pk}: {e!s}")
+    except Exception as e:
+        logger.error(
+            f"Error initializing RAG assistant for system {getattr(system, 'pk', None)}: {e!s}"
+        )
+        for doc in docs:
+            errors.append(
+                {
+                    "document_id": int(doc.pk),
+                    "document_title": doc.title,
+                    "error": f"System error: {e!s}",
+                    "system_id": int(getattr(system, "pk", 0)),
+                }
+            )
+
+
+def _group_documents_by_system(
+    documents: list[RagDocument],
+) -> dict[int, dict[str, Any]]:
+    """Группирует документы по системам.
+
+    Args:
+        documents: Список документов
+
+    Returns:
+        Словарь с группированными документами по ID системы
+    """
+    grouped: dict[int, dict[str, Any]] = defaultdict(
+        lambda: {"system": None, "documents": []}
+    )
+    for doc in documents:
+        sys_obj = getattr(doc, "rag_system", None)
+        sys_id = getattr(sys_obj, "pk", None)
+        if sys_id is None:
+            continue
+        try:
+            sys_id_int = int(sys_id)
+        except (TypeError, ValueError):
+            continue
+        grouped[sys_id_int]["system"] = sys_obj
+        grouped[sys_id_int]["documents"].append(doc)
+    return dict(grouped)
+
+
+@shared_task
+def index_documents_batch_async(document_ids: list[int]) -> dict[str, Any]:
+    """Асинхронная индексация пакета документов.
+
+    Args:
+        document_ids: Список ID документов для индексации
+
+    Returns:
+        Словарь с результатом запуска задач
+    """
+    results: list[str] = []
+    docs = RagDocument.objects.filter(id__in=document_ids)
+    for d in docs:
+        async_result = process_document_async.delay(int(d.pk))
+        results.append(async_result.id)
+    return {"status": "started", "task_ids": results, "count": len(results)}

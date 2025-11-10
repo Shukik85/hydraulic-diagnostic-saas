@@ -1,0 +1,40 @@
+Django>=5.1,<5.2
+djangorestframework>=3.15,<3.16
+drf-spectacular>=0.27,<0.28
+django-filter>=24.3
+psycopg[binary,pool]>=3.2  # ИСПРАВЛЕНО: добавлен pool для connection pooling
+redis>=5.0
+celery>=5.4,<5.5
+django-celery-beat>=2.6
+python-decouple>=3.8
+django-cors-headers>=4.4
+structlog>=24.1
+django-redis>=5.4
+django-extensions>=3.2
+djangorestframework-simplejwt>=5.3
+gunicorn>=22.0
+
+# Обязательные для ImageField и ML
+Pillow>=10.4,<11.0
+sentence-transformers>=3.0,<6.0
+scikit-learn>=1.5,<2.0
+numpy>=1.24,<2.0  # Фиксируем версию для совместимости
+pandas>=2.2,<3.0
+
+# RAG/AI Dependencies
+langchain>=0.1.17,<0.2.0
+langchain-community>=0.0.38,<0.1.0
+faiss-cpu>=1.7.4,<1.8.0
+ollama>=0.2.1,<0.3.0
+
+# WebSocket Support
+channels>=4.0.0,<5.0.0
+daphne>=4.0.0,<5.0.0
+channels-redis>=4.3.0
+
+# Monitoring and Error Tracking
+sentry-sdk[django]>=1.40.0,<2.0.0
+prometheus-client>=0.20.0  # Для мониторинга Celery tasks и метрик sensors
+
+# TimescaleDB utilities (для совместимости со старыми миграциями)
+psycopg2-binary>=2.9.0,<3.0.0

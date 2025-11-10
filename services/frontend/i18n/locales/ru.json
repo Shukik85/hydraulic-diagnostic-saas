@@ -1,0 +1,213 @@
+{
+  "app": {"name":"Гидравлика ИИ","title":"Гидравлик Диагностик","subtitle":"Диагностическая платформа","version":"Версия"},
+  "nav": {"dashboard":"Дашборд","systems":"Системы","diagnostics":"Диагностика","reports":"Отчёты","chat":"Консультации","settings":"Настройки","equipments":"Оборудование","openDashboard":"Открыть дашборд","notifications":"Уведомления"},
+  "ui": {"search":"Поиск","help":"Помощь","profile":"Профиль","settings":"Настройки","logout":"Выйти","close":"Закрыть","cancel":"Отмена","view":"Просмотр","optional":"опционально","minutes":"мин","description":"Описание","toggleTheme":"Переключить тему","lightTheme":"Светлая","darkTheme":"Тёмная","language":{"switch":"Сменить язык"}},
+  "auth": {"signIn":"Войти","getStarted":"Начать","startFreeTrial":"Бесплатный период","watchDemo":"Посмотреть демо","startTrialNow":"Начать бесплатный период"},
+  "dashboard": {
+    "title": "Корпоративный дашборд",
+    "subtitle": "Мониторинг и аналитика гидравлических систем в реальном времени",
+    "liveStatus": "Онлайн",
+    "refreshBtn": "Обновить",
+    "kpi": {
+      "activeSystems": "Активные системы",
+      "systemHealth": "Здоровье систем",
+      "preventedFailures": "Предотвращённые сбои",
+      "costSavings": "Экономия средств",
+      "fromYesterday": "от вчерашнего дня",
+      "uptimeExcellence": "Отличное время работы",
+      "aiPredictions": "Прогнозы ИИ",
+      "vsPreviousYear": "по сравнению с прошлым годом"
+    },
+    "charts": {
+      "systemPerformance": "Производительность систем",
+      "aiPredictions": "Прогнозы ИИ",
+      "last24h": "Последние 24 часа",
+      "last7d": "Последние 7 дней",
+      "last30d": "Последние 30 дней",
+      "mlActive": "МЛ активно",
+      "normalOps": "Нормальная работа",
+      "maintenanceSoon": "Обслуживание скоро",
+      "criticalIssues": "Критические проблемы"
+    },
+    "quickActions": {
+      "title": "Быстрые действия",
+      "runDiagnostics": "Запустить диагностику",
+      "generateReport": "Создать отчёт",
+      "addSystem": "Добавить систему"
+    },
+    "recentEvents": {
+      "title": "Последние события",
+      "systemNormal": "Система #{0} работает нормально",
+      "anomalyDetected": "Обнаружена аномалия в системе #{0}",
+      "diagnosticsCompleted": "Диагностика завершена для системы #{0}",
+      "minutesAgo": "{0} минут назад",
+      "hourAgo": "{0} час назад"
+    },
+    "aiStatus": {
+      "title": "Статус ИИ",
+      "diagnosticModel": "Модель диагностики",
+      "predictionAccuracy": "Точность прогноза",
+      "modelTraining": "Обучение модели",
+      "lastUpdate": "Последнее обновление",
+      "active": "Активно",
+      "complete": "Завершено",
+      "minAgo": "{0} мин назад"
+    }
+  },
+  "settings": {
+    "title": "Настройки",
+    "subtitle": "Управление настройками аккаунта и системы",
+    "tabs": {
+      "profile": "Профиль",
+      "notifications": "Уведомления",
+      "integrations": "Интеграции",
+      "team": "Команда",
+      "system": "Система"
+    },
+    "profile": {
+      "title": "Личная информация",
+      "subtitle": "Обновите персональные данные и контактную информацию",
+      "firstName": "Имя",
+      "lastName": "Фамилия",
+      "emailAddress": "Email адрес",
+      "company": "Компания",
+      "phone": "Телефон",
+      "saveChanges": "Сохранить изменения",
+      "changePassword": "Сменить пароль",
+      "changePasswordSubtitle": "Обновите пароль аккаунта для безопасности",
+      "currentPassword": "Текущий пароль",
+      "newPassword": "Новый пароль",
+      "confirmPassword": "Подтвердите новый пароль",
+      "currentPasswordPlaceholder": "Введите текущий пароль",
+      "newPasswordPlaceholder": "Введите новый пароль",
+      "confirmPasswordPlaceholder": "Подтвердите новый пароль",
+      "updatePassword": "Обновить пароль"
+    },
+    "notifications": {
+      "title": "Email уведомления",
+      "subtitle": "Настройка получения email оповещений",
+      "systemAlerts": "Системные оповещения",
+      "systemAlertsDesc": "Критические сбои и аварии системы",
+      "maintenanceReminders": "Напоминания об обслуживании",
+      "maintenanceRemindersDesc": "Предстоящие задачи сервиса и обслуживания",
+      "diagnosticReports": "Диагностические отчёты",
+      "diagnosticReportsDesc": "Когда диагностические отчёты готовы",
+      "weeklySummary": "Недельная сводка",
+      "weeklySummaryDesc": "Еженедельный обзор состояния системы"
+    },
+    "integrations": {
+      "title": "Системные интеграции",
+      "subtitle": "Подключение к внешним системам и сервисам",
+      "scadaSystem": "SCADA система",
+      "scadaSystemDesc": "Интеграция данных в реальном времени",
+      "erpSystem": "ERP система",
+      "erpSystemDesc": "Синхронизация обслуживания и запасов",
+      "slackIntegration": "Интеграция Slack",
+      "slackIntegrationDesc": "Командные уведомления и оповещения",
+      "connected": "Подключено",
+      "notConnected": "Не подключено",
+      "configure": "Настроить",
+      "connect": "Подключить",
+      "apiKeys": "API ключи",
+      "apiKeysSubtitle": "Управление токенами доступа API для внешних интеграций",
+      "primaryApiKey": "Основной API ключ",
+      "copy": "Копировать",
+      "generateNewKey": "Создать новый ключ"
+    },
+    "team": {
+      "title": "Участники команды",
+      "subtitle": "Управление доступом пользователей и правами",
+      "inviteUser": "Пригласить пользователя",
+      "user": "Пользователь",
+      "role": "Роль",
+      "lastActive": "Последняя активность",
+      "status": "Статус",
+      "actions": "Действия",
+      "admin": "Администратор",
+      "engineer": "Инженер",
+      "active": "Активен",
+      "hoursAgo": "{0} часов назад",
+      "dayAgo": "{0} день назад"
+    },
+    "system": {
+      "title": "Конфигурация системы",
+      "subtitle": "Настройка системных параметров и предпочтений",
+      "defaultAlertThreshold": "Порог оповещений по умолчанию",
+      "dataRetentionPeriod": "Период хранения данных",
+      "warningAt75": "Предупреждение при 75%",
+      "warningAt80": "Предупреждение при 80%",
+      "warningAt90": "Предупреждение при 90%",
+      "months3": "3 месяца",
+      "months6": "6 месяцев",
+      "year1": "1 год",
+      "years2": "2 года",
+      "autoBackup": "Автобэкап",
+      "autoBackupDesc": "Автоматическое резервное копирование диагностических данных ежедневно",
+      "saveSystemSettings": "Сохранить системные настройки"
+    }
+  },
+  "sensors": {
+    "title": "Датчики",
+    "subtitle": "Мониторинг и управление датчиками системы",
+    "addSensor": "Добавить датчик",
+    "noSensors": "Датчики не настроены",
+    "noSensorsDesc": "Добавьте датчики для начала мониторинга этой системы",
+    "table": {
+      "name": "Название",
+      "type": "Тип",
+      "status": "Статус",
+      "lastValue": "Последнее значение",
+      "updatedAt": "Обновлено",
+      "actions": "Действия"
+    },
+    "detail": {
+      "title": "Детали датчика",
+      "overview": "Обзор",
+      "dataStream": "Поток данных",
+      "thresholds": "Пороги",
+      "eventLog": "Журнал событий",
+      "metadata": "Метаданные",
+      "currentReadings": "Текущие показания",
+      "lastUpdate": "Последнее обновление"
+    }
+  },
+  "equipments": {
+    "detail": {
+      "title": "Детали оборудования",
+      "overview": "Обзор",
+      "sensors": "Датчики",
+      "diagnostics": "Диагностика",
+      "maintenance": "Обслуживание",
+      "specifications": "Спецификации",
+      "attachedSensors": "Подключённые датчики",
+      "recentDiagnostics": "Недавние диагностики",
+      "lastMaintenance": "Последнее обслуживание"
+    }
+  },
+  "landing": {
+    "hero": {"title":"Продвинутая диагностика гидравлических систем","subtitle":"Мониторинг в реальном времени, ИИ-анализ и предсказательное обслуживание гидравлических систем. Поддерживайте оптимальную эффективность операций."},
+    "features": {"title":"Мощные возможности","subtitle":"Всё необходимое для мониторинга и оптимизации гидравлических систем","monitoring":{"title":"Мониторинг в реальном времени","description":"Потоковая передача данных от всех подключённых систем с мгновенными уведомлениями о аномалиях."},"analytics":{"title":"ИИ-аналитика","description":"Алгоритмы машинного обучения обнаруживают паттерны и прогнозируют потребности в обслуживании до возникновения отказов."},"alerts":{"title":"Умные уведомления","description":"Настраиваемые уведомления по email, SMS или в приложении о критических событиях системы."},"reports":{"title":"Подробные отчёты","description":"Комплексные отчёты о производительности с историческими трендами и рекомендациями."},"security":{"title":"Корпоративная безопасность","description":"Шифрование банковского уровня и соответствие стандартам промышленной безопасности."},"integration":{"title":"API интеграция","description":"RESTful API и webhook'и для бесшовной интеграции с вашими существующими системами."}},
+    "stats": {"uptime":"Время работы системы","users":"Активных пользователей","support":"Поддержка"},
+    "cta": {"title":"Готовы оптимизировать ваши гидравлические системы?","subtitle":"Присоединяйтесь к сотням компаний, использующих Гидравлик Диагностик для повышения эффективности и сокращения простоев."},
+    "footer": {
+      "product": {"title":"Продукт","features":"Возможности","pricing":"Цены","documentation":"Документация"},
+      "company": {"title":"Компания","about":"О нас","blog":"Блог","careers":"Карьера"},
+      "legal": {"title":"Правовая информация","privacy":"Конфиденциальность","terms":"Условия","security":"Безопасность"},
+      "contact": {
+        "title":"Контакты",
+        "emailLabel":"Email:",
+        "emailUser":"contact",
+        "emailDomain":"hydraulic-diagnostic.com",
+        "phone":"Телефон: +1 (555) 123-4567",
+        "chat":"Чат: Круглосуточно"
+      },
+      "copyright":"© 2025 Гидравлик Диагностик. Все права защищены."
+    }
+  },
+  "breadcrumbs": {"home":"Главная","page":"Страница","system":"Система","equipment":"Оборудование","sensors":"Датчики"},
+  "footer": {"copyright":"Все права защищены","settings":"Настройки","help":"Помощь"},
+  "diagnostics": {"title":"Диагностика систем","subtitle":"Мониторинг и анализ состояния гидравлических систем","runNew":"Запустить диагностику","healthScore":"Оценка состояния","started":"Начато","issues":"Проблемы","issuesCount":"проблем","issuesFound":"Обнаружено проблем","analysisDuration":"Время анализа","exportPDF":"Экспорт PDF","activeSessions":"Активные сессии","priority":"Приоритет","priorityMedium":"Средний","statusLabel":"Статус","statusNormal":"Норма","runModal":{"title":"Запустить диагностику","description":"Настройте параметры диагностики","equipment":"Оборудование","selectEquipment":"Выберите оборудование для диагностики","pumpStationA":"HYD-001 - Насосная станция A","hydraulicMotorB":"HYD-002 - Гидравлический мотор B","controlValveC":"HYD-003 - Управляющий клапан C","coolingSystemD":"HYD-004 - Система охлаждения D","diagnosticType":"Тип диагностики","fullAnalysis":"Полный анализ системы","pressureCheck":"Только проверка давления","temperatureAnalysis":"Анализ температуры","vibrationAnalysis":"Анализ вибрации","flowAnalysis":"Анализ расхода","emailNotification":"Email уведомления","realTimeResults":"Результаты в реальном времени","estimatedDuration":"Примерная продолжительность","priorityAnalysis":"Приоритетный анализ","startDiagnostic":"Запустить диагностику","equipmentRequired":"Пожалуйста, выберите оборудование"},"kpi":{"activeSessions":"Активные сессии","runningNow":"выполняется","successRate":"Успешность","thisWeek":"за неделю {0}","avgDuration":"Среднее время","faster":"быстрее {0}","issuesFound":"Обнаружено","needsAttention":"требует внимания"},"status":{"completed":"Завершено","warning":"Предупреждение","error":"Ошибка","processing":"Обработка"},"recentResults":{"title":"Последние результаты","subtitle":"История диагностики систем"},"filters":{"allEquipment":"Всё оборудование"},"table":{"name":"Название","equipment":"Оборудование","healthScore":"Состояние","issues":"Проблемы","completed":"Завершено","status":"Статус","actions":"Действия"},"results":{"title":"Результаты диагностики","subtitle":"Подробные результаты анализа","titleWithName":"{title}: {name}"},"recommendations":{"pressureMaintenance":"Обслуживание давления","pressureMaintenanceDesc":"Проверьте состояние фильтров и уплотнений","temperatureMonitoring":"Контроль температуры","temperatureMonitoringDesc":"Температура в нормальных пределах"}},
+  "systems": {"title":"Гидравлические системы","subtitle":"Управление и мониторинг оборудования","addNew":"Добавить систему","noSystems":"Нет систем","noSystemsDesc":"Добавьте первую гидравлическую систему для мониторинга","create":{"title":"Создать систему","subtitle":"Заполните параметры системы","name":"Название системы","namePlaceholder":"Например: HYD-001 — Насосная станция A","type":"Тип системы","initialStatus":"Начальный статус","descriptionPlaceholder":"Краткое описание системы (опционально)","nextStepsTitle":"Следующие шаги","nextStepsDesc":"После создания настройте датчики и пороги.","createBtn":"Создать систему","errors":{"nameRequired":"Укажите название системы"}},"types":{"industrial":"Промышленная","mobile":"Мобильная","marine":"Судовая","construction":"Строительная","mining":"Горнодобывающая","agricultural":"Сельскохозяйственная"},"status":{"active":"Активна","maintenance":"Обслуживание","inactive":"Неактивна","emergency":"Авария"}},
+  "chat": {"title":"Консультации","subtitle":"Интеллектуальные консультации по диагностике","placeholder":"Опишите вашу проблему...","thinking":"Обрабатываю запрос...","newSession":{"title":"Новая консультация","button":"Новая консультация"}},
+  "reports": {"title":"Отчёты и аналитика","subtitle":"Генерация отчётов о состоянии систем","generate":{"title":"Генерация отчёта","subtitle":"Настройте параметры отчёта","generateBtn":"Генерировать","generating":"Генерируется...","template":"Шаблон отчёта","period":"Период анализа","language":"Язык","customTitle":"Название отчёта","customTitlePlaceholder":"Например: Месячный отчёт по HYD-001","autoTitle":"Оставьте пустым для автоматического названия"},"periods":{"last_24h":"Последние 24 часа","last_7d":"Последние 7 дней","last_30d":"Последние 30 дней","last_90d":"Последние 90 дней"},"locales":{"ru":"Русский","en":"English","de":"Deutsch"},"templates":{"execShort":"Краткий","executive":"Краткий обзор для руководства","techShort":"Технический","technical":"Подробный технический анализ","compShort":"Соответствие","compliance":"Отчёт о соответствии стандартам","maintShort":"Обслуживание","maintenance":"План обслуживания и ремонта"},"severity":{"low":"Низкая","medium":"Средняя","high":"Высокая","critical":"Критичная"},"status":{"completed":"Готов","in_progress":"В процессе","pending":"Ожидание","failed":"Ошибка"}}
+}

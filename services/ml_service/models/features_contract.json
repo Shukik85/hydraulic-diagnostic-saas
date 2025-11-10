@@ -1,0 +1,49 @@
+{
+  "contract_version": "features_v1",
+  "schema_version": "2025-11-05", 
+  "features_count": 25,
+  "feature_engineering": {
+    "description": "Hydraulic sensor data with statistical aggregations",
+    "window_minutes": 10,
+    "sampling_frequency_hz": 100.0,
+    "aggregation_methods": ["mean", "std", "min", "max", "p95"]
+  },
+  "feature_definitions": [
+    {"index": 0, "name": "pressure_mean", "sensor_type": "pressure", "unit": "bar", "aggregation": "mean"},
+    {"index": 1, "name": "temperature_mean", "sensor_type": "temperature", "unit": "celsius", "aggregation": "mean"},
+    {"index": 2, "name": "vibration_mean", "sensor_type": "vibration", "unit": "mm/s", "aggregation": "mean"},
+    {"index": 3, "name": "flow_mean", "sensor_type": "flow", "unit": "l/min", "aggregation": "mean"},
+    {"index": 4, "name": "current_mean", "sensor_type": "current", "unit": "A", "aggregation": "mean"},
+    {"index": 5, "name": "voltage_mean", "sensor_type": "voltage", "unit": "V", "aggregation": "mean"},
+    {"index": 6, "name": "pressure_std", "sensor_type": "pressure", "unit": "bar", "aggregation": "std"},
+    {"index": 7, "name": "temperature_std", "sensor_type": "temperature", "unit": "celsius", "aggregation": "std"},
+    {"index": 8, "name": "vibration_std", "sensor_type": "vibration", "unit": "mm/s", "aggregation": "std"},
+    {"index": 9, "name": "flow_std", "sensor_type": "flow", "unit": "l/min", "aggregation": "std"},
+    {"index": 10, "name": "current_std", "sensor_type": "current", "unit": "A", "aggregation": "std"},
+    {"index": 11, "name": "voltage_std", "sensor_type": "voltage", "unit": "V", "aggregation": "std"},
+    {"index": 12, "name": "pressure_min", "sensor_type": "pressure", "unit": "bar", "aggregation": "min"},
+    {"index": 13, "name": "temperature_min", "sensor_type": "temperature", "unit": "celsius", "aggregation": "min"},
+    {"index": 14, "name": "vibration_min", "sensor_type": "vibration", "unit": "mm/s", "aggregation": "min"},
+    {"index": 15, "name": "flow_min", "sensor_type": "flow", "unit": "l/min", "aggregation": "min"},
+    {"index": 16, "name": "current_min", "sensor_type": "current", "unit": "A", "aggregation": "min"},
+    {"index": 17, "name": "voltage_min", "sensor_type": "voltage", "unit": "V", "aggregation": "min"},
+    {"index": 18, "name": "pressure_max", "sensor_type": "pressure", "unit": "bar", "aggregation": "max"},
+    {"index": 19, "name": "temperature_max", "sensor_type": "temperature", "unit": "celsius", "aggregation": "max"},
+    {"index": 20, "name": "vibration_max", "sensor_type": "vibration", "unit": "mm/s", "aggregation": "max"},
+    {"index": 21, "name": "flow_max", "sensor_type": "flow", "unit": "l/min", "aggregation": "max"},
+    {"index": 22, "name": "current_max", "sensor_type": "current", "unit": "A", "aggregation": "max"},
+    {"index": 23, "name": "voltage_max", "sensor_type": "voltage", "unit": "V", "aggregation": "max"},
+    {"index": 24, "name": "system_efficiency", "sensor_type": "computed", "unit": "ratio", "aggregation": "derived"}
+  ],
+  "compatibility": {
+    "ensemble_models": ["catboost", "xgboost", "random_forest", "adaptive"],
+    "two_stage_models": ["binary_detector", "fault_classifier"],
+    "mandatory_preprocessing": ["StandardScaler"],
+    "feature_validation": "strict"
+  },
+  "metadata": {
+    "created_at": "2025-11-05T02:29:00Z",
+    "created_by": "hydraulic-diagnostic-platform",
+    "description": "Enterprise feature contract for hydraulic anomaly detection ML pipeline"
+  }
+}
