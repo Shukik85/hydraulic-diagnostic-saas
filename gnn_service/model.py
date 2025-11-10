@@ -43,7 +43,7 @@ class TemporalGAT(nn.Module):
         gat_dropout: float = model_config.gat_dropout,
         num_lstm_layers: int = model_config.num_lstm_layers,
         lstm_dropout: float = model_config.lstm_dropout,
-    ):
+    ):  # sourcery skip: assign-if-exp
         super().__init__()
         self.num_node_features = num_node_features
         self.hidden_dim = hidden_dim
@@ -57,7 +57,7 @@ class TemporalGAT(nn.Module):
 
         # ✅ ВСЕ слои одинаковые (без if/else логики!)
         for i in range(num_gat_layers):
-            if i == 0:
+            if i == 0:  # noqa: SIM108
                 in_channels = num_node_features  # 15
             else:
                 in_channels = hidden_dim * num_heads  # 384
@@ -110,7 +110,7 @@ class TemporalGAT(nn.Module):
         x: torch.Tensor,
         edge_index: torch.Tensor,
         batch: torch.Tensor | None = None,
-        sequence_length: int = model_config.sequence_length,
+        sequence_length: int = model_config.sequence_length,  # noqa: ARG002
     ) -> tuple[torch.Tensor, torch.Tensor, dict]:
         """
         Forward pass of the model.
@@ -126,14 +126,16 @@ class TemporalGAT(nn.Module):
             embeddings: Node embeddings [batch_size, hidden_dim]
             attention_weights: Dictionary of attention weights for explainability
         """
-        batch_size = batch.max().item() + 1 if batch is not None else 1
+        batch_size = batch.max().item() + 1 if batch is not None else 1  # noqa: F841
 
         # Store attention weights for each layer
         attention_weights = {}
 
         # Spatial processing with GAT layers
         x_spatial = x
-        for i, (gat_layer, bn) in enumerate(zip(self.gat_layers, self.batch_norms)):
+        for i, (gat_layer, bn) in enumerate(
+            zip(self.gat_layers, self.batch_norms, strict=False)
+        ):
             x_spatial, attention = gat_layer(
                 x_spatial, edge_index, return_attention_weights=True
             )
@@ -173,7 +175,7 @@ class TemporalGAT(nn.Module):
 
     def get_attention_weights(self) -> dict:
         """Get attention weights for model explainability."""
-        return self.attention_weights if self.attention_weights else {}
+        return self.attention_weights or {}
 
 
 class HydraulicGNN(nn.Module):
@@ -224,11 +226,10 @@ class HydraulicGNN(nn.Module):
         """Get predictions for each component."""
         probabilities = self.predict_proba(x, edge_index, batch)
 
-        predictions = {}
-        for i, component in enumerate(self.component_names):
-            predictions[component] = probabilities[:, i]
-
-        return predictions
+        return {
+            component: probabilities[:, i]
+            for i, component in enumerate(self.component_names)
+        }
 
 
 def create_model(device: str = None) -> HydraulicGNN:
