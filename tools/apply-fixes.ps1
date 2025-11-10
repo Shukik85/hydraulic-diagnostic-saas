@@ -2,7 +2,7 @@
 # Usage: powershell -ExecutionPolicy Bypass -File .\tools\apply-fixes.ps1
 
 param(
-    [string]$Branch = "chore/lint-fixes-ci-green",
+    [string]$Branch = "HEAD",
     [switch]$DryRun
 )
 
@@ -55,12 +55,14 @@ Write-Host "Checking final lint status..."
 $lintSucceeded = $true
 try {
     ruff check backend/ | Out-Host
-} catch {
+}
+catch {
     $lintSucceeded = $false
 }
 if ($lintSucceeded) {
     Write-Host "Ruff check passed - no blocking errors!"
-} else {
+}
+else {
     Write-Host "Some Ruff warnings remain (non-blocking)."
 }
 
@@ -70,13 +72,15 @@ Push-Location backend
 $pytestSucceeded = $true
 try {
     pytest --collect-only -q | Out-Host
-} catch {
+}
+catch {
     $pytestSucceeded = $false
 }
 Pop-Location
 if ($pytestSucceeded) {
     Write-Host "Pytest collection successful!"
-} else {
+}
+else {
     Write-Host "ERROR: Pytest collection failed."
     Write-Host "Try running: cd backend && pytest --collect-only"
     exit 1
