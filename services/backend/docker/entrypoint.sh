@@ -85,7 +85,7 @@ fi
 # Run smoke tests if requested
 if [ "${RUN_SMOKE_TESTS:-False}" = "True" ]; then
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] Running smoke tests..."
-    python smoke_diagnostics.py
+    python tests/smoke/smoke_diagnostics.py
 fi
 
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] Backend initialization completed!"

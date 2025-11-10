@@ -1,0 +1,5 @@
+# Full RAG Service Python dependencies
+fastapi
+uvicorn[standard]
+prometheus-client
+pydantic

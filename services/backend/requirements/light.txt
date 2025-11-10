@@ -1,0 +1,7 @@
+# Minimal Celery/Redis worker requirements (no ML, no RAG, no serving APIs)
+Django>=5.1,<5.2
+celery[redis]>=5.4.0,<5.5.0
+redis>=5.0,<6.0
+psycopg[binary]>=3.2,<4.0
+python-decouple>=3.8,<4.0
+structlog>=24.1,<25.0

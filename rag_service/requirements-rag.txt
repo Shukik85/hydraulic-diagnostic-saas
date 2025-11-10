@@ -1,0 +1,6 @@
+faiss-cpu
+langchain
+sentence-transformers
+httpx
+structlog
+pydantic-settings

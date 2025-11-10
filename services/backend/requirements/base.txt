@@ -1,0 +1,28 @@
+# Core backend API + infra, без ML/RAG/LLM
+# Не содержит ML и RAG пакетов — только core Django, DRF, Celery, TimescaleDB/Redis, Prometheus, WebSockets и monitoring
+Django>=5.1,<5.2
+djangorestframework>=3.15,<3.16
+drf-spectacular>=0.27,<0.28
+django-filter>=24.3
+psycopg[binary,pool]>=3.2
+redis>=5.0,<6.0
+celery[redis]>=5.4.0,<5.5.0
+django-celery-beat>=2.6,<3.0
+python-decouple>=3.8,<4.0
+django-cors-headers>=4.4,<5.0
+structlog>=24.1,<25.0
+django-redis>=5.4,<6.0
+django-extensions>=3.2,<4.0
+djangorestframework-simplejwt>=5.3,<6.0
+gunicorn>=22.0,<23.0
+channels>=4.0.0,<5.0.0
+daphne>=4.0.0,<5.0.0
+channels-redis>=4.3.0,<5.0.0
+sentry-sdk[django]>=1.40.0,<2.0.0
+prometheus-client>=0.20.0,<1.0.0
+psycopg2-binary>=2.9.0,<3.0.0
+# Utilities только для core
+requests>=2.32,<3.0
+python-dateutil>=2.9,<3.0
+# Async HTTP client для rag_service и ml_service
+httpx>=0.27.0,<1.0.0
