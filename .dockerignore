@@ -1,114 +1,82 @@
-# ==============================================================================
-# Docker ignore file - исключаем ненужные файлы для ускорения сборки
-# ==============================================================================
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Git files
-.git
-.gitignore
-.gitattributes
+# Virtual environments (ВАЖНО!)
+.venv/
+.venv_wsl/
+venv/
+ENV/
+env/
 
-# Documentation
-*.md
-docs/
-
-# IDE/Editor files
+# IDEs
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
-# Python cache and virtual envs
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-.venv/
-venv/
-env/
-.env.local
-.pytest_cache/
-.coverage
-.tox/
-.mypy_cache/
-*.egg-info/
-dist/
-build/
+# Git
+.git/
+.gitignore
 
-# Node.js (if any)
-node_modules/
-npm-debug.log
-yarn-debug.log
-yarn-error.log
-package-lock.json
-yarn.lock
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*.yml
 
-# Frontend build files
-nuxt_frontend/node_modules/
-nuxt_frontend/dist/
-nuxt_frontend/.nuxt/
-nuxt_frontend/.output/
-
-# Database files
-*.sqlite3
-*.db
+# Data files (exclude large datasets from build context)
+*.csv
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.pkl
+*.parquet
 
 # Logs
-logs/
 *.log
+logs/
 
-# Media/Static files (will be collected inside container)
-backend/staticfiles/
-backend/media/
+# Models (exclude from build context, mount as volume)
+models/
+checkpoints/
 
-# ML models and data (large files)
-ml_service/models/
-ml_service/data/
-data/
-
-# Docker files (except Dockerfile itself)
-docker-compose*.yml
-.docker-trigger
-
-# Development tools
-.pre-commit-config.yaml
-Makefile
-.bandit
-setup.cfg
-pyproject.toml
-
-# Scripts and tools
-scripts/
-tools/
-quick-test.*
-fix-docker-issues.*
-WINDOWS_*
-
-# Test files
-tests/
-**/test_*.py
-**/*_test.py
-**/tests.py
-pytest.ini
-.pytest_cache/
-
-# Deploy and CI files
-deploy/
-.github/
-
-# Environment files (only copy .env that exists)
-.env.*
-!.env
-
-# Temporary files
+# Temp
 tmp/
 temp/
 *.tmp
 
-# Requirements that change rarely (copied explicitly in Dockerfile)
-requirements*.txt
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Node (if any frontend)
+node_modules/

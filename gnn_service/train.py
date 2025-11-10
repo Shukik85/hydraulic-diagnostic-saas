@@ -1,266 +1,421 @@
-"""Training script for GNN with SSL pretraining + supervised fine-tuning."""
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
-from pytorch_lightning.loggers import TensorBoardLogger
+"""
+Training script for Temporal GAT hydraulic diagnostics model.
+"""
+
+import argparse
+import json
+import logging
+from datetime import datetime
+from pathlib import Path
+
+import numpy as np
 import torch
-import torch.nn.functional as F
-from torch_geometric.loader import DataLoader
-from typing import Optional
-import os
+import torch.nn as nn
+from config import model_config, training_config
+from dataset import HydraulicGraphDataset, split_dataset
+from model import TemporalGAT
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from torch.optim import Adam
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.utils.data import DataLoader
 
-from .config import config
-from .dataset import HydraulicGraphDataset
-from .model import GNNClassifier
-from .ssl_pretraining import SSLPretrainer
+# Configure logging
+log_dir = Path("logs")
+log_dir.mkdir(exist_ok=True, parents=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler(log_dir / "training.log"), logging.StreamHandler()],
+)
+logger = logging.getLogger(__name__)
 
 
-class SSLLightningModule(pl.LightningModule):
-    """PyTorch Lightning module for SSL pretraining."""
-    
-    def __init__(self, model: SSLPretrainer, lr: float = config.ssl_lr):
-        super().__init__()
-        self.model = model
-        self.lr = lr
-    
-    def forward(self, data):
-        return self.model(data)
-    
-    def training_step(self, batch, batch_idx):
-        loss, metrics = self.model.compute_ssl_loss(batch)
-        
-        for key, value in metrics.items():
-            self.log(key, value, on_step=True, on_epoch=True, prog_bar=True)
-        
-        return loss
-    
-    def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-5)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=config.ssl_epochs, eta_min=1e-6
+class HydraulicTrainer:
+    """Trainer for hydraulic diagnostics GNN model."""
+
+    def __init__(self, config: training_config):
+        self.config = config
+        self.device = torch.device(config.device)
+        self.model = None
+        self.optimizer = None
+        self.scheduler = None
+        self.criterion = nn.BCEWithLogitsLoss()
+
+        # Metrics storage
+        self.train_metrics = []
+        self.val_metrics = []
+        self.best_val_loss = float("inf")
+        self.best_epoch = 0
+
+    def setup_data(self) -> tuple[DataLoader, DataLoader, DataLoader]:
+        """Setup data loaders."""
+        try:
+            # Load full dataset
+            dataset = HydraulicGraphDataset()
+            logger.info(f"Loaded dataset with {len(dataset)} graphs")
+
+            # Split dataset
+            train_dataset, val_dataset, test_dataset = split_dataset(
+                dataset,
+                self.config.train_split,
+                self.config.val_split,
+                self.config.test_split,
+            )
+
+            # Create data loaders
+            train_loader = train_dataset.get_data_loader(
+                batch_size=self.config.batch_size, shuffle=True
+            )
+            val_loader = val_dataset.get_data_loader(
+                batch_size=self.config.batch_size, shuffle=False
+            )
+            test_loader = test_dataset.get_data_loader(
+                batch_size=self.config.batch_size, shuffle=False
+            )
+
+            logger.info(
+                f"Data loaders created: "
+                f"Train={len(train_loader)}, Val={len(val_loader)}, Test={len(test_loader)}"
+            )
+
+            return train_loader, val_loader, test_loader
+
+        except Exception as e:
+            logger.error(f"Error setting up data: {e}")
+            raise
+
+    def setup_model(self) -> TemporalGAT:
+        """Initialize model."""
+        model = TemporalGAT(
+            num_node_features=model_config.num_node_features,
+            hidden_dim=model_config.hidden_dim,
+            num_classes=model_config.num_classes,
+            num_gat_layers=model_config.num_gat_layers,
+            num_heads=model_config.num_heads,
+            gat_dropout=model_config.gat_dropout,
+            num_lstm_layers=model_config.num_lstm_layers,
+            lstm_dropout=model_config.lstm_dropout,
+        ).to(self.device)
+
+        logger.info(f"Model initialized on {self.device}")
+        logger.info(f"Total parameters: {sum(p.numel() for p in model.parameters()):,}")
+
+        return model
+
+    def calculate_metrics(
+        self, y_true: torch.Tensor, y_pred: torch.Tensor, threshold: float = 0.5
+    ) -> dict[str, float]:
+        """Calculate multi-label classification metrics."""
+        y_pred_binary = (y_pred > threshold).float()
+        y_true_np = y_true.cpu().numpy()
+        y_pred_np = y_pred_binary.cpu().numpy()
+
+        # Component-wise metrics
+        component_metrics = {}
+        for i, component in enumerate(model_config.component_names):
+            try:
+                component_metrics[component] = {
+                    "precision": precision_score(
+                        y_true_np[:, i], y_pred_np[:, i], zero_division=0
+                    ),
+                    "recall": recall_score(
+                        y_true_np[:, i], y_pred_np[:, i], zero_division=0
+                    ),
+                    "f1": f1_score(y_true_np[:, i], y_pred_np[:, i], zero_division=0),
+                    "accuracy": accuracy_score(y_true_np[:, i], y_pred_np[:, i]),
+                }
+            except Exception as e:
+                logger.warning(f"Error calculating metrics for {component}: {e}")
+                component_metrics[component] = {
+                    "precision": 0,
+                    "recall": 0,
+                    "f1": 0,
+                    "accuracy": 0,
+                }
+
+        # Macro averages
+        macro_precision = np.mean([m["precision"] for m in component_metrics.values()])
+        macro_recall = np.mean([m["recall"] for m in component_metrics.values()])
+        macro_f1 = np.mean([m["f1"] for m in component_metrics.values()])
+
+        # Micro averages (global)
+        micro_precision = precision_score(
+            y_true_np, y_pred_np, average="micro", zero_division=0
         )
-        return [optimizer], [scheduler]
-
-
-class SupervisedLightningModule(pl.LightningModule):
-    """PyTorch Lightning module for supervised fine-tuning."""
-    
-    def __init__(self, model: GNNClassifier, lr: float = config.finetune_lr):
-        super().__init__()
-        self.model = model
-        self.lr = lr
-        self.save_hyperparameters(ignore=["model"])
-    
-    def forward(self, data):
-        return self.model(data)
-    
-    def training_step(self, batch, batch_idx):
-        logits, _, _ = self.model(batch)
-        loss = F.cross_entropy(logits, batch.y)
-        
-        # Accuracy
-        preds = torch.argmax(logits, dim=-1)
-        acc = (preds == batch.y).float().mean()
-        
-        self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        self.log("train/accuracy", acc, on_step=True, on_epoch=True, prog_bar=True)
-        
-        return loss
-    
-    def validation_step(self, batch, batch_idx):
-        logits, _, _ = self.model(batch)
-        loss = F.cross_entropy(logits, batch.y)
-        
-        preds = torch.argmax(logits, dim=-1)
-        acc = (preds == batch.y).float().mean()
-        
-        self.log("val/loss", loss, on_epoch=True, prog_bar=True)
-        self.log("val/accuracy", acc, on_epoch=True, prog_bar=True)
-        
-        return {"val_loss": loss, "val_accuracy": acc}
-    
-    def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.parameters(), lr=self.lr, weight_decay=1e-5)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=5
+        micro_recall = recall_score(
+            y_true_np, y_pred_np, average="micro", zero_division=0
         )
+        micro_f1 = f1_score(y_true_np, y_pred_np, average="micro", zero_division=0)
+
         return {
-            "optimizer": optimizer,
-            "lr_scheduler": {
-                "scheduler": scheduler,
-                "monitor": "val/loss",
-            },
+            "component_metrics": component_metrics,
+            "macro_precision": macro_precision,
+            "macro_recall": macro_recall,
+            "macro_f1": macro_f1,
+            "micro_precision": micro_precision,
+            "micro_recall": micro_recall,
+            "micro_f1": micro_f1,
+            "accuracy": accuracy_score(y_true_np, y_pred_np),
         }
 
+    def train_epoch(self, train_loader: DataLoader) -> dict[str, float]:
+        """Train for one epoch."""
+        self.model.train()
+        total_loss = 0
+        all_preds = []
+        all_targets = []
 
-def train_ssl(
-    dataset: HydraulicGraphDataset,
-    save_path: str = "./models/ssl_pretrained.ckpt",
-) -> SSLPretrainer:
-    """Run SSL pretraining.
-    
-    Args:
-        dataset: Training dataset
-        save_path: Path to save pretrained model
-    
-    Returns:
-        Pretrained model
-    """
-    print("[1/2] Starting SSL Pretraining...")
-    
-    # DataLoader
-    train_loader = DataLoader(
-        dataset,
-        batch_size=config.batch_size,
-        shuffle=True,
-        num_workers=config.num_workers,
-    )
-    
-    # Model
-    ssl_model = SSLPretrainer()
-    lightning_module = SSLLightningModule(ssl_model)
-    
-    # Callbacks
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.dirname(save_path),
-        filename="ssl_pretrained",
-        monitor="ssl/total_loss",
-        mode="min",
-        save_top_k=1,
-    )
-    
-    # Logger
-    logger = TensorBoardLogger(config.log_dir, name="ssl_pretraining")
-    
-    # Trainer
-    trainer = pl.Trainer(
-        max_epochs=config.ssl_epochs,
-        accelerator="gpu" if config.device == "cuda" else "cpu",
-        devices=1,
-        callbacks=[checkpoint_callback],
-        logger=logger,
-        gradient_clip_val=1.0,
-    )
-    
-    # Train
-    trainer.fit(lightning_module, train_loader)
-    
-    print(f"SSL Pretraining complete! Model saved to {save_path}")
-    
-    return ssl_model
+        for batch in train_loader:
+            batch = batch.to(self.device)
 
+            self.optimizer.zero_grad()
 
-def train_supervised(
-    dataset: HydraulicGraphDataset,
-    val_dataset: Optional[HydraulicGraphDataset] = None,
-    ssl_model: Optional[SSLPretrainer] = None,
-    save_path: str = "./models/gnn_classifier.ckpt",
-) -> GNNClassifier:
-    """Run supervised fine-tuning.
-    
-    Args:
-        dataset: Training dataset
-        val_dataset: Validation dataset (optional)
-        ssl_model: Pretrained SSL model (if available)
-        save_path: Path to save fine-tuned model
-    
-    Returns:
-        Fine-tuned classifier
-    """
-    print("[2/2] Starting Supervised Fine-Tuning...")
-    
-    # DataLoaders
-    train_loader = DataLoader(
-        dataset,
-        batch_size=config.batch_size,
-        shuffle=True,
-        num_workers=config.num_workers,
-    )
-    
-    val_loader = None
-    if val_dataset is not None:
-        val_loader = DataLoader(
-            val_dataset,
-            batch_size=config.batch_size,
-            shuffle=False,
-            num_workers=config.num_workers,
+            # Forward pass
+            logits, _, _ = self.model(batch.x, batch.edge_index, batch.batch)
+
+            # Reshape targets to match logits shape
+            # logits: [batch_size, 7]
+            # batch.y: [batch_size * 7] -> need to reshape to [batch_size, 7]
+            batch_size = logits.size(0)
+            targets = batch.y.view(batch_size, -1)  # ✅ ДОБАВЬ ЭТО
+
+            loss = self.criterion(
+                logits, targets
+            )  # ✅ Используй targets вместо batch.y
+
+            # Backward pass
+            loss.backward()
+            self.optimizer.step()
+
+            total_loss += loss.item()
+            all_preds.append(torch.sigmoid(logits).detach())
+            all_targets.append(targets.detach())  # ✅ Используй targets
+
+        # Concatenate all predictions and targets
+        all_preds = torch.cat(all_preds, dim=0)
+        all_targets = torch.cat(all_targets, dim=0)
+
+        # Calculate metrics
+        metrics = self.calculate_metrics(all_targets, all_preds)
+        metrics["loss"] = total_loss / len(train_loader)
+
+        return metrics
+
+    def validate_epoch(self, val_loader: DataLoader) -> dict[str, float]:
+        """Validate for one epoch."""
+        self.model.eval()
+        total_loss = 0
+        all_preds = []
+        all_targets = []
+
+        with torch.no_grad():
+            for batch in val_loader:
+                batch = batch.to(self.device)
+
+                logits, _, _ = self.model(batch.x, batch.edge_index, batch.batch)
+
+                # Reshape targets to match logits
+                batch_size = logits.size(0)
+                targets = batch.y.view(batch_size, -1)  # ✅ ДОБАВЬ ЭТО
+
+                loss = self.criterion(logits, targets)  # ✅ Используй targets
+
+                total_loss += loss.item()
+                all_preds.append(torch.sigmoid(logits))
+                all_targets.append(targets)  # ✅ Используй targets
+
+        all_preds = torch.cat(all_preds, dim=0)
+        all_targets = torch.cat(all_targets, dim=0)
+
+        metrics = self.calculate_metrics(all_targets, all_preds)
+        metrics["loss"] = total_loss / len(val_loader)
+
+        return metrics
+
+    def save_checkpoint(self, epoch: int, val_loss: float, is_best: bool = False):
+        """Save model checkpoint."""
+        checkpoint = {
+            "epoch": epoch,
+            "model_state_dict": self.model.state_dict(),
+            "optimizer_state_dict": self.optimizer.state_dict(),
+            "scheduler_state_dict": self.scheduler.state_dict()
+            if self.scheduler
+            else None,
+            "val_loss": val_loss,
+            "config": {
+                "model_config": model_config.__dict__,
+                "training_config": self.config.__dict__,
+            },
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        # Always save latest
+        latest_path = (
+            Path(self.config.model_save_path).parent / "gnn_classifier_latest.ckpt"
         )
-    
-    # Model
-    classifier = GNNClassifier()
-    
-    # Transfer weights from SSL encoder
-    if ssl_model is not None:
-        print("Transferring weights from SSL pretrained encoder...")
-        classifier.encoder.load_state_dict(ssl_model.encoder.state_dict())
-    
-    lightning_module = SupervisedLightningModule(classifier)
-    
-    # Callbacks
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.dirname(save_path),
-        filename="gnn_classifier_best",
-        monitor="val/accuracy" if val_loader else "train/accuracy",
-        mode="max",
-        save_top_k=1,
+        torch.save(checkpoint, latest_path)
+
+        # Save best model
+        if is_best:
+            torch.save(checkpoint, self.config.model_save_path)
+            logger.info(f"New best model saved with val_loss: {val_loss:.4f}")
+
+    def train(self, epochs: int = None):
+        """Main training loop."""
+        epochs = epochs or self.config.epochs
+
+        # Setup data and model
+        train_loader, val_loader, test_loader = self.setup_data()
+        self.model = self.setup_model()
+
+        # Setup optimizer and scheduler
+        self.optimizer = Adam(
+            self.model.parameters(),
+            lr=self.config.learning_rate,
+            weight_decay=self.config.weight_decay,
+        )
+
+        self.scheduler = ReduceLROnPlateau(
+            self.optimizer, mode="min", factor=0.5, patience=5, verbose=True
+        )
+
+        logger.info(f"Starting training for {epochs} epochs...")
+
+        no_improvement_count = 0
+
+        for epoch in range(epochs):
+            # Training phase
+            train_metrics = self.train_epoch(train_loader)
+            self.train_metrics.append(train_metrics)
+
+            # Validation phase
+            val_metrics = self.validate_epoch(val_loader)
+            self.val_metrics.append(val_metrics)
+
+            # Learning rate scheduling
+            self.scheduler.step(val_metrics["loss"])
+
+            # Check for improvement
+            is_best = val_metrics["loss"] < self.best_val_loss
+            if is_best:
+                self.best_val_loss = val_metrics["loss"]
+                self.best_epoch = epoch
+                no_improvement_count = 0
+            else:
+                no_improvement_count += 1
+
+            # Save checkpoint
+            self.save_checkpoint(epoch, val_metrics["loss"], is_best)
+
+            # Log progress
+            if epoch % 10 == 0 or epoch == epochs - 1:
+                logger.info(
+                    f"Epoch {epoch:3d}/{epochs} | "
+                    f"Train Loss: {train_metrics['loss']:.4f} | "
+                    f"Val Loss: {val_metrics['loss']:.4f} | "
+                    f"Val F1: {val_metrics['macro_f1']:.4f} | "
+                    f"LR: {self.optimizer.param_groups[0]['lr']:.6f}"
+                )
+
+            # Early stopping
+            if no_improvement_count >= self.config.patience:
+                logger.info(f"Early stopping at epoch {epoch}")
+                break
+
+        # Final evaluation
+        logger.info("Training completed!")
+        logger.info(
+            f"Best epoch: {self.best_epoch} with val_loss: {self.best_val_loss:.4f}"
+        )
+
+        # Test evaluation
+        test_metrics = self.validate_epoch(test_loader)
+        logger.info(
+            f"Test Metrics - Loss: {test_metrics['loss']:.4f}, "
+            f"F1: {test_metrics['macro_f1']:.4f}"
+        )
+
+        # Save training history
+        self.save_training_history()
+
+    def save_training_history(self):
+        """Save training metrics history."""
+        history = {
+            "train_metrics": self.train_metrics,
+            "val_metrics": self.val_metrics,
+            "best_epoch": self.best_epoch,
+            "best_val_loss": self.best_val_loss,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        history_path = (
+            Path(self.config.model_save_path).parent / "training_history.json"
+        )
+        with open(history_path, "w") as f:
+            json.dump(history, f, indent=2)
+
+        logger.info(f"Training history saved to {history_path}")
+
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Train GNN hydraulic diagnostics model"
     )
-    
-    early_stopping = EarlyStopping(
-        monitor="val/loss" if val_loader else "train/loss",
-        patience=10,
-        mode="min",
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=training_config.epochs,
+        help="Number of training epochs",
     )
-    
-    # Logger
-    logger = TensorBoardLogger(config.log_dir, name="supervised_finetuning")
-    
-    # Trainer
-    trainer = pl.Trainer(
-        max_epochs=config.finetune_epochs,
-        accelerator="gpu" if config.device == "cuda" else "cpu",
-        devices=1,
-        callbacks=[checkpoint_callback, early_stopping],
-        logger=logger,
-        gradient_clip_val=1.0,
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=training_config.batch_size,
+        help="Batch size for training",
     )
-    
-    # Train
-    trainer.fit(lightning_module, train_loader, val_loader)
-    
-    print(f"Supervised Fine-Tuning complete! Model saved to {save_path}")
-    
-    return classifier
+    parser.add_argument(
+        "--lr", type=float, default=training_config.learning_rate, help="Learning rate"
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default=training_config.device,
+        help="Device to train on (cuda/cpu)",
+    )
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        default=training_config.data_path,
+        help="Path to training data",
+    )
+
+    return parser.parse_args()
+
+
+def main():
+    """Main training function."""
+    try:
+        # Parse arguments
+        args = parse_args()
+
+        # Update config
+        training_config.epochs = args.epochs
+        training_config.batch_size = args.batch_size
+        training_config.learning_rate = args.lr
+        training_config.device = args.device
+        training_config.data_path = args.data_path
+
+        # Create trainer and train
+        trainer = HydraulicTrainer(training_config)
+        trainer.train()
+
+        logger.info("Training completed successfully!")
+
+    except Exception as e:
+        logger.error(f"Training failed: {e}")
+        raise
 
 
 if __name__ == "__main__":
-    # Example usage
-    import argparse
-    
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--equipment-ids", nargs="+", required=True)
-    parser.add_argument("--start-date", type=str, required=True)
-    parser.add_argument("--end-date", type=str, required=True)
-    parser.add_argument("--val-split", type=float, default=0.2)
-    args = parser.parse_args()
-    
-    # Load dataset
-    full_dataset = HydraulicGraphDataset(
-        root="./data",
-        equipment_ids=args.equipment_ids,
-        start_date=args.start_date,
-        end_date=args.end_date,
-    )
-    
-    # Train/val split
-    train_size = int(len(full_dataset) * (1 - args.val_split))
-    val_size = len(full_dataset) - train_size
-    train_dataset, val_dataset = torch.utils.data.random_split(
-        full_dataset, [train_size, val_size]
-    )
-    
-    # SSL Pretraining
-    ssl_model = train_ssl(train_dataset)
-    
-    # Supervised Fine-tuning
-    classifier = train_supervised(train_dataset, val_dataset, ssl_model)
-    
-    print("✅ Training complete!")
+    main()

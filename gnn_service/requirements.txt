@@ -6,9 +6,9 @@ scipy==1.11.4
 
 # PyTorch Geometric (for CUDA 12.1)
 torch-geometric==2.4.0
-torch-scatter==2.1.2+pt23cu121
-torch-sparse==0.6.18+pt23cu121
-torch-cluster==1.6.3+pt23cu121
+# torch-scatter==2.1.2+pt23cu121
+# torch-sparse==0.6.18+pt23cu121
+# torch-cluster==1.6.3+pt23cu121
 
 # Training
 pytorch-lightning==2.1.0

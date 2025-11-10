@@ -1,38 +1,35 @@
-# GNN Service Dockerfile with CUDA 12.1 support
-FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
+FROM pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime
 
-# Set working directory
 WORKDIR /app
 
-# Install Python 3.11
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
-    python3.11 \
-    python3.11-pip \
-    python3.11-dev \
+    curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Symlink python3.11 to python
-RUN ln -s /usr/bin/python3.11 /usr/bin/python
+# Upgrade pip
+RUN pip install --upgrade pip
 
-# Copy requirements
-COPY gnn_service/requirements.txt /app/requirements.txt
+# Install PyTorch Geometric (compatible with PyTorch 2.3.1)
+RUN pip install torch-geometric
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt \
-    -f https://data.pyg.org/whl/torch-2.3.1+cu121.html
+# Copy and install requirements
+COPY gnn_service/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY gnn_service/ /app/gnn_service/
+# Copy code
+COPY gnn_service/ ./gnn_service/
 
 # Create directories
 RUN mkdir -p /app/models /app/logs /app/data
 
-# Expose API port
+ENV PYTHONUNBUFFERED=1
+ENV CUDA_VISIBLE_DEVICES=0
+
 EXPOSE 8003
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8003/health')"
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8003/health || exit 1
 
-# Run application
 CMD ["python", "-m", "gnn_service.main"]

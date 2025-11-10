@@ -1,186 +1,151 @@
-"""HydraulicGraphDataset for loading time-series graph data from TimescaleDB."""
-import numpy as np
-import torch
-from torch_geometric.data import Data, Dataset
-from typing import List, Tuple, Optional
-import sqlalchemy as sa
-from sqlalchemy.orm import sessionmaker
-import pandas as pd
+"""
+PyTorch Dataset class for hydraulic graph data.
+"""
 
-from .config import config
+import logging
+
+import torch
+from config import training_config
+from torch.utils.data import Dataset
+from torch_geometric.data import Batch
+
+logger = logging.getLogger(__name__)
 
 
 class HydraulicGraphDataset(Dataset):
-    """Dataset for hydraulic system graphs with temporal data."""
-    
-    def __init__(
-        self,
-        root: str,
-        equipment_ids: List[str],
-        start_date: str,
-        end_date: str,
-        transform=None,
-        pre_transform=None,
-    ):
-        self.equipment_ids = equipment_ids
-        self.start_date = start_date
-        self.end_date = end_date
-        self.engine = sa.create_engine(config.postgres_uri)
-        self.Session = sessionmaker(bind=self.engine)
-        
-        super().__init__(root, transform, pre_transform)
-        
-    @property
-    def raw_file_names(self) -> List[str]:
-        return []
-    
-    @property
-    def processed_file_names(self) -> List[str]:
-        return [f"data_{i}.pt" for i in range(len(self.equipment_ids))]
-    
-    def download(self):
-        pass
-    
-    def process(self):
-        """Load data from TimescaleDB and convert to PyG Data objects."""
-        for idx, equipment_id in enumerate(self.equipment_ids):
-            # Load metadata (graph structure)
-            metadata = self._load_metadata(equipment_id)
-            
-            # Load time-series sensor data
-            sensor_data = self._load_sensor_data(equipment_id)
-            
-            # Convert to PyG Data
-            data = self._create_graph_data(metadata, sensor_data)
-            
-            torch.save(data, self.processed_paths[idx])
-    
-    def len(self) -> int:
-        return len(self.equipment_ids)
-    
-    def get(self, idx: int) -> Data:
-        data = torch.load(self.processed_paths[idx])
-        return data
-    
-    def _load_metadata(self, equipment_id: str) -> dict:
-        """Load component metadata and topology from database."""
-        with self.Session() as session:
-            query = sa.text("""
-                SELECT 
-                    equipment_id,
-                    components,
-                    adjacency_matrix,
-                    duty_cycle
-                FROM system_metadata
-                WHERE equipment_id = :equipment_id
-            """)
-            result = session.execute(query, {"equipment_id": equipment_id}).fetchone()
-            
-            if not result:
-                raise ValueError(f"No metadata found for equipment {equipment_id}")
-            
-            return {
-                "equipment_id": result[0],
-                "components": result[1],  # JSON
-                "adjacency_matrix": np.array(result[2]),  # 2D array
-                "duty_cycle": result[3]  # JSON
-            }
-    
-    def _load_sensor_data(self, equipment_id: str) -> pd.DataFrame:
-        """Load time-series sensor data from TimescaleDB hypertable."""
-        query = f"""
-            SELECT 
-                time,
-                component_id,
-                pressure,
-                temperature,
-                flow_rate,
-                vibration,
-                label
-            FROM sensor_readings
-            WHERE equipment_id = '{equipment_id}'
-              AND time BETWEEN '{self.start_date}' AND '{self.end_date}'
-            ORDER BY time ASC
+    """Dataset for hydraulic system graph data with multi-label classification."""
+
+    def __init__(self, graphs: list | None = None, transform=None):
         """
-        
-        df = pd.read_sql(query, self.engine)
-        return df
-    
-    def _create_graph_data(
-        self, 
-        metadata: dict, 
-        sensor_data: pd.DataFrame
-    ) -> Data:
-        """Convert metadata + sensor data to PyG Data object."""
-        # Node features: aggregate sensor data per component
-        components = metadata["components"]
-        num_nodes = len(components)
-        
-        # Extract features (mean, std, min, max, recent_trend)
-        node_features = []
-        for comp in components:
-            comp_data = sensor_data[sensor_data["component_id"] == comp["id"]]
-            
-            if len(comp_data) > 0:
-                features = self._extract_features(comp_data)
-            else:
-                features = np.zeros(config.num_node_features)
-            
-            node_features.append(features)
-        
-        x = torch.tensor(np.array(node_features), dtype=torch.float)
-        
-        # Edge index from adjacency matrix
-        adj_matrix = metadata["adjacency_matrix"]
-        edge_index = torch.tensor(
-            np.array(np.where(adj_matrix > 0)), 
-            dtype=torch.long
+        Initialize dataset.
+
+        Args:
+            graphs: List of PyG Data objects
+            transform: Optional transform to apply to graphs
+        """
+        self.graphs = graphs or self._load_graphs()
+        self.transform = transform
+        logger.info(f"Initialized dataset with {len(self.graphs)} graphs")
+
+    def _load_graphs(self) -> list:
+        """Load graphs from saved file."""
+        try:
+            graphs = torch.load(
+                training_config.graphs_save_path,
+                weights_only=False,  # ✅ ДОБАВЬ ЭТО
+            )
+            logger.info(
+                f"Loaded {len(graphs)} graphs from {training_config.graphs_save_path}"
+            )
+            return graphs
+        except Exception as e:
+            logger.error(f"Error loading graphs: {e}")
+            raise
+
+    def __len__(self) -> int:
+        """Return number of graphs in dataset."""
+        return len(self.graphs)
+
+    def __getitem__(self, idx: int):
+        """
+        Get graph by index.
+
+        Args:
+            idx: Index of graph to retrieve
+
+        Returns:
+            PyG Data object
+        """
+        if idx >= len(self):
+            raise IndexError(f"Index {idx} out of range for dataset size {len(self)}")
+
+        graph = self.graphs[idx]
+
+        if self.transform:
+            graph = self.transform(graph)
+
+        return graph
+
+    def get_data_loader(
+        self, batch_size: int = None, shuffle: bool = True, num_workers: int = 0
+    ) -> torch.utils.data.DataLoader:
+        """
+        Create DataLoader for this dataset.
+
+        Args:
+            batch_size: Batch size (default from config)
+            shuffle: Whether to shuffle data
+            num_workers: Number of worker processes
+
+        Returns:
+            DataLoader instance
+        """
+        batch_size = batch_size or training_config.batch_size
+
+        def collate_fn(batch):
+            """Custom collate function for PyG Data objects."""
+            return Batch.from_data_list(batch)
+
+        return torch.utils.data.DataLoader(
+            self,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            num_workers=num_workers,
+            collate_fn=collate_fn,
+            pin_memory=training_config.device == "cuda",
         )
-        
-        # Edge attributes (connection type: pressure=1, return=2, pilot=3)
-        edge_attr = []
-        for i, j in edge_index.t().tolist():
-            # Extract connection type from metadata
-            conn_type = components[i].get("connection_types", {}).get(components[j]["id"], "pressure_line")
-            type_encoding = {"pressure_line": 1, "return_line": 2, "pilot_line": 3}
-            edge_attr.append([type_encoding.get(conn_type, 1)])
-        
-        edge_attr = torch.tensor(edge_attr, dtype=torch.float)
-        
-        # Label: 0 = normal, 1 = anomaly
-        # Majority vote from sensor_data labels
-        if len(sensor_data) > 0 and "label" in sensor_data.columns:
-            label = int(sensor_data["label"].mode()[0])
-        else:
-            label = 0
-        
-        y = torch.tensor([label], dtype=torch.long)
-        
-        return Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
-    
-    def _extract_features(self, comp_data: pd.DataFrame) -> np.ndarray:
-        """Extract statistical features from component sensor data."""
-        features = []
-        
-        for col in ["pressure", "temperature", "flow_rate", "vibration"]:
-            if col in comp_data.columns:
-                values = comp_data[col].dropna()
-                if len(values) > 0:
-                    features.extend([
-                        values.mean(),
-                        values.std(),
-                        values.min(),
-                        values.max(),
-                        values.iloc[-10:].mean() - values.iloc[:10].mean()  # trend
-                    ])
-                else:
-                    features.extend([0, 0, 0, 0, 0])
-            else:
-                features.extend([0, 0, 0, 0, 0])
-        
-        # Pad/truncate to num_node_features
-        features = np.array(features[:config.num_node_features])
-        if len(features) < config.num_node_features:
-            features = np.pad(features, (0, config.num_node_features - len(features)))
-        
-        return features
+
+
+def split_dataset(
+    dataset: HydraulicGraphDataset,
+    train_ratio: float = 0.7,
+    val_ratio: float = 0.15,
+    test_ratio: float = 0.15,
+) -> tuple:
+    """
+    Split dataset into train/validation/test sets.
+
+    Args:
+        dataset: Complete dataset
+        train_ratio: Training set ratio
+        val_ratio: Validation set ratio
+        test_ratio: Test set ratio
+
+    Returns:
+        Tuple of (train_dataset, val_dataset, test_dataset)
+    """
+    if abs(train_ratio + val_ratio + test_ratio - 1.0) > 1e-6:
+        raise ValueError("Ratios must sum to 1.0")
+
+    total_size = len(dataset)
+    train_size = int(train_ratio * total_size)
+    val_size = int(val_ratio * total_size)
+    test_size = total_size - train_size - val_size
+
+    # Split indices
+    indices = torch.randperm(total_size).tolist()
+    train_indices = indices[:train_size]
+    val_indices = indices[train_size : train_size + val_size]
+    test_indices = indices[train_size + val_size :]
+
+    # Create subsets
+    train_graphs = [dataset.graphs[i] for i in train_indices]
+    val_graphs = [dataset.graphs[i] for i in val_indices]
+    test_graphs = [dataset.graphs[i] for i in test_indices]
+
+    train_dataset = HydraulicGraphDataset(train_graphs)
+    val_dataset = HydraulicGraphDataset(val_graphs)
+    test_dataset = HydraulicGraphDataset(test_graphs)
+
+    logger.info(
+        f"Dataset split: Train={len(train_dataset)}, Val={len(val_dataset)}, Test={len(test_dataset)}"
+    )
+
+    return train_dataset, val_dataset, test_dataset
+
+
+if __name__ == "__main__":
+    # Example usage
+    dataset = HydraulicGraphDataset()
+    print(f"Dataset size: {len(dataset)}")
+    print(f"Sample graph: {dataset[0]}")

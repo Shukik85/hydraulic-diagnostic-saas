@@ -1,5 +1,4 @@
 # Updated docker-compose.yml with GNN Service
-version: '3.8'
 
 services:
   # ... existing services (backend, ml_service, rag_service, etc.) ...
@@ -13,11 +12,11 @@ services:
       - "8003:8003"
     environment:
       - CUDA_VISIBLE_DEVICES=0
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=hydraulic_diagnostics
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      # - POSTGRES_HOST=postgres
+      # - POSTGRES_PORT=5432
+      # - POSTGRES_DB=hydraulic_diagnostics
+      # - POSTGRES_USER=postgres
+      # - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - ./models:/app/models
       - ./logs:/app/logs
@@ -31,8 +30,8 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-    depends_on:
-      - postgres
+    # depends_on:
+      # - postgres
     restart: unless-stopped
 
 networks:
