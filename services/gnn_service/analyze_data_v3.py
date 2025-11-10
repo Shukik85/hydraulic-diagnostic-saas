@@ -1,9 +1,7 @@
 """
 Advanced Analytics & Visualization for BIM Dataset (GNN input)
-- Распределения признаков и целевых меток
-- Анализ сбалансированности классов
-- Поиск outliers, корреляций, примеры реальных и аномальных паттернов
-- Фичи по временной деградации, каскадным сценариям
+- Корректно обрабатывает отсутствие столбца time (если нет — ставит time = range(...))
+- Полный EDA: boxplot, class balance, corr, outlier, временные тренды
 """
 import pandas as pd
 import numpy as np
@@ -22,6 +20,9 @@ Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 print("[1] Загружаю данные...")
 df = pd.read_csv(CSV_PATH)
 print(f"[✓] Shape: {df.shape}")
+if 'time' not in df.columns:
+    df['time'] = np.arange(len(df))
+    print('[!] time column not found, auto-added sequential index')
 
 # 2. Metadata
 with open(META_PATH, 'r', encoding='utf-8') as f:
@@ -80,12 +81,12 @@ for comp in components:
 with open(f'{OUT_DIR}outliers.json', 'w', encoding='utf-8') as f:
     json.dump(outliers, f, indent=2)
 
-# 7. Example time-based degradation scenario (флаг time-indexed)
-if 'time' in df.columns:
+# 7. Example time-based degradation scenario
+def plot_time_trend():
     plt.figure(figsize=(14,5))
     for comp in components:
-        feat = colmap[comp][0]  # например, главное давление/скорость
-        plt.plot(df['time'], df[feat], label=comp)
+        feat = colmap[comp][0]
+        plt.plot(df['time'], df[feat], label=comp, alpha=0.8)
     plt.legend()
     plt.xlabel('time')
     plt.ylabel('first main sensor')
@@ -93,6 +94,8 @@ if 'time' in df.columns:
     plt.tight_layout()
     plt.savefig(f'{OUT_DIR}time_degradation_trend.png')
     plt.close()
+
+plot_time_trend()
 
 # 8. Save overall statistics
 df.info(buf=open(f'{OUT_DIR}df_info.txt','w'))
