@@ -1,8 +1,16 @@
 """
-SQLAlchemy ORM Models
+Models package
 """
-from .user import User
 from .equipment import Equipment, Component
-from .sensor_data import SensorData, SensorDataHypertable
+from .sensor_data import SensorData
+from .sensor_mapping import SensorMapping, DataSource
+from .user import User
 
-__all__ = ["User", "Equipment", "Component", "SensorData", "SensorDataHypertable"]
+__all__ = [
+    'Equipment',
+    'Component', 
+    'SensorData',
+    'SensorMapping',
+    'DataSource',
+    'User'
+]
