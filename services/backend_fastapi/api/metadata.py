@@ -1,18 +1,16 @@
 """
 Equipment metadata CRUD API
 """
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import List
-from uuid import UUID
-import structlog
 
+import structlog
 from db.session import get_db
-from models.equipment import Equipment, Component
-from schemas.equipment import EquipmentCreate, EquipmentUpdate, EquipmentResponse
+from fastapi import APIRouter, Depends, HTTPException, status
 from middleware.auth import get_current_user
+from models.equipment import Component, Equipment
 from models.user import User
+from schemas.equipment import EquipmentCreate, EquipmentResponse, EquipmentUpdate
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 logger = structlog.get_logger()
@@ -21,8 +19,8 @@ logger = structlog.get_logger()
 @router.post("/", response_model=EquipmentResponse, status_code=status.HTTP_201_CREATED)
 async def create_equipment(
     equipment: EquipmentCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
 ):
     """Create new equipment with components"""
     try:
@@ -37,7 +35,7 @@ async def create_equipment(
             location=equipment.location,
             manufacturer=equipment.manufacturer,
             model=equipment.model,
-            serial_number=equipment.serial_number
+            serial_number=equipment.serial_number,
         )
 
         # Create components
@@ -49,7 +47,7 @@ async def create_equipment(
                 sensors=comp.sensors,
                 normal_ranges=comp.normal_ranges,
                 connected_to=comp.connected_to,
-                position=comp.position
+                position=comp.position,
             )
             db_equipment.components.append(db_component)
 
@@ -57,42 +55,43 @@ async def create_equipment(
         await db.commit()
         await db.refresh(db_equipment)
 
-        logger.info("equipment_created", equipment_id=str(db_equipment.id), user_id=str(current_user.id))
+        logger.info(
+            "equipment_created",
+            equipment_id=str(db_equipment.id),
+            user_id=str(current_user.id),
+        )
         return db_equipment
 
     except Exception as e:
         await db.rollback()
         logger.error("equipment_creation_failed", exc_info=e)
-        raise HTTPException(status_code=500, detail="Failed to create equipment")
+        raise HTTPException(status_code=500, detail="Failed to create equipment") from e
 
 
 @router.get("/{system_id}", response_model=EquipmentResponse)
 async def get_equipment(
     system_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
 ):
     """Get equipment by system_id"""
     result = await db.execute(
         select(Equipment).where(
-            Equipment.user_id == current_user.id,
-            Equipment.system_id == system_id
+            Equipment.user_id == current_user.id, Equipment.system_id == system_id
         )
     )
-    equipment = result.scalar_one_or_none()
-
-    if not equipment:
+    if equipment := result.scalar_one_or_none():
+        return equipment
+    else:
         raise HTTPException(status_code=404, detail="Equipment not found")
 
-    return equipment
 
-
-@router.get("/", response_model=List[EquipmentResponse])
+@router.get("/", response_model=list[EquipmentResponse])
 async def list_equipment(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
 ):
     """List all equipment for current user"""
     result = await db.execute(
@@ -108,14 +107,13 @@ async def list_equipment(
 async def update_equipment(
     system_id: str,
     equipment_update: EquipmentUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
 ):
     """Update equipment"""
     result = await db.execute(
         select(Equipment).where(
-            Equipment.user_id == current_user.id,
-            Equipment.system_id == system_id
+            Equipment.user_id == current_user.id, Equipment.system_id == system_id
         )
     )
     equipment = result.scalar_one_or_none()
@@ -138,14 +136,13 @@ async def update_equipment(
 @router.delete("/{system_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_equipment(
     system_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user: User = Depends(get_current_user),  # noqa: B008
 ):
     """Delete equipment"""
     result = await db.execute(
         select(Equipment).where(
-            Equipment.user_id == current_user.id,
-            Equipment.system_id == system_id
+            Equipment.user_id == current_user.id, Equipment.system_id == system_id
         )
     )
     equipment = result.scalar_one_or_none()

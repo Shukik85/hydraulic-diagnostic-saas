@@ -2,13 +2,13 @@
 Quota and rate limiting middleware
 Enforces subscription tier limits
 """
+
+import redis.asyncio as redis
+import structlog
+from config import settings
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
-import structlog
-import redis.asyncio as redis
-
-from config import settings
 
 logger = structlog.get_logger()
 
@@ -28,10 +28,7 @@ class QuotaMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/health"):
             return await call_next(request)
 
-        # Get user from request state (set by AuthMiddleware)
-        api_key = request.headers.get(settings.API_KEY_HEADER)
-
-        if api_key:
+        if api_key := request.headers.get(settings.API_KEY_HEADER):
             # Check rate limit
             is_allowed = await self._check_rate_limit(api_key)
 
@@ -39,13 +36,12 @@ class QuotaMiddleware(BaseHTTPMiddleware):
                 logger.warning("rate_limit_exceeded", api_key_prefix=api_key[:10])
                 return JSONResponse(
                     status_code=429,
-                    content={"detail": "Rate limit exceeded. Upgrade your plan."}
+                    content={"detail": "Rate limit exceeded. Upgrade your plan."},
                 )
 
-        response = await call_next(request)
-        return response
+        return await call_next(request)
 
-    async def _check_rate_limit(self, api_key: str) -> bool:
+    async def _check_rate_limit(self, api_key: str) -> bool:  # noqa: ARG002
         """
         Check if user has quota remaining
         TODO: Implement Redis-based rate limiting

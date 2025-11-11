@@ -1,13 +1,14 @@
 """
 Celery tasks for email sending
 """
-from celery import shared_task
-from typing import Optional
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from pathlib import Path
+
 import os
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from pathlib import Path
+
+from celery import shared_task
 
 # Email configuration
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.sendgrid.net")
@@ -22,19 +23,17 @@ TEMPLATE_DIR = Path(__file__).parent.parent / "templates" / "emails"
 def load_template(template_name: str) -> str:
     """Load email template"""
     template_path = TEMPLATE_DIR / template_name
-    if template_path.exists():
-        return template_path.read_text()
-    return ""
+    return template_path.read_text() if template_path.exists() else ""
 
 
 def send_email_smtp(to_email: str, subject: str, html_body: str):
     """Send email via SMTP"""
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = FROM_EMAIL
-    msg['To'] = to_email
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = FROM_EMAIL
+    msg["To"] = to_email
 
-    html_part = MIMEText(html_body, 'html')
+    html_part = MIMEText(html_body, "html")
     msg.attach(html_part)
 
     with smtplib.SMTP(EMAIL_HOST, EMAIL_PORT) as server:
@@ -48,12 +47,12 @@ def send_password_reset_email(to_email: str, user_name: str, reset_link: str):
     """Send password reset email"""
     template = load_template("password_reset.html")
 
-    html_body = template.replace("{{user_name}}", user_name).replace("{{reset_link}}", reset_link)
+    html_body = template.replace("{{user_name}}", user_name).replace(
+        "{{reset_link}}", reset_link
+    )
 
     send_email_smtp(
-        to_email,
-        "Password Reset Request - Hydraulic Diagnostics",
-        html_body
+        to_email, "Password Reset Request - Hydraulic Diagnostics", html_body
     )
 
 
@@ -62,21 +61,18 @@ def send_new_api_key_email(to_email: str, user_name: str, api_key: str):
     """Send new API key email"""
     template = load_template("new_api_key.html")
 
-    html_body = template.replace("{{user_name}}", user_name).replace("{{api_key}}", api_key)
+    html_body = template.replace("{{user_name}}", user_name).replace(
+        "{{api_key}}", api_key
+    )
 
     send_email_smtp(
-        to_email,
-        "New API Key Generated - Hydraulic Diagnostics",
-        html_body
+        to_email, "New API Key Generated - Hydraulic Diagnostics", html_body
     )
 
 
 @shared_task
 def send_support_ticket_notification(
-    ticket_id: str,
-    user_email: str,
-    subject: str,
-    priority: str
+    ticket_id: str, user_email: str, subject: str, priority: str
 ):
     """Notify support team about new ticket"""
     # Send to support team email
@@ -94,9 +90,7 @@ def send_support_ticket_notification(
     """
 
     send_email_smtp(
-        support_email,
-        f"[{priority.upper()}] New Support Ticket: {subject}",
-        html_body
+        support_email, f"[{priority.upper()}] New Support Ticket: {subject}", html_body
     )
 
     # Send confirmation to user
@@ -110,8 +104,4 @@ def send_support_ticket_notification(
     <p>— Hydraulic Diagnostics Team</p>
     """
 
-    send_email_smtp(
-        user_email,
-        f"Support Ticket Created: {subject}",
-        user_html
-    )
+    send_email_smtp(user_email, f"Support Ticket Created: {subject}", user_html)

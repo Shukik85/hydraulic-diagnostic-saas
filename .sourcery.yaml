@@ -1,0 +1,5 @@
+rule_settings:
+  disable:
+  - swap-if-expression
+  - swap-if-else-branches
+  - merge-nested-ifs

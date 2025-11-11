@@ -1,27 +1,26 @@
 """
 Account management and data export (GDPR)
 """
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
-import uuid
 
-from app.models.user import User
-from app.models.data_export import DataExportRequest
+import uuid
+from datetime import UTC, datetime
+
 from app.dependencies import get_current_user
+from app.models.data_export import DataExportRequest
+from app.models.user import User
 from app.tasks.data_export import export_user_data_task
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/account", tags=["Account"])
 
-
-# ============= Models =============
 
 class DataExportResponse(BaseModel):
     request_id: uuid.UUID
     status: str
     message: str
     estimated_time: str = "~30-60 minutes"
+
 
 class AccountInfo(BaseModel):
     id: uuid.UUID
@@ -35,8 +34,9 @@ class AccountInfo(BaseModel):
 
 # ============= Endpoints =============
 
+
 @router.get("/me", response_model=AccountInfo)
-async def get_account_info(current_user: User = Depends(get_current_user)):
+async def get_account_info(current_user: User = Depends(get_current_user)):  # noqa: B008
     """
     Get current user account information
     """
@@ -47,14 +47,14 @@ async def get_account_info(current_user: User = Depends(get_current_user)):
         subscription_status=current_user.subscription_status,
         api_requests_count=current_user.api_requests_count,
         ml_inferences_count=current_user.ml_inferences_count,
-        created_at=current_user.created_at
+        created_at=current_user.created_at,
     )
 
 
 @router.post("/export-data", response_model=DataExportResponse, status_code=202)
 async def request_data_export(
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),  # noqa: B008
 ):
     """
     Request complete data export (GDPR compliance)
@@ -73,34 +73,30 @@ async def request_data_export(
         return DataExportResponse(
             request_id=existing.id,
             status="pending",
-            message="Data export already in progress"
+            message="Data export already in progress",
         )
 
     # Create new export request
     export_request = await DataExportRequest.create(
-        user_id=current_user.id,
-        status="pending"
+        user_id=current_user.id, status="pending"
     )
 
     # Queue export task
     background_tasks.add_task(
-        export_user_data_task,
-        export_request.id,
-        current_user.id,
-        current_user.email
+        export_user_data_task, export_request.id, current_user.id, current_user.email
     )
 
     return DataExportResponse(
         request_id=export_request.id,
         status="pending",
-        message="Data export started. Download link will be sent to your email."
+        message="Data export started. Download link will be sent to your email.",
     )
 
 
 @router.delete("/me")
 async def delete_account(
     confirmation: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),  # noqa: B008
 ):
     """
     Delete user account (GDPR right to be forgotten)
@@ -116,7 +112,7 @@ async def delete_account(
     current_user.first_name = "Deleted"
     current_user.last_name = "User"
     current_user.api_key = f"deleted_{uuid.uuid4()}"
-    current_user.updated_at = datetime.utcnow()
+    current_user.updated_at = datetime.now(UTC)
     await current_user.save()
 
     # TODO: Schedule data purge after 30 days

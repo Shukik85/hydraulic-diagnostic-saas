@@ -16,40 +16,7 @@ def check_gpu_setup():
     print(f"CUDA Available: {'✅' if cuda_available else '❌'}")
 
     if cuda_available:
-        # GPU information
-        device_count = torch.cuda.device_count()
-        print(f"Number of GPUs: {device_count}")
-
-        for i in range(device_count):
-            gpu_name = torch.cuda.get_device_name(i)
-            memory = torch.cuda.get_device_properties(i).total_memory / 1e9
-            print(f"GPU {i}: {gpu_name} ({memory:.1f} GB)")
-
-        # CUDA version
-        cuda_version = torch.version.cuda
-        print(f"CUDA Version: {cuda_version}")
-
-        # Memory usage
-        current_memory = torch.cuda.memory_allocated() / 1e9
-        reserved_memory = torch.cuda.memory_reserved() / 1e9
-        print(f"Current GPU memory: {current_memory:.2f} GB")
-        print(f"Reserved GPU memory: {reserved_memory:.2f} GB")
-
-        # Performance recommendations
-        print("\n💡 Performance Recommendations:")
-
-        if device_count > 1:
-            print("✅ Multiple GPUs detected - consider using DistributedDataParallel")
-        else:
-            print("✅ Single GPU - optimized settings applied")
-
-        if memory >= 16:
-            print("✅ High memory GPU - can use larger batch sizes")
-        elif memory >= 8:
-            print("⚠️  Medium memory GPU - moderate batch sizes recommended")
-        else:
-            print("❌ Low memory GPU - consider gradient accumulation")
-
+        _extracted_from_check_gpu_setup_13()
     else:
         print("\n💡 CPU-only training recommendations:")
         print("✅ Use smaller batch sizes (8-16)")
@@ -69,6 +36,43 @@ def check_gpu_setup():
     print("=" * 50)
 
 
+# TODO Rename this here and in `check_gpu_setup`
+def _extracted_from_check_gpu_setup_13():
+    # GPU information
+    device_count = torch.cuda.device_count()
+    print(f"Number of GPUs: {device_count}")
+
+    for i in range(device_count):
+        gpu_name = torch.cuda.get_device_name(i)
+        memory = torch.cuda.get_device_properties(i).total_memory / 1e9
+        print(f"GPU {i}: {gpu_name} ({memory:.1f} GB)")
+
+    # CUDA version
+    cuda_version = torch.version.cuda
+    print(f"CUDA Version: {cuda_version}")
+
+    # Memory usage
+    current_memory = torch.cuda.memory_allocated() / 1e9
+    reserved_memory = torch.cuda.memory_reserved() / 1e9
+    print(f"Current GPU memory: {current_memory:.2f} GB")
+    print(f"Reserved GPU memory: {reserved_memory:.2f} GB")
+
+    # Performance recommendations
+    print("\n💡 Performance Recommendations:")
+
+    if device_count > 1:
+        print("✅ Multiple GPUs detected - consider using DistributedDataParallel")
+    else:
+        print("✅ Single GPU - optimized settings applied")
+
+    if memory >= 16:
+        print("✅ High memory GPU - can use larger batch sizes")
+    elif memory >= 8:
+        print("⚠️  Medium memory GPU - moderate batch sizes recommended")
+    else:
+        print("❌ Low memory GPU - consider gradient accumulation")
+
+
 def get_optimized_config():
     """Get optimized configuration based on GPU availability."""
 
@@ -76,7 +80,7 @@ def get_optimized_config():
         "batch_size": 32 if torch.cuda.is_available() else 8,
         "num_workers": 4 if torch.cuda.is_available() else 0,
         "mixed_precision": torch.cuda.is_available(),
-        "gradient_accumulation": 2 if not torch.cuda.is_available() else 1,
+        "gradient_accumulation": (1 if torch.cuda.is_available() else 2),
     }
 
     if torch.cuda.is_available():

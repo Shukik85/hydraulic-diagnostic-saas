@@ -5,7 +5,7 @@ Level 6B Option D: Generate synthetic sensor data
 
 import asyncio
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import numpy as np
 from db.session import get_db
@@ -15,6 +15,7 @@ from models.equipment import Equipment
 from models.sensor_data import SensorData
 from models.sensor_mapping import DataSource, SensorMapping
 from schemas.simulator import SimulatorConfig, SimulatorStartResponse, SimulatorStatus
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/simulator", tags=["Simulator"])
@@ -27,8 +28,8 @@ active_simulations = {}
 async def start_simulator(
     config: SimulatorConfig,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user=Depends(get_current_user),  # noqa: B008
 ):
     """
     Start simulator for equipment
@@ -75,7 +76,7 @@ async def start_simulator(
         "equipment_id": config.equipment_id,
         "data_source_id": data_source.id,
         "status": "running",
-        "started_at": datetime.utcnow(),
+        "started_at": datetime.now(UTC),
         "config": config.dict(),
     }
 
@@ -97,17 +98,15 @@ async def start_simulator(
 @router.get("/status/{simulation_id}", response_model=SimulatorStatus)
 async def get_simulator_status(simulation_id: uuid.UUID):
     """Get simulation status"""
-    sim = active_simulations.get(str(simulation_id))
-
-    if not sim:
+    if sim := active_simulations.get(str(simulation_id)):
+        return {
+            "simulation_id": simulation_id,
+            "status": sim["status"],
+            "started_at": sim["started_at"],
+            "config": sim["config"],
+        }
+    else:
         raise HTTPException(status_code=404, detail="Simulation not found")
-
-    return {
-        "simulation_id": simulation_id,
-        "status": sim["status"],
-        "started_at": sim["started_at"],
-        "config": sim["config"],
-    }
 
 
 @router.post("/stop/{simulation_id}")
@@ -134,7 +133,7 @@ async def run_simulation(
     Background task: Generate and insert sensor readings
     """
     try:
-        start_time = datetime.utcnow()
+        start_time = datetime.now(UTC)
         end_time = start_time + timedelta(seconds=config.duration)
         current_time = start_time
 
@@ -169,9 +168,16 @@ async def run_simulation(
             # Commit batch every second
             await db.commit()
 
-            # Wait for next interval
-            await asyncio.sleep(interval)
-            current_time = datetime.utcnow()
+            # More accurate interval timing
+            loop_start = datetime.now(UTC)
+
+            # ... (your processing code here) ...
+
+            elapsed = (datetime.now(UTC) - loop_start).total_seconds()
+            sleep_time = interval - elapsed
+            if sleep_time > 0:
+                await asyncio.sleep(sleep_time)
+            current_time = datetime.now(UTC)
 
         # Mark as completed
         active_simulations[str(simulation_id)]["status"] = "completed"
@@ -189,11 +195,9 @@ def generate_sensor_value(
     """
     base_value = (mapping.expected_range_min + mapping.expected_range_max) / 2
     range_span = mapping.expected_range_max - mapping.expected_range_min
-
     # Scenario-specific patterns
-    if scenario == "normal":
-        # Stable values with small noise
-        variation = np.random.normal(0, noise_level * range_span * 0.05)
+    if scenario == "cyclic":
+        variation = range_span * 0.2 * np.sin(2 * np.pi * 0.1 * time_elapsed)
 
     elif scenario == "degradation":
         # Gradual drift over time
@@ -202,19 +206,19 @@ def generate_sensor_value(
 
     elif scenario == "failure":
         # Sudden spike at random times
-        if np.random.random() < 0.01:  # 1% chance of spike
-            variation = range_span * 0.5 * np.random.choice([-1, 1])
-        else:
-            variation = np.random.normal(0, noise_level * range_span * 0.1)
-
-    elif scenario == "cyclic":
-        # Sinusoidal pattern
-        frequency = 0.1  # Hz
-        amplitude = range_span * 0.2
-        variation = amplitude * np.sin(2 * np.pi * frequency * time_elapsed)
+        variation = (
+            range_span * 0.5 * np.random.choice([-1, 1])
+            if np.random.random() < 0.01
+            else np.random.normal(0, noise_level * range_span * 0.1)
+        )
+    elif scenario == "normal":
+        # Stable values with small noise
+        variation = np.random.normal(0, noise_level * range_span * 0.05)
 
     else:
-        variation = 0
+        raise ValueError(
+            f"Unsupported scenario '{scenario}' provided to generate_sensor_value."
+        )
 
     # Add noise
     noise = np.random.normal(0, noise_level * range_span * 0.02)

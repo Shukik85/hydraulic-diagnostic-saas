@@ -1,10 +1,11 @@
 """
 GNN Service client for ML inference
 """
+
+from typing import Any
+
 import httpx
 import structlog
-from typing import Dict, Any
-
 from config import settings
 
 logger = structlog.get_logger()
@@ -17,7 +18,7 @@ class GNNClient:
         self.base_url = settings.GNN_SERVICE_URL
         self.timeout = 30.0
 
-    async def infer(self, user_id: str, system_id: str) -> Dict[str, Any]:
+    async def infer(self, user_id: str, system_id: str) -> dict[str, Any]:
         """
         Run GNN inference for system
         Returns anomaly scores per component
@@ -26,7 +27,7 @@ class GNNClient:
             try:
                 response = await client.post(
                     f"{self.base_url}/gnn/infer",
-                    params={"user_id": user_id, "system_id": system_id}
+                    params={"user_id": user_id, "system_id": system_id},
                 )
                 response.raise_for_status()
 
@@ -35,14 +36,14 @@ class GNNClient:
                     "gnn_inference_completed",
                     user_id=user_id,
                     system_id=system_id,
-                    n_components=result.get("n_components")
+                    n_components=result.get("n_components"),
                 )
 
                 return result
 
             except httpx.HTTPError as e:
                 logger.error("gnn_inference_failed", exc_info=e)
-                raise RuntimeError(f"GNN inference failed: {str(e)}")
+                raise RuntimeError(f"GNN inference failed: {str(e)}") from e
 
     async def health_check(self) -> bool:
         """Check if GNN service is healthy"""
@@ -50,5 +51,5 @@ class GNNClient:
             try:
                 response = await client.get(f"{self.base_url}/gnn/health")
                 return response.status_code == 200
-            except:
+            except Exception:
                 return False

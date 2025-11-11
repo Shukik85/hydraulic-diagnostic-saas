@@ -2,30 +2,33 @@
 Sensor Mapping API
 Level 6A: Assign sensors to components
 """
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
+
 import uuid
 
 from db.session import get_db
-from models.sensor_mapping import SensorMapping
+from fastapi import APIRouter, Depends, HTTPException, status
+from middleware.auth import get_current_user
 from models.equipment import Equipment
+from models.sensor_mapping import SensorMapping
 from schemas.sensor_mapping import (
+    AutoDetectResponse,
     SensorMappingCreate,
     SensorMappingResponse,
     SensorMappingUpdate,
-    AutoDetectResponse
 )
-from middleware.auth import get_current_user
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/api/sensor-mappings", tags=["Sensor Mapping"])
 
 
-@router.post("/", response_model=SensorMappingResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/", response_model=SensorMappingResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_sensor_mapping(
     mapping: SensorMappingCreate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user=Depends(get_current_user),  # noqa: B008
 ):
     """
     Create new sensor-to-component mapping
@@ -48,8 +51,7 @@ async def create_sensor_mapping(
 
     # Create mapping
     db_mapping = SensorMapping(
-        **mapping.dict(),
-        component_name=equipment.components[mapping.component_index]
+        **mapping.dict(), component_name=equipment.components[mapping.component_index]
     )
 
     db.add(db_mapping)
@@ -59,11 +61,11 @@ async def create_sensor_mapping(
     return db_mapping
 
 
-@router.get("/equipment/{equipment_id}", response_model=List[SensorMappingResponse])
+@router.get("/equipment/{equipment_id}", response_model=list[SensorMappingResponse])
 async def get_equipment_sensors(
     equipment_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user=Depends(get_current_user),  # noqa: B008
 ):
     """
     Get all sensor mappings for equipment
@@ -75,17 +77,15 @@ async def get_equipment_sensors(
     result = await db.execute(
         select(SensorMapping).where(SensorMapping.equipment_id == equipment_id)
     )
-    mappings = result.scalars().all()
-
-    return mappings
+    return result.scalars().all()
 
 
 @router.post("/equipment/{equipment_id}/auto-detect", response_model=AutoDetectResponse)
 async def auto_detect_sensors(
     equipment_id: uuid.UUID,
-    available_sensors: List[str],  # List of sensor IDs from data source
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    available_sensors: list[str],  # List of sensor IDs from data source
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user=Depends(get_current_user),  # noqa: B008
 ):
     """
     Auto-detect sensor-to-component mappings
@@ -100,8 +100,7 @@ async def auto_detect_sensors(
     for component_idx, component_name in enumerate(equipment.components):
         # Find sensors matching component name
         matching_sensors = [
-            s for s in available_sensors
-            if component_name.lower() in s.lower()
+            s for s in available_sensors if component_name.lower() in s.lower()
         ]
 
         for sensor_id in matching_sensors:
@@ -110,27 +109,31 @@ async def auto_detect_sensors(
 
             # Estimate expected range based on component type
             ranges = estimate_ranges(
-                component_type=equipment.component_specs.get(component_name, {}).get('type'),
-                sensor_type=sensor_type
+                component_type=equipment.component_specs.get(component_name, {}).get(
+                    "type"
+                ),
+                sensor_type=sensor_type,
             )
 
-            suggestions.append({
-                'component_index': component_idx,
-                'component_name': component_name,
-                'sensor_id': sensor_id,
-                'sensor_type': sensor_type,
-                'expected_range_min': ranges['min'],
-                'expected_range_max': ranges['max'],
-                'unit': ranges['unit'],
-                'confidence': calculate_confidence(sensor_id, component_name),
-                'auto_detected': True
-            })
+            suggestions.append(
+                {
+                    "component_index": component_idx,
+                    "component_name": component_name,
+                    "sensor_id": sensor_id,
+                    "sensor_type": sensor_type,
+                    "expected_range_min": ranges["min"],
+                    "expected_range_max": ranges["max"],
+                    "unit": ranges["unit"],
+                    "confidence": calculate_confidence(sensor_id, component_name),
+                    "auto_detected": True,
+                }
+            )
 
     return {
-        'equipment_id': equipment_id,
-        'total_sensors': len(available_sensors),
-        'matched_sensors': len(suggestions),
-        'suggestions': suggestions
+        "equipment_id": equipment_id,
+        "total_sensors": len(available_sensors),
+        "matched_sensors": len(suggestions),
+        "suggestions": suggestions,
     }
 
 
@@ -138,8 +141,8 @@ async def auto_detect_sensors(
 async def update_sensor_mapping(
     mapping_id: uuid.UUID,
     update: SensorMappingUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user=Depends(get_current_user),  # noqa: B008
 ):
     """Update sensor mapping"""
     mapping = await db.get(SensorMapping, mapping_id)
@@ -164,8 +167,8 @@ async def update_sensor_mapping(
 @router.delete("/{mapping_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_sensor_mapping(
     mapping_id: uuid.UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user = Depends(get_current_user)
+    db: AsyncSession = Depends(get_db),  # noqa: B008
+    current_user=Depends(get_current_user),  # noqa: B008
 ):
     """Delete sensor mapping"""
     mapping = await db.get(SensorMapping, mapping_id)
@@ -186,46 +189,44 @@ def infer_sensor_type(sensor_id: str) -> str:
     """Infer sensor type from ID"""
     sensor_id_lower = sensor_id.lower()
 
-    if 'p' in sensor_id_lower or 'pressure' in sensor_id_lower:
-        return 'pressure'
-    elif 't' in sensor_id_lower or 'temp' in sensor_id_lower:
-        return 'temperature'
-    elif 'v' in sensor_id_lower or 'vibr' in sensor_id_lower:
-        return 'vibration'
-    elif 'f' in sensor_id_lower or 'flow' in sensor_id_lower:
-        return 'flow'
+    if "p" in sensor_id_lower or "pressure" in sensor_id_lower:
+        return "pressure"
+    elif "t" in sensor_id_lower or "temp" in sensor_id_lower:
+        return "temperature"
+    elif "v" in sensor_id_lower or "vibr" in sensor_id_lower:
+        return "vibration"
+    elif "f" in sensor_id_lower or "flow" in sensor_id_lower:
+        return "flow"
     else:
-        return 'unknown'
+        return "unknown"
 
 
 def estimate_ranges(component_type: str, sensor_type: str) -> dict:
     """Estimate expected ranges based on component and sensor type"""
     ranges_map = {
-        'pump': {
-            'pressure': {'min': 150, 'max': 250, 'unit': 'bar'},
-            'temperature': {'min': 40, 'max': 80, 'unit': '°C'},
-            'vibration': {'min': 0, 'max': 5, 'unit': 'mm/s'}
+        "pump": {
+            "pressure": {"min": 150, "max": 250, "unit": "bar"},
+            "temperature": {"min": 40, "max": 80, "unit": "°C"},
+            "vibration": {"min": 0, "max": 5, "unit": "mm/s"},
         },
-        'cylinder': {
-            'pressure': {'min': 100, 'max': 200, 'unit': 'bar'},
-            'temperature': {'min': 30, 'max': 70, 'unit': '°C'}
+        "cylinder": {
+            "pressure": {"min": 100, "max": 200, "unit": "bar"},
+            "temperature": {"min": 30, "max": 70, "unit": "°C"},
         },
-        'valve': {
-            'pressure': {'min': 50, 'max': 150, 'unit': 'bar'}
-        }
-    }
-
-    default_ranges = {
-        'pressure': {'min': 0, 'max': 300, 'unit': 'bar'},
-        'temperature': {'min': 0, 'max': 100, 'unit': '°C'},
-        'vibration': {'min': 0, 'max': 10, 'unit': 'mm/s'},
-        'flow': {'min': 0, 'max': 200, 'unit': 'L/min'}
+        "valve": {"pressure": {"min": 50, "max": 150, "unit": "bar"}},
     }
 
     if component_type in ranges_map and sensor_type in ranges_map[component_type]:
         return ranges_map[component_type][sensor_type]
 
-    return default_ranges.get(sensor_type, {'min': 0, 'max': 100, 'unit': 'units'})
+    default_ranges = {
+        "pressure": {"min": 0, "max": 300, "unit": "bar"},
+        "temperature": {"min": 0, "max": 100, "unit": "°C"},
+        "vibration": {"min": 0, "max": 10, "unit": "mm/s"},
+        "flow": {"min": 0, "max": 200, "unit": "L/min"},
+    }
+
+    return default_ranges.get(sensor_type, {"min": 0, "max": 100, "unit": "units"})
 
 
 def calculate_confidence(sensor_id: str, component_name: str) -> float:
@@ -238,7 +239,7 @@ def calculate_confidence(sensor_id: str, component_name: str) -> float:
 
     # Sensor type inference
     sensor_type = infer_sensor_type(sensor_id)
-    if sensor_type != 'unknown':
+    if sensor_type != "unknown":
         score += 0.3
 
     # Additional heuristics

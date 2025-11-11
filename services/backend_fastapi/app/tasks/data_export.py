@@ -1,17 +1,16 @@
 """
 Celery task for data export (GDPR compliance)
 """
-from celery import shared_task
-import zipfile
-import json
-from pathlib import Path
-from datetime import datetime
-import boto3
-from typing import Optional
 
-from app.models.user import User
-from app.models.equipment import Equipment
+import json
+import zipfile
+from datetime import UTC, datetime
+from pathlib import Path
+
 from app.models.data_export import DataExportRequest
+from app.models.equipment import Equipment
+from app.models.user import User
+from celery import shared_task
 
 
 @shared_task
@@ -33,7 +32,7 @@ def export_user_data_task(export_request_id: str, user_id: str, user_email: str)
     try:
         # Collect data
         data = {
-            "export_date": datetime.utcnow().isoformat(),
+            "export_date": datetime.now(UTC).isoformat(),
             "user_id": user_id,
             "profile": await _export_user_profile(user_id),
             "equipment": await _export_equipment(user_id),
@@ -42,7 +41,7 @@ def export_user_data_task(export_request_id: str, user_id: str, user_email: str)
 
         # Create ZIP
         zip_path = Path(f"/tmp/export_{user_id}.zip")
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             zf.writestr("data.json", json.dumps(data, indent=2))
             zf.writestr("README.txt", _get_readme_text())
 
@@ -52,11 +51,12 @@ def export_user_data_task(export_request_id: str, user_id: str, user_email: str)
         # Update status
         export_request.status = "completed"
         export_request.download_url = download_url
-        export_request.completed_at = datetime.utcnow()
+        export_request.completed_at = datetime.now(UTC)
         await export_request.save()
 
         # Send email with download link
         from app.tasks.email import send_email_smtp
+
         send_email_smtp(
             user_email,
             "Your Data Export is Ready",
@@ -65,7 +65,7 @@ def export_user_data_task(export_request_id: str, user_id: str, user_email: str)
             <p>Your data export is ready for download.</p>
             <p><a href="{download_url}">Download Now</a></p>
             <p>This link expires in 7 days.</p>
-            """
+            """,
         )
 
     except Exception as e:
@@ -102,13 +102,13 @@ async def _export_equipment(user_id: str) -> list:
     ]
 
 
-async def _export_api_logs(user_id: str) -> list:
+async def _export_api_logs(_user_id: str) -> list:
     """Export recent API usage logs"""
     # TODO: Query API logs from last 90 days
     return []
 
 
-async def _upload_to_storage(file_path: Path, export_id: str) -> str:
+async def _upload_to_storage(_file_path: Path, export_id: str) -> str:
     """Upload file to S3 and return presigned URL"""
     # TODO: Implement S3 upload
     # For now, return placeholder

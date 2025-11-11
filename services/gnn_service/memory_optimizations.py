@@ -9,26 +9,11 @@ def apply_memory_optimizations(model, config):
     """Apply memory saving techniques."""
 
     # Gradient checkpointing for GNN layers
-    if config.gpu_config.gradient_checkpointing:  # noqa: SIM102
-        if hasattr(model, "gnn") and hasattr(model.gnn, "gat_layers"):
-            for _i, layer in enumerate(model.gnn.gat_layers):
-                layer.checkpoint = True
-
-    # Use inplace operations where possible
-    def set_inplace(module):
-        if hasattr(module, "inplace"):
-            module.inplace = True
-        for child in module.children():
-            set_inplace(child)
-
-    set_inplace(model)
-
-    # Use memory-efficient attention if available
-    try:
-        torch.backends.cuda.enable_flash_sdp(True)
-        torch.backends.cuda.enable_mem_efficient_sdp(True)
-    except:  # noqa: E722
-        pass
+    if config.gpu_config.gradient_checkpointing and (
+        hasattr(model, "gnn") and hasattr(model.gnn, "gat_layers")
+    ):
+        for layer in model.gnn.gat_layers:
+            layer.checkpoint = True
 
 
 def clear_gpu_cache():

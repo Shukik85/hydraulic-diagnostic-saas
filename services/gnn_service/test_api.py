@@ -2,6 +2,7 @@
 Test script for the GNN API service.
 """
 
+import contextlib
 import requests
 import time
 import numpy as np
@@ -14,8 +15,7 @@ HEADERS = {"Content-Type": "application/json"}
 def create_test_request() -> dict:
     """Create a test request with realistic hydraulic data."""
 
-    # Use corrected physical norms for realistic test data
-    test_data = {
+    return {
         "pump": {
             "raw_features": [
                 250.0,
@@ -24,8 +24,20 @@ def create_test_request() -> dict:
                 2.5,
                 75.0,
             ],  # pressure, rpm, temp, vibration, power
-            "normalized_features": [0.7, 0.5, 0.6, 0.5, 0.7],  # normalized values
-            "deviation_features": [0.0, 0.0, 0.0, 0.0, 0.1],  # slight power deviation
+            "normalized_features": [
+                0.7,
+                0.5,
+                0.6,
+                0.5,
+                0.7,
+            ],  # normalized values
+            "deviation_features": [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.1,
+            ],  # slight power deviation
         },
         "cylinder_boom": {
             "raw_features": [200.0, 60.0, 50.0, 200.0, 160.0],
@@ -60,8 +72,6 @@ def create_test_request() -> dict:
         "equipment_id": "test_excavator_001",
         "timestamp": "2024-01-01T12:00:00Z",
     }
-
-    return test_data
 
 
 def test_health():
@@ -140,7 +150,7 @@ def test_batch_prediction():
 
         if response.status_code == 200:
             result = response.json()
-            print("✅ Batch prediction passed")
+            print(f"✅ Batch prediction passed: {processing_time:.2f}ms")
             print(f"Total processing time: {result['total_processing_time_ms']:.2f}ms")
             print(f"Processed {len(result['predictions'])} graphs")
 
@@ -181,18 +191,15 @@ def performance_test():
     test_request = create_test_request()
     times = []
 
-    for i in range(10):  # 10 requests for performance testing
+    for _i in range(10):  # 10 requests for performance testing
         start_time = time.time()
-        try:
+        with contextlib.suppress(Exception):
             response = requests.post(
                 f"{BASE_URL}/predict", json=test_request, headers=HEADERS
             )
             if response.status_code == 200:
                 elapsed = (time.time() - start_time) * 1000
                 times.append(elapsed)
-        except:
-            pass
-
     if times:
         avg_time = np.mean(times)
         std_time = np.std(times)
