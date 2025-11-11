@@ -1,7 +1,4 @@
 #!/bin/bash
-# tools/generate_frontend_clients.sh
-# Генерация TypeScript клиентов для frontend из OpenAPI спецификации
-
 set -e
 
 echo "🔄 Aggregating OpenAPI specs..."
@@ -10,7 +7,8 @@ python tools/aggregate_openapi.py
 echo "📦 Generating TypeScript API clients..."
 cd services/frontend
 
-npx openapi-generator-cli generate \
+# Используем @openapitools/openapi-generator-cli
+npx @openapitools/openapi-generator-cli@latest generate \
   -i ../../docs/api/openapi.yaml \
   -g typescript-axios \
   -o api/generated \
