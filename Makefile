@@ -1,116 +1,98 @@
-SHELL := /bin/bash
+# Hydraulic Diagnostics SaaS - Makefile
+# Quick commands for Docker management
 
-# Default env file
-ENV ?= .env
+.PHONY: help build up down restart logs clean test migrate
 
-.PHONY: help
-help:
-	@echo "🛠️  Hydraulic Diagnostic SaaS - Available Commands:"
-	@echo ""
-	@echo "📦 Main Development:"
-	@echo "  make dev               - start dev stack (alias for 'up')"
-	@echo "  make up                - start dev stack (docker-compose.dev.yml)"
-	@echo "  make down              - stop dev stack"
-	@echo "  make logs              - follow dev logs"
-	@echo "  make init-data         - initialize demo data and RAG system"
-	@echo ""
-	@echo "🗄️  Database & Migrations:"
-	@echo "  make migrate           - run Django migrations"
-	@echo "  make superuser         - create Django superuser"
-	@echo "  make shell             - open Django shell"
-	@echo ""
-	@echo "🧪 Testing & Quality:"
-	@echo "  make test              - run all tests"
-	@echo "  make test-backend      - run backend tests only"
-	@echo "  make test-rag          - run RAG system tests"
-	@echo "  make smoke-test        - run smoke tests"
-	@echo "  make lint              - run ruff lint"
-	@echo "  make format            - run ruff format"
-	@echo "  make check             - run pre-commit checks"
-	@echo ""
-	@echo "🚀 Production:"
-	@echo "  make up-prod           - start prod stack (docker-compose.prod.yml)"
-	@echo "  make down-prod         - stop prod stack"
-	@echo "  make logs-prod         - follow prod logs"
-	@echo ""
-	@echo "🔧 Utilities:"
-	@echo "  make clean             - clean up containers and volumes"
-	@echo "  make rebuild           - rebuild all containers"
+help: ## Show this help message
+	@echo "Available commands:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# -------- Dev stack --------
-dev: up
+build: ## Build all containers
+	docker-compose build
 
-up:
-	@if [ ! -f $(ENV) ]; then \
-		echo "⚠️  .env file not found. Creating from .env.dev.example..."; \
-		cp .env.dev.example $(ENV); \
-	fi
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) up --build -d
+up: ## Start all services
+	docker-compose up -d
 
-down:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) down
+down: ## Stop all services
+	docker-compose down
 
-logs:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) logs -f --tail=200
+restart: ## Restart all services
+	docker-compose restart
 
-# -------- Database operations --------
-migrate:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend python manage.py migrate
+logs: ## View logs (use: make logs SERVICE=backend_fastapi)
+ifdef SERVICE
+	docker-compose logs -f $(SERVICE)
+else
+	docker-compose logs -f
+endif
 
-superuser:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend python manage.py createsuperuser
-
-shell:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend python manage.py shell
-
-# -------- Data initialization --------
-init-data:
-	@echo "🔄 Initializing demo data and RAG system..."
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend python manage.py generate_test_data
-	@echo "✅ Demo data initialized successfully!"
-
-# -------- Testing --------
-test:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend pytest -v
-
-test-backend:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend pytest backend/tests/ -v
-
-test-rag:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend python test_rag.py
-
-smoke-test:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend python smoke_diagnostics.py
-
-# -------- Code quality --------
-lint:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend ruff check .
-
-format:
-	docker compose -f docker-compose.dev.yml --env-file $(ENV) exec backend ruff format .
-
-check:
-	@echo "🔍 Running pre-commit checks..."
-	pre-commit run --all-files
-
-# -------- Prod stack --------
-up-prod:
-	docker compose -f docker-compose.prod.yml --env-file $(ENV) up --build -d
-
-down-prod:
-	docker compose -f docker-compose.prod.yml --env-file $(ENV) down
-
-logs-prod:
-	docker compose -f docker-compose.prod.yml --env-file $(ENV) logs -f --tail=200
-
-# -------- Utilities --------
-clean:
-	@echo "🧹 Cleaning up containers and volumes..."
-	docker compose -f docker-compose.dev.yml down -v --remove-orphans
+clean: ## Stop and remove all containers, networks, volumes
+	docker-compose down -v
 	docker system prune -f
 
-rebuild:
-	@echo "🔄 Rebuilding all containers..."
-	docker compose -f docker-compose.dev.yml down
-	docker compose -f docker-compose.dev.yml build --no-cache
-	docker compose -f docker-compose.dev.yml up -d
+clean-all: ## Complete cleanup (WARNING: removes all Docker data)
+	@echo "⚠️  This will remove ALL Docker containers, images, and volumes!"
+	@read -p "Are you sure? [y/N]: " confirm && [ "$$confirm" = "y" ] || exit 1
+	docker-compose down -v
+	docker system prune -af --volumes
+
+# Development commands
+dev: ## Start in development mode
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+dev-build: ## Build and start in development mode
+	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+
+# Database commands
+migrate: ## Run database migrations
+	docker-compose exec backend_fastapi alembic upgrade head
+	docker-compose exec backend_django python manage.py migrate
+
+makemigrations: ## Create new migrations
+	docker-compose exec backend_fastapi alembic revision --autogenerate -m "$(MSG)"
+	docker-compose exec backend_django python manage.py makemigrations
+
+db-shell: ## Open database shell
+	docker-compose exec postgres psql -U user -d hydraulic_db
+
+redis-cli: ## Open Redis CLI
+	docker-compose exec redis redis-cli
+
+# Testing
+test: ## Run tests
+	docker-compose exec backend_fastapi pytest
+	docker-compose exec backend_django python manage.py test
+
+# Service-specific commands
+backend-shell: ## Open FastAPI backend shell
+	docker-compose exec backend_fastapi bash
+
+django-shell: ## Open Django shell
+	docker-compose exec backend_django python manage.py shell
+
+gnn-shell: ## Open GNN service shell
+	docker-compose exec gnn_service bash
+
+# Monitoring
+ps: ## Show running containers
+	docker-compose ps
+
+stats: ## Show container stats
+	docker stats
+
+health: ## Check health status
+	@echo "Backend FastAPI:"; curl -s http://localhost:8100/health/ | jq
+	@echo "\nDjango Admin:"; curl -s http://localhost:8000/health/
+	@echo "\nGNN Service:"; curl -s http://localhost:8001/gnn/health | jq
+
+# Backup
+backup-db: ## Backup PostgreSQL database
+	@mkdir -p backups
+	docker-compose exec -T postgres pg_dump -U user hydraulic_db > backups/db_backup_$$(date +%Y%m%d_%H%M%S).sql
+
+restore-db: ## Restore database (use: make restore-db FILE=backup.sql)
+ifdef FILE
+	docker-compose exec -T postgres psql -U user hydraulic_db < $(FILE)
+else
+	@echo "Error: specify FILE=path/to/backup.sql"
+endif

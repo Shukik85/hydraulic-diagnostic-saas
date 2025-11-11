@@ -1,9 +1,0 @@
-# ----------------------------------------------------------------------------
-# RAG Service (internal only, FastAPI)
-# ----------------------------------------------------------------------------
-RAG_SERVICE_URL = config("RAG_SERVICE_URL", default="http://rag_service:8002", cast=str)
-RAG_INTERNAL_API_KEY = config("RAG_INTERNAL_API_KEY", default="supersecuredefault", cast=str)
-
-if not RAG_INTERNAL_API_KEY or RAG_INTERNAL_API_KEY == "supersecuredefault":
-    if not DEBUG:
-        raise Exception("RAG_INTERNAL_API_KEY must be set in production!")

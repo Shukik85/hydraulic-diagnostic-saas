@@ -1,133 +1,50 @@
+version: '3.8'
+
+# ============================================
+# Development Override
+# Использование: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ============================================
+
 services:
-  # База данных с TimescaleDB
-  db:
-    image: timescale/timescaledb:2.15.0-pg16  # Актуальная версия на октябрь 2025
+  backend_fastapi:
+    build:
+      target: development
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: hydraulic_diagnostic
-      # TimescaleDB специфичные настройки
-      TIMESCALEDB_TELEMETRY: 'off'
+      DEBUG: "true"
+      ENV: development
+      LOG_LEVEL: DEBUG
+    volumes:
+      - ./services/backend_fastapi:/app
+    command: uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+  backend_django:
+    environment:
+      DEBUG: "true"
+    volumes:
+      - ./services/backend:/app
+    command: python manage.py runserver 0.0.0.0:8000
+
+  gnn_service:
+    environment:
+      DEBUG: "true"
+      LOG_LEVEL: DEBUG
+    volumes:
+      - ./services/gnn_service:/app
+    command: uvicorn inference_service:app --reload --host 0.0.0.0 --port 8001
+
+  rag_service:
+    environment:
+      DEBUG: "true"
+    volumes:
+      - ./services/rag_service:/app
+    command: uvicorn main:app --reload --host 0.0.0.0 --port 8002
+
+  postgres:
     ports:
       - "5432:5432"
-    volumes:
-      - timescale_data:/var/lib/postgresql/data
-      - ./docker/init-timescale.sql:/docker-entrypoint-initdb.d/001-init-timescale.sql:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres && psql -U postgres -d hydraulic_diagnostic -c 'SELECT 1 FROM timescaledb_information.hypertables LIMIT 1;' || echo 'TimescaleDB not ready'"]
-      interval: 15s
-      timeout: 10s
-      retries: 8
-      start_period: 30s
+    environment:
+      POSTGRES_DB: hydraulic_dev
 
-  # Redis для Celery и кеширования
   redis:
-    image: redis:7-alpine
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Django backend
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      DJANGO_SETTINGS_MODULE: core.settings
-      DATABASE_URL: postgresql://postgres:password123@db:5432/hydraulic_diagnostic
-      REDIS_URL: redis://redis:6379/0
-      AI_REDIS_URL: redis://redis:6379/1
-      SECRET_KEY: dev-secret-key
-      DEBUG: "True"
-      ALLOWED_HOSTS: localhost,127.0.0.1
-      # TimescaleDB специфичные настройки
-      TIMESCALE_ENABLED: "True"
-      TIMESCALE_CHUNK_TIME_INTERVAL: "7 days"
-    volumes:
-      - ./backend:/app/backend
-      - ./backend/logs:/app/backend/logs
-      - ./data:/app/data  # Для RAG индексов
-    ports:
-      - "8000:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  # Celery worker для background задач
-  celery_worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["bash", "-lc", ". /opt/venv/bin/activate && celery -A core worker -l info"]
-    working_dir: /app/backend
-    environment:
-      DJANGO_SETTINGS_MODULE: core.settings
-      DATABASE_URL: postgresql://postgres:password123@db:5432/hydraulic_diagnostic
-      REDIS_URL: redis://redis:6379/0
-      AI_REDIS_URL: redis://redis:6379/1
-      SECRET_KEY: dev-secret-key
-      DEBUG: "True"
-      TIMESCALE_ENABLED: "True"
-    volumes:
-      - ./backend:/app/backend
-      - ./data:/app/data
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  # Celery beat для периодических задач (TimescaleDB управление)
-  celery_beat:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["bash", "-lc", ". /opt/venv/bin/activate && celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"]
-    working_dir: /app/backend
-    environment:
-      DJANGO_SETTINGS_MODULE: core.settings
-      DATABASE_URL: postgresql://postgres:password123@db:5432/hydraulic_diagnostic
-      REDIS_URL: redis://redis:6379/0
-      AI_REDIS_URL: redis://redis:6379/1
-      SECRET_KEY: dev-secret-key
-      DEBUG: "True"
-      TIMESCALE_ENABLED: "True"
-    volumes:
-      - ./backend:/app/backend
-      - ./data:/app/data
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  # Flower для мониторинга Celery (опционально)
-  flower:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["bash", "-lc", ". /opt/venv/bin/activate && celery -A core flower"]
-    working_dir: /app/backend
-    environment:
-      DJANGO_SETTINGS_MODULE: core.settings
-      REDIS_URL: redis://redis:6379/0
-    ports:
-      - "5555:5555"
-    depends_on:
-      - redis
-    profiles:
-      - monitoring  # Запуск через: docker-compose --profile monitoring up
-
-volumes:
-  timescale_data:
-    driver: local
-  redis_data:
-    driver: local

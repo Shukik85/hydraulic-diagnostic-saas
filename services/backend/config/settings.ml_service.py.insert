@@ -1,9 +1,0 @@
-# ----------------------------------------------------------------------------
-# ML Service Configuration (internal only, FastAPI)
-# ----------------------------------------------------------------------------
-ML_SERVICE_URL = config("ML_SERVICE_URL", default="http://ml_service:8001", cast=str)
-ML_INTERNAL_API_KEY = config("ML_INTERNAL_API_KEY", default="supersecuremlkey", cast=str)
-
-if not ML_INTERNAL_API_KEY or ML_INTERNAL_API_KEY == "supersecuremlkey":
-    if not DEBUG:
-        raise Exception("ML_INTERNAL_API_KEY must be set in production!")

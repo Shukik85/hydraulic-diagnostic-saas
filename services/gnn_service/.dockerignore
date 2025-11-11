@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+.venv
+venv
+.env
+.pytest_cache
+models/*.pth
+models/*.pt
+data/temp/
+.idea
+.vscode
+*.swp
