@@ -1,11 +1,10 @@
-# Python bytecode
+# ============================================
+# Python
+# ============================================
 __pycache__/
-__pypackages__/
 *.py[cod]
 *$py.class
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -19,180 +18,103 @@ parts/
 sdist/
 var/
 wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
-pip-wheel-metadata/
 
 # Virtual environments
-.venv
+.venv/
 venv/
-env/
 ENV/
-env.bak/
-venv.bak/
+env/
 
-# Environment variables
-.env
-.env.local
-.env.development
-.env.development.local
-.env.test
-.env.test.local
-.env.production
-.env.production.local
-
-# Django specific
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-static_root/
-staticfiles/
-media/
-logs/
-
-# Testing
-.coverage
-.coverage.*
-.pytest_cache/
-.tox/
-.nox/
-.hypothesis/
-htmlcov/
-coverage
-coverage.xml
-nosetests.xml
-*.cover
-*.py,cover
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# IDE / Editors
+# ============================================
+# IDE
+# ============================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 .DS_Store
-.DS_Store?
-Thumbs.db
-ehthumbs.db
 
-# Temporary files
-*.tmp
-*.temp
-*.pid
-*.pid.lock
-*.seed
-.temp/
-temp/
-tmp/
-certs/
+# ============================================
+# Environment & Config
+# ============================================
+.env
+.env.local
+.env.*.local
+!.env.example
 
-# ML / Data Science specific
-*.pkl
-*.pickle
-*.joblib
-*.h5
-*.hdf5
-*.parquet
-*.feather
-data/raw/
-data/uci_hydraulic/
-data/processed/
-models/trained/
-artifacts/
-mlruns/
-.mlflow/
+# ============================================
+# Databases
+# ============================================
+*.db
+*.sqlite3
+*.sql
 
-# Jupyter Notebooks
-.ipynb_checkpoints
-*.ipynb
+# ============================================
+# Docker (старые файлы)
+# ============================================
+docker-compose.override.yml
+docker-compose.*.yml.old
 
-# Documentation
-docs/_build/
-/site
-
-# Frontend (Node.js)
-node_modules/
-node_modules
+# ============================================
+# Logs
+# ============================================
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
-frontend/build/
-frontend/dist/
-.next
-.nuxt
-.output
-.parcel-cache
-.eslintcache
-.stylelintcache
-*.tsbuildinfo
 
-# Cache files
-.cache
-.nyc_output
-.webassets-cache
+# ============================================
+# Testing
+# ============================================
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
 .mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
+.ruff_cache/
 
-# Other
-._*
-.ropeproject
-.scrapy
-.spyderproject
-.spyproject
-profile_default/
-ipython_config.py
-.python-version
-Pipfile.lock
-*.manifest
-*.spec
-*.mo
-*.pot
-*.sage.py
-*.lcov
-.Spotlight-V100
-.Trashes
-instance/
-target/
-pids
-pip-log.txt
-pip-delete-this-directory.txt
+# ============================================
+# Build artifacts
+# ============================================
+*.tar.gz
+*.zip
+node_modules/
 
-# Backup directories
-*_backup_*/
-*.backup/
-backups/
+# ============================================
+# Data & Models (не коммитим большие файлы)
+# ============================================
+data/raw/
+data/processed/
+models/*.pth
+models/*.pt
+models/*.h5
+models/*.pkl
+training/checkpoints/
 
-# .gitignore updates for OpenAPI workflow
+# ============================================
+# Certificates & Keys
+# ============================================
+certs/*.key
+certs/*.pem
+*.key
+*.pem
 
-# Frontend generated API clients (auto-generated from OpenAPI)
-services/frontend/api/generated/
+# ============================================
+# Frontend (Nuxt)
+# ============================================
+.nuxt/
+.output/
+dist/
 
-# Aggregated OpenAPI spec (auto-generated)
-docs/api/openapi.yaml
-
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-
-# IDE
-.vscode/
-.idea/
-
-# Logs
-*.log
-
-# Environment
-.env
-.env.local
+# ============================================
+# Временные файлы
+# ============================================
+tmp/
+temp/
+*.tmp
