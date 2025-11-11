@@ -5,38 +5,41 @@ Async SQLAlchemy with connection pooling
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from typing import AsyncGenerator
+import sys
+from pathlib import Path
 
-from ..config import settings
+# Add parent to path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from config import settings
 
 # Create async engine
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    str(settings.DATABASE_URL),
     echo=settings.DEBUG,
-    pool_size=settings.DB_POOL_SIZE,
-    max_overflow=settings.DB_MAX_OVERFLOW,
-    pool_pre_ping=True,  # Verify connections before using
+    pool_size=10,
+    max_overflow=20,
 )
 
-# Session factory
+# Create async session factory
 AsyncSessionLocal = async_sessionmaker(
     engine,
     class_=AsyncSession,
     expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
 )
 
-# Base class for models
+# Declarative base
 Base = declarative_base()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dependency for FastAPI routes
-    Provides database session with automatic cleanup
-    """
+    """Get database session"""
     async with AsyncSessionLocal() as session:
         try:
             yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
         finally:
             await session.close()

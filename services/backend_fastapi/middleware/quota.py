@@ -8,7 +8,7 @@ from starlette.responses import JSONResponse
 import structlog
 import redis.asyncio as redis
 
-from ..config import settings
+from config import settings
 
 logger = structlog.get_logger()
 

@@ -6,11 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import structlog
 
-from ..db.session import get_db
-from ..models.user import User
-from ..schemas.user import UserCreate, UserResponse
-from ..services.auth_service import AuthService
-from ..middleware.auth import get_current_user
+from db.session import get_db
+from models.user import User
+from schemas.user import UserCreate, UserResponse
+from services.auth_service import AuthService
+from middleware.auth import get_current_user
 
 router = APIRouter()
 logger = structlog.get_logger()

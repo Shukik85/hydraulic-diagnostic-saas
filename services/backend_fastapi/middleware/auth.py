@@ -9,9 +9,9 @@ from sqlalchemy import select
 from starlette.middleware.base import BaseHTTPMiddleware
 import structlog
 
-from ..db.session import get_db
-from ..models.user import User
-from ..config import settings
+from db.session import get_db
+from models.user import User
+from config import settings
 
 logger = structlog.get_logger()
 

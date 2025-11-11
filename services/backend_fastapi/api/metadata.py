@@ -8,11 +8,11 @@ from typing import List
 from uuid import UUID
 import structlog
 
-from ..db.session import get_db
-from ..models.equipment import Equipment, Component
-from ..schemas.equipment import EquipmentCreate, EquipmentUpdate, EquipmentResponse
-from ..middleware.auth import get_current_user
-from ..models.user import User
+from db.session import get_db
+from models.equipment import Equipment, Component
+from schemas.equipment import EquipmentCreate, EquipmentUpdate, EquipmentResponse
+from middleware.auth import get_current_user
+from models.user import User
 
 router = APIRouter()
 logger = structlog.get_logger()

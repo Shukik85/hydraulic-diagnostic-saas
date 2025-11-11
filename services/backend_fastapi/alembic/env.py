@@ -1,26 +1,38 @@
 """
-Alembic environment configuration for async migrations
+Alembic environment for FastAPI with existing structure
 """
 from logging.config import fileConfig
+import sys
+from pathlib import Path
+
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from sqlalchemy import pool
-from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 import asyncio
 
-# Import all models for auto-generation
-from app.db.session import Base
-from app.models import *  # noqa
-from app.config import settings
+# Import config
+import config as app_config
+settings = app_config.settings
 
+# Import Base
+from db.session import Base
+
+# Import all models
+from models import *  # noqa
+
+# Alembic Config object
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+# Set database URL from settings
+config.set_main_option("sqlalchemy.url", str(settings.DATABASE_URL))
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
@@ -37,15 +49,8 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-
 async def run_async_migrations() -> None:
-    """Run migrations in 'online' mode with async support."""
+    """Run migrations in 'online' mode with async."""
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -56,6 +61,13 @@ async def run_async_migrations() -> None:
         await connection.run_sync(do_run_migrations)
 
     await connectable.dispose()
+
+
+def do_run_migrations(connection):
+    context.configure(connection=connection, target_metadata=target_metadata)
+
+    with context.begin_transaction():
+        context.run_migrations()
 
 
 def run_migrations_online() -> None:

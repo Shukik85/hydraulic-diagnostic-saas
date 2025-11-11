@@ -8,11 +8,11 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 import structlog
 
-from .config import settings
-from .api import metadata, ingestion, health, users
-from .db.session import engine, Base
-from .middleware.auth import AuthMiddleware
-from .middleware.quota import QuotaMiddleware
+from config import settings
+from api import metadata, ingestion, health, users
+from db.session import engine, Base
+from middleware.auth import AuthMiddleware
+from middleware.quota import QuotaMiddleware
 
 logger = structlog.get_logger()
 

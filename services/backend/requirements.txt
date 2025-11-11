@@ -1,8 +1,28 @@
-# Backend requirements - entry point
-# Используйте:
-#   pip install -r requirements.txt           # базовые зависимости
-#   pip install -r requirements/dev.txt       # development
-#   pip install -r requirements/prod.txt      # production
-#   pip install -r requirements/light.txt     # Celery workers без ML
+# Django Backend - Customer Support & Operations
+# Single requirements file (no nested imports!)
 
--r requirements/base.txt
+# Django Core
+Django==4.2.7
+psycopg2-binary==2.9.9
+
+# Celery
+celery==5.3.4
+django-celery-beat==2.5.0
+django-celery-results==2.6.0
+redis==5.0.1
+
+# WSGI Server
+gunicorn==21.2.0
+
+# Email
+django-anymail[sendgrid]==10.2
+
+# Stripe Integration
+stripe==7.4.0
+
+# Utilities
+python-dotenv==1.0.0
+Pillow==10.1.0
+
+# Logging
+structlog==24.1.0

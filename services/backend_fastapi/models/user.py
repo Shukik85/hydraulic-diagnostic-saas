@@ -7,7 +7,7 @@ from sqlalchemy.sql import func
 import uuid
 import enum
 
-from ..db.session import Base
+from db.session import Base
 
 
 class SubscriptionTier(str, enum.Enum):

@@ -5,7 +5,7 @@ import httpx
 import structlog
 from typing import Dict, Any
 
-from ..config import settings
+from config import settings
 
 logger = structlog.get_logger()
 

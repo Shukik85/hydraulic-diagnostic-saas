@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import structlog
 
-from ..db.session import get_db
+from db.session import get_db
 
 router = APIRouter()
 logger = structlog.get_logger()

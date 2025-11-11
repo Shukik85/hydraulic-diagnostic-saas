@@ -8,9 +8,9 @@ import structlog
 import uuid
 from datetime import datetime
 
-from ..models.sensor_data import SensorData, SensorDataHypertable
-from ..models.equipment import Equipment
-from ..schemas.sensor import SensorReading
+from models.sensor_data import SensorData, SensorDataHypertable
+from models.equipment import Equipment
+from schemas.sensor import SensorReading
 
 logger = structlog.get_logger()
 

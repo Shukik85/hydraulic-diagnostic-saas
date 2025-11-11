@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import secrets
 import structlog
 
-from ..models.user import User, SubscriptionTier, SubscriptionStatus
+from models.user import User, SubscriptionTier, SubscriptionStatus
 
 logger = structlog.get_logger()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
