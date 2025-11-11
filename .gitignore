@@ -172,3 +172,27 @@ pip-delete-this-directory.txt
 *_backup_*/
 *.backup/
 backups/
+
+# .gitignore updates for OpenAPI workflow
+
+# Frontend generated API clients (auto-generated from OpenAPI)
+services/frontend/api/generated/
+
+# Aggregated OpenAPI spec (auto-generated)
+docs/api/openapi.yaml
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local

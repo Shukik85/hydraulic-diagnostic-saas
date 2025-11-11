@@ -1,0 +1,79 @@
+openapi: 3.1.0
+info:
+  title: Universal GNN Diagnostic API
+  version: 1.0.0
+  description: |
+    Production-ready API для Universal Hydraulic GNN service (любой topology/metadata).
+paths:
+  /gnn/infer:
+    post:
+      summary: Universal (metadata-driven) GNN inference
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: system_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Аномалии по компонентам
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  system_id: { type: string }
+                  anomaly_scores:
+                    type: object
+                    additionalProperties:
+                      type: number
+                  n_components: { type: integer }
+        '400':
+          description: Bad request
+  /gnn/health:
+    get:
+      summary: Health check endpoint
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                properties:
+                  status:
+                    type: string
+                    example: ok
+components:
+  schemas:
+    EquipmentMetadata:
+      type: object
+      properties:
+        user_id: { type: string }
+        system_id: { type: string }
+        system_type: { type: string }
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComponentMetadata'
+        adjacency_matrix:
+          type: array
+          items:
+            type: array
+            items: { type: integer }
+    ComponentMetadata:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string }
+        sensors:
+          type: array
+          items: { type: string }
+        normal_ranges: { type: object }
+        connected_to:
+          type: array
+          items: { type: string }
