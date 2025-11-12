@@ -111,7 +111,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <nav class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg">
+  <nav
+    class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg">
     <div class="container mx-auto flex items-center justify-between h-16 px-4">
       <!-- Logo Section -->
       <slot name="logo">
@@ -165,8 +166,8 @@ onMounted(() => {
           <Icon name="heroicons:bell" class="w-5 h-5" />
           <span v-if="props.notificationsCount > 0"
             class="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center animate-pulse">
-            <span class="text-xs font-bold text-white">{{n              props.notificationsCount > 99 ? '99+' : props.notificationsCount
-            }}</span>
+            <span class="text-xs font-bold text-white">{{ props.notificationsCount > 99 ? '99+' :
+              props.notificationsCount }}</span>
           </span>
         </button>
 
@@ -247,7 +248,8 @@ onMounted(() => {
     </div>
 
     <!-- Mobile Menu -->
-    <div v-if="isMobileMenuOpen" class="lg:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg">
+    <div v-if="isMobileMenuOpen"
+      class="lg:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg">
       <div class="px-4 py-4 space-y-1">
         <NuxtLink v-for="item in props.items" :key="item.to" :to="item.to" :target="item.external ? '_blank' : '_self'"
           :class="[
@@ -272,20 +274,22 @@ onMounted(() => {
           <div class="flex items-center justify-between gap-2">
             <!-- Language Switcher Mobile -->
             <LanguageSwitcher />
-            
+
             <button @click="toggleTheme"
               class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <Icon :name="colorMode?.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-4 h-4" />
-              <span class="text-sm">{{n                colorMode?.preference === 'dark' ? t('ui.lightTheme', 'Светлая') : t('ui.darkTheme', 'Тёмная')
+              <span class="text-sm">{{ colorMode?.preference === 'dark' ? t('ui.lightTheme', 'Светлая') :
+                t('ui.darkTheme', 'Тёмная')
               }}</span>
             </button>
-            
+
             <button v-if="props.showNotifications" @click="openNotifications"
               class="relative p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <Icon name="heroicons:bell" class="w-5 h-5" />
               <span v-if="props.notificationsCount > 0"
                 class="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center animate-pulse">
-                <span class="text-xs font-bold text-white">{{                  props.notificationsCount > 99 ? '99+' : props.notificationsCount
+                <span class="text-xs font-bold text-white">{{ props.notificationsCount > 99 ? '99+' :
+                  props.notificationsCount
                 }}</span>
               </span>
             </button>
