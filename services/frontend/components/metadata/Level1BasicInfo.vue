@@ -3,70 +3,70 @@
   <div class="level-1 space-y-6">
     <div>
       <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-        1. Базовая информация об оборудовании
+        {{ $t('wizard.level1.title') }}
       </h2>
       <p class="text-sm text-gray-600 dark:text-gray-400">
-        Укажите основные характеристики вашего оборудования
+        {{ $t('wizard.level1.description') }}
       </p>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <!-- Тип оборудования -->
-      <UFormGroup label="Тип оборудования" required>
+      <!-- Equipment Type -->
+      <UFormGroup :label="$t('wizard.level1.equipmentType')" required>
         <USelect
           v-model="formData.equipment_type"
           :options="equipmentTypeOptions"
-          placeholder="Выберите тип"
+          :placeholder="$t('wizard.level1.selectType')"
           @update:model-value="onEquipmentTypeChange"
         />
         <template v-if="formData.equipment_type === 'other'" #hint>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Опишите тип оборудования в поле "Модель"
+            {{ $t('wizard.level1.otherTypeHint') }}
           </p>
         </template>
       </UFormGroup>
 
-      <!-- Производитель -->
-      <UFormGroup label="Производитель" required>
+      <!-- Manufacturer -->
+      <UFormGroup :label="$t('wizard.level1.manufacturer')" required>
         <UInput
           v-model="formData.manufacturer"
-          placeholder="Например: Caterpillar, Komatsu, Volvo"
+          :placeholder="$t('wizard.level1.manufacturerPlaceholder')"
           icon="i-heroicons-building-office-2"
           :list="manufacturers"
           @input="onManufacturerChange"
         />
         <template #hint>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Начните вводить название — появятся подсказки
+            {{ $t('wizard.level1.manufacturerHint') }}
           </p>
         </template>
       </UFormGroup>
 
-      <!-- Модель -->
-      <UFormGroup label="Модель" required>
+      <!-- Model -->
+      <UFormGroup :label="$t('wizard.level1.model')" required>
         <UInput
           v-model="formData.model"
-          placeholder="Например: 320D, PC200, EC210"
+          :placeholder="$t('wizard.level1.modelPlaceholder')"
           icon="i-heroicons-tag"
         />
       </UFormGroup>
 
-      <!-- Серийный номер -->
-      <UFormGroup label="Серийный номер / ID" required>
+      <!-- Serial Number -->
+      <UFormGroup :label="$t('wizard.level1.serialNumber')" required>
         <UInput
           v-model="formData.serial_number"
-          placeholder="Уникальный идентификатор"
+          :placeholder="$t('wizard.level1.serialNumberPlaceholder')"
           icon="i-heroicons-hashtag"
         />
         <template #hint>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Используется для идентификации оборудования в системе
+            {{ $t('wizard.level1.serialNumberHint') }}
           </p>
         </template>
       </UFormGroup>
 
-      <!-- Дата выпуска -->
-      <UFormGroup label="Дата выпуска">
+      <!-- Manufacture Date -->
+      <UFormGroup :label="$t('wizard.level1.manufactureDate')">
         <UInput
           v-model="formData.manufacture_date"
           type="date"
@@ -75,13 +75,13 @@
         />
         <template #hint>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Влияет на расчёт возраста системы и износа
+            {{ $t('wizard.level1.manufactureDateHint') }}
           </p>
         </template>
       </UFormGroup>
 
-      <!-- Equipment ID (автоматически генерируется) -->
-      <UFormGroup label="ID системы">
+      <!-- Equipment ID (auto-generated) -->
+      <UFormGroup :label="$t('wizard.level1.systemId')">
         <UInput
           :model-value="generatedEquipmentId"
           disabled
@@ -89,7 +89,7 @@
         />
         <template #hint>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            Автоматически создаётся на основе введённых данных
+            {{ $t('wizard.level1.systemIdHint') }}
           </p>
         </template>
       </UFormGroup>
@@ -100,7 +100,7 @@
       v-if="validationErrors.length > 0"
       color="red"
       icon="i-heroicons-exclamation-triangle"
-      title="Ошибки валидации"
+      :title="$t('wizard.level1.validation.errors')"
     >
       <template #description>
         <ul class="list-disc pl-5 space-y-1">
@@ -115,7 +115,7 @@
       v-else-if="isFormValid"
       color="green"
       icon="i-heroicons-check-circle"
-      title="Базовая информация заполнена корректно"
+      :title="$t('wizard.level1.validation.success')"
     />
   </div>
 </template>
@@ -124,6 +124,7 @@
 import { useMetadataStore } from '~/stores/metadata'
 import type { EquipmentType } from '~/types/metadata'
 
+const { t } = useI18n()
 const store = useMetadataStore()
 
 const formData = reactive({
@@ -134,13 +135,13 @@ const formData = reactive({
   manufacture_date: store.wizardState.system.manufacture_date || '',
 })
 
-const equipmentTypeOptions = [
-  { value: 'excavator_tracked', label: 'Экскаватор гусеничный' },
-  { value: 'excavator_wheeled', label: 'Экскаватор колёсный' },
-  { value: 'loader_wheeled', label: 'Погрузчик колёсный' },
-  { value: 'crane_mobile', label: 'Кран автомобильный' },
-  { value: 'other', label: 'Другое' }
-]
+const equipmentTypeOptions = computed(() => [
+  { value: 'excavator_tracked', label: t('wizard.level1.types.excavator_tracked') },
+  { value: 'excavator_wheeled', label: t('wizard.level1.types.excavator_wheeled') },
+  { value: 'loader_wheeled', label: t('wizard.level1.types.loader_wheeled') },
+  { value: 'crane_mobile', label: t('wizard.level1.types.crane_mobile') },
+  { value: 'other', label: t('wizard.level1.types.other') }
+])
 
 const manufacturers = [
   'Caterpillar',
@@ -165,7 +166,7 @@ const today = computed(() => {
 
 const generatedEquipmentId = computed(() => {
   if (!formData.equipment_type || !formData.serial_number) {
-    return 'Не сгенерирован'
+    return t('wizard.level1.notGenerated')
   }
   const prefix = formData.equipment_type!.split('_')[0].toUpperCase().slice(0, 2)
   const year = formData.manufacture_date
@@ -178,21 +179,21 @@ const validationErrors = computed(() => {
   const errors: string[] = []
 
   if (!formData.equipment_type) {
-    errors.push('Не выбран тип оборудования')
+    errors.push(t('wizard.level1.validation.noType'))
   }
 
   if (!formData.manufacturer) {
-    errors.push('Не указан производитель')
+    errors.push(t('wizard.level1.validation.noManufacturer'))
   }
 
   if (!formData.model) {
-    errors.push('Не указана модель')
+    errors.push(t('wizard.level1.validation.noModel'))
   }
 
   if (!formData.serial_number) {
-    errors.push('Не указан серийный номер')
+    errors.push(t('wizard.level1.validation.noSerialNumber'))
   } else if (formData.serial_number.length < 3) {
-    errors.push('Серийный номер должен содержать минимум 3 символа')
+    errors.push(t('wizard.level1.validation.serialTooShort'))
   }
 
   return errors
@@ -215,18 +216,16 @@ function updateStore() {
     model: formData.model || undefined,
     serial_number: formData.serial_number || undefined,
     manufacture_date: formData.manufacture_date || undefined,
-    equipment_id: generatedEquipmentId.value !== 'Не сгенерирован'
+    equipment_id: generatedEquipmentId.value !== t('wizard.level1.notGenerated')
       ? generatedEquipmentId.value
       : undefined
   })
 }
 
-// Watch для обновления store при изменениях
 watch(formData, () => {
   updateStore()
 }, { deep: true })
 
-// Если есть изменения в store (например, загружены из localStorage)
 watch(() => store.wizardState.system, (newSystem) => {
   if (!newSystem) return
   if (newSystem.equipment_type) formData.equipment_type = newSystem.equipment_type
