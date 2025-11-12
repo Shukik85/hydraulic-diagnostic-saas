@@ -3,10 +3,10 @@
   <div class="level-3 space-y-6">
     <div>
       <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-        3. Характеристики компонентов
+        {{ $t('wizard.level3.title') }}
       </h2>
       <p class="text-sm text-gray-600 dark:text-gray-400">
-        Настройте параметры каждого компонента гидросистемы
+        {{ $t('wizard.level3.description') }}
       </p>
     </div>
 
@@ -15,18 +15,18 @@
       v-if="store.componentsCount === 0"
       color="yellow"
       icon="i-heroicons-exclamation-triangle"
-      title="Компоненты не найдены"
-      description="Вернитесь на Уровень 2 и добавьте компоненты на схему"
+      :title="$t('wizard.level3.noComponents')"
+      :description="$t('wizard.level3.noComponentsWarning')"
     />
 
     <template v-else>
       <!-- Component selector -->
       <UCard class="p-6">
-        <UFormGroup label="Выберите компонент для настройки">
+        <UFormGroup :label="$t('wizard.level3.selectComponent')">
           <USelect
             v-model="selectedComponentId"
             :options="componentOptions"
-            placeholder="-- Выберите компонент --"
+            placeholder="-- Select --"
             size="lg"
           >
             <template #leading>
@@ -52,7 +52,7 @@
               class="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4"
             />
             <p class="text-gray-500 dark:text-gray-400">
-              Выберите компонент для настройки его характеристик
+              {{ $t('wizard.level3.emptyState') }}
             </p>
           </div>
         </UCard>
@@ -61,7 +61,7 @@
       <!-- Progress summary -->
       <UCard class="p-6">
         <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Заполненность компонентов
+          {{ $t('wizard.level3.completeness') }}
         </h3>
         
         <div class="space-y-3">
@@ -103,11 +103,11 @@ import ValveForm from '~/components/metadata/Level3ComponentForms/ValveForm.vue'
 import FilterForm from '~/components/metadata/Level3ComponentForms/FilterForm.vue'
 import AccumulatorForm from '~/components/metadata/Level3ComponentForms/AccumulatorForm.vue'
 
+const { t } = useI18n()
 const store = useMetadataStore()
 
 const selectedComponentId = ref<string>('')
 
-// Auto-select first component
 onMounted(() => {
   const firstComponent = store.wizardState.system.components?.[0]
   if (firstComponent) {
@@ -142,15 +142,20 @@ const currentFormComponent = computed(() => {
 })
 
 function getComponentLabel(comp: ComponentMetadata): string {
-  const typeLabels: Record<ComponentType, string> = {
-    pump: '⚡ Насос',
-    motor: '🔄 Мотор',
-    cylinder: '⬌ Цилиндр',
-    valve: '⬥ Клапан',
-    filter: '◈ Фильтр',
-    accumulator: '⬢ Аккумулятор'
+  const typeLabel = t(`wizard.level3.componentTypes.${comp.component_type}`)
+  return `${getComponentEmoji(comp.component_type)} ${typeLabel} — ${comp.id}`
+}
+
+function getComponentEmoji(type: ComponentType): string {
+  const emojis: Record<ComponentType, string> = {
+    pump: '⚡',
+    motor: '🔄',
+    cylinder: '⬌',
+    valve: '⬥',
+    filter: '◈',
+    accumulator: '⬢'
   }
-  return `${typeLabels[comp.component_type]} — ${comp.id}`
+  return emojis[type] || '⚙️'
 }
 
 function getComponentIcon(type?: ComponentType): string {
@@ -173,12 +178,10 @@ function getComponentCompleteness(comp: ComponentMetadata): number {
   if (comp.normal_ranges.pressure) filled++
   if (comp.normal_ranges.temperature) filled++
 
-  // Специфичные поля
   if (comp.component_type === 'pump' && comp.pump_specific?.nominal_flow_rate) filled++
   if (comp.component_type === 'motor' && comp.motor_specific?.displacement) filled++
   if (comp.component_type === 'cylinder' && comp.cylinder_specific?.piston_diameter) filled++
 
-  // История
   if (comp.last_maintenance) filled++
 
   return filled / total

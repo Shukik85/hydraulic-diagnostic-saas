@@ -3,10 +3,10 @@
   <div class="level-5 space-y-6">
     <div>
       <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-        5. Финальная валидация и отправка
+        {{ $t('wizard.level5.title') }}
       </h2>
       <p class="text-sm text-gray-600 dark:text-gray-400">
-        Проверка полноты данных и готовности к обучению GNN модели
+        {{ $t('wizard.level5.description') }}
       </p>
     </div>
 
@@ -14,7 +14,7 @@
     <UCard class="p-8">
       <div class="flex flex-col items-center">
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-6">
-          Общая готовность системы
+          {{ $t('wizard.level5.overallReadiness') }}
         </h3>
         
         <!-- Progress circle -->
@@ -47,7 +47,7 @@
               {{ store.completeness }}%
             </span>
             <span class="text-xs text-gray-500 dark:text-gray-400">
-              готово
+              {{ $t('wizard.level5.ready') }}
             </span>
           </div>
         </div>
@@ -57,24 +57,24 @@
           v-if="store.completeness < 50"
           color="red"
           icon="i-heroicons-x-circle"
-          title="Недостаточно данных"
-          description="Необходимо заполнить больше полей для обучения модели"
+          :title="$t('wizard.level5.insufficient')"
+          :description="$t('wizard.level5.insufficientDesc')"
           class="max-w-md"
         />
         <UAlert
           v-else-if="store.completeness < 70"
           color="yellow"
           icon="i-heroicons-exclamation-triangle"
-          title="Хорошо"
-          description="Рекомендуется заполнить больше полей для лучшей точности"
+          :title="$t('wizard.level5.good')"
+          :description="$t('wizard.level5.goodDesc')"
           class="max-w-md"
         />
         <UAlert
           v-else
           color="green"
           icon="i-heroicons-check-circle"
-          title="Отлично!"
-          description="Система готова к обучению GNN модели"
+          :title="$t('wizard.level5.excellent')"
+          :description="$t('wizard.level5.excellentDesc')"
           class="max-w-md"
         />
       </div>
@@ -85,7 +85,7 @@
       <div class="flex items-center gap-2 mb-4">
         <UIcon name="i-heroicons-x-circle" class="w-5 h-5 text-red-600 dark:text-red-400" />
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Ошибки валидации ({{ validationErrors.length }})
+          {{ $t('wizard.level5.validationErrors') }} ({{ validationErrors.length }})
         </h3>
       </div>
       
@@ -113,11 +113,11 @@
       <div class="flex items-center gap-2 mb-4">
         <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Критичные поля ({{ incompleteness.critical_missing.length }})
+          {{ $t('wizard.level5.criticalFields') }} ({{ incompleteness.critical_missing.length }})
         </h3>
       </div>
       <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Эти поля обязательны для корректной работы модели
+        {{ $t('wizard.level5.criticalFieldsDesc') }}
       </p>
       
       <div class="space-y-2">
@@ -137,11 +137,11 @@
       <div class="flex items-center gap-2 mb-4">
         <UIcon name="i-heroicons-information-circle" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Вспомогательные поля ({{ incompleteness.secondary_missing.length }})
+          {{ $t('wizard.level5.secondaryFields') }} ({{ incompleteness.secondary_missing.length }})
         </h3>
       </div>
       <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Необязательные, но улучшат точность модели
+        {{ $t('wizard.level5.secondaryFieldsDesc') }}
       </p>
       
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -161,11 +161,11 @@
       <div class="flex items-center gap-2 mb-4">
         <UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-          Инферированные значения ({{ Object.keys(incompleteness.inferred_values).length }})
+          {{ $t('wizard.level5.inferredValues') }} ({{ Object.keys(incompleteness.inferred_values).length }})
         </h3>
       </div>
       <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        Автоматически заполнены на основе других данных
+        {{ $t('wizard.level5.inferredValuesDesc') }}
       </p>
       
       <div class="space-y-3">
@@ -189,7 +189,7 @@
                   variant="soft"
                   size="xs"
                 >
-                  Confidence: {{ (data.confidence * 100).toFixed(0) }}%
+                  {{ $t('wizard.level5.confidence') }}: {{ (data.confidence * 100).toFixed(0) }}%
                 </UBadge>
               </div>
             </div>
@@ -206,7 +206,7 @@
             {{ store.componentsCount }}
           </p>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Компонентов
+            {{ $t('wizard.level5.summary.components') }}
           </p>
         </div>
       </UCard>
@@ -217,7 +217,7 @@
             {{ adjacencyEdgesCount }}
           </p>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Связей
+            {{ $t('wizard.level5.summary.connections') }}
           </p>
         </div>
       </UCard>
@@ -228,7 +228,7 @@
             {{ store.completeness }}%
           </p>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Заполнено
+            {{ $t('wizard.level5.summary.filled') }}
           </p>
         </div>
       </UCard>
@@ -239,7 +239,7 @@
             {{ confidenceScore.toFixed(2) }}
           </p>
           <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Уверенность
+            {{ $t('wizard.level5.summary.confidence') }}
           </p>
         </div>
       </UCard>
@@ -254,7 +254,7 @@
         :disabled="isSubmitting"
         @click="runInference"
       >
-        Инферировать значения
+        {{ $t('wizard.level5.actions.inferValues') }}
       </UButton>
 
       <UButton
@@ -265,7 +265,7 @@
         size="lg"
         @click="submitMetadata"
       >
-        {{ store.completeness >= 70 ? 'Завершить настройку' : 'Сохранить с пробелами' }}
+        {{ store.completeness >= 70 ? $t('wizard.level5.actions.submit') : $t('wizard.level5.actions.submitWithGaps') }}
       </UButton>
     </div>
 
@@ -275,27 +275,27 @@
         <div v-if="submitSuccess" class="text-center p-6">
           <div class="text-6xl mb-4">✅</div>
           <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Метаданные успешно сохранены!
+            {{ $t('wizard.level5.modal.successTitle') }}
           </h3>
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
-            Система готова к обучению GNN модели<br>
-            Полнота данных: {{ store.completeness }}%
+            {{ $t('wizard.level5.modal.successDesc') }}<br>
+            {{ $t('wizard.level5.modal.dataCompleteness') }}: {{ store.completeness }}%
           </p>
           <UButton color="primary" @click="goToDashboard">
-            Перейти в Dashboard
+            {{ $t('wizard.level5.modal.goToDashboard') }}
           </UButton>
         </div>
 
         <div v-else class="text-center p-6">
           <div class="text-6xl mb-4">❌</div>
           <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Ошибка отправки
+            {{ $t('wizard.level5.modal.errorTitle') }}
           </h3>
           <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
             {{ submitError }}
           </p>
           <UButton color="gray" @click="showResultModal = false">
-            Закрыть
+            {{ $t('ui.close') }}
           </UButton>
         </div>
       </UCard>
@@ -306,6 +306,7 @@
 <script setup lang="ts">
 import { useMetadataStore } from '~/stores/metadata'
 
+const { t } = useI18n()
 const store = useMetadataStore()
 const router = useRouter()
 const toast = useToast()
@@ -316,7 +317,6 @@ const submitSuccess = ref(false)
 const submitError = ref('')
 
 const validationErrors = computed(() => store.validateConsistency())
-
 const incompleteness = computed(() => store.wizardState.incompleteness_report)
 
 const adjacencyEdgesCount = computed(() => {
@@ -327,7 +327,6 @@ const adjacencyEdgesCount = computed(() => {
 const confidenceScore = computed(() => {
   const inferred = Object.values(incompleteness.value.inferred_values)
   if (inferred.length === 0) return 1.0
-
   const avgConfidence = inferred.reduce((sum, v) => sum + (v as any).confidence, 0) / inferred.length
   return avgConfidence
 })
@@ -336,7 +335,6 @@ const canSubmit = computed(() => {
   return validationErrors.value.length === 0 && store.componentsCount > 0
 })
 
-// Progress Circle
 const circumference = 2 * Math.PI * 54
 const dashOffset = computed(() => {
   return circumference - (store.completeness / 100) * circumference
@@ -357,8 +355,8 @@ function getConfidenceColor(confidence: number): string {
 function runInference() {
   store.inferMissingValues()
   toast.add({
-    title: 'Инференция завершена',
-    description: 'Недостающие значения заполнены',
+    title: t('wizard.level5.actions.inferValues'),
+    description: t('wizard.level5.inferredValuesDesc'),
     color: 'green'
   })
 }
@@ -375,12 +373,12 @@ async function submitMetadata() {
     } else {
       submitSuccess.value = false
       const error = result.error as any
-      submitError.value = error?.message || 'Неизвестная ошибка'
+      submitError.value = error?.message || t('wizard.level5.modal.errorTitle')
       showResultModal.value = true
     }
   } catch (error: any) {
     submitSuccess.value = false
-    submitError.value = error.message || 'Ошибка сети'
+    submitError.value = error.message || t('wizard.level5.modal.errorTitle')
     showResultModal.value = true
   } finally {
     isSubmitting.value = false
