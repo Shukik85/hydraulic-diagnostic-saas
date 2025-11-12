@@ -7,9 +7,11 @@
   - Anomaly markers
   - Zoom & pan
   - Export to image
+  
+  MIGRATED: BaseCard → UCard, BaseButton → UButton
 -->
 <template>
-  <BaseCard class="sensor-chart">
+  <UCard class="sensor-chart p-6">
     <div class="flex items-center justify-between mb-4">
       <div>
         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
@@ -33,6 +35,8 @@
         <UButton
           icon="i-heroicons-arrow-path"
           size="sm"
+          color="gray"
+          variant="outline"
           :loading="isLoading"
           @click="fetchData"
         >
@@ -43,12 +47,35 @@
     
     <!-- Chart -->
     <div class="chart-container" :style="{ height: chartHeight }">
-      <v-chart
-        :option="chartOption"
-        :loading="isLoading"
-        autoresize
-        @click="onChartClick"
-      />
+      <ClientOnly>
+        <v-chart
+          v-if="data.length > 0"
+          :option="chartOption"
+          :loading="isLoading"
+          autoresize
+          class="w-full h-full"
+          @click="onChartClick"
+        />
+        <div v-else class="flex items-center justify-center h-full">
+          <div class="text-center">
+            <UIcon
+              name="i-heroicons-chart-bar"
+              class="w-16 h-16 text-gray-300 dark:text-gray-700 mx-auto mb-3"
+            />
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              No data available
+            </p>
+          </div>
+        </div>
+        <template #fallback>
+          <div class="flex items-center justify-center h-full">
+            <UIcon
+              name="i-heroicons-arrow-path"
+              class="w-8 h-8 animate-spin text-blue-500"
+            />
+          </div>
+        </template>
+      </ClientOnly>
     </div>
     
     <!-- Stats -->
@@ -61,22 +88,28 @@
       </div>
       <div>
         <p class="text-xs text-gray-500 dark:text-gray-400">Min</p>
-        <p class="text-lg font-semibold">{{ stats.min?.toFixed(2) || 'N/A' }}</p>
+        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {{ stats.min?.toFixed(2) || 'N/A' }}
+        </p>
       </div>
       <div>
         <p class="text-xs text-gray-500 dark:text-gray-400">Max</p>
-        <p class="text-lg font-semibold">{{ stats.max?.toFixed(2) || 'N/A' }}</p>
+        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {{ stats.max?.toFixed(2) || 'N/A' }}
+        </p>
       </div>
       <div>
         <p class="text-xs text-gray-500 dark:text-gray-400">Avg</p>
-        <p class="text-lg font-semibold">{{ stats.avg?.toFixed(2) || 'N/A' }}</p>
+        <p class="text-lg font-semibold text-gray-900 dark:text-gray-100">
+          {{ stats.avg?.toFixed(2) || 'N/A' }}
+        </p>
       </div>
     </div>
-  </BaseCard>
+  </UCard>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { EChartsOption } from 'echarts'
 
 interface Props {
@@ -101,7 +134,7 @@ const emit = defineEmits<{
 
 const api = useApiAdvanced()
 const isLoading = ref(false)
-const data = ref<Array<{ timestamp: number; value: number; isAnomaly?: boolean }>>([])
+const data = ref<Array<{ timestamp: number; value: number; isAnomaly?: boolean }>>([]))
 const currentValue = ref<number | null>(null)
 
 // Refresh interval options
@@ -137,10 +170,12 @@ const chartOption = computed<EChartsOption>(() => {
     .map(d => [d.timestamp, d.value])
   
   return {
+    backgroundColor: 'transparent',
     grid: {
       left: '3%',
       right: '4%',
-      bottom: '10%',
+      bottom: '15%',
+      top: '10%',
       containLabel: true
     },
     tooltip: {
@@ -165,7 +200,8 @@ const chartOption = computed<EChartsOption>(() => {
       name: props.unit,
       splitLine: {
         lineStyle: {
-          type: 'dashed'
+          type: 'dashed',
+          color: '#e5e7eb'
         }
       }
     },
@@ -230,7 +266,8 @@ const chartOption = computed<EChartsOption>(() => {
       },
       {
         start: 0,
-        end: 100
+        end: 100,
+        height: 20
       }
     ],
     toolbox: {
