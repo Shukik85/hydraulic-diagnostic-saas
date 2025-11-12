@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  gnn_service:
+    build: .
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+    environment:
+      - MODEL_PATH=/app/models/universal_dynamic_best.ckpt
+      - METADATA_PATH=/app/data/equipment_metadata_full.json
+    depends_on:
+      - timescaledb
+    restart: unless-stopped
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=hydraulic_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+volumes:
+  pgdata:

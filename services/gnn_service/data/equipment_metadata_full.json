@@ -1,0 +1,33 @@
+{
+  "equipment_id": "EXC-PROD-001",
+  "equipment_type": "excavator_30t",
+  "manufacturer": "ExcDemoLtd",
+  "model": "Excavator-X",
+  "components": [
+    {"id": "pump_main_1", "type": "pump", "role": "energy_source", "sensors": [{"type": "pressure", "location": "outlet", "operating_range": {"min": 50,"max": 330,"nominal": 280,"unit": "bar"}}], "parameters": {"displacement": 180}, "criticality": 1.0 },
+    {"id": "pump_main_2", "type": "pump", "role": "energy_source", "sensors": [{"type": "pressure", "location": "outlet", "operating_range": {"min": 50, "max": 330, "nominal": 280, "unit": "bar"}}], "parameters": {"displacement": 180}, "criticality": 1.0 },
+    {"id": "valve_main", "type": "valve", "role": "control", "sensors": [{"type": "pressure", "location": "load_sensing", "operating_range": {"min": 10, "max": 300, "nominal": 200, "unit": "bar"}}], "parameters": {}, "criticality": 0.9 },
+    {"id": "cylinder_boom", "type": "cylinder","role": "actuator","sensors": [{"type": "pressure","location": "piston_side","operating_range": {"min": 10,"max": 330,"nominal": 270,"unit": "bar"}}],"parameters": {"bore": 120},"criticality": 0.9 },
+    {"id": "cylinder_arm","type": "cylinder","role": "actuator","sensors": [{"type": "pressure","location": "piston_side","operating_range": {"min": 10,"max": 330,"nominal": 240,"unit": "bar"}}],"parameters": {"bore": 110},"criticality": 0.8 },
+    {"id": "cylinder_bucket", "type": "cylinder", "role": "actuator", "sensors": [{"type": "pressure", "location": "piston_side", "operating_range": {"min": 10, "max": 330, "nominal": 220, "unit": "bar"}}], "parameters": {"bore": 100}, "criticality": 0.8 },
+    {"id": "motor_swing","type": "motor","role": "actuator","sensors": [{"type": "pressure","location": "inlet","operating_range": {"min": 10,"max": 330,"nominal": 250,"unit": "bar"}}], "parameters": {"displacement": 85}, "criticality": 0.7 },
+    {"id": "motor_travel_left","type": "motor","role": "actuator","sensors": [{"type": "pressure","location": "inlet","operating_range": {"min": 10,"max": 330,"nominal": 250,"unit": "bar"}}],"parameters": {"displacement": 85}, "criticality": 0.7},
+    {"id": "motor_travel_right","type": "motor","role": "actuator","sensors": [{"type": "pressure","location": "inlet","operating_range": {"min": 10,"max": 330,"nominal": 250,"unit": "bar"}}],"parameters": {"displacement": 85}, "criticality": 0.7}
+  ],
+  "connections": [
+    {"from_component": "pump_main_1", "to_component": "valve_main", "connection_type": "hydraulic", "bidirectional": true, "weight": 1.0 },
+    {"from_component": "pump_main_2", "to_component": "valve_main", "connection_type": "hydraulic", "bidirectional": true, "weight": 1.0 },
+    {"from_component": "valve_main", "to_component": "cylinder_boom", "connection_type": "hydraulic", "bidirectional": true, "weight": 1.0 },
+    {"from_component": "valve_main", "to_component": "cylinder_arm", "connection_type": "hydraulic", "bidirectional": true, "weight": 1.0 },
+    {"from_component": "valve_main", "to_component": "cylinder_bucket", "connection_type": "hydraulic", "bidirectional": true, "weight": 1.0 },
+    {"from_component": "valve_main", "to_component": "motor_swing", "connection_type": "hydraulic", "bidirectional": true, "weight": 1.0 },
+    {"from_component": "valve_main", "to_component": "motor_travel_left", "connection_type": "hydraulic", "bidirectional": true, "weight": 1.0 },
+    {"from_component": "valve_main", "to_component": "motor_travel_right", "connection_type": "hydraulic", "bidirectional": true, "weight": 1.0 }
+  ],
+  "energy_sources": [
+    {"component_id": "pump_main_1","operation_modes": [{"name": "continuous", "activation_conditions": {}, "active_components": ["*"]}], "priority": 1, "activation_strategy": "automatic" },
+    {"component_id": "pump_main_2","operation_modes": [{"name": "continuous", "activation_conditions": {}, "active_components": ["*"]}], "priority": 2, "activation_strategy": "automatic" }
+  ],
+  "graph_topology": "auto",
+  "metadata": {}
+}
