@@ -1,11 +1,13 @@
-from sqlalchemy import Column, String, DateTime, UUID, JSON, Boolean
-from db.session import Base
 import uuid
 from datetime import datetime
 
+from db.session import Base
+from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, String
+
+
 class Equipment(Base):
     __tablename__ = "equipment"
-    
+
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     system_id = Column(String(255), unique=True, nullable=False)

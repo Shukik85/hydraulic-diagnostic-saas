@@ -1,9 +1,43 @@
-fastapi==0.114.0
-uvicorn[standard]==0.30.1
-torch==2.1.0
-torch-geometric==2.4.0
-pandas==2.2.0
-numpy==1.26.0
-redis==5.0.7
-structlog==24.2.0
-python-dotenv==1.0.1
+# PyTorch 2.3.1 with CUDA 12.4 (compatible with GTX 1650 SUPER + Driver 577/CUDA 12.9)
+--index-url https://download.pytorch.org/whl/cu124
+
+# PyTorch Core
+torch==2.3.1
+torchvision==0.18.1
+torchaudio==2.3.1
+
+# PyTorch Geometric (compatible with PyTorch 2.3)
+torch-geometric==2.5.0
+torch-scatter==2.1.2
+torch-sparse==0.6.18
+torch-cluster==1.6.3
+torch-spline-conv==1.2.2
+
+# Core ML Libraries
+numpy>=1.24.0,<2.0.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+
+# Graph Processing
+networkx>=3.1
+
+# API Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# HTTP Client
+httpx>=0.25.0
+
+# Utilities
+python-dotenv>=1.0.0
+python-multipart>=0.0.6
+pyyaml>=6.0
+
+# Logging & Monitoring
+structlog>=23.2.0
+
+# Testing (optional)
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
