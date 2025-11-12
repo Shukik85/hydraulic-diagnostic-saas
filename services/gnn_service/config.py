@@ -1,41 +1,66 @@
-import os
+# services/gnn_service/config.py
+"""
+Unified and dynamic configuration for Universal GNN Service.
+"""
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Optional
+import torch
+from schemas import GraphTopology
 
-from dotenv import load_dotenv
+@dataclass
+class ModelConfig:
+    hidden_dim: int = 128
+    num_heads: int = 8
+    num_gat_layers: int = 3
+    lstm_hidden_dim: int = 256
+    lstm_layers: int = 2
+    dropout: float = 0.3
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
-load_dotenv()
+@dataclass
+class TrainingConfig:
+    data_path: str = "data/bim_comprehensive.csv"
+    metadata_path: str = "data/equipment_metadata.json"
+    batch_size: int = 16
+    num_workers: int = 4
+    max_epochs: int = 100
+    learning_rate: float = 1e-3
+    window_minutes: int = 60
+    timestep_minutes: int = 5
+    sequence_length: int = 5
+    train_ratio: float = 0.7
+    val_ratio: float = 0.15
+    test_ratio: float = 0.15
 
-# Device
-DEVICE = os.getenv("DEVICE", "cuda")
+@dataclass
+class DBConfig:
+    host: str = "localhost"
+    port: int = 5432
+    database: str = "hydraulic_db"
+    user: str = "postgres"
+    password: str = ""
+    pool_size: int = 10
+    timeout: float = 5.0
 
-# Model
-HIDDEN_DIM = int(os.getenv("HIDDEN_DIM", "96"))
-NUM_GAT_LAYERS = int(os.getenv("NUM_GAT_LAYERS", "3"))
-NUM_HEADS = int(os.getenv("NUM_HEADS", "4"))
-LSTM_LAYERS = int(os.getenv("LSTM_LAYERS", "2"))
-DROPOUT = float(os.getenv("DROPOUT", "0.12"))
+@dataclass
+class APIConfig:
+    host: str = "0.0.0.0"
+    port: int = 8002
+    reload: bool = False
+    workers: int = 2
+    model_path: str = "models/universal_dynamic_best.ckpt"
+    metadata_path: str = "data/equipment_metadata.json"
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
-# Temporal
-TIME_WINDOW_MINUTES = int(os.getenv("TIME_WINDOW_MINUTES", "60"))
-TIMESTEP_MINUTES = int(os.getenv("TIMESTEP_MINUTES", "5"))
-NUM_TIMESTEPS = TIME_WINDOW_MINUTES // TIMESTEP_MINUTES
+@dataclass
+class ObservabilityConfig:
+    log_level: str = "INFO"
+    log_format: str = "json"
+    log_dir: str = "logs"
 
-# Thresholds
-HEALTH_CRITICAL = float(os.getenv("HEALTH_CRITICAL", "0.3"))
-HEALTH_WARNING = float(os.getenv("HEALTH_WARNING", "0.6"))
-
-# Database
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = int(os.getenv("DB_PORT", "5432"))
-DB_NAME = os.getenv("DB_NAME", "hydraulic_db")
-DB_USER = os.getenv("DB_USER", "user")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
-
-# API
-API_HOST = os.getenv("API_HOST", "0.0.0.0")
-API_PORT = int(os.getenv("API_PORT", "8001"))
-
-# LLM/RAG
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
-LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
-LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.3"))
+# Singletons
+model_config = ModelConfig()
+training_config = TrainingConfig()
+db_config = DBConfig()
+api_config = APIConfig()
+observability_config = ObservabilityConfig()
