@@ -1,13 +1,8 @@
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
-# CUDA 12.9
-CUDA_VISIBLE_DEVICES=0
-PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:256
-TORCH_CUDA_ARCH_LIST="7.5"  # GTX 1650 compute capability
 
 # Device
 DEVICE = os.getenv("DEVICE", "cuda")
