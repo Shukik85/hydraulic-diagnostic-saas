@@ -1,17 +1,21 @@
 /**
- * useApi.ts — Enterprise API client для Hydraulic Diagnostic Platform
- * Типизировано по OpenAPI v3.1.0
+ * useApi - Enterprise API client for Hydraulic Diagnostic Platform
  * 
  * Features:
  * - Automatic retry with exponential backoff
  * - Request deduplication
  * - Centralized error handling
  * - Token refresh logic
- * - Request/response interceptors
+ * - Auth methods integrated
+ * 
+ * @example
+ * const api = useApi()
+ * const result = await api.get('/systems')
+ * await api.login({ email, password })
  */
 
 import { ref, computed } from 'vue'
-import type { Ref } from 'vue'
+import type { User, LoginCredentials, RegisterData } from '~/types/api'
 
 export interface ApiRequestOptions {
   headers?: Record<string, string>
@@ -40,12 +44,6 @@ export interface ApiErrorResponse {
 }
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-
-interface RequestCacheKey {
-  method: string
-  url: string
-  body?: string
-}
 
 // Request deduplication cache
 const pendingRequests = new Map<string, Promise<any>>()
@@ -231,7 +229,7 @@ export function useApi() {
         status: response.status
       }
       
-      // Handle 401 - redirect to login
+      // Handle 401 - clear token and redirect
       if (response.status === 401) {
         token.value = null
         if (process.client) {
@@ -246,7 +244,7 @@ export function useApi() {
       if (error.name === 'AbortError') {
         return {
           error: {
-            message: 'Запрос отменён',
+            message: 'Request cancelled',
             code: 'ABORTED'
           },
           status: 0
@@ -263,7 +261,7 @@ export function useApi() {
       
       return {
         error: {
-          message: error.message || 'Ошибка сети',
+          message: error.message || 'Network error',
           code: 'NETWORK_ERROR',
           details: error
         },
@@ -272,7 +270,8 @@ export function useApi() {
     }
   }
   
-  // Convenience methods
+  // ==================== HTTP METHOD SHORTCUTS ====================
+  
   async function get<T = unknown>(endpoint: string, options?: ApiRequestOptions) {
     return request<T>(endpoint, { ...options, method: 'GET' })
   }
@@ -293,6 +292,81 @@ export function useApi() {
     return request<T>(endpoint, { ...options, method: 'DELETE' })
   }
   
+  // ==================== AUTH METHODS ====================
+  
+  /**
+   * Login user
+   */
+  async function login(credentials: LoginCredentials): Promise<User> {
+    const response = await post<{ user: User; access: string; refresh: string }>(
+      '/auth/login',
+      credentials
+    )
+    
+    if (isApiSuccess(response)) {
+      token.value = response.data.access
+      return response.data.user
+    }
+    
+    throw new Error(response.error.message)
+  }
+  
+  /**
+   * Register new user
+   */
+  async function register(userData: RegisterData): Promise<User> {
+    const response = await post<{ user: User; access: string; refresh: string }>(
+      '/auth/register',
+      userData
+    )
+    
+    if (isApiSuccess(response)) {
+      token.value = response.data.access
+      return response.data.user
+    }
+    
+    throw new Error(response.error.message)
+  }
+  
+  /**
+   * Logout user
+   */
+  async function logout(): Promise<void> {
+    try {
+      await post('/auth/logout')
+    } finally {
+      token.value = null
+    }
+  }
+  
+  /**
+   * Get current user
+   */
+  async function getCurrentUser(): Promise<User> {
+    const response = await get<User>('/auth/me')
+    
+    if (isApiSuccess(response)) {
+      return response.data
+    }
+    
+    throw new Error(response.error.message)
+  }
+  
+  /**
+   * Update user profile
+   */
+  async function updateUser(userData: Partial<User>): Promise<User> {
+    const response = await patch<User>('/auth/me', userData)
+    
+    if (isApiSuccess(response)) {
+      return response.data
+    }
+    
+    throw new Error(response.error.message)
+  }
+  
+  // ==================== TOKEN MANAGEMENT ====================
+  
   /**
    * Set authentication token
    */
@@ -308,12 +382,22 @@ export function useApi() {
   }
   
   return {
+    // Core methods
     request,
     get,
     post,
     put,
     patch,
     delete: del,
+    
+    // Auth methods
+    login,
+    register,
+    logout,
+    getCurrentUser,
+    updateUser,
+    
+    // Token management
     token: readonly(token),
     isAuthenticated,
     setToken,
@@ -321,11 +405,18 @@ export function useApi() {
   }
 }
 
-// Type guards
+// ==================== TYPE GUARDS ====================
+
+/**
+ * Type guard: Check if response is error
+ */
 export function isApiError(response: any): response is ApiErrorResponse {
   return response && 'error' in response && typeof response.error === 'object'
 }
 
+/**
+ * Type guard: Check if response is success
+ */
 export function isApiSuccess<T>(response: any): response is ApiResponse<T> {
   return response && 'data' in response && !('error' in response)
 }
