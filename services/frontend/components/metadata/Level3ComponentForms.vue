@@ -1,80 +1,133 @@
 <!-- components/metadata/Level3ComponentForms.vue -->
 <template>
-  <div class="level-3">
-    <h2 class="text-xl font-semibold mb-4">3. Характеристики компонентов</h2>
-
-    <p v-if="store.componentsCount === 0" class="text-gray-600 mb-4">
-      Вернитесь на Уровень 2 и добавьте компоненты на схему.
-    </p>
-
-    <div v-else class="components-forms">
-      <!-- Выбор компонента -->
-      <div class="component-selector mb-6">
-        <label class="form-label">Выберите компонент для настройки:</label>
-        <select v-model="selectedComponentId" class="form-select">
-          <option value="">-- Выберите компонент --</option>
-          <option v-for="comp in store.wizardState.system.components" :key="comp.id" :value="comp.id">
-            {{ getComponentLabel(comp) }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Динамическая форма -->
-      <transition name="fade" mode="out-in">
-        <component v-if="selectedComponentId && currentFormComponent" :is="currentFormComponent"
-          :component-id="selectedComponentId" :key="selectedComponentId" />
-        <div v-else class="empty-state">
-          <p class="text-gray-500">Выберите компонент для настройки его характеристик</p>
-        </div>
-      </transition>
+  <div class="level-3 space-y-6">
+    <div>
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+        3. Характеристики компонентов
+      </h2>
+      <p class="text-sm text-gray-600 dark:text-gray-400">
+        Настройте параметры каждого компонента гидросистемы
+      </p>
     </div>
 
-    <!-- Progress indicator -->
-    <div class="progress-summary mt-6">
-      <h3 class="text-sm font-semibold mb-2">Заполненность компонентов:</h3>
-      <div class="components-progress">
-        <div v-for="comp in store.wizardState.system.components" :key="comp.id" class="component-progress-item">
-          <span class="component-name">{{ comp.id }}</span>
-          <div class="progress-bar-sm">
-            <div class="progress-fill-sm" :style="{ width: `${getComponentCompleteness(comp) * 100}%` }"></div>
+    <!-- No components warning -->
+    <UAlert
+      v-if="store.componentsCount === 0"
+      color="yellow"
+      icon="i-heroicons-exclamation-triangle"
+      title="Компоненты не найдены"
+      description="Вернитесь на Уровень 2 и добавьте компоненты на схему"
+    />
+
+    <template v-else>
+      <!-- Component selector -->
+      <UCard class="p-6">
+        <UFormGroup label="Выберите компонент для настройки">
+          <USelect
+            v-model="selectedComponentId"
+            :options="componentOptions"
+            placeholder="-- Выберите компонент --"
+            size="lg"
+          >
+            <template #leading>
+              <UIcon :name="getComponentIcon(selectedComponent?.component_type)" class="w-5 h-5" />
+            </template>
+          </USelect>
+        </UFormGroup>
+      </UCard>
+
+      <!-- Dynamic form -->
+      <Transition name="fade" mode="out-in">
+        <component
+          v-if="selectedComponentId && currentFormComponent"
+          :is="currentFormComponent"
+          :component-id="selectedComponentId"
+          :key="selectedComponentId"
+        />
+        
+        <UCard v-else class="p-12">
+          <div class="text-center">
+            <UIcon
+              name="i-heroicons-cog-6-tooth"
+              class="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4"
+            />
+            <p class="text-gray-500 dark:text-gray-400">
+              Выберите компонент для настройки его характеристик
+            </p>
           </div>
-          <span class="progress-pct">{{ Math.round(getComponentCompleteness(comp) * 100) }}%</span>
+        </UCard>
+      </Transition>
+
+      <!-- Progress summary -->
+      <UCard class="p-6">
+        <h3 class="text-base font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          Заполненность компонентов
+        </h3>
+        
+        <div class="space-y-3">
+          <div
+            v-for="comp in store.wizardState.system.components"
+            :key="comp.id"
+            class="flex items-center gap-3"
+          >
+            <UIcon
+              :name="getComponentIcon(comp.component_type)"
+              class="w-5 h-5 text-gray-600 dark:text-gray-400"
+            />
+            <span class="text-sm font-medium text-gray-900 dark:text-gray-100 w-32">
+              {{ comp.id }}
+            </span>
+            <UProgress
+              :value="getComponentCompleteness(comp) * 100"
+              :color="getCompletenessColor(getComponentCompleteness(comp))"
+              size="sm"
+              class="flex-1"
+            />
+            <span class="text-xs font-semibold text-gray-600 dark:text-gray-400 w-12 text-right">
+              {{ Math.round(getComponentCompleteness(comp) * 100) }}%
+            </span>
+          </div>
         </div>
-      </div>
-    </div>
+      </UCard>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useMetadataStore } from '~/stores/metadata';
-import type { ComponentMetadata, ComponentType } from '~/types/metadata';
-import PumpForm from '~/components/metadata/Level3ComponentForms/PumpForm.vue';
-import MotorForm from '~/components/metadata/Level3ComponentForms/MotorForm.vue';
-import CylinderForm from '~/components/metadata/Level3ComponentForms/CylinderForm.vue';
-import ValveForm from '~/components/metadata/Level3ComponentForms/ValveForm.vue';
-import FilterForm from '~/components/metadata/Level3ComponentForms/FilterForm.vue';
-import AccumulatorForm from '~/components/metadata/Level3ComponentForms/AccumulatorForm.vue';
+import { useMetadataStore } from '~/stores/metadata'
+import type { ComponentMetadata, ComponentType } from '~/types/metadata'
+import PumpForm from '~/components/metadata/Level3ComponentForms/PumpForm.vue'
+import MotorForm from '~/components/metadata/Level3ComponentForms/MotorForm.vue'
+import CylinderForm from '~/components/metadata/Level3ComponentForms/CylinderForm.vue'
+import ValveForm from '~/components/metadata/Level3ComponentForms/ValveForm.vue'
+import FilterForm from '~/components/metadata/Level3ComponentForms/FilterForm.vue'
+import AccumulatorForm from '~/components/metadata/Level3ComponentForms/AccumulatorForm.vue'
 
+const store = useMetadataStore()
 
-const store = useMetadataStore();
-
-const selectedComponentId = ref<string>('');
+const selectedComponentId = ref<string>('')
 
 // Auto-select first component
 onMounted(() => {
-  const firstComponent = store.wizardState.system.components?.[0];
+  const firstComponent = store.wizardState.system.components?.[0]
   if (firstComponent) {
-    selectedComponentId.value = firstComponent.id;
+    selectedComponentId.value = firstComponent.id
   }
-});
-
+})
 
 const selectedComponent = computed(() =>
   store.wizardState.system.components?.find(c => c.id === selectedComponentId.value)
-);
+)
+
+const componentOptions = computed(() => {
+  return store.wizardState.system.components?.map(comp => ({
+    value: comp.id,
+    label: getComponentLabel(comp)
+  })) || []
+})
 
 const currentFormComponent = computed(() => {
-  if (!selectedComponent.value) return null;
+  if (!selectedComponent.value) return null
 
   const formComponents: Record<ComponentType, any> = {
     pump: PumpForm,
@@ -83,130 +136,65 @@ const currentFormComponent = computed(() => {
     valve: ValveForm,
     filter: FilterForm,
     accumulator: AccumulatorForm,
-  };
+  }
 
-  return formComponents[selectedComponent.value.component_type];
-});
+  return formComponents[selectedComponent.value.component_type]
+})
 
 function getComponentLabel(comp: ComponentMetadata): string {
   const typeLabels: Record<ComponentType, string> = {
-    pump: '⚙️ Насос',
+    pump: '⚡ Насос',
     motor: '🔄 Мотор',
     cylinder: '⬌ Цилиндр',
     valve: '⬥ Клапан',
     filter: '◈ Фильтр',
     accumulator: '⬢ Аккумулятор'
-  };
-  return `${typeLabels[comp.component_type]} — ${comp.id}`;
+  }
+  return `${typeLabels[comp.component_type]} — ${comp.id}`
+}
+
+function getComponentIcon(type?: ComponentType): string {
+  const icons: Record<ComponentType, string> = {
+    pump: 'i-heroicons-bolt',
+    motor: 'i-heroicons-arrow-path',
+    cylinder: 'i-heroicons-arrows-right-left',
+    valve: 'i-heroicons-adjustments-horizontal',
+    filter: 'i-heroicons-funnel',
+    accumulator: 'i-heroicons-battery-100'
+  }
+  return icons[type || 'pump'] || 'i-heroicons-cog-6-tooth'
 }
 
 function getComponentCompleteness(comp: ComponentMetadata): number {
-  let filled = 0;
-  let total = 5;
+  let filled = 0
+  let total = 5
 
-  if (comp.max_pressure) filled++;
-  if (comp.normal_ranges.pressure) filled++;
-  if (comp.normal_ranges.temperature) filled++;
+  if (comp.max_pressure) filled++
+  if (comp.normal_ranges.pressure) filled++
+  if (comp.normal_ranges.temperature) filled++
 
   // Специфичные поля
-  if (comp.component_type === 'pump' && comp.pump_specific?.nominal_flow_rate) filled++;
-  if (comp.component_type === 'motor' && comp.motor_specific?.displacement) filled++;
-  if (comp.component_type === 'cylinder' && comp.cylinder_specific?.piston_diameter) filled++;
+  if (comp.component_type === 'pump' && comp.pump_specific?.nominal_flow_rate) filled++
+  if (comp.component_type === 'motor' && comp.motor_specific?.displacement) filled++
+  if (comp.component_type === 'cylinder' && comp.cylinder_specific?.piston_diameter) filled++
 
   // История
-  if (comp.last_maintenance) filled++;
+  if (comp.last_maintenance) filled++
 
-  return filled / total;
+  return filled / total
+}
+
+function getCompletenessColor(completeness: number): string {
+  if (completeness < 0.3) return 'red'
+  if (completeness < 0.7) return 'yellow'
+  return 'green'
 }
 </script>
 
 <style scoped>
-.level-3 {
-  padding: 1rem;
-}
-
-.component-selector {
-  max-width: 500px;
-}
-
-.form-label {
-  font-weight: 500;
-  font-size: 0.875rem;
-  color: #374151;
-  margin-bottom: 0.5rem;
-  display: block;
-}
-
-.form-select {
-  width: 100%;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 0.875rem;
-}
-
-.form-select:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.empty-state {
-  padding: 3rem;
-  text-align: center;
-  background: #f9fafb;
-  border: 2px dashed #d1d5db;
-  border-radius: 0.75rem;
-}
-
-.progress-summary {
-  padding: 1rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-}
-
-.components-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.component-progress-item {
-  display: grid;
-  grid-template-columns: 150px 1fr 60px;
-  align-items: center;
-  gap: 1rem;
-}
-
-.component-name {
-  font-size: 0.875rem;
-  color: #374151;
-  font-weight: 500;
-}
-
-.progress-bar-sm {
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-fill-sm {
-  height: 100%;
-  background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #10b981 100%);
-  transition: width 0.3s;
-}
-
-.progress-pct {
-  font-size: 0.75rem;
-  color: #6b7280;
-  text-align: right;
-}
-
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s;
+  transition: opacity 0.2s ease;
 }
 
 .fade-enter-from,
