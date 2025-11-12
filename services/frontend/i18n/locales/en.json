@@ -1,8 +1,286 @@
 {
   "app": {"name":"Hydraulic AI","title":"Hydraulic Diagnostic","subtitle":"Diagnostic Platform","version":"Version"},
   "nav": {"dashboard":"Dashboard","systems":"Systems","diagnostics":"Diagnostics","reports":"Reports","chat":"Chat","settings":"Settings","equipments":"Equipment","openDashboard":"Open Dashboard","notifications":"Notifications"},
-  "ui": {"search":"Search","help":"Help","profile":"Profile","settings":"Settings","logout":"Logout","close":"Close","cancel":"Cancel","view":"View","optional":"optional","minutes":"min","description":"Description","toggleTheme":"Toggle Theme","lightTheme":"Light","darkTheme":"Dark","language":{"switch":"Switch Language"}},
+  "ui": {"search":"Search","help":"Help","profile":"Profile","settings":"Settings","logout":"Logout","close":"Close","cancel":"Cancel","save":"Save","edit":"Edit","delete":"Delete","view":"View","add":"Add","optional":"optional","required":"required","minutes":"min","description":"Description","toggleTheme":"Toggle Theme","lightTheme":"Light","darkTheme":"Dark","language":{"switch":"Switch Language"}},
   "auth": {"signIn":"Sign In","getStarted":"Get Started","startFreeTrial":"Start Free Trial","watchDemo":"Watch Demo","startTrialNow":"Start Your Free Trial Now"},
+  "wizard": {
+    "level1": {
+      "title": "Basic Equipment Information",
+      "description": "Specify the main characteristics of your equipment",
+      "equipmentType": "Equipment Type",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "serialNumber": "Serial Number / ID",
+      "manufactureDate": "Manufacture Date",
+      "systemId": "System ID",
+      "selectType": "Select type",
+      "manufacturerPlaceholder": "e.g., Caterpillar, Komatsu, Volvo",
+      "manufacturerHint": "Start typing - suggestions will appear",
+      "modelPlaceholder": "e.g., 320D, PC200, EC210",
+      "serialNumberPlaceholder": "Unique identifier",
+      "serialNumberHint": "Used to identify equipment in the system",
+      "manufactureDateHint": "Affects system age and wear calculations",
+      "systemIdHint": "Automatically generated from entered data",
+      "notGenerated": "Not generated",
+      "otherTypeHint": "Describe equipment type in Model field",
+      "validation": {
+        "errors": "Validation errors:",
+        "success": "Basic information filled correctly",
+        "noType": "Equipment type not selected",
+        "noManufacturer": "Manufacturer not specified",
+        "noModel": "Model not specified",
+        "noSerialNumber": "Serial number not specified",
+        "serialTooShort": "Serial number must contain at least 3 characters"
+      },
+      "types": {
+        "excavator_tracked": "Tracked Excavator",
+        "excavator_wheeled": "Wheeled Excavator",
+        "loader_wheeled": "Wheeled Loader",
+        "crane_mobile": "Mobile Crane",
+        "other": "Other"
+      }
+    },
+    "level3": {
+      "title": "Component Characteristics",
+      "description": "Configure parameters for each hydraulic system component",
+      "selectComponent": "Select component to configure",
+      "noComponents": "No components found",
+      "noComponentsWarning": "Return to Level 2 and add components to the scheme",
+      "completeness": "Component Completeness",
+      "emptyState": "Select a component to configure its characteristics",
+      "componentTypes": {
+        "pump": "Pump",
+        "motor": "Motor",
+        "cylinder": "Cylinder",
+        "valve": "Valve",
+        "filter": "Filter",
+        "accumulator": "Accumulator"
+      }
+    },
+    "level5": {
+      "title": "Final Validation and Submission",
+      "description": "Check data completeness and readiness for GNN model training",
+      "overallReadiness": "Overall System Readiness",
+      "ready": "ready",
+      "insufficient": "Insufficient data",
+      "insufficientDesc": "Need to fill more fields for model training",
+      "good": "Good",
+      "goodDesc": "Recommended to fill more fields for better accuracy",
+      "excellent": "Excellent!",
+      "excellentDesc": "System ready for GNN model training",
+      "validationErrors": "Validation Errors",
+      "criticalFields": "Critical Fields",
+      "criticalFieldsDesc": "These fields are required for correct model operation",
+      "secondaryFields": "Secondary Fields",
+      "secondaryFieldsDesc": "Optional, but will improve model accuracy",
+      "inferredValues": "Inferred Values",
+      "inferredValuesDesc": "Automatically filled based on other data",
+      "confidence": "Confidence",
+      "summary": {
+        "components": "Components",
+        "connections": "Connections",
+        "filled": "Filled",
+        "confidence": "Confidence"
+      },
+      "actions": {
+        "inferValues": "Infer Values",
+        "submit": "Complete Setup",
+        "submitWithGaps": "Save with gaps",
+        "submitting": "Submitting..."
+      },
+      "modal": {
+        "successTitle": "Metadata Successfully Saved!",
+        "successDesc": "System ready for GNN model training",
+        "dataCompleteness": "Data completeness",
+        "errorTitle": "Submission Error",
+        "goToDashboard": "Go to Dashboard"
+      }
+    }
+  },
+  "equipment": {
+    "list": {
+      "title": "Equipment List",
+      "description": "Manage your hydraulic equipment",
+      "searchPlaceholder": "Search equipment...",
+      "typeFilter": "Type",
+      "statusFilter": "Status",
+      "addEquipment": "Add Equipment",
+      "noEquipment": "No equipment found",
+      "noEquipmentDesc": "Try adjusting your search filters",
+      "getStarted": "Get started by adding your first equipment",
+      "filters": {
+        "allTypes": "All Types",
+        "excavator": "Excavator",
+        "press": "Press",
+        "crane": "Crane",
+        "loader": "Loader",
+        "pump": "Pump",
+        "allStatuses": "All Statuses",
+        "active": "Active",
+        "inactive": "Inactive",
+        "maintenance": "Maintenance"
+      },
+      "card": {
+        "manufacturer": "Manufacturer",
+        "model": "Model",
+        "sensors": "Sensors",
+        "uptime": "Uptime",
+        "alerts": "Alerts",
+        "view": "View",
+        "edit": "Edit",
+        "delete": "Delete"
+      }
+    },
+    "sensors": {
+      "title": "Sensors",
+      "configured": "sensors configured",
+      "addSensor": "Add Sensor",
+      "noSensors": "No sensors configured",
+      "description": "Add sensors to start monitoring this equipment",
+      "table": {
+        "sensorId": "Sensor ID",
+        "sensorType": "Type",
+        "status": "Status",
+        "lastReading": "Last Reading",
+        "mapping": "Mapping",
+        "actions": "Actions"
+      },
+      "status": {
+        "online": "Online",
+        "offline": "Offline",
+        "error": "Error"
+      },
+      "mappingStatus": {
+        "mapped": "Mapped",
+        "unmapped": "Not Mapped"
+      },
+      "modal": {
+        "addTitle": "Add Sensor",
+        "editTitle": "Edit Sensor",
+        "sensorId": "Sensor ID",
+        "sensorIdPlaceholder": "e.g., PRESS-001",
+        "sensorType": "Sensor Type",
+        "selectType": "Select sensor type",
+        "unit": "Unit",
+        "minValue": "Min Value",
+        "maxValue": "Max Value",
+        "samplingRate": "Sampling Rate (Hz)",
+        "cancel": "Cancel",
+        "save": "Save"
+      },
+      "types": {
+        "pressure": "Pressure",
+        "temperature": "Temperature",
+        "flow": "Flow Rate",
+        "vibration": "Vibration",
+        "position": "Position",
+        "speed": "Speed"
+      },
+      "deleteConfirm": "Delete sensor",
+      "deleteSuccess": "Sensor deleted successfully",
+      "addSuccess": "Sensor added successfully",
+      "updateSuccess": "Sensor updated successfully",
+      "error": "Failed to perform operation"
+    },
+    "dataSources": {
+      "title": "Data Sources",
+      "configured": "sources configured",
+      "addSource": "Add Source",
+      "noSources": "No data sources configured",
+      "description": "Connect data sources to start ingesting sensor data",
+      "card": {
+        "records": "Records",
+        "lastSync": "Last Sync",
+        "never": "Never",
+        "configure": "Configure",
+        "sync": "Sync Now",
+        "syncing": "Syncing...",
+        "delete": "Delete"
+      },
+      "types": {
+        "csv": "CSV File",
+        "api": "API Polling",
+        "iot": "IoT Gateway",
+        "simulator": "Data Simulator"
+      },
+      "modal": {
+        "addTitle": "Add Data Source",
+        "name": "Source Name",
+        "namePlaceholder": "e.g., Production CSV",
+        "type": "Source Type",
+        "selectType": "Select source type",
+        "cancel": "Cancel",
+        "add": "Add Source"
+      },
+      "deleteConfirm": "Delete data source",
+      "syncSuccess": "Data source synced successfully",
+      "addSuccess": "Data source added successfully",
+      "deleteSuccess": "Data source deleted successfully",
+      "error": "Failed to perform operation"
+    },
+    "settings": {
+      "title": "Settings",
+      "basicInfo": "Basic Information",
+      "basicInfoDesc": "Update equipment details and metadata",
+      "name": "Equipment Name",
+      "namePlaceholder": "e.g., Excavator CAT 320D",
+      "type": "Equipment Type",
+      "manufacturer": "Manufacturer",
+      "model": "Model",
+      "serialNumber": "Serial Number",
+      "location": "Location",
+      "locationPlaceholder": "e.g., Warehouse A, Section 3",
+      "description": "Description",
+      "descriptionPlaceholder": "Additional notes about the equipment",
+      "monitoring": "Monitoring Settings",
+      "monitoringDesc": "Configure monitoring parameters",
+      "enableMonitoring": "Enable Real-time Monitoring",
+      "enableMonitoringDesc": "Activate continuous sensor monitoring",
+      "dataRetention": "Data Retention Period",
+      "samplingInterval": "Sampling Interval",
+      "alerts": "Alert Settings",
+      "alertsDesc": "Configure alert thresholds and notifications",
+      "enableAlerts": "Enable Alerts",
+      "enableAlertsDesc": "Send notifications when thresholds are exceeded",
+      "criticalThreshold": "Critical Threshold",
+      "warningThreshold": "Warning Threshold",
+      "alertChannels": "Alert Channels",
+      "email": "Email",
+      "sms": "SMS",
+      "push": "Push Notification",
+      "gnn": "GNN Diagnostics",
+      "gnnDesc": "Configure GNN model parameters",
+      "enableGnn": "Enable GNN Analysis",
+      "enableGnnDesc": "Use Graph Neural Network for advanced diagnostics",
+      "inferenceInterval": "Inference Interval",
+      "anomalyThreshold": "Anomaly Threshold",
+      "sensitivityLevel": "Sensitivity Level",
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "dangerZone": "Danger Zone",
+      "dangerZoneDesc": "Irreversible actions that affect equipment data",
+      "deactivateEquipment": "Deactivate Equipment",
+      "deactivateDesc": "Temporarily disable monitoring and diagnostics",
+      "deactivate": "Deactivate",
+      "deleteEquipment": "Delete Equipment",
+      "deleteDesc": "Permanently delete all data. This cannot be undone!",
+      "deleteButton": "Delete Equipment",
+      "actions": {
+        "saveChanges": "Save Changes",
+        "resetChanges": "Reset Changes",
+        "saving": "Saving..."
+      },
+      "toast": {
+        "saveSuccess": "Settings saved successfully",
+        "saveError": "Failed to save settings",
+        "resetSuccess": "Changes reset",
+        "deactivateSuccess": "Equipment deactivated",
+        "deleteSuccess": "Equipment deleted",
+        "deleteError": "Failed to delete equipment"
+      }
+    }
+  },
   "dashboard": {
     "title": "Enterprise Dashboard",
     "subtitle": "Real-time hydraulic systems monitoring & analytics",
@@ -177,6 +455,8 @@
       "overview": "Overview",
       "sensors": "Sensors",
       "diagnostics": "Diagnostics",
+      "dataSources": "Data Sources",
+      "settings": "Settings",
       "maintenance": "Maintenance",
       "specifications": "Specifications",
       "attachedSensors": "Attached Sensors",
@@ -204,7 +484,7 @@
       "copyright":"© 2025 Hydraulic Diagnostic. All rights reserved."
     }
   },
-  "breadcrumbs": {"home":"Home","page":"Page","system":"System","equipment":"Equipment"},
+  "breadcrumbs": {"home":"Home","page":"Page","system":"System","equipment":"Equipment","sensors":"Sensors"},
   "footer": {"copyright":"All rights reserved","settings":"Settings","help":"Help"},
   "diagnostics": {"title":"System Diagnostics","subtitle":"Monitor and analyze hydraulic system performance","runNew":"Run Diagnostics","healthScore":"Health Score","started":"Started","issues":"Issues","issuesCount":"issues","issuesFound":"Issues Found","analysisDuration":"Analysis Duration","exportPDF":"Export PDF","activeSessions":"Active Sessions","priority":"Priority","priorityMedium":"Medium","statusLabel":"Status","statusNormal":"Normal","runModal":{"title":"Run Diagnostic","description":"Configure diagnostic parameters","equipment":"Equipment","selectEquipment":"Select equipment to diagnose","pumpStationA":"HYD-001 - Pump Station A","hydraulicMotorB":"HYD-002 - Hydraulic Motor B","controlValveC":"HYD-003 - Control Valve C","coolingSystemD":"HYD-004 - Cooling System D","diagnosticType":"Diagnostic Type","fullAnalysis":"Full System Analysis","pressureCheck":"Pressure Check Only","temperatureAnalysis":"Temperature Analysis","vibrationAnalysis":"Vibration Analysis","flowAnalysis":"Flow Rate Analysis","emailNotification":"Email Notification","realTimeResults":"Real-time Results","estimatedDuration":"Estimated Duration","priorityAnalysis":"Priority Analysis","startDiagnostic":"Start Diagnostic","equipmentRequired":"Please select equipment"},"kpi":{"activeSessions":"Active Sessions","runningNow":"running now","successRate":"Success Rate","thisWeek":"this week {0}","avgDuration":"Average Duration","faster":"faster {0}","issuesFound":"Issues Found","needsAttention":"needs attention"},"status":{"completed":"Completed","warning":"Warning","error":"Error","processing":"Processing"},"recentResults":{"title":"Recent Results","subtitle":"System diagnostic history"},"filters":{"allEquipment":"All Equipment"},"table":{"name":"Name","equipment":"Equipment","healthScore":"Health Score","issues":"Issues","completed":"Completed","status":"Status","actions":"Actions"},"results":{"title":"Diagnostic Results","subtitle":"Detailed analysis results","titleWithName":"{title}: {name}"},"recommendations":{"pressureMaintenance":"Pressure Maintenance","pressureMaintenanceDesc":"Check filter and seal conditions","temperatureMonitoring":"Temperature Control","temperatureMonitoringDesc":"Temperature within normal limits"}},
   "systems": {"title":"Hydraulic Systems","subtitle":"Equipment management and monitoring","addNew":"Add System","noSystems":"No Systems","noSystemsDesc":"Add your first hydraulic system for monitoring","create":{"title":"Create System","subtitle":"Fill in the system parameters","name":"System Name","namePlaceholder":"e.g., HYD-001 - Pump Station A","type":"System Type","initialStatus":"Initial Status","descriptionPlaceholder":"Brief description of the system (optional)","nextStepsTitle":"Next Steps","nextStepsDesc":"After creation, configure sensors and thresholds.","createBtn":"Create System","errors":{"nameRequired":"System name is required"}},"types":{"industrial":"Industrial","mobile":"Mobile","marine":"Marine","construction":"Construction","mining":"Mining","agricultural":"Agricultural"},"status":{"active":"Active","maintenance":"Maintenance","inactive":"Inactive","emergency":"Emergency"}},
