@@ -1,5 +1,5 @@
 /**
- * TypeScript Types для Hydraulic Diagnostic Platform API
+ * TypeScript Types for Hydraulic Diagnostic Platform API
  * 
  * @see https://github.com/Shukik85/hydraulic-diagnostic-saas
  * @version 1.0.0
@@ -152,7 +152,7 @@ export interface PasswordStrength {
 // -------------------- ENUMS --------------------
 
 /**
- * Единицы измерения датчиков
+ * Sensor measurement units
  */
 export enum SensorUnit {
   Bar = 'bar',
@@ -162,7 +162,7 @@ export enum SensorUnit {
 }
 
 /**
- * Предпочтения ML моделей
+ * ML model preferences
  */
 export enum ModelPreference {
   CatBoost = 'catboost',
@@ -173,7 +173,7 @@ export enum ModelPreference {
 }
 
 /**
- * Уровень критичности аномалии
+ * Anomaly severity levels
  */
 export enum AnomalySeverity {
   Normal = 'normal',
@@ -182,7 +182,7 @@ export enum AnomalySeverity {
 }
 
 /**
- * Типы компонентов системы
+ * System component types
  */
 export enum ComponentType {
   Pump = 'pump',
@@ -192,7 +192,7 @@ export enum ComponentType {
 }
 
 /**
- * Статус компонента
+ * Component status
  */
 export enum ComponentStatus {
   Normal = 'normal',
@@ -201,7 +201,7 @@ export enum ComponentStatus {
 }
 
 /**
- * Статус обработки задания
+ * Job processing status
  */
 export enum JobStatus {
   Queued = 'queued',
@@ -211,7 +211,7 @@ export enum JobStatus {
 }
 
 /**
- * Коды ошибок API
+ * API error codes
  */
 export enum ErrorCode {
   ValidationError = 'VALIDATION_ERROR',
@@ -220,177 +220,178 @@ export enum ErrorCode {
   InternalError = 'INTERNAL_ERROR',
   MLServiceUnavailable = 'ML_SERVICE_UNAVAILABLE',
   NotFound = 'NOT_FOUND',
-  Forbidden = 'FORBIDDEN'
+  Forbidden = 'FORBIDDEN',
+  NetworkError = 'NETWORK_ERROR' // Added for network failures
 }
 
 // -------------------- REQUEST SCHEMAS --------------------
 
 /**
- * Показания одного датчика
+ * Single sensor reading
  */
 export interface SensorReading {
-  /** UUID датчика */
+  /** Sensor UUID */
   sensor_id: string
   /** ISO 8601 timestamp */
   timestamp: string
-  /** Численное значение показания */
+  /** Numeric reading value */
   value: number
-  /** Единица измерения */
+  /** Measurement unit */
   unit: SensorUnit
-  /** Качество данных (0-100%) */
+  /** Data quality (0-100%) */
   quality?: number
 }
 
 /**
- * Массовая загрузка данных датчиков
+ * Bulk sensor data ingestion
  */
 export interface SensorBulkIngest {
-  /** UUID системы */
+  /** System UUID */
   system_id: string
-  /** Массив показаний (1-10000) */
+  /** Array of readings (1-10000) */
   readings: SensorReading[]
 }
 
 /**
- * Запрос ML предсказания
+ * ML prediction request
  */
 export interface MLPredictionRequest {
-  /** UUID системы */
+  /** System UUID */
   system_id: string
-  /** Данные датчиков для анализа */
+  /** Sensor data for analysis */
   sensor_data: SensorReading[]
-  /** Предпочитаемая модель (default: ensemble) */
+  /** Preferred model (default: ensemble) */
   model_preference?: ModelPreference
 }
 
 // -------------------- RESPONSE SCHEMAS --------------------
 
 /**
- * Ответ после массовой загрузки
+ * Bulk ingestion response
  */
 export interface BulkIngestResponse {
-  /** UUID задания обработки */
+  /** Processing job UUID */
   job_id: string
-  /** Статус обработки */
+  /** Processing status */
   status: JobStatus
 }
 
 /**
- * Детали предсказания одной модели
+ * Single model prediction details
  */
 export interface ModelPrediction {
-  /** Название модели */
+  /** Model name */
   model: ModelPreference
-  /** Скор аномальности (0-1) */
+  /** Anomaly score (0-1) */
   score: number
-  /** Уверенность модели (0-1) */
+  /** Model confidence (0-1) */
   confidence: number
 }
 
 /**
- * Метаданные ML inference
+ * ML inference metadata
  */
 export interface PredictionMetadata {
-  /** Время инференса в миллисекундах */
+  /** Inference time in milliseconds */
   inference_time_ms: number
-  /** Версия модели */
+  /** Model version */
   model_version: string
-  /** Использован ли кэш */
+  /** Was cache used */
   cache_hit: boolean
 }
 
 /**
- * Ответ ML предсказания
+ * ML prediction response
  */
 export interface MLPredictionResponse {
-  /** UUID предсказания */
+  /** Prediction UUID */
   prediction_id: string
-  /** UUID системы */
+  /** System UUID */
   system_id: string
   /** ISO 8601 timestamp */
   timestamp: string
-  /** Общий скор аномальности (0-1) */
+  /** Overall anomaly score (0-1) */
   anomaly_score: number
-  /** Уровень критичности */
+  /** Severity level */
   severity: AnomalySeverity
-  /** Предсказания от разных моделей */
+  /** Predictions from different models */
   predictions: ModelPrediction[]
-  /** Метаданные инференса */
+  /** Inference metadata */
   metadata: PredictionMetadata
 }
 
 /**
- * Статус компонента системы
+ * Component status details
  */
 export interface ComponentStatusDetail {
-  /** ID компонента */
+  /** Component ID */
   component_id: string
-  /** Тип компонента */
+  /** Component type */
   type: ComponentType
-  /** Текущий статус */
+  /** Current status */
   status: ComponentStatus
-  /** Время последней аномалии */
+  /** Last anomaly timestamp */
   last_anomaly: string | null
 }
 
 /**
- * Общий статус системы
+ * System overall status
  */
 export interface SystemStatus {
-  /** UUID системы */
+  /** System UUID */
   system_id: string
-  /** Общий health score (0-100) */
+  /** Overall health score (0-100) */
   health_score: number
-  /** Статусы компонентов */
+  /** Component statuses */
   component_statuses: ComponentStatusDetail[]
-  /** Время последнего обновления */
+  /** Last update timestamp */
   last_updated: string
 }
 
 /**
- * Пагинация
+ * Pagination info
  */
 export interface Pagination {
-  /** Текущая страница */
+  /** Current page */
   page: number
-  /** Элементов на странице */
+  /** Items per page */
   per_page: number
-  /** Всего элементов */
+  /** Total items */
   total: number
-  /** Всего страниц */
+  /** Total pages */
   pages: number
 }
 
 /**
- * Список аномалий с пагинацией
+ * Paginated anomalies list
  */
 export interface AnomaliesListResponse {
-  /** Массив аномалий */
+  /** Anomaly items */
   items: MLPredictionResponse[]
-  /** Информация о пагинации */
+  /** Pagination info */
   pagination: Pagination
 }
 
 // -------------------- ERROR HANDLING --------------------
 
 /**
- * Детали ошибки API
+ * API error details
  */
 export interface APIErrorDetail {
-  /** Код ошибки */
+  /** Error code */
   code: ErrorCode
-  /** Человекочитаемое сообщение */
+  /** Human-readable message */
   message: string
-  /** Дополнительные детали */
+  /** Additional details */
   details?: Record<string, any>
   /** ISO 8601 timestamp */
   timestamp: string
-  /** UUID запроса для трейсинга */
+  /** Request UUID for tracing */
   request_id: string
 }
 
 /**
- * Стандартный формат ответа с ошибкой
+ * Standard error response format
  */
 export interface ErrorResponse {
   error: APIErrorDetail
@@ -399,25 +400,25 @@ export interface ErrorResponse {
 // -------------------- QUERY PARAMETERS --------------------
 
 /**
- * Параметры запроса списка аномалий
+ * Query parameters for anomalies list
  */
 export interface AnomaliesQueryParams {
-  /** Начало диапазона времени (ISO 8601) */
+  /** Start time range (ISO 8601) */
   start_date?: string
-  /** Конец диапазона времени (ISO 8601) */
+  /** End time range (ISO 8601) */
   end_date?: string
-  /** Фильтр по уровню критичности */
+  /** Filter by severity level */
   severity?: AnomalySeverity
-  /** Номер страницы (min: 1) */
+  /** Page number (min: 1) */
   page?: number
-  /** Элементов на странице (1-100) */
+  /** Items per page (1-100) */
   per_page?: number
 }
 
 // -------------------- WEBSOCKET MESSAGES --------------------
 
 /**
- * WebSocket событие: новое показание датчика
+ * WebSocket event: new sensor reading
  */
 export interface WSNewSensorReading {
   type: 'sensor_reading'
@@ -425,7 +426,7 @@ export interface WSNewSensorReading {
 }
 
 /**
- * WebSocket событие: новая аномалия
+ * WebSocket event: new anomaly detected
  */
 export interface WSNewAnomaly {
   type: 'anomaly_detected'
@@ -433,7 +434,7 @@ export interface WSNewAnomaly {
 }
 
 /**
- * WebSocket событие: обновление статуса системы
+ * WebSocket event: system status update
  */
 export interface WSSystemStatusUpdate {
   type: 'system_status_update'
@@ -441,7 +442,7 @@ export interface WSSystemStatusUpdate {
 }
 
 /**
- * Все возможные типы WebSocket сообщений
+ * All possible WebSocket message types
  */
 export type WSMessage =
   | WSNewSensorReading
@@ -460,7 +461,7 @@ export interface ApiRequestOptions {
 }
 
 /**
- * Тип для pending/loading состояний
+ * Async state for pending/loading operations
  */
 export interface AsyncState<T> {
   data: T | null
@@ -471,14 +472,14 @@ export interface AsyncState<T> {
 // -------------------- HELPER FUNCTIONS --------------------
 
 /**
- * Helper: Check if response is error
+ * Check if response is error
  */
 export function isErrorResponse(response: any): response is ErrorResponse {
   return response && typeof response === 'object' && 'error' in response
 }
 
 /**
- * Helper: Extract error message
+ * Extract error message from various error types
  */
 export function getErrorMessage(error: ErrorResponse | Error | unknown): string {
   if (error instanceof Error) {
@@ -491,14 +492,14 @@ export function getErrorMessage(error: ErrorResponse | Error | unknown): string 
 }
 
 /**
- * Helper: Format anomaly score для UI
+ * Format anomaly score for UI display
  */
 export function formatAnomalyScore(score: number): string {
   return `${(score * 100).toFixed(1)}%`
 }
 
 /**
- * Helper: Get severity color (Tailwind classes)
+ * Get Tailwind severity color classes
  */
 export function getSeverityColor(severity: AnomalySeverity): string {
   const colors: Record<AnomalySeverity, string> = {
@@ -510,7 +511,7 @@ export function getSeverityColor(severity: AnomalySeverity): string {
 }
 
 /**
- * Helper: Get component status color
+ * Get component status color classes
  */
 export function getComponentStatusColor(status: ComponentStatus): string {
   const colors: Record<ComponentStatus, string> = {
@@ -522,7 +523,7 @@ export function getComponentStatusColor(status: ComponentStatus): string {
 }
 
 /**
- * Helper: Get severity badge icon
+ * Get severity icon name
  */
 export function getSeverityIcon(severity: AnomalySeverity): string {
   const icons: Record<AnomalySeverity, string> = {
@@ -536,7 +537,7 @@ export function getSeverityIcon(severity: AnomalySeverity): string {
 // -------------------- TYPE GUARDS --------------------
 
 /**
- * Type guard: Check if SensorReading is valid
+ * Type guard: Validate sensor reading
  */
 export function isValidSensorReading(data: any): data is SensorReading {
   return (
@@ -550,7 +551,7 @@ export function isValidSensorReading(data: any): data is SensorReading {
 }
 
 /**
- * Type guard: Check if MLPredictionResponse is valid
+ * Type guard: Validate ML prediction
  */
 export function isValidMLPrediction(data: any): data is MLPredictionResponse {
   return (
@@ -564,7 +565,7 @@ export function isValidMLPrediction(data: any): data is MLPredictionResponse {
 }
 
 /**
- * Type guard: Check if WebSocket message is valid
+ * Type guard: Validate WebSocket message
  */
 export function isValidWSMessage(data: any): data is WSMessage {
   return (

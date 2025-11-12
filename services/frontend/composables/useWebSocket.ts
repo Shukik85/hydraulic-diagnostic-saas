@@ -1,16 +1,26 @@
 /**
- * useWebSocket.ts — реактивный WebSocket composable
- * Поддержка real-time sensor data, anomaly alerts, system status updates
- * Типизировано по OpenAPI v3.1 спецификации
+ * useWebSocket - Reactive WebSocket composable
+ * 
+ * Features:
+ * - Real-time sensor data streaming
+ * - Anomaly alerts
+ * - System status updates
+ * - Auto-reconnection
+ * - Type-safe message handling
+ * 
+ * @example
+ * const ws = useWebSocket()
+ * ws.connect()
+ * ws.onAnomalyDetected((data) => console.log(data))
  */
 import { ref, onUnmounted, computed } from 'vue'
 import type {
   WSMessage,
   WSNewSensorReading,
   WSNewAnomaly,
-  WSSystemStatusUpdate,
-  isValidWSMessage
+  WSSystemStatusUpdate
 } from '../types/api'
+import { isValidWSMessage } from '../types/api'
 
 /**
  * WebSocket connection states
@@ -45,7 +55,7 @@ const DEFAULT_OPTIONS: Required<UseWebSocketOptions> = {
 }
 
 /**
- * WebSocket composable для real-time коммуникации
+ * WebSocket composable for real-time communication
  */
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options }
@@ -70,6 +80,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     console.error('[WebSocket ERROR]', ...args)
   }
   
+  /**
+   * Connect to WebSocket server
+   */
   function connect() {
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       log('Already connected')
@@ -96,6 +109,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   }
   
+  /**
+   * Disconnect from WebSocket server
+   */
   function disconnect() {
     log('Disconnecting...')
     
@@ -118,6 +134,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     reconnectAttempts = 0
   }
   
+  /**
+   * Schedule reconnection attempt
+   */
   function scheduleReconnect() {
     if (!opts.autoReconnect) return
     
@@ -133,6 +152,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     reconnectTimer = setTimeout(() => connect(), opts.reconnectDelay)
   }
   
+  /**
+   * Handle WebSocket open event
+   */
   function handleOpen() {
     log('Connected')
     connectionState.value = WSConnectionState.Connected
@@ -141,6 +163,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     startHeartbeat()
   }
   
+  /**
+   * Handle incoming WebSocket message
+   */
   function handleMessage(event: MessageEvent) {
     try {
       const message = JSON.parse(event.data) as WSMessage
@@ -156,7 +181,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       const handlers = messageHandlers.get(message.type)
       if (handlers) {
         handlers.forEach(h => {
-          try { h(message.data) } catch (e) { logError('Handler error:', e) }
+          try {
+            h(message.data)
+          } catch (e) {
+            logError('Handler error:', e)
+          }
         })
       }
     } catch (error) {
@@ -164,12 +193,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   }
   
+  /**
+   * Handle WebSocket error
+   */
   function handleError(event: Event) {
     logError('Error:', event)
     lastError.value = event
     connectionState.value = WSConnectionState.Error
   }
   
+  /**
+   * Handle WebSocket close
+   */
   function handleClose(event: CloseEvent) {
     log('Closed:', event.code)
     
@@ -185,6 +220,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   }
   
+  /**
+   * Start heartbeat timer
+   */
   function startHeartbeat() {
     if (heartbeatTimer) clearInterval(heartbeatTimer)
     
@@ -199,6 +237,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }, opts.heartbeatInterval)
   }
   
+  /**
+   * Subscribe to specific message type
+   */
   function on<T extends WSMessage['type']>(
     type: T,
     handler: (data: Extract<WSMessage, { type: T }>['data']) => void
@@ -210,9 +251,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     const handlers = messageHandlers.get(type)!
     handlers.add(handler)
     
+    // Return unsubscribe function
     return () => handlers.delete(handler)
   }
   
+  /**
+   * Send message to server
+   */
   function send(data: any): boolean {
     if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
       logError('Cannot send: not connected')
@@ -229,38 +274,56 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   }
   
+  /**
+   * Subscribe to sensor readings
+   */
   function onSensorReading(handler: (data: WSNewSensorReading['data']) => void) {
     return on('sensor_reading', handler)
   }
   
+  /**
+   * Subscribe to anomaly alerts
+   */
   function onAnomalyDetected(handler: (data: WSNewAnomaly['data']) => void) {
     return on('anomaly_detected', handler)
   }
   
+  /**
+   * Subscribe to system status updates
+   */
   function onSystemStatusUpdate(handler: (data: WSSystemStatusUpdate['data']) => void) {
     return on('system_status_update', handler)
   }
   
+  // Cleanup on unmount
   onUnmounted(() => {
     log('Cleanup')
     disconnect()
   })
   
   return {
+    // State
     connectionState,
     isConnected,
     lastMessage,
     lastError,
+    
+    // Methods
     connect,
     disconnect,
     send,
     on,
+    
+    // Convenience methods
     onSensorReading,
     onAnomalyDetected,
     onSystemStatusUpdate
   }
 }
 
+/**
+ * Get Tailwind color classes for connection state
+ */
 export function getConnectionStateColor(state: WSConnectionState): string {
   const colors: Record<WSConnectionState, string> = {
     [WSConnectionState.Disconnected]: 'text-gray-500 bg-gray-100',
@@ -272,6 +335,9 @@ export function getConnectionStateColor(state: WSConnectionState): string {
   return colors[state] || 'text-gray-500 bg-gray-100'
 }
 
+/**
+ * Get icon name for connection state
+ */
 export function getConnectionStateIcon(state: WSConnectionState): string {
   const icons: Record<WSConnectionState, string> = {
     [WSConnectionState.Disconnected]: 'heroicons:x-circle',
