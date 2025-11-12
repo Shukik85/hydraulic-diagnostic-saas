@@ -111,7 +111,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <nav class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 shadow-lg">
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-lg">
     <div class="container mx-auto flex items-center justify-between h-16 px-4">
       <!-- Logo Section -->
       <slot name="logo">
@@ -122,11 +122,11 @@ onMounted(() => {
           </div>
           <div>
             <span
-              class="text-lg font-bold text-gray-900 group-hover:text-blue-700 transition-colors duration-200 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)] select-none">
+              class="text-lg font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors duration-200 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)] select-none">
               {{ t('app.name', 'Гидравлика ИИ') }}
             </span>
             <span
-              class="block text-xs leading-tight text-gray-600 tracking-wide group-hover:text-blue-600 transition-colors drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]">
+              class="block text-xs leading-tight text-gray-600 dark:text-gray-400 tracking-wide group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors drop-shadow-[0_1px_1px_rgba(0,0,0,0.15)]">
               {{ t('app.subtitle', 'Диагностическая платформа') }}
             </span>
           </div>
@@ -140,7 +140,7 @@ onMounted(() => {
             'flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 hover:underline',
             route.path === item.to
               ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white shadow-md font-semibold'
-              : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50',
+              : 'text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800',
           ]">
             <Icon v-if="item.icon" :name="item.icon" class="w-4 h-4" />
             <span>{{ t(`nav.${item.label}`) }}</span>
@@ -150,30 +150,32 @@ onMounted(() => {
       </ul>
 
       <!-- Desktop Actions -->
-      <div class="hidden lg:flex items-center space-x-3">
+      <div class="hidden lg:flex items-center space-x-2">
         <!-- Help (Chat) - заменяет поиск -->
         <NuxtLink to="/chat"
-          class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           :title="t('ui.help')">
           <Icon name="heroicons:question-mark-circle" class="w-5 h-5" />
         </NuxtLink>
 
         <!-- Notifications -->
         <button v-if="props.showNotifications" @click="openNotifications"
-          class="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          class="relative p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           :title="t('nav.notifications', 'Уведомления')">
           <Icon name="heroicons:bell" class="w-5 h-5" />
           <span v-if="props.notificationsCount > 0"
             class="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center animate-pulse">
-            <span class="text-xs font-bold text-white">{{
-              props.notificationsCount > 99 ? '99+' : props.notificationsCount
+            <span class="text-xs font-bold text-white">{{n              props.notificationsCount > 99 ? '99+' : props.notificationsCount
             }}</span>
           </span>
         </button>
 
+        <!-- Language Switcher -->
+        <LanguageSwitcher />
+
         <!-- Theme Toggle -->
         <button @click="toggleTheme"
-          class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          class="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           :title="t('ui.toggleTheme', 'Переключить тему')">
           <Icon :name="colorMode?.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-5 h-5" />
         </button>
@@ -181,7 +183,7 @@ onMounted(() => {
         <!-- User Profile -->
         <div v-if="props.showProfile" class="relative profile-menu">
           <button @click="toggleProfileMenu"
-            class="flex items-center space-x-2 p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+            class="flex items-center space-x-2 p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
             <div
               class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md">
               {{ userInitials }}
@@ -192,35 +194,35 @@ onMounted(() => {
 
           <!-- Profile Dropdown -->
           <div v-if="isProfileMenuOpen"
-            class="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
-            <div class="px-4 py-3 border-b border-gray-100">
+            class="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50">
+            <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
               <div class="flex items-center space-x-3">
                 <div
                   class="w-12 h-12 bg-linear-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
                   {{ userInitials }}
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-semibold text-gray-900 truncate">
+                  <p class="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {{ userName }}
                   </p>
-                  <p class="text-xs text-gray-600 truncate">{{ userEmail }}</p>
+                  <p class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ userEmail }}</p>
                 </div>
               </div>
             </div>
 
             <div class="py-1">
               <NuxtLink to="/profile"
-                class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <Icon name="heroicons:user" class="w-4 h-4 mr-3" />
                 {{ t('ui.profile') }}
               </NuxtLink>
               <NuxtLink to="/settings"
-                class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                class="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                 <Icon name="heroicons:cog-6-tooth" class="w-4 h-4 mr-3" />
                 {{ t('ui.settings') }}
               </NuxtLink>
               <button @click="handleLogout"
-                class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                class="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                 <Icon name="heroicons:arrow-right-on-rectangle" class="w-4 h-4 mr-3" />
                 {{ t('ui.logout') }}
               </button>
@@ -239,20 +241,20 @@ onMounted(() => {
 
       <!-- Mobile Menu Button -->
       <button @click="isMobileMenuOpen = !isMobileMenuOpen"
-        class="lg:hidden p-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors">
+        class="lg:hidden p-2 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
         <Icon :name="isMobileMenuOpen ? 'heroicons:x-mark' : 'heroicons:bars-3'" class="w-6 h-6" />
       </button>
     </div>
 
     <!-- Mobile Menu -->
-    <div v-if="isMobileMenuOpen" class="lg:hidden bg-white border-t border-gray-200 shadow-lg">
+    <div v-if="isMobileMenuOpen" class="lg:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-lg">
       <div class="px-4 py-4 space-y-1">
         <NuxtLink v-for="item in props.items" :key="item.to" :to="item.to" :target="item.external ? '_blank' : '_self'"
           :class="[
             'flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors text-base font-medium',
             route.path === item.to
               ? 'bg-linear-to-r from-blue-600 to-blue-700 text-white shadow-md'
-              : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50',
+              : 'text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800',
           ]">
           <Icon v-if="item.icon" :name="item.icon" class="w-5 h-5" />
           <span>{{ t(`nav.${item.label}`) }}</span>
@@ -261,27 +263,29 @@ onMounted(() => {
 
         <!-- Help (Chat) в мобильном меню -->
         <NuxtLink to="/chat"
-          class="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors text-base font-medium text-gray-700 hover:text-blue-700 hover:bg-blue-50">
+          class="flex items-center space-x-3 px-3 py-3 rounded-lg transition-colors text-base font-medium text-gray-700 dark:text-gray-300 hover:text-blue-700 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800">
           <Icon name="heroicons:question-mark-circle" class="w-5 h-5" />
           <span>{{ t('ui.help') }}</span>
         </NuxtLink>
 
-        <div class="border-t border-gray-200 pt-4 mt-4">
-          <div class="flex items-center justify-between">
+        <div class="border-t border-gray-200 dark:border-gray-800 pt-4 mt-4">
+          <div class="flex items-center justify-between gap-2">
+            <!-- Language Switcher Mobile -->
+            <LanguageSwitcher />
+            
             <button @click="toggleTheme"
-              class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors">
+              class="flex items-center space-x-2 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <Icon :name="colorMode?.preference === 'dark' ? 'heroicons:sun' : 'heroicons:moon'" class="w-4 h-4" />
-              <span class="text-sm">{{
-                colorMode?.preference === 'dark' ? t('ui.lightTheme', 'Светлая') : t('ui.darkTheme', 'Тёмная')
+              <span class="text-sm">{{n                colorMode?.preference === 'dark' ? t('ui.lightTheme', 'Светлая') : t('ui.darkTheme', 'Тёмная')
               }}</span>
             </button>
+            
             <button v-if="props.showNotifications" @click="openNotifications"
-              class="relative p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors">
+              class="relative p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <Icon name="heroicons:bell" class="w-5 h-5" />
               <span v-if="props.notificationsCount > 0"
                 class="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 flex items-center justify-center animate-pulse">
-                <span class="text-xs font-bold text-white">{{
-                  props.notificationsCount > 99 ? '99+' : props.notificationsCount
+                <span class="text-xs font-bold text-white">{{                  props.notificationsCount > 99 ? '99+' : props.notificationsCount
                 }}</span>
               </span>
             </button>
