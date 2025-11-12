@@ -1,13 +1,13 @@
-# PyTorch 2.3.1 with CUDA 12.4 (compatible with GTX 1650 SUPER + Driver 577/CUDA 12.9)
+# PyTorch 2.5.1 with CUDA 12.4 (compatible with GTX 1650 SUPER + Driver 577/CUDA 12.9)
 --index-url https://download.pytorch.org/whl/cu124
 
-# PyTorch Core
-torch==2.3.1
-torchvision==0.18.1
-torchaudio==2.3.1
+# PyTorch Core (LATEST STABLE for CUDA 12.4)
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
 
-# PyTorch Geometric (compatible with PyTorch 2.3)
-torch-geometric==2.5.0
+# PyTorch Geometric (compatible with PyTorch 2.5)
+torch-geometric==2.6.1
 torch-scatter==2.1.2
 torch-sparse==0.6.18
 torch-cluster==1.6.3
