@@ -1,13 +1,13 @@
 /**
  * useApi - Enterprise API client for Hydraulic Diagnostic Platform
- * 
+ *
  * Features:
  * - Automatic retry with exponential backoff
  * - Request deduplication
  * - Centralized error handling
  * - Token refresh logic
  * - Auth methods integrated
- * 
+ *
  * @example
  * const api = useApi()
  * const result = await api.get('/systems')
@@ -19,6 +19,7 @@ import type { User, LoginCredentials, RegisterData } from '~/types/api'
 
 export interface ApiRequestOptions {
   headers?: Record<string, string>
+  params?: Record<string, any>
   signal?: AbortSignal
   retry?: boolean
   retryAttempts?: number
@@ -56,15 +57,15 @@ const BASE_RETRY_DELAY = 1000 // ms
 export function useApi() {
   const config = useRuntimeConfig()
   const API_URL = config.public.apiBase
-  
+
   // Token management
   const token = useCookie<string | null>('auth_token', {
     maxAge: 60 * 60 * 24 * 7, // 7 days
     sameSite: 'lax'
   })
-  
+
   const isAuthenticated = computed(() => !!token.value)
-  
+
   /**
    * Generate cache key for request deduplication
    */
@@ -72,7 +73,7 @@ export function useApi() {
     const bodyStr = body ? JSON.stringify(body) : ''
     return `${method}:${url}:${bodyStr}`
   }
-  
+
   /**
    * Calculate exponential backoff delay
    */
@@ -80,14 +81,14 @@ export function useApi() {
     const jitter = Math.random() * 0.3 * baseDelay
     return Math.min(baseDelay * Math.pow(2, attempt) + jitter, 30000) // Max 30s
   }
-  
+
   /**
    * Sleep utility for retry delays
    */
   function sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
   }
-  
+
   /**
    * Check if error is retryable
    */
@@ -96,7 +97,7 @@ export function useApi() {
     if (error?.code === 'NETWORK_ERROR' || error?.code === 'ECONNABORTED') return true
     return false
   }
-  
+
   /**
    * Parse response headers to object
    */
@@ -107,7 +108,28 @@ export function useApi() {
     })
     return result
   }
-  
+
+  /**
+   * Build URL with query params
+   */
+  function buildUrl(endpoint: string, params?: Record<string, any>): string {
+    const url = endpoint.startsWith('http') ? endpoint : API_URL + endpoint
+
+    if (!params || Object.keys(params).length === 0) {
+      return url
+    }
+
+    const searchParams = new URLSearchParams()
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value))
+      }
+    })
+
+    const queryString = searchParams.toString()
+    return queryString ? `${url}?${queryString}` : url
+  }
+
   /**
    * Core request function with retry logic
    */
@@ -121,6 +143,7 @@ export function useApi() {
     const {
       method = 'GET',
       body,
+      params,
       headers: customHeaders = {},
       signal,
       retry = true,
@@ -128,9 +151,9 @@ export function useApi() {
       retryDelay = BASE_RETRY_DELAY,
       silent = false
     } = options
-    
-    const url = endpoint.startsWith('http') ? endpoint : API_URL + endpoint
-    
+
+    const url = buildUrl(endpoint, params)
+
     // Request deduplication for GET requests
     if (method === 'GET') {
       const cacheKey = getCacheKey(method, url)
@@ -139,16 +162,16 @@ export function useApi() {
         return pending
       }
     }
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...customHeaders
     }
-    
+
     if (token.value) {
       headers['Authorization'] = `Bearer ${token.value}`
     }
-    
+
     const requestPromise = executeRequest<T>(
       url,
       method,
@@ -158,17 +181,17 @@ export function useApi() {
       retry ? retryAttempts : 0,
       retryDelay
     )
-    
+
     // Cache GET requests
     if (method === 'GET') {
       const cacheKey = getCacheKey(method, url)
       pendingRequests.set(cacheKey, requestPromise)
       requestPromise.finally(() => pendingRequests.delete(cacheKey))
     }
-    
+
     return requestPromise
   }
-  
+
   /**
    * Execute request with retry logic
    */
@@ -188,10 +211,10 @@ export function useApi() {
         body: body ? JSON.stringify(body) : undefined,
         signal
       }
-      
+
       const response = await fetch(url, init)
       const contentType = response.headers.get('content-type')
-      
+
       let data: any
       if (contentType?.includes('application/json')) {
         const text = await response.text()
@@ -199,7 +222,7 @@ export function useApi() {
       } else {
         data = await response.text()
       }
-      
+
       // Success response
       if (response.ok) {
         return {
@@ -208,7 +231,7 @@ export function useApi() {
           headers: parseHeaders(response.headers)
         }
       }
-      
+
       // Check if we should retry
       if (retriesLeft > 0 && isRetryableError(response.status)) {
         const delay = getRetryDelay(MAX_RETRY_ATTEMPTS - retriesLeft, retryDelay)
@@ -216,7 +239,7 @@ export function useApi() {
         await sleep(delay)
         return executeRequest<T>(url, method, headers, body, signal, retriesLeft - 1, retryDelay)
       }
-      
+
       // Error response
       const error: ApiErrorResponse = {
         error: {
@@ -228,7 +251,7 @@ export function useApi() {
         },
         status: response.status
       }
-      
+
       // Handle 401 - clear token and redirect
       if (response.status === 401) {
         token.value = null
@@ -236,9 +259,9 @@ export function useApi() {
           window.location.href = '/auth/login'
         }
       }
-      
+
       return error
-      
+
     } catch (error: any) {
       // Network error or abort
       if (error.name === 'AbortError') {
@@ -250,7 +273,7 @@ export function useApi() {
           status: 0
         }
       }
-      
+
       // Retry on network errors
       if (retriesLeft > 0) {
         const delay = getRetryDelay(MAX_RETRY_ATTEMPTS - retriesLeft, retryDelay)
@@ -258,7 +281,7 @@ export function useApi() {
         await sleep(delay)
         return executeRequest<T>(url, method, headers, body, signal, retriesLeft - 1, retryDelay)
       }
-      
+
       return {
         error: {
           message: error.message || 'Network error',
@@ -269,31 +292,31 @@ export function useApi() {
       }
     }
   }
-  
+
   // ==================== HTTP METHOD SHORTCUTS ====================
-  
+
   async function get<T = unknown>(endpoint: string, options?: ApiRequestOptions) {
     return request<T>(endpoint, { ...options, method: 'GET' })
   }
-  
+
   async function post<T = unknown>(endpoint: string, body?: any, options?: ApiRequestOptions) {
     return request<T>(endpoint, { ...options, method: 'POST', body })
   }
-  
+
   async function put<T = unknown>(endpoint: string, body?: any, options?: ApiRequestOptions) {
     return request<T>(endpoint, { ...options, method: 'PUT', body })
   }
-  
+
   async function patch<T = unknown>(endpoint: string, body?: any, options?: ApiRequestOptions) {
     return request<T>(endpoint, { ...options, method: 'PATCH', body })
   }
-  
+
   async function del<T = unknown>(endpoint: string, options?: ApiRequestOptions) {
     return request<T>(endpoint, { ...options, method: 'DELETE' })
   }
-  
+
   // ==================== AUTH METHODS ====================
-  
+
   /**
    * Login user
    */
@@ -302,15 +325,15 @@ export function useApi() {
       '/auth/login',
       credentials
     )
-    
+
     if (isApiSuccess(response)) {
       token.value = response.data.access
       return response.data.user
     }
-    
+
     throw new Error(response.error.message)
   }
-  
+
   /**
    * Register new user
    */
@@ -319,15 +342,15 @@ export function useApi() {
       '/auth/register',
       userData
     )
-    
+
     if (isApiSuccess(response)) {
       token.value = response.data.access
       return response.data.user
     }
-    
+
     throw new Error(response.error.message)
   }
-  
+
   /**
    * Logout user
    */
@@ -338,49 +361,49 @@ export function useApi() {
       token.value = null
     }
   }
-  
+
   /**
    * Get current user
    */
   async function getCurrentUser(): Promise<User> {
     const response = await get<User>('/auth/me')
-    
+
     if (isApiSuccess(response)) {
       return response.data
     }
-    
+
     throw new Error(response.error.message)
   }
-  
+
   /**
    * Update user profile
    */
   async function updateUser(userData: Partial<User>): Promise<User> {
     const response = await patch<User>('/auth/me', userData)
-    
+
     if (isApiSuccess(response)) {
       return response.data
     }
-    
+
     throw new Error(response.error.message)
   }
-  
+
   // ==================== TOKEN MANAGEMENT ====================
-  
+
   /**
    * Set authentication token
    */
   function setToken(newToken: string | null) {
     token.value = newToken
   }
-  
+
   /**
    * Clear authentication token
    */
   function clearToken() {
     token.value = null
   }
-  
+
   return {
     // Core methods
     request,
@@ -389,14 +412,14 @@ export function useApi() {
     put,
     patch,
     delete: del,
-    
+
     // Auth methods
     login,
     register,
     logout,
     getCurrentUser,
     updateUser,
-    
+
     // Token management
     token: readonly(token),
     isAuthenticated,
