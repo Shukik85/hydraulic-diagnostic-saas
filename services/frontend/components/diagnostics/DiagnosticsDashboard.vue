@@ -8,6 +8,8 @@
   - Anomaly detection results
   - Recommendations panel
   - Export to CSV/PDF
+  
+  MIGRATED: BaseCard → UCard, BaseButton → UButton, StatusBadge → UBadge
 -->
 <template>
   <div class="diagnostics-dashboard space-y-6">
@@ -37,6 +39,7 @@
         <UDropdown :items="exportItems">
           <UButton
             icon="i-heroicons-arrow-down-tray"
+            color="gray"
             variant="outline"
           >
             Export
@@ -54,9 +57,9 @@
     />
     
     <!-- GNN Results -->
-    <div v-if="gnnResults" class="grid grid-cols-3 gap-6">
+    <div v-if="gnnResults" class="grid grid-cols-1 sm:grid-cols-3 gap-6">
       <!-- Overall Health Score -->
-      <BaseCard>
+      <UCard class="p-6">
         <div class="text-center">
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
             System Health Score
@@ -64,14 +67,14 @@
           <div class="text-4xl font-bold" :class="getHealthScoreColor(gnnResults.health_score)">
             {{ (gnnResults.health_score * 100).toFixed(1) }}%
           </div>
-          <p class="text-xs text-gray-500 mt-2">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
             Last updated: {{ formatTime(gnnResults.timestamp) }}
           </p>
         </div>
-      </BaseCard>
+      </UCard>
       
       <!-- Detected Anomalies -->
-      <BaseCard>
+      <UCard class="p-6">
         <div class="text-center">
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
             Detected Anomalies
@@ -79,14 +82,14 @@
           <div class="text-4xl font-bold text-red-600 dark:text-red-400">
             {{ gnnResults.anomalies?.length || 0 }}
           </div>
-          <p class="text-xs text-gray-500 mt-2">
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
             {{ criticalCount }} critical, {{ warningCount }} warning
           </p>
         </div>
-      </BaseCard>
+      </UCard>
       
       <!-- Prediction Confidence -->
-      <BaseCard>
+      <UCard class="p-6">
         <div class="text-center">
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">
             Prediction Confidence
@@ -96,29 +99,35 @@
           </div>
           <UProgress
             :value="gnnResults.confidence * 100"
+            color="blue"
             class="mt-3"
           />
         </div>
-      </BaseCard>
+      </UCard>
     </div>
     
     <!-- Component Anomaly Scores -->
-    <BaseCard v-if="gnnResults?.component_scores">
-      <h3 class="text-lg font-semibold mb-4">
+    <UCard v-if="gnnResults?.component_scores" class="p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
         Component Anomaly Scores
       </h3>
       
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
           v-for="(score, componentId) in gnnResults.component_scores"
           :key="componentId"
-          class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+          class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
         >
           <div class="flex items-center justify-between mb-2">
             <p class="text-sm font-medium text-gray-900 dark:text-gray-100">
               {{ getComponentName(componentId) }}
             </p>
-            <StatusBadge :status="getStatusFromScore(score)" />
+            <UBadge
+              :color="getStatusColor(getStatusFromScore(score))"
+              variant="soft"
+            >
+              {{ getStatusLabel(getStatusFromScore(score)) }}
+            </UBadge>
           </div>
           
           <div class="flex items-center gap-2">
@@ -134,11 +143,11 @@
           </div>
         </div>
       </div>
-    </BaseCard>
+    </UCard>
     
     <!-- Recommendations -->
-    <BaseCard v-if="gnnResults?.recommendations">
-      <h3 class="text-lg font-semibold mb-4">
+    <UCard v-if="gnnResults?.recommendations" class="p-6">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
         Recommendations
       </h3>
       
@@ -163,7 +172,7 @@
           </template>
         </UAlert>
       </div>
-    </BaseCard>
+    </UCard>
     
     <!-- Sensor Charts Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -328,6 +337,24 @@ function getStatusFromScore(score: number): string {
   return 'critical'
 }
 
+function getStatusColor(status: string): string {
+  const colors: Record<string, string> = {
+    operational: 'green',
+    warning: 'yellow',
+    critical: 'red'
+  }
+  return colors[status] || 'gray'
+}
+
+function getStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    operational: 'Normal',
+    warning: 'Warning',
+    critical: 'Critical'
+  }
+  return labels[status] || 'Unknown'
+}
+
 function getScoreColor(score: number): string {
   if (score < 0.3) return 'text-green-600 dark:text-green-400'
   if (score < 0.7) return 'text-yellow-600 dark:text-yellow-400'
@@ -368,5 +395,10 @@ function onComponentSelect(component: ComponentMetadata) {
 
 function onAnomalyClick(data: any) {
   console.log('Anomaly clicked:', data)
+  toast.add({
+    title: 'Anomaly Detected',
+    description: `Anomaly at ${formatTime(data[0])} with value ${data[1].toFixed(2)}`,
+    color: 'red'
+  })
 }
 </script>
