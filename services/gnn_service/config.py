@@ -1,47 +1,40 @@
-"""
-Configuration for GTX 1650 SUPER (4GB VRAM)
-Optimized for production use
-"""
-import torch
+import os
+from dotenv import load_dotenv
 
-# Model Configuration (reduced for 4GB VRAM)
-MODEL_CONFIG = {
-    "in_channels": 10,
-    "hidden_channels": 32,  # Reduced from 64
-    "out_channels": 1,
-    "num_layers": 2,  # Reduced from 3
-    "heads": 4,  # Reduced from 8
-    "dropout": 0.1,
-}
+load_dotenv()
 
-# Inference Configuration
-INFERENCE_CONFIG = {
-    "use_mixed_precision": True,  # FP16 saves 50% memory
-    "compile_model": True,  # torch.compile optimization
-    "max_batch_size": 5,  # Limited by 4GB VRAM
-}
+# Device
+DEVICE = os.getenv("DEVICE", "cuda")
 
-# GPU Configuration
-GPU_CONFIG = {
-    "device": "cuda" if torch.cuda.is_available() else "cpu",
-    "cuda_memory_fraction": 0.85,  # Use max 85% (3.4GB)
-    "enable_cudnn_benchmark": True,
-    "torch_compile_mode": "reduce-overhead",
-}
+# Model
+HIDDEN_DIM = int(os.getenv("HIDDEN_DIM", "96"))
+NUM_GAT_LAYERS = int(os.getenv("NUM_GAT_LAYERS", "3"))
+NUM_HEADS = int(os.getenv("NUM_HEADS", "4"))
+LSTM_LAYERS = int(os.getenv("LSTM_LAYERS", "2"))
+DROPOUT = float(os.getenv("DROPOUT", "0.12"))
 
-# Memory Management
-MEMORY_CONFIG = {
-    "clear_cache_after_inference": True,
-    "max_cached_graphs": 10,
-}
+# Temporal
+TIME_WINDOW_MINUTES = int(os.getenv("TIME_WINDOW_MINUTES", "60"))
+TIMESTEP_MINUTES = int(os.getenv("TIMESTEP_MINUTES", "5"))
+NUM_TIMESTEPS = TIME_WINDOW_MINUTES // TIMESTEP_MINUTES
 
-def apply_gpu_config():
-    """Apply GPU optimization settings"""
-    if torch.cuda.is_available():
-        torch.cuda.set_per_process_memory_fraction(
-            GPU_CONFIG["cuda_memory_fraction"],
-            device=0
-        )
-        torch.backends.cudnn.benchmark = GPU_CONFIG["enable_cudnn_benchmark"]
-        print(f"✅ GPU configured for GTX 1650 SUPER")
-        print(f"   Max VRAM: {GPU_CONFIG['cuda_memory_fraction'] * 4:.1f} GB")
+# Thresholds
+HEALTH_CRITICAL = float(os.getenv("HEALTH_CRITICAL", "0.3"))
+HEALTH_WARNING = float(os.getenv("HEALTH_WARNING", "0.6"))
+
+# Database
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = int(os.getenv("DB_PORT", "5432"))
+DB_NAME = os.getenv("DB_NAME", "hydraulic_db")
+DB_USER = os.getenv("DB_USER", "user")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+
+# API
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8001"))
+
+# LLM/RAG
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
+LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.3"))
