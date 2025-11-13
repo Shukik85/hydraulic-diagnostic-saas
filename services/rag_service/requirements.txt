@@ -1,5 +1,39 @@
-# Full RAG Service Python dependencies
-fastapi
-uvicorn[standard]
-prometheus-client
-pydantic
+# services/rag_service/requirements.txt
+# Production dependencies для RAG Service
+
+# Core
+fastapi>=0.108.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.3
+python-dotenv>=1.0.0
+
+# LLM Inference
+vllm>=0.6.0
+torch>=2.1.2
+transformers>=4.36.0
+accelerate>=0.25.0
+bitsandbytes>=0.41.3
+
+# RAG Components
+chromadb>=0.4.22
+llama-index>=0.9.48
+sentence-transformers>=2.2.2
+langchain>=0.1.0
+
+# gRPC
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+protobuf>=4.25.0
+
+# Database
+asyncpg>=0.29.0
+
+# Monitoring
+prometheus-client>=0.19.0
+structlog>=24.1.0
+
+# Utils
+tqdm>=4.66.0
+aiofiles>=23.2.1
+tenacity>=8.2.3
+numpy>=1.24.0
