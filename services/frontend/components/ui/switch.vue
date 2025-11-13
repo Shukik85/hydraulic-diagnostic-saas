@@ -2,8 +2,9 @@
   <label
     :class="
       cn(
-        'relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full border border-transparent bg-gray-200 transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
-        modelValue && 'bg-primary',
+        'relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full border transition-colors',
+        'focus-within:ring-2 focus-within:ring-primary-500/30',
+        modelValue ? 'bg-gradient-to-r from-primary-600 to-primary-500 border-primary-500' : 'bg-steel-dark border-steel-medium',
         disabled && 'cursor-not-allowed opacity-50',
         className
       )
@@ -19,8 +20,9 @@
     <span
       :class="
         cn(
-          'inline-block h-5 w-5 transform rounded-full bg-white transition-transform',
-          modelValue ? 'translate-x-6' : 'translate-x-1'
+          'inline-block h-5 w-5 transform rounded-full transition-all duration-200',
+          'shadow-md',
+          modelValue ? 'translate-x-6 bg-white' : 'translate-x-0.5 bg-steel-shine'
         )
       "
     />
