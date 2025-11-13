@@ -1,175 +1,356 @@
-<template>
-  <div class="space-y-8">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="u-h2">{{ t('systems.title') }}</h1>
-        <p class="u-body text-gray-600 mt-1">{{ t('systems.subtitle') }}</p>
-      </div>
-      <button @click="showCreateModal = true" class="u-btn u-btn-primary u-btn-md w-full sm:w-auto">
-        <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
-        {{ t('systems.addNew') }}
-      </button>
-    </div>
-
-    <div v-if="systems.length > 0" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <div v-for="system in systems" :key="system.id" class="u-card p-6 hover:shadow-lg transition-shadow">
-        <div class="flex items-start justify-between mb-4">
-          <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-gray-900 truncate">{{ system.name }}</h3>
-            <p class="text-sm text-gray-500">{{ system.type }}</p>
-          </div>
-          <span class="u-badge" :class="getSystemStatusClass(system.status)">
-            {{ t(`systems.status.${system.status}`) }}
-          </span>
-        </div>
-
-        <div class="space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">{{ t('systems.pressure') }}</span>
-            <span class="font-semibold">{{ system.pressure }} бар</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">{{ t('systems.temperature') }}</span>
-            <span class="font-semibold">{{ system.temperature }}°C</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">{{ t('systems.updated') }}</span>
-            <span class="text-sm text-gray-500">{{ formatDate(system.last_update) }}</span>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 mt-4">
-          <NuxtLink :to="`/systems/${system.id}`" class="u-btn u-btn-primary u-btn-sm flex-1">
-            <Icon name="heroicons:eye" class="w-4 h-4 mr-1" />
-            {{ t('ui.view') }}
-          </NuxtLink>
-          <button class="u-btn u-btn-ghost u-btn-sm flex-1">
-            <Icon name="heroicons:cog-6-tooth" class="w-4 h-4 mr-1" />
-            {{ t('ui.settings') }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div v-else class="u-card p-12 text-center">
-      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Icon name="heroicons:server-stack" class="w-8 h-8 text-gray-400" />
-      </div>
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ t('systems.noSystems') }}</h3>
-      <p class="text-gray-600 mb-6">{{ t('systems.noSystemsDesc') }}</p>
-      <button @click="showCreateModal = true" class="u-btn u-btn-primary">
-        <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
-        {{ t('systems.addNew') }}
-      </button>
-    </div>
-
-    <UCreateSystemModal
-      v-model="showCreateModal"
-      :loading="isCreating"
-      @submit="handleCreateSystem"
-      @cancel="showCreateModal = false"
-    />
-  </div>
-</template>
-
 <script setup lang="ts">
-import { definePageMeta } from '#imports'
-import type { HydraulicSystem } from '~/types/api'
+/**
+ * Systems List Page - Type-safe with Generated API
+ * 
+ * Shows all hydraulic systems with:
+ * - Real-time status updates
+ * - Tree view navigation
+ * - Advanced filtering
+ * - Type-safe API calls
+ */
 
-// Page metadata
+import { useGeneratedApi } from '~/composables/useGeneratedApi'
+import type { System } from '~/generated/api'
+
 definePageMeta({
-  layout: 'dashboard' as const,
-  middleware: ['auth']
+  middleware: ['auth'],
+  layout: 'dashboard'
 })
 
 // Composables
-const { t } = useI18n()
+const api = useGeneratedApi()
+const { success, error: notifyError } = useNotifications()
+const sync = useRealtimeSync({ autoConnect: true })
 
 // State
-const showCreateModal = ref(false)
-const isCreating = ref(false)
+const systems = ref<System[]>([])
+const loading = ref(false)
+const searchQuery = ref('')
+const statusFilter = ref<string>('all')
 
-// Mock data
-const systems = ref([] as HydraulicSystem[])
-
-// Initialize with mock data
-systems.value = [
-  {
-    id: 1,
-    name: 'HYD-001 - Pump Station A',
-    type: 'industrial',
-    status: 'active',
-    description: 'Основная насосная станция производственной линии',
-    pressure: 2.3,
-    temperature: 68,
-    flow_rate: 185,
-    vibration: 0.8,
-    health_score: 92,
-    last_update: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: 2,
-    name: 'HYD-002 - Hydraulic Motor B',
-    type: 'mobile',
-    status: 'maintenance',
-    description: 'Гидравлический мотор мобильной установки',
-    pressure: 1.8,
-    temperature: 72,
-    flow_rate: 150,
-    vibration: 1.2,
-    health_score: 78,
-    last_update: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+// Computed
+const filteredSystems = computed(() => {
+  let filtered = systems.value
+  
+  // Search filter
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(s => 
+      s.name.toLowerCase().includes(query) ||
+      s.manufacturer.toLowerCase().includes(query) ||
+      s.model.toLowerCase().includes(query)
+    )
   }
-]
+  
+  // Status filter
+  if (statusFilter.value !== 'all') {
+    filtered = filtered.filter(s => s.status === statusFilter.value)
+  }
+  
+  return filtered
+})
 
-// Methods
-const handleCreateSystem = async (data: any) => {
-  isCreating.value = true
+const statusCounts = computed(() => ({
+  all: systems.value.length,
+  online: systems.value.filter(s => s.status === 'online').length,
+  offline: systems.value.filter(s => s.status === 'offline').length,
+  maintenance: systems.value.filter(s => s.status === 'maintenance').length,
+  error: systems.value.filter(s => s.status === 'error').length
+}))
+
+// Load systems
+async function loadSystems() {
+  loading.value = true
   try {
-    const newSystem: HydraulicSystem = {
-      id: Date.now(),
-      name: data.name,
-      type: data.type,
-      status: data.status || 'active',
-      description: data.description,
-      pressure: 0,
-      temperature: 0,
-      flow_rate: 0,
-      vibration: 0,
-      health_score: 100,
-      last_update: new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-    systems.value.push(newSystem)
-    showCreateModal.value = false
-  } catch (error) {
-    console.error('Failed to create system:', error)
+    // ✅ Type-safe API call!
+    systems.value = await api.equipment.getSystems()
+    success(`Загружено ${systems.value.length} систем`)
+  } catch (err) {
+    notifyError('Ошибка загрузки систем')
+    console.error(err)
   } finally {
-    isCreating.value = false
+    loading.value = false
   }
 }
 
-const getSystemStatusClass = (status: string): string => {
-  const classes: Record<string, string> = {
-    active: 'u-badge-success',
-    maintenance: 'u-badge-warning',
-    emergency: 'u-badge-error',
-    inactive: 'u-badge-gray'
-  }
-  return classes[status] || 'u-badge-gray'
+// Navigate to system details
+function viewSystem(systemId: string) {
+  navigateTo(`/systems/${systemId}`)
 }
 
-const formatDate = (dateString: string): string => {
-  return new Date(dateString).toLocaleString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+// Navigate to create system
+function createSystem() {
+  navigateTo('/systems/new')
 }
+
+// Real-time updates
+watch(() => sync.lastUpdate, () => {
+  // Reload systems on real-time update
+  if (sync.lastUpdate?.type === 'system_status_update') {
+    loadSystems()
+  }
+})
+
+// Load on mount
+onMounted(() => loadSystems())
 </script>
+
+<template>
+  <div class="systems-page">
+    <!-- Header -->
+    <div class="page-header">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+          Гидравлические системы
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400 mt-1">
+          Управление и мониторинг оборудования
+        </p>
+      </div>
+      
+      <PermissionGate permission="systems:write">
+        <button class="btn-primary" @click="createSystem">
+          <Icon name="heroicons:plus" class="w-5 h-5" />
+          Создать систему
+        </button>
+      </PermissionGate>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+      <!-- Search -->
+      <div class="search-box">
+        <Icon name="heroicons:magnifying-glass" class="search-icon" />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Поиск по названию, производителю или модели..."
+          class="search-input"
+        />
+      </div>
+      
+      <!-- Status filters -->
+      <div class="status-filters">
+        <button
+          v-for="status in ['all', 'online', 'offline', 'maintenance', 'error']"
+          :key="status"
+          :class="['status-filter', { active: statusFilter === status }]"
+          @click="statusFilter = status"
+        >
+          {{ status === 'all' ? 'Все' : status }}
+          <span class="count">{{ statusCounts[status] }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <ApiState :loading :error="null" :data="systems">
+      <template #loading>
+        <div class="loading-state">
+          <Icon name="heroicons:arrow-path" class="w-8 h-8 animate-spin" />
+          <p>Загрузка систем...</p>
+        </div>
+      </template>
+      
+      <template #default="{ data }">
+        <!-- Systems grid -->
+        <div v-if="filteredSystems.length > 0" class="systems-grid">
+          <div
+            v-for="system in filteredSystems"
+            :key="system.id"
+            class="system-card"
+            @click="viewSystem(system.id)"
+          >
+            <!-- Header -->
+            <div class="card-header">
+              <Icon name="heroicons:server" class="w-6 h-6 text-blue-600" />
+              <div class="flex-1 min-w-0">
+                <h3 class="card-title">{{ system.name }}</h3>
+                <p class="card-subtitle">
+                  {{ system.manufacturer }} {{ system.model }}
+                </p>
+              </div>
+              
+              <!-- Status badge -->
+              <span :class="['status-badge', `status-${system.status}`]">
+                {{ system.status }}
+              </span>
+            </div>
+            
+            <!-- Info -->
+            <div class="card-info">
+              <div class="info-item">
+                <Icon name="heroicons:cube" class="w-4 h-4" />
+                <span>{{ system.equipment_type }}</span>
+              </div>
+              
+              <div v-if="system.location" class="info-item">
+                <Icon name="heroicons:map-pin" class="w-4 h-4" />
+                <span>{{ system.location }}</span>
+              </div>
+              
+              <div class="info-item">
+                <Icon name="heroicons:cog" class="w-4 h-4" />
+                <span>{{ system.components?.length || 0 }} компонентов</span>
+              </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="card-actions">
+              <button class="btn-sm btn-secondary">
+                <Icon name="heroicons:eye" class="w-4 h-4" />
+                Просмотр
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Empty state -->
+        <div v-else class="empty-state">
+          <Icon name="heroicons:server" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 class="text-xl font-semibold text-gray-700 mb-2">
+            Системы не найдены
+          </h3>
+          <p class="text-gray-500 mb-6">
+            Начните с создания первой системы
+          </p>
+          <PermissionGate permission="systems:write">
+            <button class="btn-primary" @click="createSystem">
+              <Icon name="heroicons:plus" class="w-5 h-5" />
+              Создать первую систему
+            </button>
+          </PermissionGate>
+        </div>
+      </template>
+    </ApiState>
+  </div>
+</template>
+
+<style scoped>
+.systems-page {
+  @apply container mx-auto px-4 py-8;
+}
+
+.page-header {
+  @apply flex items-start justify-between mb-8;
+}
+
+.filters-section {
+  @apply mb-6 space-y-4;
+}
+
+.search-box {
+  @apply relative;
+}
+
+.search-icon {
+  @apply absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400;
+}
+
+.search-input {
+  @apply w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg;
+  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
+  @apply focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+.status-filters {
+  @apply flex gap-2 overflow-x-auto pb-2;
+}
+
+.status-filter {
+  @apply px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700;
+  @apply text-sm font-medium text-gray-700 dark:text-gray-300;
+  @apply hover:bg-gray-50 dark:hover:bg-gray-800;
+  @apply transition-colors whitespace-nowrap;
+}
+
+.status-filter.active {
+  @apply bg-blue-600 text-white border-blue-600;
+  @apply hover:bg-blue-700;
+}
+
+.status-filter .count {
+  @apply ml-2 px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-xs;
+}
+
+.status-filter.active .count {
+  @apply bg-blue-700;
+}
+
+.systems-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+}
+
+.system-card {
+  @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700;
+  @apply hover:border-blue-500 hover:shadow-lg;
+  @apply cursor-pointer transition-all p-6;
+}
+
+.card-header {
+  @apply flex items-start gap-3 mb-4;
+}
+
+.card-title {
+  @apply font-semibold text-gray-900 dark:text-white truncate;
+}
+
+.card-subtitle {
+  @apply text-sm text-gray-500 truncate;
+}
+
+.status-badge {
+  @apply px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap;
+}
+
+.status-online {
+  @apply bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400;
+}
+
+.status-offline {
+  @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+}
+
+.status-maintenance {
+  @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400;
+}
+
+.status-error {
+  @apply bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400;
+}
+
+.card-info {
+  @apply space-y-2 mb-4;
+}
+
+.info-item {
+  @apply flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400;
+}
+
+.card-actions {
+  @apply flex gap-2 pt-4 border-t border-gray-200 dark:border-gray-700;
+}
+
+.loading-state {
+  @apply flex flex-col items-center justify-center py-20 text-gray-500;
+}
+
+.empty-state {
+  @apply text-center py-20;
+}
+
+.btn-primary {
+  @apply flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg;
+  @apply hover:bg-blue-700 transition-colors font-medium;
+}
+
+.btn-secondary {
+  @apply flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg;
+  @apply text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700;
+  @apply transition-colors;
+}
+
+.btn-sm {
+  @apply text-sm px-3 py-1.5;
+}
+</style>
