@@ -2,11 +2,16 @@
   <div
     :class="
       cn(
-        'bg-border shrink-0',
+        'bg-steel-medium shrink-0',
         orientation === 'horizontal' ? 'h-px w-full' : 'h-full w-px',
         className
       )
     "
+    :style="{
+      background: orientation === 'horizontal' 
+        ? 'linear-gradient(90deg, transparent, #4b5563, transparent)'
+        : 'linear-gradient(180deg, transparent, #4b5563, transparent)'
+    }"
     v-bind="$attrs"
   />
 </template>
