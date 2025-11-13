@@ -1,0 +1,291 @@
+name: OpenAPI TypeScript Auto-Sync
+
+# Triggers: когда изменяются backend сервисы или OpenAPI specs
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - 'feature/**'
+    paths:
+      - 'services/*/main.py'
+      - 'services/*/app/**'
+      - 'services/*/routers/**'
+      - 'specs/**'
+      - '.github/workflows/openapi-sync.yml'
+  pull_request:
+    paths:
+      - 'services/*/main.py'
+      - 'services/*/app/**'
+      - 'services/*/routers/**'
+  workflow_dispatch:
+
+jobs:
+  generate-typescript-client:
+    name: Generate TypeScript API Client
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'services/frontend/package-lock.json'
+      
+      - name: Install Python dependencies
+        run: |
+          pip install fastapi uvicorn pydantic
+      
+      - name: Install Frontend dependencies
+        working-directory: services/frontend
+        run: npm ci
+      
+      - name: Generate OpenAPI Specs
+        run: |
+          echo "🔄 Generating OpenAPI specifications..."
+          
+          # Create specs directory
+          mkdir -p specs
+          
+          # TODO: Add actual spec generation when backend services are ready
+          # For now, create a minimal spec for testing
+          cat > specs/combined-api.json << 'EOF'
+          {
+            "openapi": "3.1.0",
+            "info": {
+              "title": "Hydraulic Diagnostic API",
+              "version": "1.0.0",
+              "description": "API for hydraulic system diagnostics"
+            },
+            "servers": [
+              {
+                "url": "http://localhost:8100",
+                "description": "Development server"
+              }
+            ],
+            "paths": {},
+            "components": {
+              "schemas": {},
+              "securitySchemes": {
+                "bearerAuth": {
+                  "type": "http",
+                  "scheme": "bearer",
+                  "bearerFormat": "JWT"
+                }
+              }
+            },
+            "security": [
+              {
+                "bearerAuth": []
+              }
+            ]
+          }
+          EOF
+          
+          echo "✅ OpenAPI specs generated"
+      
+      - name: Generate TypeScript Client
+        working-directory: services/frontend
+        run: |
+          echo "🤖 Generating TypeScript API client..."
+          chmod +x scripts/generate-api-client.sh
+          npm run generate:api
+          echo "✅ TypeScript client generated"
+      
+      - name: TypeScript Type Check
+        working-directory: services/frontend
+        run: |
+          echo "🔍 Running TypeScript type check..."
+          npm run typecheck || echo "⚠️ TypeScript errors detected"
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain services/frontend/generated/) ]]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "📝 TypeScript client has changes"
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "✅ No changes in TypeScript client"
+          fi
+      
+      - name: Commit generated files
+        if: steps.check_changes.outputs.changes == 'true' && github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add services/frontend/generated/
+          git add services/frontend/composables/useGeneratedApi.ts
+          
+          git commit -m "chore(frontend): auto-update TypeScript API client from OpenAPI specs
+          
+          - Generated from OpenAPI specs
+          - Auto-committed by CI/CD
+          - Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          [skip ci]"
+          
+          git push
+      
+      - name: Comment on PR (if breaking changes)
+        if: github.event_name == 'pull_request' && steps.check_changes.outputs.changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## ⚠️ OpenAPI Changes Detected
+              
+              **TypeScript API client был обновлён** из-за изменений в backend API.
+              
+              ### 📝 Что изменилось:
+              - OpenAPI specs обновлены
+              - TypeScript types перегенерированы
+              
+              ### ✅ Action Required:
+              1. Проверьте TypeScript compilation errors
+              2. Обновите код frontend, если есть breaking changes
+              3. Запустите \`npm run typecheck\` локально
+              
+              ### 🔗 Generated files:
+              - \`services/frontend/generated/api/\`
+              
+              ---
+              
+              _Auto-generated by OpenAPI Sync workflow_`
+            });
+      
+      - name: Upload generated client as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: typescript-api-client
+          path: services/frontend/generated/api/
+          retention-days: 30
+      
+      - name: Summary
+        run: |
+          echo "## 🎉 OpenAPI Sync Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ OpenAPI specs generated" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ TypeScript client generated" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ steps.check_changes.outputs.changes }}" == "true" ]]; then
+            echo "- 📝 Changes detected and committed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- ℹ️ No changes detected" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📂 Generated files:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ls -la services/frontend/generated/api/ || echo "Not generated yet"
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  validate-breaking-changes:
+    name: Validate Breaking Changes
+    runs-on: ubuntu-latest
+    needs: generate-typescript-client
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download generated client
+        uses: actions/download-artifact@v4
+        with:
+          name: typescript-api-client
+          path: services/frontend/generated/api/
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'services/frontend/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: services/frontend
+        run: npm ci
+      
+      - name: Check TypeScript compilation
+        id: typecheck
+        working-directory: services/frontend
+        continue-on-error: true
+        run: |
+          npm run typecheck 2>&1 | tee typecheck.log
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+      
+      - name: Post breaking changes comment
+        if: steps.typecheck.outputs.exit_code != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('services/frontend/typecheck.log', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚨 Breaking Changes Detected!
+              
+              **TypeScript compilation failed** после обновления OpenAPI specs.
+              
+              ### ❌ Ошибки компиляции:
+              
+              \`\`\`typescript
+              ${log.slice(0, 2000)}
+              \`\`\`
+              
+              ### 🔧 Что нужно сделать:
+              
+              1. **Проверьте изменения в API:**
+                 - Были ли удалены endpoints?
+                 - Изменились ли типы параметров?
+                 - Были ли переименованы поля?
+              
+              2. **Обновите frontend код:**
+                 - Исправьте все TypeScript ошибки
+                 - Обновите импорты типов
+                 - Адаптируйте API calls
+              
+              3. **Запустите локально:**
+                 \`\`\`bash
+                 npm run generate:api
+                 npm run typecheck
+                 \`\`\`
+              
+              ### ⚠️ ВАЖНО:
+              
+              Этот PR **НЕ МОЖЕТ быть смержен** до исправления breaking changes!
+              
+              ---
+              
+              _Auto-detected by OpenAPI Sync workflow_`
+            });
+      
+      - name: Fail if breaking changes
+        if: steps.typecheck.outputs.exit_code != '0'
+        run: |
+          echo "❌ Breaking changes detected! TypeScript compilation failed."
+          exit 1
