@@ -1,5 +1,6 @@
 {
-  "name": "nuxt_frontend",
+  "name": "hydraulic-diagnostic-frontend",
+  "version": "1.0.0",
   "type": "module",
   "private": true,
   "scripts": {
@@ -10,7 +11,9 @@
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "nuxi typecheck"
+    "typecheck": "nuxi typecheck",
+    "generate:api": "bash ./scripts/generate-api-client.sh",
+    "generate:api:watch": "nodemon --watch ../../specs --exec 'npm run generate:api'"
   },
   "dependencies": {
     "@nuxt/content": "^3.7.1",
@@ -26,10 +29,12 @@
     "@pinia/nuxt": "^0.11.2",
     "@types/three": "^0.181.0",
     "@unhead/vue": "^2.0.19",
+    "axios": "^1.7.7",
     "better-sqlite3": "^12.4.1",
     "class-variance-authority": "^0.7.1",
     "echarts": "^6.0.0",
     "nuxt": "^4.1.3",
+    "papaparse": "^5.4.1",
     "pinia": "^3.0.3",
     "tailwind-merge": "^3.3.1",
     "three": "^0.181.0",
@@ -42,9 +47,12 @@
     "@iconify-json/heroicons": "^1.2.3",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^24.9.1",
+    "@types/papaparse": "^5.3.15",
     "autoprefixer": "^10.4.21",
     "clsx": "^2.1.1",
     "eslint": "^9.38.0",
+    "nodemon": "^3.1.7",
+    "openapi-typescript-codegen": "^0.29.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
     "vue-tsc": "^3.1.1"
