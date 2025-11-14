@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+=======
+from typing import Dict, List, Optional, Any
+>>>>>>> da16424e28634340833b5d4c6ea96234fc52ac16
 # services/equipment_service/main.py
 """
 Equipment Service - CRUD operations for hydraulic systems.
@@ -231,7 +235,11 @@ async def batch_create_components(components: List[Component]):
 
 
 @app.post("/sensors/validate-hierarchy", tags=["Sensors"])
+<<<<<<< HEAD
 async def validate_hierarchy(data: Dict):
+=======
+async def validate_hierarchy(data: dict):
+>>>>>>> da16424e28634340833b5d4c6ea96234fc52ac16
     """
     Validate CSV hierarchical data.
     

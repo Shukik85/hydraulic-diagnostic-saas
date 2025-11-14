@@ -22,14 +22,14 @@ onErrorCaptured(handleError);
 
 // Demo readiness indicator
 onMounted(() => {
-  console.log('🚀 Hydraulic Diagnostic SaaS - Ready for investor demo!');
+  console.log('🚀 Hydraulic Diagnostic SaaS - Metallic Industrial Theme Ready!');
 });
 </script>
 
 <template>
   <div
     id="app"
-    class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors duration-200"
+    class="min-h-screen bg-background-primary text-text-primary transition-colors duration-200"
   >
     <NuxtLayout>
       <NuxtPage />
@@ -38,13 +38,16 @@ onMounted(() => {
 </template>
 
 <style>
+/* Import metallic industrial theme */
+@import './styles/metallic.css';
+
 /* Optimized global styles for fast loading */
 * {
   box-sizing: border-box;
 }
 
 html {
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue',
     Arial, sans-serif;
   scroll-behavior: smooth;
   line-height: 1.6;
@@ -58,28 +61,9 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Optimized scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.5);
-}
-
-/* Focus styles */
+/* Metallic focus styles */
 .premium-focus:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid #4f46e5; /* Updated to indigo */
   outline-offset: 2px;
 }
 

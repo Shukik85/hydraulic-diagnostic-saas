@@ -10,7 +10,10 @@ pydantic-settings==2.1.0
 # ML
 torch==2.2.0
 torch-geometric==2.4.0
+<<<<<<< HEAD
 onnxruntime-gpu==1.16.3
+=======
+>>>>>>> da16424e28634340833b5d4c6ea96234fc52ac16
 
 # Data
 numpy==1.26.3
@@ -34,4 +37,7 @@ httpx==0.25.2
 
 # Utilities
 python-dotenv==1.0.0
+<<<<<<< HEAD
 onnx==1.15.0
+=======
+>>>>>>> da16424e28634340833b5d4c6ea96234fc52ac16
