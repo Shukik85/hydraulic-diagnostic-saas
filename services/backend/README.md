@@ -10,6 +10,13 @@ Django Admin Panel для операторов и support team:
 - 🔧 Equipment data viewing (read-only)
 - 🆘 Support tools & quick actions
 
+## 📋 Requirements
+
+- **Python 3.14+** (required for modern type hints and match/case)
+- **PostgreSQL 14+**
+- **Redis 7+**
+- **pip >= 23.0**
+
 ## 🚀 Quick Start
 
 ### Local Development
@@ -18,12 +25,15 @@ Django Admin Panel для операторов и support team:
 cd services/backend
 
 # Create virtual environment
-python -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate  # Linux/Mac
 # .venv\Scripts\activate  # Windows
 
 # Install dependencies
-pip install -r requirements.txt
+pip install -e .[dev,test]
+
+# Install pre-commit hooks
+pre-commit install
 
 # Set up environment
 cp .env.example .env
@@ -35,7 +45,7 @@ python manage.py migrate
 # Create superuser
 python manage.py createsuperuser
 
-# Run server
+# Run development server
 python manage.py runserver 0.0.0.0:8000
 ```
 
@@ -65,6 +75,7 @@ services/backend/
 │   └── celery.py
 │
 ├── apps/
+│   ├── core/               # Shared utilities (enums, types)
 │   ├── users/              # User management
 │   ├── subscriptions/      # Billing & subscriptions
 │   ├── equipment/          # Equipment viewing (read-only)
@@ -72,9 +83,58 @@ services/backend/
 │   ├── monitoring/         # Logs & metrics
 │   └── support/            # Support tools
 │
-├── requirements.txt        # Single file, all deps
+├── pyproject.toml          # Project config & dependencies
+├── .pre-commit-config.yaml # Pre-commit hooks
+├── requirements.txt        # Legacy requirements (use pyproject.toml)
 ├── Dockerfile
 └── manage.py
+```
+
+## 🔧 Development Tools
+
+### Type Checking
+
+```bash
+# Run mypy type checker
+mypy apps/
+
+# With strict mode (recommended)
+mypy --strict apps/
+```
+
+### Linting & Formatting
+
+```bash
+# Run ruff linter
+ruff check .
+
+# Auto-fix issues
+ruff check --fix .
+
+# Format code
+ruff format .
+```
+
+### Security Scanning
+
+```bash
+# Run bandit security scanner
+bandit -r apps/
+
+# Check dependencies for vulnerabilities
+safety check
+```
+
+### Pre-commit Hooks
+
+Pre-commit hooks run automatically on `git commit`. To run manually:
+
+```bash
+# Run all hooks
+pre-commit run --all-files
+
+# Run specific hook
+pre-commit run mypy --all-files
 ```
 
 ## 🎨 Admin Features
@@ -108,6 +168,22 @@ services/backend/
 - Support action history
 - Data export (GDPR)
 
+## 🧪 Testing
+
+```bash
+# Run tests
+pytest
+
+# With coverage
+pytest --cov=apps --cov-report=html
+
+# Run specific test file
+pytest tests/test_users.py
+
+# Run with verbose output
+pytest -v
+```
+
 ## 🔧 Management Commands
 
 ```bash
@@ -126,6 +202,9 @@ celery -A config worker -l info
 
 # Run Celery beat (scheduler)
 celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+# Check code quality
+python manage.py check
 ```
 
 ## 🔒 Security
@@ -139,17 +218,8 @@ celery -A config beat -l info --scheduler django_celery_beat.schedulers:Database
 - [ ] Configure CORS properly
 - [ ] Set up rate limiting
 - [ ] Enable 2FA for superusers
-
-## 🧪 Testing
-
-```bash
-# Run tests
-python manage.py test
-
-# With coverage
-coverage run --source='.' manage.py test
-coverage report
-```
+- [ ] Run security audit (`bandit -r apps/`)
+- [ ] Check dependencies (`safety check`)
 
 ## 📊 Database Schema
 
@@ -193,10 +263,33 @@ coverage report
 
 See `.env.example` for all required variables.
 
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for contribution guidelines.
+
+### Code Style
+
+- **Type hints**: All functions must have type annotations
+- **Docstrings**: Google-style docstrings for public APIs
+- **Formatting**: Handled by ruff (max line length: 100)
+- **Linting**: Must pass `ruff check` and `mypy --strict`
+- **Testing**: Minimum 80% coverage required
+
+### Pull Request Process
+
+1. Create feature branch from `master`
+2. Make changes with proper type hints and tests
+3. Run pre-commit hooks: `pre-commit run --all-files`
+4. Ensure tests pass: `pytest`
+5. Submit PR with clear description
+
 ## 🆘 Troubleshooting
 
 ### "Could not open requirements file"
-**Fixed!** Now using single `requirements.txt` without nested imports.
+**Fixed!** Now using `pyproject.toml`. Install with:
+```bash
+pip install -e .[dev,test]
+```
 
 ### Static files not loading
 ```bash
@@ -206,6 +299,22 @@ python manage.py collectstatic
 ### Database connection error
 Check `DATABASE_*` environment variables.
 
+### Type checking errors
+```bash
+# Install type stubs
+pip install django-stubs types-redis types-pillow
+
+# Run with less strict mode if needed
+mypy --no-strict-optional apps/
+```
+
 ## 📞 Support
 
 Questions: shukik85@ya.ru
+
+## 📚 Additional Resources
+
+- [Django Documentation](https://docs.djangoproject.com/)
+- [Python 3.14 What's New](https://docs.python.org/3.14/whatsnew/3.14.html)
+- [mypy Documentation](https://mypy.readthedocs.io/)
+- [ruff Documentation](https://docs.astral.sh/ruff/)
