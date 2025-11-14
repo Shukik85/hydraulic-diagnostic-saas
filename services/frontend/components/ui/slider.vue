@@ -2,21 +2,27 @@
   <div class="w-full">
     <div
       ref="sliderRef"
-      class="relative h-2 bg-gray-200 rounded-full cursor-pointer"
+      class="relative h-2 bg-steel-dark border border-steel-medium rounded-full cursor-pointer"
       @mousedown="startDrag"
       @touchstart="startDrag"
     >
-      <div class="absolute h-full bg-blue-600 rounded-full transition-all" :style="{ width: fillPercentage + '%' }" />
+      <div 
+        class="absolute h-full rounded-full transition-all bg-gradient-to-r from-primary-600 to-primary-500" 
+        :style="{ 
+          width: fillPercentage + '%',
+          boxShadow: '0 0 10px rgba(79, 70, 229, 0.3)'
+        }" 
+      />
       <div
-        class="absolute w-4 h-4 bg-white border-2 border-blue-600 rounded-full shadow-sm cursor-grab active:cursor-grabbing transform -translate-y-1/2 top-1/2 transition-all hover:scale-110"
+        class="absolute w-4 h-4 bg-gradient-to-br from-steel-shine to-steel-light border-2 border-primary-500 rounded-full shadow-metal cursor-grab active:cursor-grabbing transform -translate-y-1/2 top-1/2 transition-all hover:scale-110"
         :style="{ left: `calc(${thumbPercentage}% - 8px)` }"
         @mousedown="startDrag"
         @touchstart="startDrag"
       />
     </div>
-    <div v-if="showValue" class="flex justify-between text-sm text-gray-600 mt-2">
+    <div v-if="showValue" class="flex justify-between text-sm text-text-secondary mt-2">
       <span>{{ props.min }}</span>
-      <span class="font-medium">{{ modelValue }}</span>
+      <span class="font-medium text-text-primary">{{ modelValue }}</span>
       <span>{{ props.max }}</span>
     </div>
   </div>

@@ -1,15 +1,34 @@
 <template>
-  <div :class="cn('flex flex-col gap-2', className)" v-bind="$attrs">
+  <TabsRoot
+    v-model="localValue"
+    :class="cn('flex flex-col gap-3', className)"
+    v-bind="$attrs"
+  >
     <slot />
-  </div>
+  </TabsRoot>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { TabsRoot } from 'radix-vue'
+import { ref, watch } from 'vue'
+import { cn } from './utils'
 
 interface Props {
-  className?: string;
+  modelValue?: string
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {});
+const props = withDefaults(defineProps<Props>(), {})
+
+const emit = defineEmits(['update:modelValue'])
+
+const localValue = ref(props.modelValue)
+
+watch(() => props.modelValue, (newVal) => {
+  localValue.value = newVal
+})
+
+watch(localValue, (newVal) => {
+  emit('update:modelValue', newVal)
+})
 </script>

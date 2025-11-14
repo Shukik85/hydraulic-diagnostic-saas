@@ -1,18 +1,27 @@
 <template>
-  <div :class="cn('flex-1 outline-none', className)" v-show="active" v-bind="$attrs">
+  <TabsContent
+    :value="value"
+    :class="
+      cn(
+        'mt-2 flex-1 outline-none',
+        'animate-in fade-in-50 duration-200',
+        className
+      )
+    "
+    v-bind="$attrs"
+  >
     <slot />
-  </div>
+  </TabsContent>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { TabsContent } from 'radix-vue'
+import { cn } from './utils'
 
 interface Props {
-  active?: boolean;
-  className?: string;
+  value: string
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {
-  active: false,
-});
+withDefaults(defineProps<Props>(), {})
 </script>

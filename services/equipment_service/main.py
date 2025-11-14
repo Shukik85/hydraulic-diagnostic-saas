@@ -1,3 +1,4 @@
+from typing import Dict, List, Optional, Any
 # services/equipment_service/main.py
 """
 Equipment Service - CRUD operations for hydraulic systems.
@@ -231,7 +232,7 @@ async def batch_create_components(components: List[Component]):
 
 
 @app.post("/sensors/validate-hierarchy", tags=["Sensors"])
-async def validate_hierarchy(data: Dict):
+async def validate_hierarchy(data: dict):
     """
     Validate CSV hierarchical data.
     

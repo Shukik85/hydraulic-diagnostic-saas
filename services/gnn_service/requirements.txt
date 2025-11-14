@@ -10,7 +10,6 @@ pydantic-settings==2.1.0
 # ML
 torch==2.2.0
 torch-geometric==2.4.0
-onnxruntime-gpu==1.16.3
 
 # Data
 numpy==1.26.3
@@ -34,4 +33,3 @@ httpx==0.25.2
 
 # Utilities
 python-dotenv==1.0.0
-onnx==1.15.0

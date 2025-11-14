@@ -2,7 +2,9 @@
   <textarea
     :class="
       cn(
-        'resize-none border border-input bg-input-background px-3 py-2 text-base rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 placeholder:text-muted-foreground',
+        'input-metal resize-none',
+        'placeholder:text-text-muted',
+        'disabled:cursor-not-allowed disabled:opacity-50',
         className
       )
     "
