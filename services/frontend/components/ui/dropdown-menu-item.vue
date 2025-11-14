@@ -1,36 +1,35 @@
 <template>
-  <button
+  <DropdownMenuItem
     :class="
       cn(
-        'flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground',
-        variant === 'destructive' &&
-          'text-destructive hover:bg-destructive/10 focus:bg-destructive/10',
-        inset && 'pl-8',
+        'relative flex cursor-pointer select-none items-center',
+        'rounded-md px-3 py-2 gap-2',
+        'text-sm font-medium text-text-primary',
+        'outline-none transition-colors duration-200',
+        // Hover state
+        'hover:bg-primary-600/10 hover:text-primary-300',
+        // Focus state
+        'focus:bg-primary-600/10 focus:text-primary-300',
+        // Active state
+        'data-[highlighted]:bg-primary-600/10 data-[highlighted]:text-primary-300',
+        // Disabled state
+        'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className
       )
     "
     v-bind="$attrs"
-    @click="$emit('click')"
   >
     <slot />
-  </button>
+  </DropdownMenuItem>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { DropdownMenuItem } from 'radix-vue'
+import { cn } from './utils'
 
 interface Props {
-  variant?: 'default' | 'destructive';
-  inset?: boolean;
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {
-  variant: 'default',
-  inset: false,
-});
-
-defineEmits<{
-  click: [];
-}>();
+withDefaults(defineProps<Props>(), {})
 </script>
