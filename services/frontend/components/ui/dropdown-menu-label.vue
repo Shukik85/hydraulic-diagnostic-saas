@@ -1,18 +1,25 @@
 <template>
-  <div :class="cn('px-2 py-1.5 text-sm font-medium', inset && 'pl-8', className)" v-bind="$attrs">
+  <DropdownMenuLabel
+    :class="
+      cn(
+        'px-3 py-1.5 text-xs font-semibold',
+        'text-text-secondary uppercase tracking-wider',
+        className
+      )
+    "
+    v-bind="$attrs"
+  >
     <slot />
-  </div>
+  </DropdownMenuLabel>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { DropdownMenuLabel } from 'radix-vue'
+import { cn } from './utils'
 
 interface Props {
-  inset?: boolean;
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {
-  inset: false,
-});
+withDefaults(defineProps<Props>(), {})
 </script>
