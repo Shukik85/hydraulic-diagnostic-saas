@@ -1,0 +1,122 @@
+name: OpenAPI Synchronization
+
+on:
+  push:
+    branches:
+      - feature/**
+      - main
+      - develop
+    paths:
+      - 'services/*/main.py'
+      - 'services/*/models.py'
+      - 'services/*/schemas.py'
+  pull_request:
+    paths:
+      - 'services/*/main.py'
+  workflow_dispatch:
+
+jobs:
+  sync-openapi:
+    name: Generate and Sync OpenAPI Specs
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r services/equipment_service/requirements.txt
+          pip install -r services/diagnosis_service/requirements.txt
+          pip install -r services/gnn_service/requirements.txt
+          pip install -r services/rag_service/requirements.txt
+          npm install -g openapi-merge-cli swagger-cli
+      
+      - name: Start services with Docker Compose
+        run: |
+          docker-compose up -d
+          echo "Waiting for services to be healthy..."
+          sleep 30
+      
+      - name: Health check all services
+        run: |
+          services=("8002" "8003" "8004")
+          for port in "${services[@]}"; do
+            timeout 60 bash -c "until curl -f http://localhost:${port}/health; do sleep 2; done" || exit 1
+            echo "✅ Service on port ${port} is healthy"
+          done
+      
+      - name: Generate OpenAPI specs
+        run: |
+          chmod +x scripts/generate-openapi.sh
+          ./scripts/generate-openapi.sh
+      
+      - name: Validate OpenAPI specs
+        run: |
+          swagger-cli validate specs/combined-api.json
+      
+      - name: Check for breaking changes
+        id: check-changes
+        continue-on-error: true
+        run: |
+          if [ -f "specs/combined-api.json.previous" ]; then
+            npx oasdiff breaking specs/combined-api.json.previous specs/combined-api.json
+            echo "breaking_changes=$?" >> $GITHUB_OUTPUT
+          else
+            echo "breaking_changes=0" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Comment on PR if breaking changes
+        if: steps.check-changes.outputs.breaking_changes != '0' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ **Breaking API Changes Detected**\n\nThis PR introduces breaking changes to the API. Please review the OpenAPI diff and update frontend accordingly.'
+            })
+      
+      - name: Generate frontend client
+        working-directory: services/frontend
+        run: |
+          npm install
+          npm run generate:api
+      
+      - name: Commit generated files
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add specs/ services/frontend/generated/
+          
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: sync OpenAPI specs and generated client [skip ci]"
+            git push
+          fi
+      
+      - name: Upload OpenAPI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-specs
+          path: specs/
+          retention-days: 30
+      
+      - name: Cleanup
+        if: always()
+        run: docker-compose down

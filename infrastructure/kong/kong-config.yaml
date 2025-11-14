@@ -1,0 +1,185 @@
+# infrastructure/kong/kong-config.yaml
+# Kong декларативная конфигурация
+_format_version: "3.0"
+_transform: true
+
+services:
+  # Auth Service
+  - name: auth-service
+    url: http://auth-service.hydraulic-prod.svc.cluster.local:8001
+    retries: 3
+    connect_timeout: 10000
+    write_timeout: 60000
+    read_timeout: 60000
+    routes:
+      - name: auth-login
+        paths:
+          - /api/v1/auth/login
+        methods:
+          - POST
+        strip_path: false
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 10
+              hour: 100
+              policy: redis
+              redis_host: redis-cluster.hydraulic-prod.svc.cluster.local
+              redis_port: 6379
+              redis_timeout: 2000
+              fault_tolerant: true
+          - name: cors
+            config:
+              origins:
+                - "https://app.hydraulic-diagnostics.com"
+                - "https://staging.hydraulic-diagnostics.com"
+              methods:
+                - GET
+                - POST
+                - PUT
+                - DELETE
+                - OPTIONS
+              headers:
+                - Authorization
+                - Content-Type
+                - X-Request-ID
+              credentials: true
+              max_age: 3600
+      
+      - name: auth-refresh
+        paths:
+          - /api/v1/auth/refresh
+        methods:
+          - POST
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 30
+              policy: redis
+      
+      - name: auth-sso
+        paths:
+          - /api/v1/auth/sso
+        methods:
+          - GET
+          - POST
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 20
+
+  # Equipment Service
+  - name: equipment-service
+    url: http://equipment-service.hydraulic-prod.svc.cluster.local:8002
+    routes:
+      - name: equipment-crud
+        paths:
+          - /api/v1/systems
+        methods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+        plugins:
+          - name: jwt
+            config:
+              secret_is_base64: false
+              key_claim_name: kid
+              claims_to_verify:
+                - exp
+              header_names:
+                - Authorization
+              uri_param_names: []
+              cookie_names: []
+          - name: request-transformer
+            config:
+              add:
+                headers:
+                  - "X-Tenant-ID:$(jwt_claims.tenant_id)"
+                  - "X-User-ID:$(jwt_claims.sub)"
+                  - "X-User-Roles:$(jwt_claims.roles)"
+          - name: rate-limiting
+            config:
+              minute: 1000
+              hour: 50000
+              policy: redis
+              redis_host: redis-cluster.hydraulic-prod.svc.cluster.local
+              fault_tolerant: true
+          - name: response-transformer
+            config:
+              add:
+                headers:
+                  - "X-RateLimit-Remaining:$(ratelimit.remaining)"
+                  - "X-Request-ID:$(request_id)"
+          - name: prometheus
+            config:
+              per_consumer: true
+
+  # Diagnosis Service
+  - name: diagnosis-service
+    url: http://diagnosis-service.hydraulic-prod.svc.cluster.local:8003
+    retries: 1
+    connect_timeout: 10000
+    write_timeout: 180000
+    read_timeout: 180000
+    routes:
+      - name: diagnosis-run
+        paths:
+          - /api/v1/diagnosis
+        methods:
+          - POST
+        plugins:
+          - name: jwt
+            config:
+              secret_is_base64: false
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 10
+              size_unit: megabytes
+          - name: rate-limiting
+            config:
+              minute: 100
+              hour: 5000
+              policy: redis
+              redis_host: redis-cluster.hydraulic-prod.svc.cluster.local
+          - name: request-transformer
+            config:
+              add:
+                headers:
+                  - "X-Tenant-ID:$(jwt_claims.tenant_id)"
+                  - "X-Priority:$(jwt_claims.plan_tier)"
+          - name: prometheus
+            config:
+              per_consumer: true
+              status_code_metrics: true
+              latency_metrics: true
+
+plugins:
+  # Global correlation ID
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid
+      echo_downstream: true
+  
+  # Global request termination (для maintenance mode)
+  - name: request-termination
+    enabled: false
+    config:
+      status_code: 503
+      message: "Service temporarily unavailable for maintenance"
+      content_type: "application/json"
+  
+  # Global Prometheus metrics
+  - name: prometheus
+    config:
+      per_consumer: false
+
+consumers:
+  - username: internal-api
+    custom_id: internal-api-client
+    jwt_secrets:
+      - key: internal-api-key
+        algorithm: HS256
+        secret: ${INTERNAL_API_SECRET}
