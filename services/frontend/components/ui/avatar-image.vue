@@ -1,13 +1,8 @@
 <template>
-  <img :class="cn('aspect-square size-full', className)" v-bind="$attrs" />
+  <img :class="[
+    'aspect-square size-full object-cover metallic-avatar-image',
+    className
+  ]" v-bind="$attrs" />
 </template>
-
-<script setup lang="ts">
-import { cn } from './utils';
-
-interface Props {
-  className?: string;
-}
-
-withDefaults(defineProps<Props>(), {});
-</script>
+<script setup lang="ts">// ...Остальной код без изменений...</script>
+<style scoped>.metallic-avatar-image { border-radius: 9999px; box-shadow: 0 2px 6px #2b334040, 0 1.5px 0 #4c596f12; }</style>

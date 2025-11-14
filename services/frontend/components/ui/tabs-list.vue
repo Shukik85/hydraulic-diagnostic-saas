@@ -1,20 +1,27 @@
 <template>
-  <div
+  <TabsList
     :class="
-      cn('inline-flex h-9 w-fit items-center justify-center rounded-xl p-[3px] flex', className)
+      cn(
+        'inline-flex h-10 items-center justify-center',
+        'rounded-lg p-1 gap-1',
+        'bg-steel-darker border border-steel-medium',
+        'shadow-sm',
+        className
+      )
     "
     v-bind="$attrs"
   >
     <slot />
-  </div>
+  </TabsList>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { TabsList } from 'radix-vue'
+import { cn } from './utils'
 
 interface Props {
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {});
+withDefaults(defineProps<Props>(), {})
 </script>

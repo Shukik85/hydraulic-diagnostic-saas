@@ -5,7 +5,7 @@
         <NuxtLink
           v-if="item.href && index < items.length - 1"
           :to="item.href"
-          class="text-muted-foreground hover:text-foreground transition-colors"
+          class="text-sm text-text-secondary hover:text-primary-400 transition-colors duration-200 font-medium"
         >
           {{ item.label }}
         </NuxtLink>
@@ -13,7 +13,9 @@
           v-else
           :class="[
             'text-sm',
-            index === items.length - 1 ? 'text-foreground font-medium' : 'text-muted-foreground',
+            index === items.length - 1 
+              ? 'text-text-primary font-semibold' 
+              : 'text-text-secondary',
           ]"
         >
           {{ item.label }}
@@ -21,7 +23,7 @@
         <Icon
           v-if="index < items.length - 1"
           name="lucide:chevron-right"
-          class="h-4 w-4 mx-1 text-muted-foreground"
+          class="h-4 w-4 mx-2 text-steel-light"
         />
       </li>
     </ol>
@@ -30,13 +32,13 @@
 
 <script setup lang="ts">
 interface BreadcrumbItem {
-  label: string;
-  href?: string;
+  label: string
+  href?: string
 }
 
 interface Props {
-  items: BreadcrumbItem[];
+  items: BreadcrumbItem[]
 }
 
-defineProps<Props>();
+defineProps<Props>()
 </script>
