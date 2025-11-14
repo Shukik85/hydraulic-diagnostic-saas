@@ -1,13 +1,23 @@
 <template>
-  <hr :class="cn('border-border -mx-1 my-1', className)" v-bind="$attrs" />
+  <DropdownMenuSeparator
+    :class="
+      cn(
+        '-mx-1 my-1 h-px',
+        'bg-gradient-to-r from-transparent via-steel-medium to-transparent',
+        className
+      )
+    "
+    v-bind="$attrs"
+  />
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { DropdownMenuSeparator } from 'radix-vue'
+import { cn } from './utils'
 
 interface Props {
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {});
+withDefaults(defineProps<Props>(), {})
 </script>

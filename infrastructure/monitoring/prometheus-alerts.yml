@@ -1,0 +1,59 @@
+groups:
+  - name: mlops_alerts
+    rules:
+      - alert: ModelDriftDetected
+        expr: model_drift_score > 0.3
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ML model drift detected"
+          description: "Drift score {{ $value }} exceeds threshold 0.3. Action required: consider model retrain/rollback."
+      - alert: HighErrorRate
+        expr: rate(diagnosis_errors_total[5m]) / rate(diagnosis_requests_total[5m]) > 0.05
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High ML inference error rate"
+          description: "Error rate {{ $value }} > 5% over last 5m. Immediate investigation needed."
+      - alert: RagLatencyTooHigh
+        expr: histogram_quantile(0.99, rate(rag_generation_latency_seconds_bucket[5m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAG generation P99 latency high"
+          description: "RAG interpreter latency P99 {{ $value }}s > 5s. Check LLM API or rag_service."
+      - alert: GnnLatencyTooHigh
+        expr: histogram_quantile(0.99, rate(gnn_inference_latency_seconds_bucket[5m])) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GNN inference P99 latency high"
+          description: "P99 inference latency {{ $value }}s > 2s. Investigate GNN service."
+      - alert: DiagnosisNotReady
+        expr: up{job="diagnosis"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Diagnosis service down"
+          description: "diagnosis_service is not available or failing health checks. Check container and K8s logs."
+      - alert: RagNotReady
+        expr: up{job="rag"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "RAG service down"
+          description: "rag_service is not available or failing health checks."
+      - alert: GnnNotReady
+        expr: up{job="gnn"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GNN service down"
+          description: "gnn_service is not available or failing health checks."

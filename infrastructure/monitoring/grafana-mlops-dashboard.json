@@ -1,0 +1,51 @@
+{
+  "dashboard": {
+    "title": "MLOps/Diagnostics Monitoring",
+    "panels": [
+      {
+        "title": "Model Drift Score",
+        "type": "graph",
+        "targets": [
+          { "expr": "model_drift_score", "legendFormat": "{{model_type}}:{{model_version}}" }
+        ],
+        "yaxes": [{"format": "short"},{"format": "short"}]
+      },
+      {
+        "title": "Drift Alerts",
+        "type": "table",
+        "targets": [
+          { "expr": "ALERTS{alertname=\"ModelDriftDetected\"}", "legendFormat": "{{alertname}}" }
+        ]
+      },
+      {
+        "title": "Diagnosis Error Rate (%)",
+        "type": "graph",
+        "targets": [
+          {"expr": "rate(diagnosis_errors_total[5m]) / rate(diagnosis_requests_total[5m]) * 100", "legendFormat": "error rate %"}
+        ]
+      },
+      {
+        "title": "RAG Generation Latency (P99, s)",
+        "type": "graph",
+        "targets": [
+          {"expr": "histogram_quantile(0.99, rate(rag_generation_latency_seconds_bucket[5m]))", "legendFormat": "rag p99 latency"}
+        ],
+        "yaxes": [{"format": "s"},{"format": "s"}]
+      },
+      {
+        "title": "GNN Inference Latency (P99, s)",
+        "type": "graph",
+        "targets": [
+          {"expr": "histogram_quantile(0.99, rate(gnn_inference_latency_seconds_bucket[5m]))", "legendFormat": "gnn p99 latency"}
+        ]
+      },
+      {
+        "title": "Service Health (Up)",
+        "type": "bargauge",
+        "targets": [
+          {"expr": "up{job=~\"gnn|rag|diagnosis\"}", "legendFormat": "{{job}}"}
+        ]
+      }
+    ]
+  }
+}
