@@ -12,33 +12,13 @@ node_modules
 # Logs
 logs
 *.log
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-.pnpm-debug.log*
 
 # Misc
 .DS_Store
 .fleet
 .idea
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
-# Environment
+# Local env files
 .env
 .env.*
 !.env.example
-
-# Testing
-coverage
-.nyc_output
-test-results/
-playwright-report/
-
-# Generated code (от OpenAPI)
-generated/
