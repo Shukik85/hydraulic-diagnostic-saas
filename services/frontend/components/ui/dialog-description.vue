@@ -1,15 +1,15 @@
 <template>
-  <p :class="cn('text-muted-foreground text-sm', className)" v-bind="$attrs">
+  <p :class="cn('text-text-secondary text-sm', className)" v-bind="$attrs">
     <slot />
   </p>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { cn } from './utils'
 
 interface Props {
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {});
+withDefaults(defineProps<Props>(), {})
 </script>
