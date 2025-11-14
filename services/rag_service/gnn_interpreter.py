@@ -1,11 +1,18 @@
 # services/rag_service/gnn_interpreter.py
 """
 Интерпретация результатов GNN через DeepSeek-R1 reasoning.
+
+FIXED:
+- Improved response parsing with regex (more robust)
+- Added error handling and fallbacks
+- Replaced datetime.utcnow() with datetime.now(timezone.utc)
+- Better logging
 """
 import json
 import logging
+import re
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from model_loader import get_model
 
@@ -54,32 +61,37 @@ class GNNInterpreter:
         Returns:
             dict: Comprehensive interpretation with reasoning
         """
-        logger.info(f"Interpreting diagnosis for {gnn_result.get('equipment_id')}")
+        logger.info(f"Interpreting diagnosis for {equipment_context.get('equipment_id')}")
         
-        # Формируем prompt
-        prompt = self._build_diagnosis_prompt(
-            gnn_result,
-            equipment_context,
-            historical_context
-        )
-        
-        # Generate response с reasoning
-        response = self.model.generate(
-            prompt,
-            max_tokens=2048,
-            temperature=0.7
-        )
-        
-        # Parse response
-        interpretation = self._parse_response(response)
-        
-        # Add metadata
-        interpretation["timestamp"] = datetime.utcnow().isoformat()
-        interpretation["model"] = "DeepSeek-R1-Distill-32B"
-        interpretation["gnn_request_id"] = gnn_result.get("request_id")
-        
-        logger.info("Interpretation completed")
-        return interpretation
+        try:
+            # Формируем prompt
+            prompt = self._build_diagnosis_prompt(
+                gnn_result,
+                equipment_context,
+                historical_context
+            )
+            
+            # Generate response с reasoning
+            response = self.model.generate(
+                prompt,
+                max_tokens=2048,
+                temperature=0.7
+            )
+            
+            # Parse response
+            interpretation = self._parse_response(response)
+            
+            # Add metadata
+            interpretation["timestamp"] = datetime.now(timezone.utc).isoformat()
+            interpretation["model"] = "DeepSeek-R1-Distill-32B"
+            interpretation["gnn_request_id"] = gnn_result.get("request_id")
+            
+            logger.info("Interpretation completed")
+            return interpretation
+            
+        except Exception as e:
+            logger.error(f"Interpretation failed: {e}", exc_info=True)
+            raise
     
     def _build_diagnosis_prompt(self, gnn_result, context, history):
         """
@@ -154,57 +166,115 @@ class GNNInterpreter:
     
     def _parse_response(self, response: str) -> Dict:
         """
-        Парсим structured ответ из text.
-        """
-        # Extract reasoning
-        reasoning = ""
-        if "<думает>" in response and "</думает>" in response:
-            start = response.index("<думает>") + len("<думает>")
-            end = response.index("</думает>")
-            reasoning = response[start:end].strip()
+        Парсим structured ответ из text с улучшенной обработкой ошибок.
         
-        # Extract sections
+        FIXED:
+        - Use regex instead of fragile string.index()
+        - Handle missing sections gracefully
+        - Add fallbacks for parse failures
+        - Better error logging
+        """
         sections = {
             "summary": "",
-            "reasoning": reasoning,
+            "reasoning": "",
             "analysis": "",
             "recommendations": [],
             "prognosis": ""
         }
         
-        # Simple parsing (можно улучшить с regex)
-        lines = response.split("\n")
-        current_section = None
-        
-        for line in lines:
-            line = line.strip()
-            if not line or line.startswith("<думает") or line.startswith("</думает"):
-                continue
+        try:
+            # Extract reasoning с regex (более надёжно)
+            reasoning_match = re.search(
+                r'<думает>(.*?)</думает>',
+                response,
+                re.DOTALL | re.IGNORECASE
+            )
+            if reasoning_match:
+                sections["reasoning"] = reasoning_match.group(1).strip()
+            else:
+                logger.warning("No <думает> tags found in response")
             
-            # Detect sections
-            if "РЕЗЮМЕ" in line.upper() or "SUMMARY" in line.upper():
-                current_section = "summary"
-            elif "АНАЛИЗ" in line.upper() or "ANALYSIS" in line.upper():
-                current_section = "analysis"
-            elif "РЕКОМЕНДАЦИ" in line.upper() or "RECOMMENDATION" in line.upper():
-                current_section = "recommendations"
-            elif "ПРОГНОЗ" in line.upper() or "PROGNOSIS" in line.upper():
-                current_section = "prognosis"
-            elif current_section:
-                if current_section == "recommendations":
-                    if line.startswith(("-", "•", "*", "1.", "2.", "3.")):
-                        # Extract recommendation
-                        rec = line.lstrip("-•*123456789. ")
-                        if rec:
-                            sections["recommendations"].append(rec)
-                else:
-                    sections[current_section] += line + "\n"
-        
-        # Clean up
-        for key in ["summary", "analysis", "prognosis"]:
-            sections[key] = sections[key].strip()
+            # Extract sections с regex
+            sections["summary"] = self._extract_section(
+                response,
+                r'(?:РЕЗЮМЕ|SUMMARY)[:\s]+(.*?)(?=АНАЛИЗ|ANALYSIS|РЕКОМЕНДАЦИ|$)',
+                "summary"
+            )
+            
+            sections["analysis"] = self._extract_section(
+                response,
+                r'(?:АНАЛИЗ|ANALYSIS)[:\s]+(.*?)(?=РЕКОМЕНДАЦИ|RECOMMENDATION|ПРОГНОЗ|$)',
+                "analysis"
+            )
+            
+            sections["prognosis"] = self._extract_section(
+                response,
+                r'(?:ПРОГНОЗ|PROGNOSIS)[:\s]+(.*?)$',
+                "prognosis"
+            )
+            
+            # Extract recommendations с улучшенным паттерном
+            rec_section = self._extract_section(
+                response,
+                r'(?:РЕКОМЕНДАЦИ|RECOMMENDATION)[^:]*[:\s]+(.*?)(?=ПРОГНОз|PROGNOSIS|$)',
+                "recommendations_raw"
+            )
+            
+            if rec_section:
+                # Парсим список рекомендаций
+                rec_lines = rec_section.split('\n')
+                for line in rec_lines:
+                    line = line.strip()
+                    # Убираем маркеры списка
+                    clean_line = re.sub(r'^[-•*\d+\.)\s]*', '', line)
+                    if clean_line and len(clean_line) > 10:  # Минимальная длина
+                        sections["recommendations"].append(clean_line)
+            
+            # Fallback: если ничего не спарсилось
+            if not any([sections["summary"], sections["analysis"], 
+                       sections["recommendations"], sections["prognosis"]]):
+                logger.warning("Failed to parse structured response, using fallback")
+                sections["summary"] = response[:500]  # Первые 500 символов
+                sections["analysis"] = response
+            
+        except Exception as e:
+            logger.error(f"Parse error: {e}", exc_info=True)
+            # Fallback - возвращаем raw response
+            sections["summary"] = "Не удалось структурировать ответ"
+            sections["analysis"] = response
+            sections["recommendations"] = ["Обратитесь к специалисту для детальной диагностики"]
         
         return sections
+    
+    def _extract_section(
+        self,
+        text: str,
+        pattern: str,
+        section_name: str
+    ) -> str:
+        """
+        Извлечение секции с помощью regex.
+        
+        Args:
+            text: Полный текст ответа
+            pattern: Regex паттерн
+            section_name: Имя секции для логирования
+            
+        Returns:
+            str: Извлечённый текст или пустая строка
+        """
+        try:
+            match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+            if match:
+                content = match.group(1).strip()
+                logger.debug(f"Extracted {section_name}: {len(content)} chars")
+                return content
+            else:
+                logger.debug(f"Section {section_name} not found")
+                return ""
+        except Exception as e:
+            logger.error(f"Error extracting {section_name}: {e}")
+            return ""
     
     def explain_anomaly(
         self,
