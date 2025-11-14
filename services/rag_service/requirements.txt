@@ -1,6 +1,6 @@
 # services/rag_service/requirements.txt
 # RAG Service dependencies
-# UPDATED: Added embeddings and vector DB support
+# UPDATED: Added embeddings, vector DB, S3 support
 
 # FastAPI
 fastapi==0.115.0
@@ -20,7 +20,11 @@ faiss-cpu==1.9.0  # FAISS для векторного поиска
 # Если нужна GPU версия FAISS:
 # faiss-gpu==1.9.0
 
-# 🆕 Опционально: Qdrant (если будете использовать вместо FAISS)
+# 🆕 S3 BACKUP
+boto3==1.34.90
+botocore==1.34.90
+
+# 🆕 Qdrant (если будете использовать вместо FAISS)
 # qdrant-client==1.12.0
 
 # Monitoring
