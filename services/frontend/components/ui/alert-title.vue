@@ -1,18 +1,25 @@
 <template>
-  <div
-    :class="cn('col-start-2 line-clamp-1 min-h-4 font-medium tracking-tight', className)"
+  <h5
+    :class="
+      cn(
+        'mb-1 font-semibold text-sm',
+        'text-text-primary',
+        'leading-none tracking-tight',
+        className
+      )
+    "
     v-bind="$attrs"
   >
     <slot />
-  </div>
+  </h5>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { cn } from './utils'
 
 interface Props {
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {});
+withDefaults(defineProps<Props>(), {})
 </script>
