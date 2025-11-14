@@ -1,71 +1,93 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: '2024-11-01',
+  ssr: false, // SPA режим для дэшборда
+
+  compatibilityDate: '2025-10-30', // Убираем warning
+
   devtools: { enabled: true },
-  
+
   modules: [
     '@pinia/nuxt',
-    '@vueuse/nuxt',
-    '@nuxt/eslint'
+    '@nuxtjs/i18n',
+    '@nuxt/icon',
+    '@nuxt/image',
+    '@nuxtjs/color-mode'
   ],
-  
-  // Runtime config
+
+  i18n: {
+    locales: [
+      {
+        code: 'ru',
+        name: 'Русский',
+        file: 'ru.json',
+        language: 'ru-RU'
+      },
+      {
+        code: 'en',
+        name: 'English',
+        file: 'en.json',
+        language: 'en-US'
+      }
+    ],
+    defaultLocale: 'ru',
+    strategy: 'no_prefix',
+    langDir: 'locales',
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_redirected',
+      redirectOn: 'root',
+      fallbackLocale: 'ru'
+    },
+    // Для @nuxtjs/i18n v10 - отдельная конфигурация
+    vueI18n: './i18n.config.ts'
+  },
+
   runtimeConfig: {
     public: {
-      // API Gateway (Kong) - unified entry point
-      apiBase: process.env.API_GATEWAY_URL || 'https://api.hydraulic-diagnostics.com',
-      
-      // WebSocket endpoint
-      wsBase: process.env.WS_URL || 'wss://api.hydraulic-diagnostics.com/ws',
-      
-      // Service endpoints (за Kong Gateway)
-      endpoints: {
-        auth: '/api/v1/auth',
-        equipment: '/api/v1/equipment',
-        diagnosis: '/api/v1/diagnosis',
-        gnn: '/api/v1/gnn',
-        rag: '/api/v1/rag',
-        admin: '/api/v1/admin'
-      },
-      
-      // Feature flags
-      features: {
-        ragInterpretation: process.env.ENABLE_RAG === 'true',
-        realtimeUpdates: process.env.ENABLE_WEBSOCKET === 'true',
-        advancedCharts: process.env.ENABLE_CHARTS === 'true'
-      }
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api',
+      wsBase: process.env.NUXT_PUBLIC_WS_BASE || 'ws://localhost:8000/ws',
+      version: '1.0.0'
     }
   },
-  
-  // TypeScript
-  typescript: {
-    strict: true,
-    typeCheck: true,
-    shim: false
-  },
-  
-  // ESLint
-  eslint: {
-    config: {
-      stylistic: true
+
+  css: [
+    '~/styles/premium-tokens.css'
+  ],
+
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {}
     }
   },
-  
-  // Build optimization
-  vite: {
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'api-client': ['./generated/api']
-          }
-        }
-      }
+
+  // Единый корневой путь компонентов, рекурсивное сканирование подпапок
+  components: [
+    { path: '~/components', global: true, pathPrefix: false },
+    { path: '~/components/ui', global: true, pathPrefix: false }
+  ],
+
+  app: {
+    head: {
+      title: 'Гидравлик Диагностик - Промышленные Решения',
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: 'Интеллектуальная платформа диагностики гидравлических систем с ИИ-анализом' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+      ]
     }
   },
-  
-  // Ignore generated code from TypeScript checking
-  ignore: [
-    'generated/**/*'
-  ]
+
+  // Explicit component transpilation for better compatibility
+  build: {
+    transpile: []
+  },
+
+  // Client-side rendering optimization
+  experimental: {
+    payloadExtraction: false
+  }
 })
