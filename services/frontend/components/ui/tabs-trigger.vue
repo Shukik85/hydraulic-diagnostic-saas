@@ -1,33 +1,42 @@
 <template>
-  <button
+  <TabsTrigger
+    :value="value"
     :class="
       cn(
-        'inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-xl border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
-        active ? 'bg-card text-foreground' : 'text-muted-foreground hover:text-foreground',
+        'inline-flex items-center justify-center gap-2',
+        'px-4 py-2 rounded-md',
+        'text-sm font-medium whitespace-nowrap',
+        'transition-all duration-200',
+        // Default state
+        'text-text-secondary bg-transparent',
+        'hover:text-primary-300 hover:bg-steel-dark',
+        // Active state
+        'data-[state=active]:text-white',
+        'data-[state=active]:bg-primary-600',
+        'data-[state=active]:shadow-[0_0_12px_rgba(79,70,229,0.4)]',
+        // Focus state
+        'focus-visible:outline-none focus-visible:ring-2',
+        'focus-visible:ring-primary-500/30 focus-visible:ring-offset-2',
+        'focus-visible:ring-offset-background-primary',
+        // Disabled state
+        'disabled:pointer-events-none disabled:opacity-50',
         className
       )
     "
-    @click="$emit('click', value)"
     v-bind="$attrs"
   >
     <slot />
-  </button>
+  </TabsTrigger>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { TabsTrigger } from 'radix-vue'
+import { cn } from './utils'
 
 interface Props {
-  value: string;
-  active?: boolean;
-  className?: string;
+  value: string
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {
-  active: false,
-});
-
-defineEmits<{
-  click: [value: string];
-}>();
+withDefaults(defineProps<Props>(), {})
 </script>
