@@ -6,6 +6,8 @@ UPDATED: Config-based, no hardcoded values.
 """
 import logging
 from typing import Optional
+from datetime import datetime, timezone
+
 from vllm import LLM, SamplingParams
 from fastapi import HTTPException
 import torch
@@ -50,7 +52,7 @@ class DeepSeekModel:
         
         # GPU checks
         if not torch.cuda.is_available():
-            raise RuntimeError("CUDA not available")
+            raise RuntimeError("CUDA not available. This service requires GPU.")
         
         gpu_count = torch.cuda.device_count()
         if gpu_count < self.tensor_parallel_size:
@@ -228,6 +230,9 @@ def get_model() -> DeepSeekModel:
     
     Returns:
         DeepSeekModel: Loaded model
+        
+    Raises:
+        RuntimeError: If model initialization fails
     """
     global _model
     if _model is None:
