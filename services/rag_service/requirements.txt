@@ -1,24 +1,48 @@
 # services/rag_service/requirements.txt
 # RAG Service dependencies
+# UPDATED: Production-ready with rate limiting, structured logging, S3
 
 # FastAPI
-fastapi==0.108.0
-uvicorn[standard]==0.25.0
-pydantic==2.5.3
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+pydantic-settings==2.6.0
 
-# vLLM (for DeepSeek-R1)
-vllm==0.6.3.post1
-transformers==4.37.2
-torch==2.2.0
+# vLLM (для DeepSeek-R1)
+vllm==0.7.3
+transformers==4.46.0
+torch==2.5.1
+accelerate==0.35.0
 
-# Monitoring (NEW!)
-prometheus_client==0.19.0
-psutil==5.9.6
-pynvml==11.5.0  # For GPU metrics
+# 🆕 Embeddings & Vector DB
+sentence-transformers==3.2.1  # E5 multilingual embeddings
+faiss-cpu==1.9.0  # FAISS vector search
+# faiss-gpu==1.9.0  # GPU version if needed
 
-# Auth (NEW!)
-PyJWT==2.8.0
+# 🆕 S3 Storage
+boto3==1.34.90
+botocore==1.34.90
+
+# 🆕 Rate Limiting
+slowapi==0.1.9
+
+# 🆕 Structured Logging
+structlog==24.4.0
+
+# Monitoring
+prometheus-client==0.21.0
+psutil==6.1.0
+pynvml==12.560.30
+
+# Auth
+PyJWT==2.9.0
 
 # Utilities
 python-dotenv==1.0.0
-httpx==0.25.2
+httpx==0.27.2
+orjson==3.10.10  # Fast JSON serialization
+
+# Testing (dev)
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx-sse==0.4.0
