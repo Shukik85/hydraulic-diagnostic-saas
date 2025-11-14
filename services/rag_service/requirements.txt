@@ -1,24 +1,45 @@
 # services/rag_service/requirements.txt
 # RAG Service dependencies
+# UPDATED: Added embeddings and vector DB support
 
 # FastAPI
-fastapi==0.108.0
-uvicorn[standard]==0.25.0
-pydantic==2.5.3
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.9.2
+pydantic-settings==2.6.0
 
-# vLLM (for DeepSeek-R1)
-vllm==0.6.3.post1
-transformers==4.37.2
-torch==2.2.0
+# vLLM (для DeepSeek-R1) - UPDATED versions
+vllm==0.7.3
+transformers==4.46.0
+torch==2.5.1
+accelerate==0.35.0
 
-# Monitoring (NEW!)
-prometheus_client==0.19.0
-psutil==5.9.6
-pynvml==11.5.0  # For GPU metrics
+# 🆕 Embeddings & Vector DB
+sentence-transformers==3.2.1  # E5 embeddings
+faiss-cpu==1.9.0  # FAISS для векторного поиска
+# Если нужна GPU версия FAISS:
+# faiss-gpu==1.9.0
 
-# Auth (NEW!)
-PyJWT==2.8.0
+# 🆕 Опционально: Qdrant (если будете использовать вместо FAISS)
+# qdrant-client==1.12.0
+
+# Monitoring
+prometheus-client==0.21.0
+psutil==6.1.0
+pynvml==12.560.30
+
+# Auth
+PyJWT==2.9.0
 
 # Utilities
 python-dotenv==1.0.0
-httpx==0.25.2
+httpx==0.27.2
+structlog==24.4.0
+
+# JSON processing
+orjson==3.10.10  # Быстрая сериализация
+
+# Testing (dev)
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx-sse==0.4.0
