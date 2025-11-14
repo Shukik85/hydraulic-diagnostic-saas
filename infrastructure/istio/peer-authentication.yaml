@@ -1,0 +1,24 @@
+# infrastructure/istio/peer-authentication.yaml
+# Strict mTLS для всех сервисов в namespace
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls-strict
+  namespace: hydraulic-prod
+spec:
+  mtls:
+    mode: STRICT
+---
+# Разрешить plaintext только для health check endpoints
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: health-check-permissive
+  namespace: hydraulic-prod
+spec:
+  selector:
+    matchLabels:
+      health-check-mode: permissive
+  portLevelMtls:
+    8080:
+      mode: PERMISSIVE  # /health, /ready endpoints
