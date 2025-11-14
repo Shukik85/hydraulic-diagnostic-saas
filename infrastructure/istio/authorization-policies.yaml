@@ -1,0 +1,110 @@
+# infrastructure/istio/authorization-policies.yaml
+# Zero-Trust Authorization Policies
+---
+# Default: Deny all
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all-default
+  namespace: hydraulic-prod
+spec:
+  {}
+---
+# Allow Frontend → API Gateway
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-frontend-to-gateway
+  namespace: hydraulic-prod
+spec:
+  selector:
+    matchLabels:
+      app: api-gateway
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces: ["hydraulic-prod"]
+            principals: ["cluster.local/ns/hydraulic-prod/sa/frontend"]
+      to:
+        - operation:
+            methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+            paths: ["/api/*", "/ws/*"]
+---
+# API Gateway → Backend Services
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-gateway-to-backend
+  namespace: hydraulic-prod
+spec:
+  selector:
+    matchLabels:
+      tier: backend
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/hydraulic-prod/sa/api-gateway"]
+      to:
+        - operation:
+            methods: ["GET", "POST", "PUT", "DELETE"]
+---
+# Diagnosis Service → GNN Service
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-diagnosis-to-gnn
+  namespace: hydraulic-prod
+spec:
+  selector:
+    matchLabels:
+      app: gnn-service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/hydraulic-prod/sa/diagnosis-service"]
+      to:
+        - operation:
+            methods: ["POST"]
+            paths: ["/grpc.GNNInference/*"]
+---
+# Services → TimescaleDB
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-services-to-db
+  namespace: hydraulic-prod
+spec:
+  selector:
+    matchLabels:
+      app: timescaledb
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/hydraulic-prod/sa/gnn-service"
+              - "cluster.local/ns/hydraulic-prod/sa/equipment-service"
+              - "cluster.local/ns/hydraulic-prod/sa/diagnosis-service"
+      to:
+        - operation:
+            ports: ["5432"]
+---
+# Allow Prometheus scraping
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: hydraulic-prod
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            namespaces: ["monitoring"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/metrics"]

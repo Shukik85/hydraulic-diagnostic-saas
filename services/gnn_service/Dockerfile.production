@@ -1,0 +1,86 @@
+# services/gnn_service/Dockerfile.production
+# Production-ready multi-stage Dockerfile с CUDA 12.8
+
+# ==================== Stage 1: Builder ====================
+ARG PYTHON_VERSION=3.11
+ARG CUDA_VERSION=12.8.0
+
+FROM nvidia/cuda:${CUDA_VERSION}-cudnn9-devel-ubuntu22.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHON_VERSION=${PYTHON_VERSION}
+
+# Install Python and build tools
+RUN apt-get update && apt-get install -y \
+    python${PYTHON_VERSION} \
+    python${PYTHON_VERSION}-dev \
+    python3-pip \
+    build-essential \
+    git \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+# Copy requirements
+COPY requirements.txt requirements-prod.txt ./
+
+# Install PyTorch with CUDA 12.8
+RUN pip install --no-cache-dir \
+    torch==2.5.0+cu128 \
+    torch-geometric==2.6.0 \
+    --extra-index-url https://download.pytorch.org/whl/cu128
+
+# Install production dependencies
+RUN pip install --no-cache-dir -r requirements-prod.txt
+
+# ==================== Stage 2: Runtime ====================
+FROM nvidia/cuda:${CUDA_VERSION}-cudnn9-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHON_VERSION=3.11
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Install Python runtime
+RUN apt-get update && apt-get install -y \
+    python${PYTHON_VERSION} \
+    python3-pip \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN useradd -m -u 1000 -s /bin/bash gnnuser
+
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python${PYTHON_VERSION}/dist-packages /usr/local/lib/python${PYTHON_VERSION}/dist-packages
+
+WORKDIR /app
+
+# Copy application code
+COPY --chown=gnnuser:gnnuser . .
+
+# Create directories
+RUN mkdir -p /app/models /app/logs /app/data /app/checkpoints && \
+    chown -R gnnuser:gnnuser /app
+
+# Switch to non-root user
+USER gnnuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8002/health', timeout=5)"
+
+# Expose ports
+EXPOSE 8002 50051
+
+# Production command with Gunicorn
+CMD ["gunicorn", "main:app", \
+     "--bind", "0.0.0.0:8002", \
+     "--workers", "2", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--timeout", "120", \
+     "--graceful-timeout", "30", \
+     "--log-level", "info", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-"]

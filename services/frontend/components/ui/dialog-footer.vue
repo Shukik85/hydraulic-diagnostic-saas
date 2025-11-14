@@ -8,11 +8,11 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { cn } from './utils'
 
 interface Props {
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {});
+withDefaults(defineProps<Props>(), {})
 </script>
