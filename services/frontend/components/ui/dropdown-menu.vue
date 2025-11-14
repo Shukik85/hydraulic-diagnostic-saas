@@ -1,91 +1,46 @@
 <template>
-  <div class="relative">
-    <button
-      ref="triggerRef"
-      :class="cn('flex items-center gap-2', triggerClass)"
-      @click="toggle"
-      v-bind="$attrs"
-    >
+  <DropdownMenuRoot v-model:open="isOpen">
+    <DropdownMenuTrigger as-child>
       <slot name="trigger" />
-    </button>
-    <Transition
-      enter-active-class="transition-all duration-200"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-active-class="transition-all duration-200"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
-    >
-      <div
-        v-if="isOpen"
-        ref="contentRef"
+    </DropdownMenuTrigger>
+
+    <DropdownMenuPortal>
+      <DropdownMenuContent
         :class="
           cn(
-            'absolute z-50 bg-popover text-popover-foreground rounded-md border shadow-md p-1 min-w-32',
+            'z-50 min-w-[12rem] overflow-hidden',
+            'rounded-lg border border-steel-medium',
+            'bg-steel-darker shadow-lg',
+            'p-1',
+            'animate-in fade-in-80 zoom-in-95',
+            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
             contentClass
           )
         "
-        :style="{ top: position.top + 'px', left: position.left + 'px' }"
+        :side-offset="4"
+        v-bind="$attrs"
       >
         <slot />
-      </div>
-    </Transition>
-  </div>
+      </DropdownMenuContent>
+    </DropdownMenuPortal>
+  </DropdownMenuRoot>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { cn } from './utils';
+import {
+  DropdownMenuContent,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+} from 'radix-vue'
+import { ref } from 'vue'
+import { cn } from './utils'
 
 interface Props {
-  triggerClass?: string;
-  contentClass?: string;
+  contentClass?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {});
+withDefaults(defineProps<Props>(), {})
 
-const isOpen = ref(false);
-const triggerRef = ref<HTMLElement>();
-const contentRef = ref<HTMLElement>();
-const position = ref({ top: 0, left: 0 });
-
-const toggle = () => {
-  isOpen.value = !isOpen.value;
-  if (isOpen.value) {
-    updatePosition();
-  }
-};
-
-const updatePosition = () => {
-  if (triggerRef.value) {
-    const rect = triggerRef.value.getBoundingClientRect();
-    position.value = {
-      top: rect.bottom,
-      left: rect.left,
-    };
-  }
-};
-
-const close = () => {
-  isOpen.value = false;
-};
-
-const handleClickOutside = (event: Event) => {
-  if (
-    triggerRef.value &&
-    !triggerRef.value.contains(event.target as Node) &&
-    contentRef.value &&
-    !contentRef.value.contains(event.target as Node)
-  ) {
-    close();
-  }
-};
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
-});
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
+const isOpen = ref(false)
 </script>

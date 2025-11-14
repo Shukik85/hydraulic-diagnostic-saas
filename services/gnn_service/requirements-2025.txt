@@ -1,0 +1,7 @@
+# ==========================================
+# GNN Service Production Requirements 2025
+# Python 3.13 | PyTorch 2.5.1 | CUDA 12.6
+# ==========================================
+
+# ... (requirements list here) ...
+# requirements-2025.txt полный из файла 60

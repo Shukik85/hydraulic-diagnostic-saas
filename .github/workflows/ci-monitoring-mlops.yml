@@ -1,0 +1,52 @@
+name: CI Monitoring & MLOps Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  monitoring-mlops-test:
+    runs-on: ubuntu-latest
+    services:
+      diagnosis:
+        image: hydraulic-diagnostic-saas/diagnosis_service:latest
+        ports:
+          - 8003:8003
+      gnn:
+        image: hydraulic-diagnostic-saas/gnn_service:latest
+        ports:
+          - 8002:8002
+      rag:
+        image: hydraulic-diagnostic-saas/rag_service:latest
+        ports:
+          - 8004:8004
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install test dependencies
+      run: |
+        pip install pytest httpx PyJWT
+    - name: Wait for services
+      run: |
+        sleep 30
+        curl -s http://localhost:8003/health
+        curl -s http://localhost:8002/health
+        curl -s http://localhost:8004/health
+    - name: Run all monitoring & MLOps tests
+      run: bash scripts/run_all_monitoring_mlops_tests.sh
+    - name: Archive endpoint test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: endpoint-logs
+        path: /tmp/health_*.json,/tmp/ready_*.json,/tmp/metrics_*.txt
+    - name: Upload pytest results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: pytest-logs
+        path: .pytest_cache/**

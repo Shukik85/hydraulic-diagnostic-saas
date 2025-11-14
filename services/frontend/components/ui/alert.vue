@@ -2,35 +2,47 @@
   <div
     :class="
       cn(
-        'relative w-full rounded-lg border px-4 py-3 text-sm grid items-start gap-y-0.5',
-        hasIcon ? 'grid-cols-[calc(var(--spacing)*4)_1fr] gap-x-3' : 'grid-cols-[0_1fr]',
-        variant === 'destructive' ? 'text-destructive bg-card' : 'bg-card text-card-foreground',
+        'relative w-full rounded-lg px-4 py-3',
+        'border border-steel-medium',
+        'bg-steel-darker',
+        'grid items-start gap-3',
+        hasIcon ? 'grid-cols-[24px_1fr]' : 'grid-cols-1',
+        // Variant styles
+        variant === 'success' && 'border-success-500/30 bg-success-500/5',
+        variant === 'warning' && 'border-warning-500/30 bg-warning-500/5',
+        variant === 'error' && 'border-error-500/30 bg-error-500/5',
+        variant === 'info' && 'border-primary-500/30 bg-primary-500/5',
         className
       )
     "
     role="alert"
     v-bind="$attrs"
   >
-    <slot name="icon" />
-    <div class="col-start-2">
+    <!-- Icon slot -->
+    <div v-if="hasIcon" class="flex items-start pt-0.5">
+      <slot name="icon" />
+    </div>
+    
+    <!-- Content -->
+    <div :class="hasIcon ? 'col-start-2' : ''">
       <slot />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
-import { computed, useSlots } from 'vue';
+import { cn } from './utils'
+import { computed, useSlots } from 'vue'
 
 interface Props {
-  variant?: 'default' | 'destructive';
-  className?: string;
+  variant?: 'default' | 'success' | 'warning' | 'error' | 'info'
+  className?: string
 }
 
 withDefaults(defineProps<Props>(), {
   variant: 'default',
-});
+})
 
-const slots = useSlots();
-const hasIcon = computed(() => !!slots.icon);
+const slots = useSlots()
+const hasIcon = computed(() => !!slots.icon)
 </script>

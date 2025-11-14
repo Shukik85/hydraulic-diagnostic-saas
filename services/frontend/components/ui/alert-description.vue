@@ -1,7 +1,11 @@
 <template>
   <div
     :class="
-      cn('text-muted-foreground col-start-2 grid justify-items-start gap-1 text-sm', className)
+      cn(
+        'text-sm text-text-secondary',
+        '[&_p]:leading-relaxed',
+        className
+      )
     "
     v-bind="$attrs"
   >
@@ -10,11 +14,11 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { cn } from './utils'
 
 interface Props {
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {});
+withDefaults(defineProps<Props>(), {})
 </script>
