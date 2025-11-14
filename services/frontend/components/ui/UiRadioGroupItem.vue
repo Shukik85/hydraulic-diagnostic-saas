@@ -1,48 +1,67 @@
 <template>
-  <label 
+  <RadioGroupItem
+    :value="value"
+    :disabled="disabled"
     :class="[
-      'relative flex items-center gap-2 cursor-pointer select-none text-text-primary',
-      'hover:text-primary-300 transition-colors',
-      disabled && 'cursor-not-allowed opacity-50'
+      'group relative flex items-center gap-3 cursor-pointer select-none',
+      'text-text-primary font-medium text-sm',
+      'transition-all duration-200',
+      disabled && 'cursor-not-allowed opacity-50',
+      className
     ]"
   >
-    <input
-      type="radio"
-      :value="value"
-      :checked="modelValue === value"
-      @input="$emit('update:modelValue', value)"
-      class="peer sr-only"
-      :disabled="disabled"
-    />
-    <span
+    <RadioGroupIndicator
       :class="[
-        'relative block w-5 h-5 rounded-full border-2 transition-all duration-200',
+        'relative flex items-center justify-center',
+        'w-5 h-5 rounded-full',
+        'border-2 transition-all duration-200',
         'bg-background-secondary',
-        modelValue === value 
-          ? 'border-primary-500 shadow-[0_0_0_2px_rgba(79,70,229,0.2)]' 
-          : 'border-steel-medium hover:border-steel-light',
-        'peer-focus-visible:ring-2 peer-focus-visible:ring-primary-500/30',
-        disabled && 'border-steel-dark bg-steel-dark'
+        // Unchecked state
+        'border-steel-medium group-hover:border-primary-400',
+        // Checked state
+        'group-data-[state=checked]:border-primary-500',
+        'group-data-[state=checked]:bg-primary-500/10',
+        'group-data-[state=checked]:shadow-[0_0_8px_rgba(79,70,229,0.3)]',
+        // Focus state
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30',
+        'focus-visible:ring-offset-2 focus-visible:ring-offset-background-primary',
+        // Disabled state
+        disabled && 'border-steel-dark bg-steel-dark group-hover:border-steel-dark',
       ]"
     >
-      <!-- Inner dot -->
+      <!-- Inner dot (only shows when checked) -->
       <span
-        v-if="modelValue === value"
-        class="absolute left-1/2 top-1/2 w-2.5 h-2.5 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 shadow-sm"
+        :class="[
+          'w-2.5 h-2.5 rounded-full',
+          'bg-primary-500 shadow-sm',
+          'transition-all duration-200',
+          'scale-0 group-data-[state=checked]:scale-100',
+        ]"
       />
-    </span>
-    <span class="text-sm font-medium">
+    </RadioGroupIndicator>
+    <label
+      :for="value?.toString()"
+      :class="[
+        'cursor-pointer group-hover:text-primary-300',
+        'transition-colors duration-200',
+        disabled && 'cursor-not-allowed',
+      ]"
+    >
       <slot />
-    </span>
-  </label>
+    </label>
+  </RadioGroupItem>
 </template>
 
 <script setup lang="ts">
+import { RadioGroupIndicator, RadioGroupItem } from 'radix-vue'
+
 interface Props {
-  modelValue?: string | number
   value: string | number
   disabled?: boolean
+  className?: string
 }
-const props = defineProps<Props>()
-defineEmits(['update:modelValue'])
+
+const props = withDefaults(defineProps<Props>(), {
+  disabled: false,
+})
 </script>
