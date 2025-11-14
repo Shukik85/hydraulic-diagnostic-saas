@@ -7,19 +7,34 @@
       :class="[
         'input-metal appearance-none w-full pr-10',
         'cursor-pointer',
-        disabled && 'cursor-not-allowed opacity-50',
+        'transition-all duration-200',
+        // Hover state
+        !disabled && 'hover:border-primary-400',
+        // Focus state
+        'focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20',
+        // Disabled state
+        disabled && 'cursor-not-allowed opacity-50 bg-steel-darker',
         className
       ]"
       v-bind="$attrs"
     >
       <slot />
     </select>
-    <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+    
+    <!-- Custom Dropdown Icon -->
+    <div 
+      :class="[
+        'absolute right-3 top-1/2 -translate-y-1/2',
+        'pointer-events-none transition-colors duration-200',
+        disabled ? 'text-steel-dark' : 'text-steel-light',
+      ]"
+    >
       <svg 
-        class="w-5 h-5 text-steel-light" 
+        class="w-5 h-5" 
         fill="none" 
         stroke="currentColor" 
         viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg"
       >
         <path 
           stroke-linecap="round" 
@@ -43,7 +58,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: '',
-  disabled: false
+  disabled: false,
 })
 
 const emit = defineEmits(['update:modelValue'])
