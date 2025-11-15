@@ -21,6 +21,7 @@ export type {
 
 // ==================== CHAT TYPES ====================
 export type {
+  ChatRole,
   ChatMessage,
   ChatSession
 } from './chat'
@@ -67,26 +68,35 @@ export {
 
 // ==================== METADATA TYPES ====================
 export type {
-  MetadataField,
-  MetadataSection,
-  MetadataValue,
+  ComponentType,
+  EquipmentType as MetadataEquipmentType,
+  NormalRange,
+  ComponentMetadata,
+  PumpSpecific,
+  MotorSpecific,
+  CylinderSpecific,
+  ValveSpecific,
+  FilterSpecific,
+  AccumulatorSpecific,
   SystemMetadata,
-  EquipmentMetadata,
-  SensorMetadata,
-  DiagnosticResultMetadata,
-  MetadataUpdate,
-  MetadataQueryParams
+  DutyCycle,
+  SensorConfig,
+  SensorDetails,
+  IncompleteDataReport,
+  WizardState,
+  ValidationResult,
+  SmartDefault
 } from './metadata'
 
 // ==================== RAG TYPES ====================
 export type {
-  RAGQuery,
-  RAGResponse,
-  RAGSource,
-  RAGContext,
-  RAGConfig,
-  RAGError,
-  RAGStreamChunk
+  RAGInterpretationRequest,
+  RAGInterpretationResponse,
+  KnowledgeDocument,
+  KnowledgeBaseSearchRequest,
+  KnowledgeBaseSearchResponse,
+  ConfidenceLevel,
+  RAGStatus
 } from './rag'
 
 // ==================== TYPE UTILITIES ====================
