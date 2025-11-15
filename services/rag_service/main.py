@@ -24,7 +24,7 @@ import structlog
 
 from model_loader import get_model
 from gnn_interpreter import get_interpreter
-from admin_endpoints import router as admin_router
+# from admin_endpoints import router as admin_router
 from openapi_config import custom_openapi
 from config import config
 
@@ -118,7 +118,7 @@ async def add_request_id_middleware(request: Request, call_next):
     return response
 
 
-app.include_router(admin_router)
+# app.include_router(admin_router)
 
 
 # Models

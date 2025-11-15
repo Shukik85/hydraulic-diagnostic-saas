@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "generate:api": "openapi-typescript-codegen --input ../../specs/combined-api.json --output ./generated/api --client axios --useOptions --useUnionTypes",
+    "generate:api": "npx openapi-typescript-codegen --input ../../specs/combined-api.json --output ./generated/api --client axios --useOptions --useUnionTypes",
     "validate:api": "swagger-cli validate ../../specs/combined-api.json",
     "predev": "npm run generate:api",
     "dev": "nuxt dev",
@@ -22,9 +22,12 @@
     "@pinia/nuxt": "^0.5.1",
     "@vueuse/core": "^10.11.0",
     "@vueuse/nuxt": "^10.11.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "axios": "^1.6.5",
     "nuxt": "^3.12.4",
     "pinia": "^2.1.7",
+    "vite-plugin-checker": "^0.11.0",
     "vue": "^3.4.31",
     "vue-router": "^4.4.0"
   },
