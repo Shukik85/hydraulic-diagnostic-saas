@@ -1,0 +1,18 @@
+/* Design Tokens: colors, typography, spacing, shadows */
+:root {
+  --color-primary: #21808D;
+  --color-text: #134252;
+  --color-surface: #FFFFFD;
+  --color-border: rgba(94,82,64,0.2);
+  --font-family-base: "FKGroteskNeue", "Inter", sans-serif;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-weight-semibold: 550;
+  --space-8: 8px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --radius-base: 8px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.04);
+}

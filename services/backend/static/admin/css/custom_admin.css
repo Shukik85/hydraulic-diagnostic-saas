@@ -1,0 +1,59 @@
+/* Custom global styles for Django Admin - industrial metallic design */
+@import url('./variables.css');
+
+body, .module, .grp-module {
+  font-family: var(--font-family-base);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+input, select, textarea {
+  font-family: var(--font-family-base);
+}
+
+.admin-nav {
+  margin: 0 0 var(--space-16) 0;
+  display: flex;
+  gap: var(--space-8);
+  padding: var(--space-8);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius-base); 
+}
+.admin-nav a {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  transition: color 0.2s;
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-base);
+}
+.admin-nav a:hover {
+  background: rgba(33, 128, 141, 0.08);
+  color: #1c5a64;
+}
+
+.button, .button.default, input[type=submit], button {
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-base);
+  font-weight: var(--font-weight-semibold);
+  border: none;
+  padding: var(--space-8) var(--space-16);
+  transition: background 0.2s;
+}
+.button:hover, .button.default:hover, input[type=submit]:hover, button:hover {
+  background: #196270;
+}
+
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  padding: var(--space-16);
+  margin-bottom: var(--space-24);
+}
+
+.status--success { color: #31C48D; }
+.status--error { color: #F05252; }
