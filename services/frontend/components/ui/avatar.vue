@@ -1,18 +1,13 @@
 <template>
   <div
-    :class="cn('relative flex size-10 shrink-0 overflow-hidden rounded-full', className)"
+    :class="[
+      'relative flex size-10 shrink-0 overflow-hidden rounded-full metallic-avatar shadow shadow-steel-medium/40',
+      className
+    ]"
     v-bind="$attrs"
   >
     <slot />
   </div>
 </template>
-
-<script setup lang="ts">
-import { cn } from './utils';
-
-interface Props {
-  className?: string;
-}
-
-withDefaults(defineProps<Props>(), {});
-</script>
+<script setup lang="ts">// ...Остальной код без изменений...</script>
+<style scoped>.metallic-avatar { background: linear-gradient(135deg, #232b36 70%, #171c22 100%); border: 2px solid #424c5b; }</style>

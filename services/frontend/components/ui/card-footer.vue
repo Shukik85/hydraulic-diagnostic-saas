@@ -1,7 +1,7 @@
 <template>
   <div
     data-slot="card-footer"
-    :class="cn('flex items-center px-6 pb-6 [.border-t]:pt-6', className)"
+    :class="cn('flex items-center px-6 pb-6 [.border-t]:pt-6 [.border-t]:border-steel-medium', className)"
     v-bind="$attrs"
   >
     <slot />
@@ -9,11 +9,11 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from './utils';
+import { cn } from './utils'
 
 interface Props {
-  className?: string;
+  className?: string
 }
 
-withDefaults(defineProps<Props>(), {});
+withDefaults(defineProps<Props>(), {})
 </script>
