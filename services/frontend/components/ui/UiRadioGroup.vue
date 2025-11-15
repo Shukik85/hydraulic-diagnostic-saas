@@ -1,19 +1,5 @@
-<template>
-  <RadioGroupRoot
-    v-model="localValue"
-    :class="[
-      'flex gap-3',
-      orientation === 'vertical' ? 'flex-col' : 'flex-row items-center',
-      className
-    ]"
-  >
-    <slot />
-  </RadioGroupRoot>
-</template>
-
 <script setup lang="ts">
 import { RadioGroupRoot } from 'radix-vue'
-import { ref, watch } from 'vue'
 
 interface Props {
   modelValue?: string | number
@@ -22,20 +8,39 @@ interface Props {
   className?: string
 }
 
+interface Emits {
+  (e: 'update:modelValue', value: string | number): void
+}
+
 const props = withDefaults(defineProps<Props>(), {
   orientation: 'horizontal',
-  disabled: false,
+  disabled: false
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<Emits>()
 
-const localValue = ref(props.modelValue)
+const localValue = ref<string | number | undefined>(props.modelValue)
 
 watch(() => props.modelValue, (newVal) => {
   localValue.value = newVal
 })
 
 watch(localValue, (newVal) => {
-  emit('update:modelValue', newVal)
+  if (newVal !== undefined) {
+    emit('update:modelValue', newVal)
+  }
 })
 </script>
+
+<template>
+  <RadioGroupRoot
+    v-model="localValue"
+    :class="[
+      'flex gap-3',
+      props.orientation === 'vertical' ? 'flex-col' : 'flex-row items-center',
+      props.className
+    ]"
+  >
+    <slot />
+  </RadioGroupRoot>
+</template>
