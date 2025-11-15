@@ -1,153 +1,496 @@
+"""Support management models with Python 3.14 type hints.
+
+Fully typed models for ticket management, SLA tracking, and access recovery.
 """
-Monitoring and support models now use shared business enums for all status, severity, kind fields.
-"""
+
+from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any, ClassVar
 
+from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
-from apps.core.enums import (
-    DataExportStatus,
-    ErrorSeverity,
-    SupportActionType,
-    SupportPriority,
-    SupportTicketStatus,
-)
-
-
-class APILog(models.Model):
-    """API request logging"""
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_id = models.UUIDField(db_index=True, null=True, blank=True)
-    method = models.CharField(max_length=10)
-    path = models.CharField(max_length=512)
-    status_code = models.IntegerField()
-    response_time_ms = models.IntegerField()
-    ip_address = models.GenericIPAddressField()
-    user_agent = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-
-    class Meta:
-        verbose_name = "API Log"
-        verbose_name_plural = "API Logs"
-        ordering = ["-created_at"]
-        indexes = [models.Index(fields=["created_at", "user_id"])]  # порядок только в ordering
-
-    def __str__(self):
-        return f"{self.method} {self.path} - {self.status_code}"
-
-
-class ErrorLog(models.Model):
-    """Error tracking"""
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_id = models.UUIDField(db_index=True, null=True, blank=True)
-    severity = models.CharField(
-        max_length=20,
-        choices=[(s.value, s.name.title()) for s in ErrorSeverity],
-    )
-    error_type = models.CharField(max_length=255)
-    message = models.TextField()
-    stack_trace = models.TextField(blank=True)
-    context = models.JSONField(default=dict)
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-
-    class Meta:
-        verbose_name = "Error Log"
-        verbose_name_plural = "Error Logs"
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"[{self.severity}] {self.error_type}"
-
-    @property
-    def severity_enum(self) -> ErrorSeverity:
-        return ErrorSeverity(self.severity)
+if TYPE_CHECKING:
+    from apps.users.models import User
 
 
 class SupportTicket(models.Model):
-    STATUS_CHOICES = [(s.value, s.name.title()) for s in SupportTicketStatus]
-    PRIORITY_CHOICES = [(p.value, p.name.title()) for p in SupportPriority]
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_id = models.UUIDField(db_index=True)
-    subject = models.CharField(max_length=255)
-    message = models.TextField()
-    priority = models.CharField(
-        max_length=20, choices=PRIORITY_CHOICES, default=SupportPriority.MEDIUM.value
+    """Support ticket for customer issues and requests.
+
+    Tracks tickets with categories, priorities, SLA management, and status.
+
+    Attributes:
+        id: UUID primary key
+        ticket_number: Human-readable ticket number (auto-generated)
+        user: Customer who created the ticket
+        assigned_to: Support agent assigned to this ticket
+        category: Type of issue/request
+        priority: Urgency level (affects SLA)
+        status: Current ticket status
+        subject: Brief summary of the issue
+        description: Detailed description
+        sla_due_date: When ticket should be resolved (based on priority)
+        sla_breached: Whether SLA deadline was missed
+        resolved_at: When ticket was resolved
+        created_at: Ticket creation timestamp
+        updated_at: Last update timestamp
+    """
+
+    # Category choices
+    class Category(models.TextChoices):
+        """Ticket category types."""
+
+        TECHNICAL = "technical", "Technical Issue"
+        BILLING = "billing", "Billing Question"
+        ACCESS = "access", "Account Access"
+        FEATURE = "feature", "Feature Request"
+        BUG = "bug", "Bug Report"
+        OTHER = "other", "Other"
+
+    # Priority choices (affects SLA)
+    class Priority(models.TextChoices):
+        """Ticket priority levels."""
+
+        LOW = "low", "Low (72h SLA)"
+        MEDIUM = "medium", "Medium (24h SLA)"
+        HIGH = "high", "High (8h SLA)"
+        CRITICAL = "critical", "Critical (2h SLA)"
+
+    # Status choices
+    class Status(models.TextChoices):
+        """Ticket status workflow."""
+
+        NEW = "new", "New"
+        OPEN = "open", "Open"
+        PENDING = "pending", "Pending Customer Response"
+        IN_PROGRESS = "in_progress", "In Progress"
+        RESOLVED = "resolved", "Resolved"
+        CLOSED = "closed", "Closed"
+        REOPENED = "reopened", "Reopened"
+
+    # SLA timeframes (hours)
+    SLA_TIMEFRAMES: ClassVar[dict[str, int]] = {
+        Priority.LOW: 72,
+        Priority.MEDIUM: 24,
+        Priority.HIGH: 8,
+        Priority.CRITICAL: 2,
+    }
+
+    id: uuid.UUID = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
     )
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=SupportTicketStatus.OPEN.value
+
+    ticket_number: str = models.CharField(
+        max_length=20,
+        unique=True,
+        editable=False,
+        help_text="Human-readable ticket number (e.g., TKT-2024-00123)",
     )
-    category = models.CharField(max_length=100, blank=True, null=True)
-    assigned_to = models.UUIDField(null=True, blank=True)
-    response = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
+    user: User = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="support_tickets",
+        help_text="Customer who created this ticket",
+    )
+
+    assigned_to: User | None = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="assigned_tickets",
+        null=True,
+        blank=True,
+        limit_choices_to={"is_staff": True},
+        help_text="Support agent assigned to this ticket",
+    )
+
+    category: str = models.CharField(
+        max_length=20,
+        choices=Category.choices,
+        default=Category.OTHER,
+        help_text="Type of issue or request",
+    )
+
+    priority: str = models.CharField(
+        max_length=20,
+        choices=Priority.choices,
+        default=Priority.MEDIUM,
+        help_text="Urgency level (affects SLA)",
+    )
+
+    status: str = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.NEW,
+        db_index=True,
+        help_text="Current ticket status",
+    )
+
+    subject: str = models.CharField(
+        max_length=255,
+        help_text="Brief summary of the issue",
+    )
+
+    description: str = models.TextField(
+        help_text="Detailed description of the issue",
+    )
+
+    sla_due_date: datetime = models.DateTimeField(
+        help_text="When ticket should be resolved (based on priority)",
+    )
+
+    sla_breached: bool = models.BooleanField(
+        default=False,
+        help_text="Whether SLA deadline was missed",
+    )
+
+    resolved_at: datetime | None = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When ticket was resolved",
+    )
+
+    created_at: datetime = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    updated_at: datetime = models.DateTimeField(
+        auto_now=True,
+    )
+
+    # Type hints for Django internals
+    if TYPE_CHECKING:
+        DoesNotExist: ClassVar[type[Exception]]
+        MultipleObjectsReturned: ClassVar[type[Exception]]
+        objects: ClassVar[models.Manager[SupportTicket]]
+        messages: models.Manager[TicketMessage]
 
     class Meta:
         db_table = "support_tickets"
         verbose_name = "Support Ticket"
         verbose_name_plural = "Support Tickets"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["-created_at", "status"], name="ticket_time_status_idx"),
+            models.Index(fields=["priority", "status"], name="ticket_pri_status_idx"),
+            models.Index(fields=["sla_due_date"], name="ticket_sla_idx"),
+        ]
 
-    def __str__(self):
-        return f"[{self.priority.upper()}] {self.subject}"
+    def __str__(self) -> str:
+        return f"{self.ticket_number}: {self.subject}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        """Save with auto-generated ticket number and SLA calculation."""
+        # Generate ticket number if new
+        if not self.ticket_number:
+            self.ticket_number = self._generate_ticket_number()
+
+        # Calculate SLA due date if new
+        if not self.pk and not self.sla_due_date:
+            self.sla_due_date = self._calculate_sla_due_date()
+
+        # Check SLA breach
+        self._check_sla_breach()
+
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_ticket_number() -> str:
+        """Generate unique ticket number (e.g., TKT-2024-00123)."""
+        from datetime import datetime
+
+        year = datetime.now().year
+        # Get last ticket number for current year
+        last_ticket = (
+            SupportTicket.objects.filter(ticket_number__startswith=f"TKT-{year}")
+            .order_by("-ticket_number")
+            .first()
+        )
+
+        if last_ticket:
+            # Extract sequence number and increment
+            seq = int(last_ticket.ticket_number.split("-")[-1]) + 1
+        else:
+            seq = 1
+
+        return f"TKT-{year}-{seq:05d}"
+
+    def _calculate_sla_due_date(self) -> datetime:
+        """Calculate SLA due date based on priority."""
+        hours = self.SLA_TIMEFRAMES[self.priority]
+        return timezone.now() + timedelta(hours=hours)
+
+    def _check_sla_breach(self) -> None:
+        """Check if SLA has been breached."""
+        if self.status not in [self.Status.RESOLVED, self.Status.CLOSED]:
+            if timezone.now() > self.sla_due_date:
+                self.sla_breached = True
 
     @property
-    def status_enum(self) -> SupportTicketStatus:
-        return SupportTicketStatus(self.status)
+    def time_until_sla(self) -> timedelta | None:
+        """Time remaining until SLA breach.
+
+        Returns:
+            Timedelta if ticket is open, None if resolved/closed
+        """
+        if self.status in [self.Status.RESOLVED, self.Status.CLOSED]:
+            return None
+        return self.sla_due_date - timezone.now()
 
     @property
-    def priority_enum(self) -> SupportPriority:
-        return SupportPriority(self.priority)
+    def is_overdue(self) -> bool:
+        """Check if ticket is overdue."""
+        return self.sla_breached
+
+    def assign_to_agent(self, agent: User) -> None:
+        """Assign ticket to support agent.
+
+        Args:
+            agent: User with is_staff=True
+        """
+        if not agent.is_staff:
+            raise ValueError("Can only assign to staff members")
+
+        self.assigned_to = agent
+        if self.status == self.Status.NEW:
+            self.status = self.Status.OPEN
+        self.save()
+
+    def resolve(self) -> None:
+        """Mark ticket as resolved."""
+        self.status = self.Status.RESOLVED
+        self.resolved_at = timezone.now()
+        self.save()
 
 
-class DataExportRequest(models.Model):
-    STATUS_CHOICES = [(s.value, s.name.title()) for s in DataExportStatus]
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_id = models.UUIDField(db_index=True)
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=DataExportStatus.PENDING.value
+class TicketMessage(models.Model):
+    """Message in a support ticket thread.
+
+    Represents a single message in the conversation between customer and support.
+
+    Attributes:
+        id: UUID primary key
+        ticket: Parent support ticket
+        author: User who wrote this message (customer or agent)
+        message: Message content
+        is_internal: Whether message is internal note (not visible to customer)
+        is_system: Whether message is auto-generated system message
+        created_at: Message timestamp
+    """
+
+    id: uuid.UUID = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
     )
-    download_url = models.URLField(max_length=512, blank=True)
-    error_message = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
-    expires_at = models.DateTimeField(null=True, blank=True)
+
+    ticket: SupportTicket = models.ForeignKey(
+        SupportTicket,
+        on_delete=models.CASCADE,
+        related_name="messages",
+        help_text="Parent support ticket",
+    )
+
+    author: User = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ticket_messages",
+        help_text="Message author (customer or agent)",
+    )
+
+    message: str = models.TextField(
+        help_text="Message content",
+    )
+
+    is_internal: bool = models.BooleanField(
+        default=False,
+        help_text="Internal note (not visible to customer)",
+    )
+
+    is_system: bool = models.BooleanField(
+        default=False,
+        help_text="Auto-generated system message",
+    )
+
+    created_at: datetime = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    # Type hints
+    if TYPE_CHECKING:
+        DoesNotExist: ClassVar[type[Exception]]
+        MultipleObjectsReturned: ClassVar[type[Exception]]
+        objects: ClassVar[models.Manager[TicketMessage]]
 
     class Meta:
-        db_table = "data_export_requests"
-        verbose_name = "Data Export Request"
-        verbose_name_plural = "Data Export Requests"
-        ordering = ["-created_at"]
+        db_table = "ticket_messages"
+        verbose_name = "Ticket Message"
+        verbose_name_plural = "Ticket Messages"
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["ticket", "created_at"], name="msg_ticket_time_idx"),
+        ]
 
-    def __str__(self):
-        return f"Export {self.id} - {self.status}"
-
-    @property
-    def status_enum(self) -> DataExportStatus:
-        return DataExportStatus(self.status)
+    def __str__(self) -> str:
+        return f"{self.author.email}: {self.message[:50]}"
 
 
-class SupportAction(models.Model):
-    ACTION_CHOICES = [(a.value, a.name.replace("_", " ").title()) for a in SupportActionType]
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user_id = models.UUIDField(db_index=True)
-    action_type = models.CharField(max_length=100, choices=ACTION_CHOICES)
-    performed_by = models.UUIDField()
-    description = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
+class AccessRecoveryRequest(models.Model):
+    """Request to recover account access.
+
+    Handles password resets and account recovery workflows.
+
+    Attributes:
+        id: UUID primary key
+        user: User requesting access recovery
+        request_type: Type of recovery (password, 2FA, etc.)
+        status: Current request status
+        verification_method: How user was verified
+        admin_notes: Internal notes for review
+        processed_by: Admin who processed the request
+        processed_at: When request was processed
+        created_at: Request creation timestamp
+    """
+
+    # Request type choices
+    class RequestType(models.TextChoices):
+        """Access recovery request types."""
+
+        PASSWORD_RESET = "password_reset", "Password Reset"
+        TWO_FA_RESET = "2fa_reset", "2FA Reset"
+        ACCOUNT_UNLOCK = "account_unlock", "Account Unlock"
+        EMAIL_CHANGE = "email_change", "Email Change"
+
+    # Status choices
+    class Status(models.TextChoices):
+        """Request status workflow."""
+
+        PENDING = "pending", "Pending Review"
+        VERIFIED = "verified", "Identity Verified"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+        COMPLETED = "completed", "Completed"
+
+    # Verification method choices
+    class VerificationMethod(models.TextChoices):
+        """How user identity was verified."""
+
+        EMAIL = "email", "Email Verification"
+        SMS = "sms", "SMS Verification"
+        ID_DOCUMENT = "id_document", "ID Document"
+        SUPPORT_CALL = "support_call", "Support Call"
+        BILLING_INFO = "billing_info", "Billing Information"
+
+    id: uuid.UUID = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+
+    user: User = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="access_recovery_requests",
+        help_text="User requesting access recovery",
+    )
+
+    request_type: str = models.CharField(
+        max_length=20,
+        choices=RequestType.choices,
+        help_text="Type of access recovery",
+    )
+
+    status: str = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+        help_text="Current request status",
+    )
+
+    verification_method: str | None = models.CharField(
+        max_length=20,
+        choices=VerificationMethod.choices,
+        null=True,
+        blank=True,
+        help_text="How user identity was verified",
+    )
+
+    admin_notes: str = models.TextField(
+        blank=True,
+        default="",
+        help_text="Internal notes for review",
+    )
+
+    processed_by: User | None = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="processed_recovery_requests",
+        null=True,
+        blank=True,
+        limit_choices_to={"is_staff": True},
+        help_text="Admin who processed the request",
+    )
+
+    processed_at: datetime | None = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When request was processed",
+    )
+
+    created_at: datetime = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+    )
+
+    # Type hints
+    if TYPE_CHECKING:
+        DoesNotExist: ClassVar[type[Exception]]
+        MultipleObjectsReturned: ClassVar[type[Exception]]
+        objects: ClassVar[models.Manager[AccessRecoveryRequest]]
 
     class Meta:
-        db_table = "support_actions"
-        verbose_name = "Support Action"
-        verbose_name_plural = "Support Actions"
+        db_table = "access_recovery_requests"
+        verbose_name = "Access Recovery Request"
+        verbose_name_plural = "Access Recovery Requests"
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["-created_at", "status"], name="recovery_time_status_idx"),
+        ]
 
-    def __str__(self):
-        return f"{self.action_type} for {self.user_id}"
+    def __str__(self) -> str:
+        return f"{self.user.email} - {self.get_request_type_display()}"
 
-    @property
-    def action_enum(self) -> SupportActionType:
-        return SupportActionType(self.action_type)
+    def approve(self, admin: User, notes: str = "") -> None:
+        """Approve access recovery request.
+
+        Args:
+            admin: Admin approving the request
+            notes: Additional notes
+        """
+        self.status = self.Status.APPROVED
+        self.processed_by = admin
+        self.processed_at = timezone.now()
+        if notes:
+            self.admin_notes += f"\n[{timezone.now()}] Approved: {notes}"
+        self.save()
+
+    def reject(self, admin: User, reason: str) -> None:
+        """Reject access recovery request.
+
+        Args:
+            admin: Admin rejecting the request
+            reason: Reason for rejection
+        """
+        self.status = self.Status.REJECTED
+        self.processed_by = admin
+        self.processed_at = timezone.now()
+        self.admin_notes += f"\n[{timezone.now()}] Rejected: {reason}"
+        self.save()
