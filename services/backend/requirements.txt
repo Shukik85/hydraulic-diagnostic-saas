@@ -1,88 +1,89 @@
-# Django Backend Requirements - Audited 2025-11-15
-# Based on actual codebase analysis
-# Python 3.11+
+# Django Backend Requirements - Audited 2025-11-15 (Updated)
+# Python 3.14+ Required
+# All packages updated to latest stable versions
 
 # ============================================================
 # CORE FRAMEWORK
 # ============================================================
-Django>=5.1,<6.0  # Upgraded from 4.2.7
-djangorestframework>=3.15,<4.0  # For API (if needed)
+Django>=5.1.3,<6.0
+djangores tframework>=3.15.2,<4.0
 
 # ============================================================
 # DATABASE
 # ============================================================
-# Modern PostgreSQL adapter (no compilation issues)
-psycopg[binary]>=3.1,<4.0
-# Legacy option: psycopg2-binary>=2.9,<3.0
+# Modern PostgreSQL adapter (psycopg3 - native async support)
+psycopg[binary]>=3.2.3,<4.0
 
 # ============================================================
 # ASYNC TASKS & BACKGROUND JOBS
 # ============================================================
-celery>=5.3,<6.0
-django-celery-beat>=2.5,<3.0  # Periodic tasks
-django-celery-results>=2.5,<3.0  # Task results storage
-redis>=5.0,<6.0  # Celery broker & cache
+celery>=5.4.0,<6.0
+django-celery-beat>=2.7.0,<3.0
+django-celery-results>=2.5.1,<3.0
+redis>=5.2.0,<6.0
 
 # ============================================================
 # PRODUCTION SERVER
 # ============================================================
-gunicorn>=21.2,<22.0  # WSGI server
-whitenoise>=6.6,<7.0  # Static files serving (recommended)
+gunicorn>=23.0.0,<24.0  # Latest stable
+whitenoise>=6.8.2,<7.0
 
 # ============================================================
 # EMAIL & NOTIFICATIONS
 # ============================================================
-django-anymail[sendgrid]>=10.2,<11.0  # Email backend
+django-anymail[sendgrid]>=12.0,<13.0
 
 # ============================================================
 # PAYMENTS
 # ============================================================
-stripe>=7.4,<8.0  # Stripe integration
+stripe>=11.1.1,<12.0  # Latest API version
 
 # ============================================================
 # UTILITIES
 # ============================================================
-python-dotenv>=1.0,<2.0  # Environment variables
-Pillow>=12,<13.0  # Image processing
+python-dotenv>=1.0.1,<2.0
+Pillow>=11.0.0,<12.0  # Latest with Python 3.14 support
 
 # ============================================================
 # LOGGING & MONITORING
 # ============================================================
-structlog>=24.1,<26.0  # Structured logging
-sentry-sdk>=2.0,<3.0  # Error tracking (optional)
-django-prometheus>=2.3,<3.0  # Metrics (optional)
+structlog>=24.4.0,<26.0
+sentry-sdk>=2.17.0,<3.0
+django-prometheus>=2.3.1,<3.0
 
 # ============================================================
 # SECURITY & AUTHENTICATION
 # ============================================================
-djangorestframework-simplejwt>=5.3,<6.0  # JWT auth (if using API)
-django-cors-headers>=4.3,<5.0  # CORS (if using API)
-argon2-cffi>=23.1,<24.0  # Secure password hashing (recommended)
+djangores tframework-simplejwt>=5.3.1,<6.0
+django-cors-headers>=4.6.0,<5.0
+argon2-cffi>=23.1.0,<24.0
 
 # ============================================================
-# API DOCUMENTATION (Optional but recommended)
+# API DOCUMENTATION
 # ============================================================
-drf-spectacular>=0.27,<1.0  # OpenAPI 3.0 schema
+drf-spectacular>=0.27.2,<1.0
 
 # ============================================================
-# DEVELOPMENT TOOLS (Optional - comment out for production)
+# DEVELOPMENT TOOLS (Optional - install separately in dev)
 # ============================================================
-# django-debug-toolbar>=4.2,<5.0
-# django-extensions>=3.2,<4.0
-# ipython>=8.20,<9.0
+# django-debug-toolbar>=4.4.6,<5.0
+# django-extensions>=3.2.3,<4.0
+# ipython>=8.29.0,<9.0
 
 # ============================================================
-# TESTING (Optional - comment out for production)
+# TESTING (Optional - install separately in test env)
 # ============================================================
-# pytest>=8.0,<9.0
-# pytest-django>=4.7,<5.0
-# pytest-cov>=4.1,<5.0
-# factory-boy>=3.3,<4.0
+# pytest>=8.3.3,<9.0
+# pytest-django>=4.9.0,<5.0
+# pytest-cov>=6.0.0,<7.0
+# pytest-asyncio>=0.24.0,<1.0
+# factory-boy>=3.3.1,<4.0
+# faker>=33.0.0,<34.0
 
 # ============================================================
-# CODE QUALITY (Optional - comment out for production)
+# CODE QUALITY (Optional - install separately in dev)
 # ============================================================
-# ruff>=0.5,<1.0
-# black>=24.1,<25.0
-# mypy>=1.10,<2.0
-# django-stubs>=5.0,<6.0
+# ruff>=0.8.2,<1.0
+# mypy>=1.13.0,<2.0
+# django-stubs[compatible-mypy]>=5.1.1,<6.0
+# types-redis>=4.6.0.20240425,<5.0
