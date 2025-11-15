@@ -1,0 +1,83 @@
+{% extends "docs/base.html" %}
+{% load static %}
+
+{% block title %}Search{% if query %}: {{ query }}{% endif %} - Documentation - {{ block.super }}{% endblock %}
+
+{% block docs_content %}
+<div class="docs-breadcrumb">
+    <a href="{% url 'docs:index' %}" class="docs-breadcrumb__link">Documentation</a>
+    <span class="docs-breadcrumb__separator">/</span>
+    <span class="docs-breadcrumb__current">Search</span>
+</div>
+
+<div class="docs-header">
+    <h1 class="docs-header__title">🔍 Search Documentation</h1>
+</div>
+
+<section class="docs-section">
+    <form method="get" action="{% url 'docs:search' %}" class="docs-search-form">
+        <input 
+            type="search" 
+            name="q" 
+            placeholder="Search documentation..." 
+            class="docs-search-form__input"
+            value="{{ query }}"
+            autofocus
+        >
+        <button type="submit" class="btn btn--primary">
+            <span class="btn__icon">🔍</span>
+            <span class="btn__text">Search</span>
+        </button>
+    </form>
+
+    {% if query %}
+    <div class="docs-search-info">
+        <p>
+            {% if result_count > 0 %}
+            Found <strong>{{ result_count }}</strong> result{{ result_count|pluralize }} for "<strong>{{ query }}</strong>"
+            {% else %}
+            No results found for "<strong>{{ query }}</strong>"
+            {% endif %}
+        </p>
+    </div>
+
+    {% if results %}
+    <div class="doc-list">
+        {% for doc in results %}
+        <a href="{% url 'docs:detail' doc.slug %}" class="doc-list-item">
+            <div class="doc-list-item__main">
+                <div class="doc-list-item__category">
+                    {{ doc.category.icon }} {{ doc.category.name }}
+                </div>
+                <h3 class="doc-list-item__title">{{ doc.title }}</h3>
+                {% if doc.summary %}
+                <p class="doc-list-item__summary">{{ doc.summary }}</p>
+                {% endif %}
+                {% if doc.tags %}
+                <div class="doc-list-item__tags">
+                    {% for tag in doc.tag_list %}
+                    <span class="tag">{{ tag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="doc-list-item__meta">
+                <div class="doc-list-item__stats">
+                    <span>👁 {{ doc.view_count }}</span>
+                    <span>📅 {{ doc.updated_at|date:"M d" }}</span>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="docs-empty">
+        <div class="docs-empty__icon">🔍</div>
+        <h3 class="docs-empty__title">No results found</h3>
+        <p class="docs-empty__message">Try different keywords or browse by category.</p>
+        <a href="{% url 'docs:index' %}" class="btn btn--secondary">Browse All Categories</a>
+    </div>
+    {% endif %}
+    {% endif %}
+</section>
+{% endblock %}

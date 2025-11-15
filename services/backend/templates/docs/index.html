@@ -1,0 +1,69 @@
+{% extends "docs/base.html" %}
+{% load static %}
+
+{% block title %}Documentation & Guides - {{ block.super }}{% endblock %}
+
+{% block docs_content %}
+<div class="docs-header">
+    <h1 class="docs-header__title">📚 Documentation & Guides</h1>
+    <p class="docs-header__subtitle">
+        Comprehensive guides and references for the Hydraulic Diagnostic System
+    </p>
+</div>
+
+{% if featured_docs %}
+<section class="docs-section">
+    <h2 class="docs-section__title">⭐ Featured Guides</h2>
+    <div class="docs-grid">
+        {% for doc in featured_docs %}
+        <a href="{% url 'docs:detail' doc.slug %}" class="doc-card">
+            <div class="doc-card__header">
+                <span class="doc-card__category">{{ doc.category.icon }} {{ doc.category.name }}</span>
+                {% if doc.id in user_progress %}
+                <span class="doc-card__badge doc-card__badge--completed">✓</span>
+                {% endif %}
+            </div>
+            <h3 class="doc-card__title">{{ doc.title }}</h3>
+            {% if doc.summary %}
+            <p class="doc-card__summary">{{ doc.summary }}</p>
+            {% endif %}
+            <div class="doc-card__footer">
+                <span class="doc-card__meta">👁 {{ doc.view_count }} views</span>
+                <span class="doc-card__meta">📅 {{ doc.updated_at|date:"M d, Y" }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="docs-section">
+    <h2 class="docs-section__title">📂 Browse by Category</h2>
+    <div class="category-grid">
+        {% for category in categories %}
+        <a href="{% url 'docs:category' category.slug %}" class="category-card">
+            <div class="category-card__icon">{{ category.icon|default:"📄" }}</div>
+            <h3 class="category-card__name">{{ category.name }}</h3>
+            {% if category.description %}
+            <p class="category-card__description">{{ category.description }}</p>
+            {% endif %}
+            <div class="category-card__count">{{ category.document_count }} document{{ category.document_count|pluralize }}</div>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="docs-section docs-section--compact">
+    <div class="docs-callout docs-callout--info">
+        <div class="docs-callout__icon">💡</div>
+        <div class="docs-callout__content">
+            <h3>Need Help?</h3>
+            <p>Can't find what you're looking for? Contact our support team or search the documentation.</p>
+            <div class="docs-callout__actions">
+                <a href="{% url 'docs:search' %}" class="btn btn--secondary">Search Docs</a>
+                <a href="{% url 'admin:support_ticket_add' %}" class="btn btn--secondary">Contact Support</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
