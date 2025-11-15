@@ -2,6 +2,7 @@
 Support URLs (quick actions API)
 """
 from django.urls import path
+
 from . import views
 
 urlpatterns = [

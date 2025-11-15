@@ -3,6 +3,7 @@ Request logging middleware
 """
 
 import time
+
 from .models import APILog
 
 

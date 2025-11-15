@@ -1,8 +1,10 @@
 """
 Monitoring and logging models
 """
-from django.db import models
 import uuid
+
+from django.db import models
+
 
 class APILog(models.Model):
     """API request logging"""

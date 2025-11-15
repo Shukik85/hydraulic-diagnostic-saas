@@ -1,13 +1,17 @@
 """
 Support action views
 """
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.contrib.admin.views.decorators import staff_member_required
-from apps.users.models import User
-from .models import SupportAction
 from datetime import timedelta
+
+from django.contrib.admin.views.decorators import staff_member_required
+from django.http import JsonResponse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
+
+from apps.users.models import User
+
+from .models import SupportAction
+
 
 @staff_member_required
 @require_POST

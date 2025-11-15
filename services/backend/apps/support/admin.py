@@ -4,7 +4,8 @@ Support admin interface (UPDATED)
 
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import SupportTicket, SupportAction, DataExportRequest
+
+from .models import DataExportRequest, SupportAction, SupportTicket
 
 
 @admin.register(SupportTicket)

@@ -2,10 +2,13 @@
 Refactored Subscription and Payment models to use shared enums for all status/tier fields.
 Business logic includes type-safe accessors and property methods.
 """
-from django.db import models
-from apps.users.models import User
-from apps.core.enums import SubscriptionTier, SubscriptionStatus, PaymentStatus
 import uuid
+
+from django.db import models
+
+from apps.core.enums import PaymentStatus, SubscriptionStatus, SubscriptionTier
+from apps.users.models import User
+
 
 class Subscription(models.Model):
     """User subscription details"""

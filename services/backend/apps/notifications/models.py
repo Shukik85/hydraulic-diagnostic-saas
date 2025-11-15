@@ -1,9 +1,12 @@
 """
 Refactored EmailCampaign and Notification models to use shared enums. Added property for status/type.
 """
-from django.db import models
-from apps.core.enums import EmailCampaignStatus, NotificationType
 import uuid
+
+from django.db import models
+
+from apps.core.enums import EmailCampaignStatus, NotificationType
+
 
 class EmailCampaign(models.Model):
     """Email marketing campaigns"""

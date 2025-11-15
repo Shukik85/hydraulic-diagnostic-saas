@@ -3,7 +3,9 @@ Notifications admin
 """
 from django.contrib import admin
 from django.utils.html import format_html
+
 from .models import EmailCampaign, Notification
+
 
 @admin.register(EmailCampaign)
 class EmailCampaignAdmin(admin.ModelAdmin):

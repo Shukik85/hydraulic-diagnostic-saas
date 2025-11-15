@@ -1,8 +1,10 @@
 """
 Equipment models (read-only, mirrored from FastAPI DB and now ready for additional Enum).
 """
-from django.db import models
 import uuid
+
+from django.db import models
+
 
 class EquipmentType(models.TextChoices):
     HYDRAULIC = "hydraulic", "Hydraulic System"

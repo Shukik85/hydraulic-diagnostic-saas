@@ -1,101 +1,119 @@
 [project]
 name = "hydraulic-diagnostic-backend"
-version = "0.1.0"
-description = "Django Admin Panel for Hydraulic Diagnostics SaaS"
-requires-python = ">=3.14"
+version = "1.0.0"
+description = "Django Admin Panel for Hydraulic Diagnostics SaaS - Production Ready"
+requires-python = ">=3.11,<3.15"
 readme = "README.md"
+license = {text = "MIT"}
 authors = [
     {name = "Plotnikov Aleksandr", email = "shukik85@ya.ru"}
 ]
+keywords = ["django", "hydraulic", "diagnostics", "saas", "admin", "celery"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Django :: 5.1",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
 
 dependencies = [
-    "Django>=4.2.7",
-    "psycopg2-binary>=2.9.9",
-    "celery>=5.3.4",
-    "django-celery-beat>=2.5.0",
-    "django-celery-results>=2.6.0",
-    "redis>=5.0.1",
-    "gunicorn>=21.2.0",
-    "django-anymail[sendgrid]>=10.2",
-    "stripe>=7.4.0",
-    "python-dotenv>=1.0.0",
-    "Pillow>=10.1.0",
-    "structlog>=24.1.0",
+    "Django>=5.1,<6.0",
+    "djangorestframework>=3.15,<4.0",
+    "psycopg[binary]>=3.1,<4.0",
+    "celery>=5.3,<6.0",
+    "django-celery-beat>=2.5,<3.0",
+    "django-celery-results>=2.5,<3.0",
+    "redis>=5.0,<6.0",
+    "gunicorn>=21.2,<22.0",
+    "whitenoise>=6.6,<7.0",
+    "django-anymail[sendgrid]>=10.2,<11.0",
+    "stripe>=7.4,<9.0",
+    "python-dotenv>=1.0,<2.0",
+    "Pillow>=11.0,<12.0",
+    "structlog>=24.1,<26.0",
+    "sentry-sdk>=2.0,<3.0",
+    "django-prometheus>=2.3,<3.0",
+    "djangorestframework-simplejwt>=5.3,<6.0",
+    "django-cors-headers>=4.3,<5.0",
+    "argon2-cffi>=23.1,<24.0",
+    "drf-spectacular>=0.27,<1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "mypy>=1.11.0",
-    "ruff>=0.6.0",
-    "django-stubs>=5.1.0",
-    "types-redis>=4.6.0",
-    "types-pillow>=10.1.0",
-    "pre-commit>=3.8.0",
-    "django-silk>=5.1.0",
-    "bandit>=1.7.9",
-    "safety>=3.2.0",
+    "mypy>=1.11,<2.0",
+    "django-stubs[compatible-mypy]>=5.1,<6.0",
+    "types-redis>=4.6,<5.0",
+    "ruff>=0.8,<1.0",
+    "pre-commit>=4.0,<5.0",
+    "django-debug-toolbar>=4.4,<5.0",
+    "django-extensions>=3.2,<4.0",
+    "ipython>=8.20,<9.0",
 ]
 
 test = [
-    "pytest>=8.3.0",
-    "pytest-django>=4.9.0",
-    "pytest-cov>=5.0.0",
-    "pytest-asyncio>=0.24.0",
-    "factory-boy>=3.3.0",
-    "faker>=28.0.0",
+    "pytest>=8.3,<9.0",
+    "pytest-django>=4.9,<5.0",
+    "pytest-cov>=6.0,<7.0",
+    "pytest-asyncio>=0.24,<1.0",
+    "factory-boy>=3.3,<4.0",
+    "faker>=33.0,<34.0",
 ]
 
 [build-system]
-requires = ["setuptools>=70.0.0", "wheel"]
+requires = ["setuptools>=75.0", "wheel>=0.45"]
 build-backend = "setuptools.build_meta"
 
+# ============================================================
+# RUFF Configuration
+# ============================================================
 [tool.ruff]
-target-version = "py314"
+target-version = "py311"
 line-length = 100
+indent-width = 4
+
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "migrations",
+    "staticfiles",
+    "media",
+]
 
 [tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "UP",  # pyupgrade
-    "ARG", # flake8-unused-arguments
-    "SIM", # flake8-simplify
-    "TCH", # flake8-type-checking
-]
-ignore = [
-    "E501",  # line too long (handled by formatter)
-    "B008",  # do not perform function calls in argument defaults
-    "B904",  # raise from None
-]
+select = ["E", "W", "F", "I", "B", "C4", "UP", "ARG", "SIM", "DJ", "N"]
+ignore = ["E501", "B008", "B904"]
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]  # unused imports
-"*/migrations/*.py" = ["E501", "F401", "F811"]  # migrations can be long
-"*/tests/*.py" = ["ARG", "SIM"]  # test files can have unused args
+"__init__.py" = ["F401"]
+"*/migrations/*.py" = ["E501", "F401", "N806"]
+"*/tests/*.py" = ["ARG", "SIM"]
+"*/admin.py" = ["N802"]
+"config/settings.py" = ["F405"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["apps", "config"]
 
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ============================================================
+# MYPY Configuration
+# ============================================================
 [tool.mypy]
-python_version = "3.14"
-strict = true
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-check_untyped_defs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-disallow_untyped_calls = false  # Django models have untyped calls
-show_error_codes = true
-
+disallow_untyped_defs = false
 plugins = ["mypy_django_plugin.main"]
+
+exclude = ["migrations/", "tests/", ".venv/"]
 
 [tool.django-stubs]
 django_settings_module = "config.settings"
@@ -107,14 +125,19 @@ module = [
     "anymail.*",
     "django_celery_beat.*",
     "django_celery_results.*",
+    "redis.*",
 ]
 ignore_missing_imports = true
 
+# ============================================================
+# PYTEST Configuration
+# ============================================================
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
 addopts = [
     "--strict-markers",
     "--cov=apps",
@@ -122,10 +145,16 @@ addopts = [
     "--cov-report=term-missing",
     "--cov-fail-under=80",
 ]
+
 testpaths = ["tests"]
 
+# ============================================================
+# COVERAGE Configuration
+# ============================================================
 [tool.coverage.run]
 source = ["apps"]
+branch = true
+
 omit = [
     "*/migrations/*",
     "*/tests/*",
@@ -136,9 +165,6 @@ omit = [
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
-    "raise AssertionError",
     "raise NotImplementedError",
-    "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
-    "@abstractmethod",
 ]

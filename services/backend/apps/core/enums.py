@@ -3,6 +3,7 @@ Unified enums for all status, tier, action, and kind fields in backend apps.
 """
 from enum import StrEnum, auto
 
+
 class SubscriptionTier(StrEnum):
     FREE = auto()
     PRO = auto()
@@ -20,6 +21,11 @@ class SubscriptionTier(StrEnum):
             self.ENTERPRISE: "Enterprise - Unlimited - Custom pricing",
         }[self]
 
+    @classmethod
+    def choices(cls):
+        return [(tier.value, tier.description) for tier in cls]
+
+
 class SubscriptionStatus(StrEnum):
     ACTIVE = auto()
     TRIAL = auto()
@@ -27,18 +33,21 @@ class SubscriptionStatus(StrEnum):
     CANCELLED = auto()
     EXPIRED = auto()
 
+    @classmethod
+    def choices(cls):
+        return [(status.value, status.name.title()) for status in cls]
+
+
 class PaymentStatus(StrEnum):
-    SUCCEEDED = auto()
     PENDING = auto()
+    SUCCEEDED = auto()
     FAILED = auto()
     REFUNDED = auto()
 
-class EmailCampaignStatus(StrEnum):
-    DRAFT = auto()
-    SCHEDULED = auto()
-    SENDING = auto()
-    SENT = auto()
-    FAILED = auto()
+    @classmethod
+    def choices(cls):
+        return [(status.value, status.name.title()) for status in cls]
+
 
 class NotificationType(StrEnum):
     INFO = auto()
@@ -46,11 +55,32 @@ class NotificationType(StrEnum):
     ERROR = auto()
     SUCCESS = auto()
 
+    @classmethod
+    def choices(cls):
+        return [(type.value, type.name.title()) for type in cls]
+
+
+class EmailCampaignStatus(StrEnum):
+    DRAFT = auto()
+    SCHEDULED = auto()
+    SENT = auto()
+    FAILED = auto()
+
+    @classmethod
+    def choices(cls):
+        return [(status.value, status.name.title()) for status in cls]
+
+
 class ErrorSeverity(StrEnum):
     LOW = auto()
     MEDIUM = auto()
     HIGH = auto()
     CRITICAL = auto()
+
+    @classmethod
+    def choices(cls):
+        return [(severity.value, severity.name.title()) for severity in cls]
+
 
 class SupportTicketStatus(StrEnum):
     OPEN = auto()
@@ -58,10 +88,21 @@ class SupportTicketStatus(StrEnum):
     RESOLVED = auto()
     CLOSED = auto()
 
+    @classmethod
+    def choices(cls):
+        return [(status.value, status.name.replace('_', ' ').title()) for status in cls]
+
+
 class SupportPriority(StrEnum):
     LOW = auto()
     MEDIUM = auto()
     HIGH = auto()
+    URGENT = auto()
+
+    @classmethod
+    def choices(cls):
+        return [(priority.value, priority.name.title()) for priority in cls]
+
 
 class DataExportStatus(StrEnum):
     PENDING = auto()
@@ -69,10 +110,17 @@ class DataExportStatus(StrEnum):
     COMPLETED = auto()
     FAILED = auto()
 
+    @classmethod
+    def choices(cls):
+        return [(status.value, status.name.title()) for status in cls]
+
+
 class SupportActionType(StrEnum):
-    PASSWORD_RESET = auto()
-    TRIAL_EXTEND = auto()
-    SUBSCRIPTION_CHANGE = auto()
-    ACCOUNT_UNLOCK = auto()
-    DATA_RECOVERY = auto()
-    OTHER = auto()
+    COMMENT = auto()
+    STATUS_CHANGE = auto()
+    ASSIGNMENT = auto()
+    PRIORITY_CHANGE = auto()
+
+    @classmethod
+    def choices(cls):
+        return [(action.value, action.name.replace('_', ' ').title()) for action in cls]

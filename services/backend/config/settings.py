@@ -3,8 +3,8 @@ Django settings for Hydraulic Diagnostics Backend
 Production-ready configuration with environment variables
 """
 import os
-from pathlib import Path
 from datetime import timedelta
+from pathlib import Path
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
