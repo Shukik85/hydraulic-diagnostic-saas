@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Optimized application root for investor demo performance
+// Application root with SEO optimization
 useSeoMeta({
   titleTemplate: '%s | Hydraulic Diagnostic SaaS',
   description:
@@ -11,18 +11,18 @@ useSeoMeta({
   twitterCard: 'summary_large_image',
 });
 
-// Optimized error handling for smooth demo
+// Global error handling
 const handleError = (error: unknown) => {
   console.error('Application error:', error);
-  // Silent handling for investor presentation
+  // Return false to prevent error propagation to parent components
   return false;
 };
 
 onErrorCaptured(handleError);
 
-// Demo readiness indicator
+// Application initialization
 onMounted(() => {
-  console.log('🚀 Hydraulic Diagnostic SaaS - Metallic Industrial Theme Ready!');
+  console.log('🚀 Hydraulic Diagnostic SaaS - Application Ready');
 });
 </script>
 
@@ -41,7 +41,7 @@ onMounted(() => {
 /* Import metallic industrial theme */
 @import './styles/metallic.css';
 
-/* Optimized global styles for fast loading */
+/* Optimized global styles */
 * {
   box-sizing: border-box;
 }
@@ -61,12 +61,13 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Metallic focus styles */
+/* Focus styles */
 .premium-focus:focus {
-  outline: 2px solid #4f46e5; /* Updated to indigo */
+  outline: 2px solid #4f46e5;
   outline-offset: 2px;
 }
 
+/* TODO: Move these animation utilities to tailwind.config.ts for better organization */
 /* Performance-optimized animations */
 .premium-fade-in {
   animation: fadeIn 0.4s ease-out;
@@ -113,7 +114,7 @@ body {
   }
 }
 
-/* Fast dark mode transitions */
+/* Dark mode transitions */
 .dark * {
   transition:
     background-color 0.15s ease,
@@ -121,7 +122,7 @@ body {
     border-color 0.15s ease;
 }
 
-/* Fixed print styles (no deprecated properties) */
+/* Print styles */
 @media print {
   body {
     -webkit-print-color-adjust: exact;
