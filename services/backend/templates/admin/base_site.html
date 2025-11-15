@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/variables.css' %}">
+<link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">Hydraulic Diagnostic Admin</a></h1>
+{% endblock %}
+
+{% block nav-global %}
+<nav class="admin-nav">
+  <a href="{% url 'admin:index' %}">Dashboard</a>
+  <a href="{% url 'docs:index' %}">📚 Документация</a>
+  <!-- можно добавить другие разделы -->
+</nav>
+{% endblock %}
+
+{% block content %}
+{{ block.super }}
+{% endblock %}
