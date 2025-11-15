@@ -1,6 +1,6 @@
 /**
  * TypeScript Types для Hydraulic Diagnostic Platform API
- * 
+ *
  * @see https://github.com/Shukik85/hydraulic-diagnostic-saas
  * @version 1.0.0
  */
@@ -158,7 +158,7 @@ export enum SensorUnit {
   Bar = 'bar',
   Celsius = 'celsius',
   RPM = 'rpm',
-  LPM = 'lpm'
+  LPM = 'lpm',
 }
 
 /**
@@ -169,7 +169,7 @@ export enum ModelPreference {
   XGBoost = 'xgboost',
   RandomForest = 'random_forest',
   Adaptive = 'adaptive',
-  Ensemble = 'ensemble'
+  Ensemble = 'ensemble',
 }
 
 /**
@@ -178,7 +178,7 @@ export enum ModelPreference {
 export enum AnomalySeverity {
   Normal = 'normal',
   Warning = 'warning',
-  Critical = 'critical'
+  Critical = 'critical',
 }
 
 /**
@@ -188,7 +188,7 @@ export enum ComponentType {
   Pump = 'pump',
   Valve = 'valve',
   Accumulator = 'accumulator',
-  Cooler = 'cooler'
+  Cooler = 'cooler',
 }
 
 /**
@@ -197,7 +197,7 @@ export enum ComponentType {
 export enum ComponentStatus {
   Normal = 'normal',
   Degraded = 'degraded',
-  Failed = 'failed'
+  Failed = 'failed',
 }
 
 /**
@@ -207,7 +207,7 @@ export enum JobStatus {
   Queued = 'queued',
   Processing = 'processing',
   Completed = 'completed',
-  Failed = 'failed'
+  Failed = 'failed',
 }
 
 /**
@@ -220,7 +220,7 @@ export enum ErrorCode {
   InternalError = 'INTERNAL_ERROR',
   MLServiceUnavailable = 'ML_SERVICE_UNAVAILABLE',
   NotFound = 'NOT_FOUND',
-  Forbidden = 'FORBIDDEN'
+  Forbidden = 'FORBIDDEN',
 }
 
 // -------------------- REQUEST SCHEMAS --------------------
@@ -504,7 +504,7 @@ export function getSeverityColor(severity: AnomalySeverity): string {
   const colors: Record<AnomalySeverity, string> = {
     [AnomalySeverity.Normal]: 'text-green-600 bg-green-50',
     [AnomalySeverity.Warning]: 'text-yellow-600 bg-yellow-50',
-    [AnomalySeverity.Critical]: 'text-red-600 bg-red-50'
+    [AnomalySeverity.Critical]: 'text-red-600 bg-red-50',
   }
   return colors[severity] || 'text-gray-600 bg-gray-50'
 }
@@ -516,7 +516,7 @@ export function getComponentStatusColor(status: ComponentStatus): string {
   const colors: Record<ComponentStatus, string> = {
     [ComponentStatus.Normal]: 'text-green-600 bg-green-50',
     [ComponentStatus.Degraded]: 'text-yellow-600 bg-yellow-50',
-    [ComponentStatus.Failed]: 'text-red-600 bg-red-50'
+    [ComponentStatus.Failed]: 'text-red-600 bg-red-50',
   }
   return colors[status] || 'text-gray-600 bg-gray-50'
 }
@@ -528,7 +528,7 @@ export function getSeverityIcon(severity: AnomalySeverity): string {
   const icons: Record<AnomalySeverity, string> = {
     [AnomalySeverity.Normal]: 'heroicons:check-circle',
     [AnomalySeverity.Warning]: 'heroicons:exclamation-triangle',
-    [AnomalySeverity.Critical]: 'heroicons:x-circle'
+    [AnomalySeverity.Critical]: 'heroicons:x-circle',
   }
   return icons[severity] || 'heroicons:information-circle'
 }
@@ -540,12 +540,12 @@ export function getSeverityIcon(severity: AnomalySeverity): string {
  */
 export function isValidSensorReading(data: any): data is SensorReading {
   return (
-    data &&
-    typeof data === 'object' &&
-    typeof data.sensor_id === 'string' &&
-    typeof data.timestamp === 'string' &&
-    typeof data.value === 'number' &&
-    Object.values(SensorUnit).includes(data.unit)
+    data
+    && typeof data === 'object'
+    && typeof data.sensor_id === 'string'
+    && typeof data.timestamp === 'string'
+    && typeof data.value === 'number'
+    && Object.values(SensorUnit).includes(data.unit)
   )
 }
 
@@ -554,12 +554,12 @@ export function isValidSensorReading(data: any): data is SensorReading {
  */
 export function isValidMLPrediction(data: any): data is MLPredictionResponse {
   return (
-    data &&
-    typeof data === 'object' &&
-    typeof data.prediction_id === 'string' &&
-    typeof data.system_id === 'string' &&
-    typeof data.anomaly_score === 'number' &&
-    Object.values(AnomalySeverity).includes(data.severity)
+    data
+    && typeof data === 'object'
+    && typeof data.prediction_id === 'string'
+    && typeof data.system_id === 'string'
+    && typeof data.anomaly_score === 'number'
+    && Object.values(AnomalySeverity).includes(data.severity)
   )
 }
 
@@ -568,9 +568,9 @@ export function isValidMLPrediction(data: any): data is MLPredictionResponse {
  */
 export function isValidWSMessage(data: any): data is WSMessage {
   return (
-    data &&
-    typeof data === 'object' &&
-    typeof data.type === 'string' &&
-    ['sensor_reading', 'anomaly_detected', 'system_status_update'].includes(data.type)
+    data
+    && typeof data === 'object'
+    && typeof data.type === 'string'
+    && ['sensor_reading', 'anomaly_detected', 'system_status_update'].includes(data.type)
   )
 }

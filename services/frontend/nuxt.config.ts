@@ -1,71 +1,111 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
-  
-  modules: [
-    '@pinia/nuxt',
-    '@vueuse/nuxt',
-    '@nuxt/eslint'
-  ],
-  
-  // Runtime config
-  runtimeConfig: {
-    public: {
-      // API Gateway (Kong) - unified entry point
-      apiBase: process.env.API_GATEWAY_URL || 'https://api.hydraulic-diagnostics.com',
-      
-      // WebSocket endpoint
-      wsBase: process.env.WS_URL || 'wss://api.hydraulic-diagnostics.com/ws',
-      
-      // Service endpoints (за Kong Gateway)
-      endpoints: {
-        auth: '/api/v1/auth',
-        equipment: '/api/v1/equipment',
-        diagnosis: '/api/v1/diagnosis',
-        gnn: '/api/v1/gnn',
-        rag: '/api/v1/rag',
-        admin: '/api/v1/admin'
-      },
-      
-      // Feature flags
-      features: {
-        ragInterpretation: process.env.ENABLE_RAG === 'true',
-        realtimeUpdates: process.env.ENABLE_WEBSOCKET === 'true',
-        advancedCharts: process.env.ENABLE_CHARTS === 'true'
-      }
-    }
-  },
-  
-  // TypeScript
+
   typescript: {
     strict: true,
-    typeCheck: true,
-    shim: false
+    typeCheck: false,
+    shim: false,
   },
-  
-  // ESLint
-  eslint: {
-    config: {
-      stylistic: true
-    }
+
+  modules: [
+    '@nuxtjs/tailwindcss',
+    '@nuxtjs/i18n',
+    '@pinia/nuxt',
+    '@nuxt/icon',
+    '@vueuse/nuxt',
+  ],
+
+  css: [
+    '~/styles/metallic.css',
+  ],
+
+  postcss: {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    },
   },
-  
-  // Build optimization
+
   vite: {
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'api-client': ['./generated/api']
-          }
-        }
-      }
-    }
+    optimizeDeps: {
+      include: [
+        'axios',
+        'echarts/core',
+        'echarts/charts',
+        'echarts/components',
+        'vue-echarts',
+        'three',
+        'three/examples/jsm/controls/OrbitControls',
+      ],
+    },
+    ssr: {
+      noExternal: ['vue-echarts', 'echarts', 'three'],
+    },
   },
-  
-  // Ignore generated code from TypeScript checking
-  ignore: [
-    'generated/**/*'
-  ]
+
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
+      wsBase: process.env.NUXT_PUBLIC_WS_BASE || 'ws://localhost:8000/ws',
+      enableMocks: process.env.ENABLE_MOCKS === 'true' || true,
+    },
+  },
+
+  i18n: {
+    locales: [
+      { code: 'ru', iso: 'ru-RU', file: 'ru.json', name: 'Русский' },
+      { code: 'en', iso: 'en-US', file: 'en.json', name: 'English' },
+    ],
+    defaultLocale: 'ru',
+    strategy: 'no_prefix',
+    langDir: 'locales/',
+    lazy: true,
+    detectBrowserLanguage: {
+      useCookie: true,
+      cookieKey: 'i18n_locale',
+      redirectOn: 'root',
+      alwaysRedirect: false,
+      fallbackLocale: 'ru',
+    },
+    vueI18n: './i18n.config.ts',
+  },
+
+  app: {
+    head: {
+      title: 'Hydraulic Diagnostic SaaS',
+      charset: 'utf-8',
+      viewport: 'width=device-width, initial-scale=1',
+      meta: [
+        { name: 'description', content: 'AI-powered hydraulic diagnostics' },
+        { name: 'theme-color', content: '#2b3340' },
+      ],
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap' },
+      ],
+    },
+  },
+
+  nitro: {
+    compressPublicAssets: true,
+    routeRules: {
+      '/api/**': { cors: true },
+      '/diagnosis/demo': { ssr: false },
+    },
+  },
+
+  build: {
+    transpile: ['tslib', 'three'],
+  },
+
+  devServer: {
+    port: 3000,
+    host: 'localhost',
+  },
+
+  imports: {
+    dirs: ['composables/**', 'utils/**', 'types/**', 'stores/**'],
+  },
 })

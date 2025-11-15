@@ -3,6 +3,7 @@
  * Mock data для demo/testing.
  * Используется только когда backend недоступен или для презентаций.
  */
+import { useRuntimeConfig } from 'nuxt/app'
 import { ref, computed } from 'vue'
 
 export interface DiagnosticResult {
@@ -29,12 +30,12 @@ export interface ActiveSession {
  */
 export function useMockData() {
   const config = useRuntimeConfig()
-  
+
   // Feature flag check
   const isMockEnabled = computed(() => {
     return config.public.features?.enableMockData === true
   })
-  
+
   /**
    * Mock результаты диагностики
    */
@@ -47,7 +48,7 @@ export function useMockData() {
       issuesFound: 1,
       completedAt: '2 часа назад',
       status: 'completed',
-      duration: '4.2 мин'
+      duration: '4.2 мин',
     },
     {
       id: 2,
@@ -57,7 +58,7 @@ export function useMockData() {
       issuesFound: 3,
       completedAt: '6 часов назад',
       status: 'warning',
-      duration: '2.8 мин'
+      duration: '2.8 мин',
     },
     {
       id: 3,
@@ -67,7 +68,7 @@ export function useMockData() {
       issuesFound: 0,
       completedAt: '1 день назад',
       status: 'completed',
-      duration: '3.1 мин'
+      duration: '3.1 мин',
     },
     {
       id: 4,
@@ -77,10 +78,10 @@ export function useMockData() {
       issuesFound: 7,
       completedAt: '3 дня назад',
       status: 'error',
-      duration: '5.7 мин'
-    }
+      duration: '5.7 мин',
+    },
   ]
-  
+
   /**
    * Mock RAG интерпретация (для demo)
    */
@@ -96,9 +97,9 @@ export function useMockData() {
 
 Шаг 4: Формирую рекомендации...
 Необходимо плановое ТО в течение 48 часов.`,
-    
+
     summary: 'Обнаружены признаки износа подшипников в насосной станции HYD-001. Рекомендуется срочное плановое обслуживание для предотвращения отказа.',
-    
+
     analysis: `Детальный анализ GNN результатов показывает:
 
 1. **Аномалии вибрации**: Увеличение амплитуды на +35% за последние 72 часа
@@ -108,16 +109,16 @@ export function useMockData() {
 Причина: Износ подшипников вследствие продолжительной эксплуатации (более 8000 часов).
 
 Риск: Средний. При отсутствии вмешательства может привести к отказу в течение 7-14 дней.`,
-    
+
     recommendations: [
       'Заменить подшипники в течение 48 часов',
       'Проверить качество смазки и уровень масла',
       'Выполнить балансировку ротора',
-      'Установить дополнительный датчик вибрации для мониторинга'
+      'Установить дополнительный датчик вибрации для мониторинга',
     ],
-    
+
     confidence: 0.87,
-    
+
     knowledgeUsed: [
       {
         id: 'kb_001',
@@ -127,8 +128,8 @@ export function useMockData() {
         metadata: {
           source: 'Техническая документация',
           category: 'Обслуживание',
-          tags: ['насосы', 'вибрация', 'подшипники']
-        }
+          tags: ['насосы', 'вибрация', 'подшипники'],
+        },
       },
       {
         id: 'kb_002',
@@ -138,18 +139,18 @@ export function useMockData() {
         metadata: {
           source: 'База знаний',
           category: 'Диагностика',
-          tags: ['подшипники', 'диагностика']
-        }
-      }
+          tags: ['подшипники', 'диагностика'],
+        },
+      },
     ],
-    
+
     metadata: {
       model: 'DeepSeek-R1-70B',
       processingTime: 12350,
-      tokensUsed: 2847
-    }
+      tokensUsed: 2847,
+    },
   }
-  
+
   /**
    * Генерировать mock diagnostic result.
    */
@@ -157,7 +158,7 @@ export function useMockData() {
     const id = Date.now()
     const score = Math.floor(Math.random() * 30) + 70
     const issuesFound = Math.floor(Math.random() * 5)
-    
+
     return {
       id,
       name: `Анализ системы - HYD-${String(id).slice(-3)}`,
@@ -166,49 +167,49 @@ export function useMockData() {
       issuesFound,
       completedAt: 'только что',
       status: score >= 90 ? 'completed' : score >= 70 ? 'warning' : 'error',
-      duration: `${Math.floor(Math.random() * 3) + 2}.${Math.floor(Math.random() * 9)} мин`
+      duration: `${Math.floor(Math.random() * 3) + 2}.${Math.floor(Math.random() * 9)} мин`,
     }
   }
-  
+
   /**
    * Симулировать активную сессию диагностики.
    */
   const simulateActiveSession = (
     onProgress: (progress: number) => void,
-    onComplete: (result: DiagnosticResult) => void
+    onComplete: (result: DiagnosticResult) => void,
   ) => {
     const session: ActiveSession = {
       id: Date.now(),
       name: `Новая диагностика`,
       equipment: 'HYD-001',
       progress: 0,
-      startedAt: 'сейчас'
+      startedAt: 'сейчас',
     }
-    
+
     const interval = setInterval(() => {
       session.progress += Math.random() * 20
       onProgress(session.progress)
-      
+
       if (session.progress >= 100) {
         session.progress = 100
         clearInterval(interval)
-        
+
         setTimeout(() => {
           const result = generateMockResult()
           onComplete(result)
         }, 1000)
       }
     }, 500)
-    
+
     return () => clearInterval(interval) // Cleanup function
   }
-  
+
   return {
     isMockEnabled: readonly(isMockEnabled),
     mockDiagnosticResults,
     mockRAGInterpretation,
     generateMockResult,
-    simulateActiveSession
+    simulateActiveSession,
   }
 }
 

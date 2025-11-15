@@ -3,7 +3,7 @@
  * Wrapper для auto-generated OpenAPI client.
  * Предоставляет typed API clients для всех backend сервисов.
  */
-import { 
+import {
   DiagnosisService,
   EquipmentService,
   GNNService,
@@ -12,14 +12,15 @@ import {
 } from '~/generated/api/services'
 
 import type { ConfigurationParameters } from '~/generated/api/core/OpenAPI'
+import { useRuntimeConfig } from 'nuxt/app'
 
 /**
  * Создает configured API clients для всех сервисов.
- * 
+ *
  * @example
  * ```typescript
  * const { diagnosis, rag } = useGeneratedApi()
- * 
+ *
  * // Fully typed!
  * const result = await diagnosis.runDiagnosis({
  *   equipmentId: 'exc_001',
@@ -30,7 +31,7 @@ import type { ConfigurationParameters } from '~/generated/api/core/OpenAPI'
  *     }
  *   }
  * })
- * 
+ *
  * // RAG interpretation
  * const interpretation = await rag.interpretDiagnosis({
  *   gnnResult: result,
@@ -41,27 +42,27 @@ import type { ConfigurationParameters } from '~/generated/api/core/OpenAPI'
 export const useGeneratedApi = () => {
   const authStore = useAuthStore()
   const config = useRuntimeConfig()
-  
+
   // Base configuration
   const configParams: ConfigurationParameters = {
     basePath: config.public.apiBase,
-    
+
     // Auth token injection
     accessToken: () => authStore.token,
-    
+
     // Custom headers
     headers: {
       'X-Device-Fingerprint': getDeviceFingerprint(),
       'X-Client-Version': '1.0.0',
       'X-Tenant-ID': authStore.tenantId
     },
-    
+
     // Credentials
     credentials: 'include'
   }
-  
+
   const apiConfig = new Configuration(configParams)
-  
+
   return {
     diagnosis: new DiagnosisService(apiConfig),
     equipment: new EquipmentService(apiConfig),
@@ -75,7 +76,7 @@ export const useGeneratedApi = () => {
  */
 function getDeviceFingerprint(): string {
   if (process.server) return 'server'
-  
+
   const fingerprint = {
     userAgent: navigator.userAgent,
     language: navigator.language,
@@ -85,13 +86,13 @@ function getDeviceFingerprint(): string {
     colorDepth: screen.colorDepth,
     hardwareConcurrency: navigator.hardwareConcurrency
   }
-  
+
   return btoa(JSON.stringify(fingerprint))
 }
 
 /**
  * Type-safe API hook для компонентов.
- * 
+ *
  * @example
  * ```vue
  * <script setup>
