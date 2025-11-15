@@ -1,3 +1,48 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const loading = ref(false)
+const modelValue = ref(true)
+const { t } = useI18n()
+
+const form = ref({
+  equipment: '',
+  type: 'full',
+  emailNotification: false,
+  priorityAnalysis: false
+})
+
+const errors = ref<{ equipment?: string }>({})
+
+function validate() {
+  errors.value.equipment = !form.value.equipment ? t('diagnostics.runModal.equipmentRequired') : ''
+  return !errors.value.equipment
+}
+
+const isValid = computed(validate)
+
+function handleCancel() {
+  modelValue.value = false
+}
+
+function handleSubmit() {
+  if (!isValid.value) return
+  loading.value = true
+  setTimeout(() => loading.value = false, 1500)
+}
+
+function getEstimatedDuration() {
+  switch (form.value.type) {
+    case 'full': return '2-5 min'
+    case 'pressure': return '1-2 min'
+    case 'temperature': return '1-2 min'
+    case 'vibration': return '1-3 min'
+    case 'flow': return '1-2 min'
+    default: return '2-5 min'
+  }
+}
+</script>
 <template>
   <UModal :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" :title="t('diagnostics.runModal.title')" :description="t('diagnostics.runModal.description')" size="md" :close-on-backdrop="!loading">
     <div class="space-y-5">
@@ -63,5 +108,4 @@
     </template>
   </UModal>
 </template>
-<script setup lang="ts">// ...без изменений...</script>
 <style scoped>.fade-enter-active, .fade-leave-active { transition: all 0.15s ease-out; } .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-4px); } .metallic-select { background-color: #191d23 !important; color: #edf2fa !important; border-color: #4c596f !important; }</style>
