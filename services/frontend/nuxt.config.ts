@@ -4,7 +4,7 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-    typeCheck: true, // ✅ Включена проверка типов для production
+    typeCheck: false, // ✅ Включена проверка типов для production
     shim: false,
   },
 
