@@ -12,7 +12,6 @@ import {
 } from '~/generated/api/services'
 
 import type { ConfigurationParameters } from '~/generated/api/core/OpenAPI'
-import { useAuthStore } from '~/stores/auth.store'
 
 /**
  * Создает configured API clients для всех сервисов.
@@ -40,28 +39,21 @@ import { useAuthStore } from '~/stores/auth.store'
  * ```
  */
 export const useGeneratedApi = () => {
-  const config = useRuntimeConfig()
   const authStore = useAuthStore()
+  const config = useRuntimeConfig()
   
   // Base configuration
   const configParams: ConfigurationParameters = {
-    basePath: config.public.apiBase as string,
+    basePath: config.public.apiBase,
     
     // Auth token injection
-    accessToken: () => {
-      try {
-        return authStore?.token || ''
-      } catch (error) {
-        console.warn('Auth store not available:', error)
-        return ''
-      }
-    },
+    accessToken: () => authStore.token,
     
     // Custom headers
     headers: {
       'X-Device-Fingerprint': getDeviceFingerprint(),
       'X-Client-Version': '1.0.0',
-      'X-Tenant-ID': authStore?.tenantId || 'default'
+      'X-Tenant-ID': authStore.tenantId
     },
     
     // Credentials
@@ -80,33 +72,21 @@ export const useGeneratedApi = () => {
 
 /**
  * Helper для device fingerprinting.
- * Генерирует уникальный отпечаток устройства для безопасности.
- * 
- * @returns Base64-encoded device fingerprint
  */
 function getDeviceFingerprint(): string {
-  // Server-side rendering
-  if (process.server) {
-    return 'server-render'
+  if (process.server) return 'server'
+  
+  const fingerprint = {
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    platform: navigator.platform,
+    screenResolution: `${screen.width}x${screen.height}`,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    colorDepth: screen.colorDepth,
+    hardwareConcurrency: navigator.hardwareConcurrency
   }
   
-  // Client-side
-  try {
-    const fingerprint = {
-      userAgent: navigator.userAgent || 'unknown',
-      language: navigator.language || 'unknown',
-      platform: navigator.platform || 'unknown',
-      screenResolution: `${screen.width || 0}x${screen.height || 0}`,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      colorDepth: screen.colorDepth || 24,
-      hardwareConcurrency: navigator.hardwareConcurrency || 4
-    }
-    
-    return btoa(JSON.stringify(fingerprint))
-  } catch (error) {
-    console.warn('Failed to generate device fingerprint:', error)
-    return 'fingerprint-error'
-  }
+  return btoa(JSON.stringify(fingerprint))
 }
 
 /**
