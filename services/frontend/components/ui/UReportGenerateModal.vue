@@ -1,3 +1,34 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+// emulates async/UX - replace with store or composable in production
+const loading = ref(false)
+const modelValue = ref(true)
+const { t } = useI18n()
+
+const form = ref({
+  template: 'executive',
+  range: 'last_7d',
+  locale: 'ru-RU',
+  title: ''
+})
+
+function handleCancel() {
+  modelValue.value = false
+}
+function handleSubmit() {
+  loading.value = true
+  setTimeout(() => loading.value = false, 2000)
+}
+function getPreviewText() {
+  return `${t('reports.generate.template')}: ${form.value.template}`
+}
+
+// provide required emits
+// defineEmits(['update:modelValue'])
+
+</script>
 <template>
   <UModal :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" :title="t('reports.generate.title')" :description="t('reports.generate.subtitle')" size="lg" :close-on-backdrop="true">
     <div class="space-y-5">
@@ -63,5 +94,4 @@
     </template>
   </UModal>
 </template>
-<script setup lang="ts">// ...без изменений...</script>
 <style scoped>.metallic-select { background-color: #191d23 !important; color: #edf2fa !important; border-color: #4c596f !important; }</style>
