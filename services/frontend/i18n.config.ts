@@ -1,5 +1,5 @@
 export default defineI18nConfig(() => ({
   legacy: false,
   fallbackLocale: 'ru',
-  globalInjection: true
+  globalInjection: true,
 }))
