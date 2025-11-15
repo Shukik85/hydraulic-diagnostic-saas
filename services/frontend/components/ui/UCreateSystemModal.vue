@@ -1,3 +1,38 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const loading = ref(false)
+const modelValue = ref(true)
+const { t } = useI18n()
+
+const form = ref({
+  name: '',
+  type: 'industrial',
+  status: 'active',
+  description: ''
+})
+
+const errors = ref<{ name?: string }>({})
+
+function validate() {
+  errors.value.name = !form.value.name ? t('systems.create.nameRequired') : ''
+  return !errors.value.name
+}
+
+const isValid = computed(validate)
+
+function handleCancel() {
+  modelValue.value = false
+}
+
+function handleSubmit() {
+  if (!isValid.value) return
+  loading.value = true
+  setTimeout(() => loading.value = false, 1500)
+}
+
+</script>
 <template>
   <UModal
     :model-value="modelValue"
@@ -11,7 +46,7 @@
       <!-- System Name -->
       <div>
         <label class="u-label" for="system-name">{{ t('systems.create.name') }} *</label>
-        <input id="system-name" v-model.trim="form.name" type="text" class="u-input" :placeholder="t('systems.create.namePlaceholder')" :disabled="loading" maxlength="200" ref="nameInputRef" />
+        <input id="system-name" v-model.trim="form.name" type="text" class="u-input" :placeholder="t('systems.create.namePlaceholder')" :disabled="loading" maxlength="200" />
         <Transition name="fade">
           <p v-if="errors.name" class="mt-2 text-sm text-error-500 flex items-center gap-1">
             <Icon name="heroicons:exclamation-circle" class="h-4 w-4 shrink-0" />
@@ -68,5 +103,4 @@
     </template>
   </UModal>
 </template>
-<script setup lang="ts">// ...без изменений...</script>
 <style scoped>.fade-enter-active, .fade-leave-active { transition: all 0.15s ease-out; } .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-4px); } .metallic-select { background-color: #191d23 !important; color: #edf2fa !important; border-color: #4c596f !important; }</style>
