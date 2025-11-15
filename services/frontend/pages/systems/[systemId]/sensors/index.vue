@@ -5,7 +5,7 @@
       <div>
         <h1 class="u-h2">{{ t('sensors.title') }}</h1>
         <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
-          {{ t('sensors.subtitle') }} - {{ t('breadcrumbs.system') }} #{{ route.params.id }}
+          {{ t('sensors.subtitle') }} - {{ t('breadcrumbs.system') }} #{{ route.params.systemId }}
         </p>
       </div>
       <button class="u-btn u-btn-primary u-btn-md">

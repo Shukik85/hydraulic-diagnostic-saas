@@ -4,7 +4,7 @@
     <div>
       <h1 class="u-h2">{{ t('sensors.detail.title') }}</h1>
       <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
-        {{ t('breadcrumbs.system') }} #{{ route.params.id }} / {{ t('breadcrumbs.sensors') }} #{{ route.params.sensorId }}
+        {{ t('breadcrumbs.system') }} #{{ route.params.systemId }} / {{ t('breadcrumbs.sensors') }} #{{ route.params.sensorId }}
       </p>
     </div>
 

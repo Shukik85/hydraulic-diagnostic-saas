@@ -1,32 +1,58 @@
+<script setup lang="ts">
+interface Props {
+  modelValue?: string | number
+  disabled?: boolean
+  className?: string
+}
+
+interface Emits {
+  (e: 'update:modelValue', value: string | number): void
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: '',
+  disabled: false
+})
+
+const emit = defineEmits<Emits>()
+
+const localValue = ref(props.modelValue)
+
+watch(() => props.modelValue, (newVal) => {
+  localValue.value = newVal
+})
+
+const handleChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  emit('update:modelValue', target.value)
+}
+</script>
+
 <template>
   <div class="relative w-full">
     <select
       v-model="localValue"
       @change="handleChange"
-      :disabled="disabled"
+      :disabled="props.disabled"
       :class="[
         'input-metal appearance-none w-full pr-10',
         'cursor-pointer',
         'transition-all duration-200',
-        // Hover state
-        !disabled && 'hover:border-primary-400',
-        // Focus state
+        !props.disabled && 'hover:border-primary-400',
         'focus:border-primary-400 focus:ring-2 focus:ring-primary-500/20',
-        // Disabled state
-        disabled && 'cursor-not-allowed opacity-50 bg-steel-darker',
-        className
+        props.disabled && 'cursor-not-allowed opacity-50 bg-steel-darker',
+        props.className
       ]"
       v-bind="$attrs"
     >
       <slot />
     </select>
     
-    <!-- Custom Dropdown Icon -->
     <div 
       :class="[
         'absolute right-3 top-1/2 -translate-y-1/2',
         'pointer-events-none transition-colors duration-200',
-        disabled ? 'text-steel-dark' : 'text-steel-light',
+        props.disabled ? 'text-steel-dark' : 'text-steel-light',
       ]"
     >
       <svg 
@@ -46,31 +72,3 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { ref, watch } from 'vue'
-
-interface Props {
-  modelValue?: string | number
-  disabled?: boolean
-  className?: string
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  modelValue: '',
-  disabled: false,
-})
-
-const emit = defineEmits(['update:modelValue'])
-
-const localValue = ref(props.modelValue)
-
-watch(() => props.modelValue, (newVal) => {
-  localValue.value = newVal
-})
-
-const handleChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement
-  emit('update:modelValue', target.value)
-}
-</script>
