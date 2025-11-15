@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 # Assumes PYTHONPATH is set in Docker/environment
 # See: services/rag_service/Dockerfile -> ENV PYTHONPATH=/app
 try:
-    from shared.admin_auth import get_current_admin_user, AdminUser
+    from admin_auth import get_current_admin_user, AdminUser
 except ImportError:
     # Fallback for local development
     import sys
@@ -31,7 +31,7 @@ except ImportError:
     # Add parent directory to path only if not in production
     if not os.getenv("PRODUCTION", "").lower() == "true":
         sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-        from shared.admin_auth import get_current_admin_user, AdminUser
+        from admin_auth import get_current_admin_user, AdminUser
     else:
         raise
 

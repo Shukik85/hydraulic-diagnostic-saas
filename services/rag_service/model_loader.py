@@ -1,245 +1,166 @@
-# services/rag_service/model_loader.py
 """
-Загрузка и управление DeepSeek-R1-Distill-32B с vLLM.
-
-UPDATED: Config-based, no hardcoded values.
+Ollama-based model loader for RAG service
+Simplified replacement for vLLM with local LLM support
 """
-import logging
-from typing import Optional
-from datetime import datetime, timezone
-
-from vllm import LLM, SamplingParams
-from fastapi import HTTPException
-import torch
+import ollama
 import structlog
-
-from config import config
+from typing import List, Dict, Any
+from pydantic import BaseModel
 
 logger = structlog.get_logger()
 
 
-class DeepSeekModel:
-    """
-    Self-hosted DeepSeek-R1-Distill-32B с vLLM.
+class OllamaConfig(BaseModel):
+    """Configuration for Ollama LLM"""
+    model_name: str = "deepseek-r1:1.5b"  # Lightweight model for CPU
+    temperature: float = 0.7
+    max_tokens: int = 2048
+    host: str = "http://localhost:11434"
+
+
+class OllamaModelLoader:
+    """Load and interact with Ollama models"""
     
-    Features:
-    - PagedAttention for memory efficiency
-    - Continuous batching
-    - Tensor parallelism for multi-GPU
-    - Optimized CUDA kernels
-    """
+    def __init__(self, config: OllamaConfig = None):
+        self.config = config or OllamaConfig()
+        self.client = ollama.Client(host=self.config.host)
+        self.model_name = self.config.model_name
+        logger.info("ollama_initialized", model=self.model_name, host=self.config.host)
     
-    def __init__(
-        self,
-        model_name: Optional[str] = None,
-        tensor_parallel_size: Optional[int] = None,
-        gpu_memory_utilization: Optional[float] = None,
-        max_model_len: Optional[int] = None
-    ):
-        # Use config defaults if not specified
-        self.model_name = model_name or config.MODEL_NAME
-        self.tensor_parallel_size = tensor_parallel_size or config.TENSOR_PARALLEL_SIZE
-        self.gpu_memory_utilization = gpu_memory_utilization or config.GPU_MEMORY_UTIL
-        self.max_model_len = max_model_len or config.MAX_MODEL_LEN
-        
-        logger.info(
-            "model_initialization_started",
-            model=self.model_name,
-            tensor_parallel_size=self.tensor_parallel_size,
-            gpu_memory_util=self.gpu_memory_utilization,
-            max_model_len=self.max_model_len
-        )
-        
-        # GPU checks
-        if not torch.cuda.is_available():
-            raise RuntimeError("CUDA not available. This service requires GPU.")
-        
-        gpu_count = torch.cuda.device_count()
-        if gpu_count < self.tensor_parallel_size:
-            raise RuntimeError(
-                f"Requested {self.tensor_parallel_size} GPUs, "
-                f"but only {gpu_count} available"
-            )
-        
-        logger.info("gpu_detected", gpu_count=gpu_count)
-        for i in range(gpu_count):
-            props = torch.cuda.get_device_properties(i)
-            logger.info(
-                "gpu_info",
-                gpu_id=i,
-                name=props.name,
-                memory_gb=f"{props.total_memory / 1024**3:.1f}"
-            )
-        
-        # Initialize vLLM
-        self.llm = LLM(
-            model=self.model_name,
-            tensor_parallel_size=self.tensor_parallel_size,
-            gpu_memory_utilization=self.gpu_memory_utilization,
-            max_model_len=self.max_model_len,
-            dtype="bfloat16",
-            trust_remote_code=True,
-            download_dir=config.MODEL_PATH  # ✅ From config!
-        )
-        
-        logger.info("model_loaded_successfully")
-    
-    def _validate_params(
-        self,
-        temperature: float,
-        top_p: float,
-        max_tokens: int
-    ):
-        """Validate generation parameters."""
-        if not 0.0 <= temperature <= 2.0:
-            raise ValueError(f"temperature must be in [0.0, 2.0], got {temperature}")
-        if not 0.0 <= top_p <= 1.0:
-            raise ValueError(f"top_p must be in [0.0, 1.0], got {top_p}")
-        if not 1 <= max_tokens <= config.MAX_MODEL_LEN:
-            raise ValueError(
-                f"max_tokens must be in [1, {config.MAX_MODEL_LEN}], got {max_tokens}"
-            )
+    def pull_model(self):
+        """Pull model from Ollama registry if not exists"""
+        try:
+            logger.info("pulling_model", model=self.model_name)
+            self.client.pull(self.model_name)
+            logger.info("model_pulled", model=self.model_name)
+        except Exception as e:
+            logger.error("model_pull_failed", error=str(e), model=self.model_name)
+            raise
     
     def generate(
         self,
         prompt: str,
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None,
-        top_p: Optional[float] = None,
-        stop: Optional[list] = None
+        system_prompt: str = None,
+        temperature: float = None,
+        max_tokens: int = None
     ) -> str:
-        """
-        Generate response with reasoning.
-        
-        Raises:
-            HTTPException: If generation fails
-        """
-        # Use config defaults
-        max_tokens = max_tokens or config.DEFAULT_MAX_TOKENS
-        temperature = temperature or config.DEFAULT_TEMPERATURE
-        top_p = top_p or config.DEFAULT_TOP_P
-        
+        """Generate text with Ollama"""
         try:
-            # Validate
-            if not prompt or not prompt.strip():
-                raise ValueError("prompt cannot be empty")
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
             
-            self._validate_params(temperature, top_p, max_tokens)
-            
-            logger.debug(
-                "generation_params",
-                prompt_length=len(prompt),
-                max_tokens=max_tokens,
-                temperature=temperature,
-                top_p=top_p
+            response = self.client.chat(
+                model=self.model_name,
+                messages=messages,
+                options={
+                    "temperature": temperature or self.config.temperature,
+                    "num_predict": max_tokens or self.config.max_tokens,
+                }
             )
             
-            sampling_params = SamplingParams(
-                max_tokens=max_tokens,
-                temperature=temperature,
-                top_p=top_p,
-                stop=stop or ["</думает>", "<|end|>"]
-            )
+            result = response["message"]["content"]
+            logger.info("generation_success", prompt_len=len(prompt), response_len=len(result))
+            return result
             
-            outputs = self.llm.generate([prompt], sampling_params)
-            
-            if not outputs or not outputs[0].outputs:
-                raise RuntimeError("vLLM returned empty outputs")
-            
-            return outputs[0].outputs[0].text
-            
-        except torch.cuda.OutOfMemoryError as e:
-            logger.error("gpu_oom", error=str(e))
-            raise HTTPException(
-                status_code=503,
-                detail="GPU out of memory. Try reducing max_tokens or batch size."
-            )
-        
-        except ValueError as e:
-            logger.error("invalid_params", error=str(e))
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid parameters: {str(e)}"
-            )
-        
         except Exception as e:
-            logger.error("generation_error", error=str(e), error_type=type(e).__name__)
-            raise HTTPException(
-                status_code=503,
-                detail=f"Model inference failed: {str(e)}"
-            )
+            logger.error("generation_failed", error=str(e))
+            raise
     
-    def batch_generate(
+    def generate_with_reasoning(
         self,
-        prompts: list[str],
-        max_tokens: Optional[int] = None,
-        temperature: Optional[float] = None
-    ) -> list[str]:
-        """
-        Batch generation for efficiency.
+        context: str,
+        query: str,
+        gnn_output: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Generate response with reasoning steps (RAG workflow)"""
         
-        Raises:
-            HTTPException: If generation fails
-        """
-        max_tokens = max_tokens or config.DEFAULT_MAX_TOKENS
-        temperature = temperature or config.DEFAULT_TEMPERATURE
+        system_prompt = """You are an expert hydraulic system diagnostic assistant.
+Analyze the provided context, GNN model output, and user query.
+Provide:
+1. Step-by-step reasoning
+2. Clear diagnosis
+3. Actionable recommendations
+
+Use Russian language for responses."""
+        
+        prompt = f"""
+Context (Knowledge Base):
+{context}
+
+GNN Model Output:
+- Anomaly detected: {gnn_output.get('anomaly_detected', False)}
+- Confidence: {gnn_output.get('confidence', 0):.2f}
+- Component: {gnn_output.get('component_id', 'Unknown')}
+
+User Query: {query}
+
+Provide detailed diagnostic analysis:"""
         
         try:
-            if not prompts:
-                raise ValueError("prompts list cannot be empty")
-            
-            if len(prompts) > 10:
-                logger.warning(
-                    "large_batch_size",
-                    batch_size=len(prompts),
-                    message="Consider splitting into smaller batches"
-                )
-            
-            self._validate_params(temperature, 0.9, max_tokens)
-            
-            sampling_params = SamplingParams(
-                max_tokens=max_tokens,
-                temperature=temperature,
-                top_p=0.9
+            response = self.generate(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                temperature=0.3  # Lower for more deterministic diagnostics
             )
             
-            outputs = self.llm.generate(prompts, sampling_params)
-            
-            if len(outputs) != len(prompts):
-                raise RuntimeError(
-                    f"Expected {len(prompts)} outputs, got {len(outputs)}"
-                )
-            
-            return [output.outputs[0].text for output in outputs]
-            
+            return {
+                "diagnosis": response,
+                "reasoning_steps": self._extract_reasoning_steps(response),
+                "confidence": gnn_output.get("confidence", 0),
+                "model": self.model_name
+            }
         except Exception as e:
-            logger.error("batch_generation_error", error=str(e))
-            raise HTTPException(
-                status_code=503,
-                detail=f"Batch generation failed: {str(e)}"
-            )
+            logger.error("reasoning_generation_failed", error=str(e))
+            raise
+    
+    def _extract_reasoning_steps(self, response: str) -> List[str]:
+        """Extract reasoning steps from response"""
+        # Simple extraction - split by numbered lines
+        lines = response.split("\n")
+        steps = []
+        for line in lines:
+            line = line.strip()
+            if line and (line[0].isdigit() or line.startswith("-") or line.startswith("•")):
+                steps.append(line)
+        return steps if steps else [response]
+    
+    def health_check(self) -> Dict[str, Any]:
+        """Check if Ollama is running and model is available"""
+        try:
+            # List models
+            models = self.client.list()
+            model_names = [m["name"] for m in models.get("models", [])]
+            
+            is_ready = self.model_name in model_names
+            
+            return {
+                "status": "healthy" if is_ready else "model_not_loaded",
+                "model": self.model_name,
+                "available_models": model_names,
+                "host": self.config.host
+            }
+        except Exception as e:
+            logger.error("health_check_failed", error=str(e))
+            return {
+                "status": "unhealthy",
+                "error": str(e),
+                "model": self.model_name
+            }
 
 
 # Global model instance
-_model: Optional[DeepSeekModel] = None
+_model_instance = None
 
 
-def get_model() -> DeepSeekModel:
-    """
-    Get global model instance (singleton).
-    
-    Returns:
-        DeepSeekModel: Loaded model
-        
-    Raises:
-        RuntimeError: If model initialization fails
-    """
-    global _model
-    if _model is None:
-        _model = DeepSeekModel(
-            model_name=config.MODEL_NAME,
-            tensor_parallel_size=config.TENSOR_PARALLEL_SIZE,
-            gpu_memory_utilization=config.GPU_MEMORY_UTIL,
-            max_model_len=config.MAX_MODEL_LEN
-        )
-    return _model
+def get_model() -> OllamaModelLoader:
+    """Get or create global model instance"""
+    global _model_instance
+    if _model_instance is None:
+        _model_instance = OllamaModelLoader()
+        try:
+            _model_instance.pull_model()
+        except Exception as e:
+            logger.warning("model_pull_skipped", error=str(e))
+    return _model_instance
