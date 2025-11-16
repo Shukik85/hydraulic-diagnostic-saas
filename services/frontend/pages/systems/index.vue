@@ -1,99 +1,130 @@
 <template>
   <div class="space-y-8">
+    <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="u-h2">{{ t('systems.title') }}</h1>
-        <p class="u-body text-gray-600 mt-1">{{ t('systems.subtitle') }}</p>
+        <h1 class="text-3xl font-bold text-white">{{ t('systems.title') }}</h1>
+        <p class="text-steel-shine mt-2">{{ t('systems.subtitle') }}</p>
       </div>
-      <button @click="showCreateModal = true" class="u-btn u-btn-primary u-btn-md w-full sm:w-auto">
-        <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
+      <UButton 
+        size="lg"
+        @click="showCreateModal = true"
+      >
+        <Icon name="heroicons:plus" class="w-5 h-5 mr-2" />
         {{ t('systems.addNew') }}
-      </button>
+      </UButton>
     </div>
 
-    <div v-if="systems.length > 0" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <div v-for="system in systems" :key="system.id" class="u-card p-6 hover:shadow-lg transition-shadow">
+    <!-- Zero State -->
+    <UZeroState
+      v-if="!loading && systems.length === 0"
+      icon-name="heroicons:cube"
+      :title="t('systems.empty.title')"
+      :description="t('systems.empty.description')"
+      action-icon="heroicons:plus"
+      :action-text="t('systems.empty.action')"
+      @action="showCreateModal = true"
+    />
+
+    <!-- Systems Grid -->
+    <div v-else class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div 
+        v-for="system in systems" 
+        :key="system.id" 
+        class="card-interactive p-6"
+        role="button"
+        tabindex="0"
+        @click="navigateTo(`/systems/${system.id}`)"
+        @keydown.enter="navigateTo(`/systems/${system.id}`)"
+      >
+        <!-- Header with Status -->
         <div class="flex items-start justify-between mb-4">
           <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-gray-900 truncate">{{ system.name }}</h3>
-            <p class="text-sm text-gray-500">{{ system.type }}</p>
+            <h3 class="font-semibold text-white truncate text-lg">{{ system.name }}</h3>
+            <p class="text-sm text-steel-shine">{{ t(`systems.types.${system.type}`) }}</p>
           </div>
-          <span class="u-badge" :class="getSystemStatusClass(system.status)">
-            {{ t(`systems.status.${system.status}`) }}
-          </span>
+          <UStatusDot 
+            :status="getSystemStatusType(system.status)"
+            :label="t(`systems.status.${system.status}`)"
+          />
         </div>
 
-        <div class="space-y-3">
+        <!-- Metrics -->
+        <div class="space-y-3 mb-4">
           <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">{{ t('systems.pressure') }}</span>
-            <span class="font-semibold">{{ system.pressure }} бар</span>
+            <div class="flex items-center gap-2">
+              <Icon name="heroicons:arrow-trending-up" class="w-4 h-4 text-steel-400" />
+              <span class="text-sm text-steel-shine">{{ t('systems.pressure') }}</span>
+            </div>
+            <span class="font-semibold text-white">{{ system.pressure }} бар</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">{{ t('systems.temperature') }}</span>
-            <span class="font-semibold">{{ system.temperature }}°C</span>
+            <div class="flex items-center gap-2">
+              <Icon name="heroicons:fire" class="w-4 h-4 text-steel-400" />
+              <span class="text-sm text-steel-shine">{{ t('systems.temperature') }}</span>
+            </div>
+            <span class="font-semibold text-white">{{ system.temperature }}°C</span>
           </div>
           <div class="flex justify-between items-center">
-            <span class="text-sm text-gray-600">{{ t('systems.updated') }}</span>
-            <span class="text-sm text-gray-500">{{ formatDate(system.last_update) }}</span>
+            <div class="flex items-center gap-2">
+              <Icon name="heroicons:heart" class="w-4 h-4 text-steel-400" />
+              <span class="text-sm text-steel-shine">Здоровье</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-16 progress-bar">
+                <div 
+                  :class="getHealthColorClass(system.health_score)"
+                  :style="{ width: system.health_score + '%' }"
+                />
+              </div>
+              <span class="text-sm font-semibold text-white">{{ system.health_score }}%</span>
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-2 mt-4">
-          <NuxtLink :to="`/systems/${system.id}`" class="u-btn u-btn-primary u-btn-sm flex-1">
-            <Icon name="heroicons:eye" class="w-4 h-4 mr-1" />
-            {{ t('ui.view') }}
-          </NuxtLink>
-          <button class="u-btn u-btn-ghost u-btn-sm flex-1">
-            <Icon name="heroicons:cog-6-tooth" class="w-4 h-4 mr-1" />
-            {{ t('ui.settings') }}
-          </button>
+        <!-- Footer -->
+        <div class="flex items-center justify-between pt-4 border-t border-steel-700/50">
+          <div class="flex items-center gap-1.5 text-xs text-steel-400">
+            <Icon name="heroicons:clock" class="w-3 h-3" />
+            <span>{{ formatDate(system.last_update) }}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button 
+              class="btn-icon"
+              @click.stop="handleSettings(system.id)"
+              aria-label="Настройки"
+            >
+              <Icon name="heroicons:cog-6-tooth" class="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div v-else class="u-card p-12 text-center">
-      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <Icon name="heroicons:server-stack" class="w-8 h-8 text-gray-400" />
-      </div>
-      <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ t('systems.noSystems') }}</h3>
-      <p class="text-gray-600 mb-6">{{ t('systems.noSystemsDesc') }}</p>
-      <button @click="showCreateModal = true" class="u-btn u-btn-primary">
-        <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
-        {{ t('systems.addNew') }}
-      </button>
-    </div>
-
+    <!-- Create System Modal -->
     <UCreateSystemModal
       v-model="showCreateModal"
       :loading="isCreating"
       @submit="handleCreateSystem"
-      @cancel="showCreateModal = false"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { definePageMeta } from '#imports'
 import type { HydraulicSystem } from '~/types/api'
 
-// Page metadata
 definePageMeta({
   layout: 'dashboard' as const,
   middleware: ['auth']
 })
 
-// Composables
 const { t } = useI18n()
 
-// State
 const showCreateModal = ref(false)
 const isCreating = ref(false)
+const loading = ref(false)
 
-// Mock data
-const systems = ref([] as HydraulicSystem[])
-
-// Initialize with mock data
-systems.value = [
+const systems = ref<HydraulicSystem[]>([
   {
     id: 1,
     name: 'HYD-001 - Pump Station A',
@@ -123,10 +154,24 @@ systems.value = [
     last_update: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
+  },
+  {
+    id: 3,
+    name: 'HYD-003 - Control Valve C',
+    type: 'construction',
+    status: 'active',
+    description: 'Управляющий клапан строительного оборудования',
+    pressure: 2.1,
+    temperature: 65,
+    flow_rate: 120,
+    vibration: 0.5,
+    health_score: 95,
+    last_update: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   }
-]
+])
 
-// Methods
 const handleCreateSystem = async (data: any) => {
   isCreating.value = true
   try {
@@ -154,14 +199,24 @@ const handleCreateSystem = async (data: any) => {
   }
 }
 
-const getSystemStatusClass = (status: string): string => {
-  const classes: Record<string, string> = {
-    active: 'u-badge-success',
-    maintenance: 'u-badge-warning',
-    emergency: 'u-badge-error',
-    inactive: 'u-badge-gray'
+const handleSettings = (systemId: number) => {
+  navigateTo(`/systems/${systemId}/settings`)
+}
+
+const getSystemStatusType = (status: string): 'success' | 'warning' | 'error' | 'offline' => {
+  const statusMap: Record<string, 'success' | 'warning' | 'error' | 'offline'> = {
+    active: 'success',
+    maintenance: 'warning',
+    emergency: 'error',
+    inactive: 'offline'
   }
-  return classes[status] || 'u-badge-gray'
+  return statusMap[status] || 'offline'
+}
+
+const getHealthColorClass = (score: number): string => {
+  if (score >= 90) return 'progress-fill-success'
+  if (score >= 70) return 'progress-fill-warning'
+  return 'progress-fill-error'
 }
 
 const formatDate = (dateString: string): string => {
