@@ -1,128 +1,121 @@
 <template>
-  <UModal
+  <UDialog
     :model-value="modelValue"
     @update:model-value="$emit('update:modelValue', $event)"
-    :title="t('systems.create.title')"
-    :description="t('systems.create.subtitle')"
-    size="md"
   >
-    <div class="space-y-5">
-      <!-- System Name -->
-      <div>
-        <label class="u-label" for="system-name">{{ t('systems.create.name') }} *</label>
-        <input 
-          id="system-name" 
-          v-model.trim="form.name" 
-          type="text" 
-          class="u-input" 
-          :placeholder="t('systems.create.namePlaceholder')" 
-          :disabled="loading" 
-          maxlength="200" 
-        />
-        <Transition name="fade">
-          <p v-if="errors.name" class="mt-2 text-sm text-error-500 flex items-center gap-1">
-            <Icon name="heroicons:exclamation-circle" class="h-4 w-4 shrink-0" />
-            {{ errors.name }}
-          </p>
-        </Transition>
-      </div>
+    <UDialogContent class="max-w-lg">
+      <UDialogHeader>
+        <UDialogTitle>{{ t('systems.create.title') }}</UDialogTitle>
+        <UDialogDescription>{{ t('systems.create.subtitle') }}</UDialogDescription>
+      </UDialogHeader>
 
-      <!-- System Type -->
-      <div class="relative">
-        <label class="u-label" for="system-type">{{ t('systems.create.type') }}</label>
-        <select 
-          id="system-type" 
-          v-model="form.type" 
-          class="u-input metallic-select" 
-          :disabled="loading"
+      <form @submit.prevent="handleSubmit" class="space-y-6">
+        <!-- System Name -->
+        <UFormGroup
+          :label="t('systems.create.name')"
+          helper="Используйте понятное имя для идентификации системы"
+          :error="errors.name"
+          required
         >
-          <option value="industrial">{{ t('systems.types.industrial') }}</option>
-          <option value="mobile">{{ t('systems.types.mobile') }}</option>
-          <option value="marine">{{ t('systems.types.marine') }}</option>
-          <option value="construction">{{ t('systems.types.construction') }}</option>
-          <option value="mining">{{ t('systems.types.mining') }}</option>
-          <option value="agricultural">{{ t('systems.types.agricultural') }}</option>
-        </select>
-        <Icon 
-          name="heroicons:chevron-down" 
-          class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-steel-light pointer-events-none" 
-        />
-      </div>
+          <UInput 
+            v-model="form.name"
+            :placeholder="t('systems.create.namePlaceholder')" 
+            :disabled="loading" 
+            maxlength="200" 
+          />
+        </UFormGroup>
 
-      <!-- Initial Status -->
-      <div class="relative">
-        <label class="u-label" for="system-status">{{ t('systems.create.initialStatus') }}</label>
-        <select 
-          id="system-status" 
-          v-model="form.status" 
-          class="u-input metallic-select" 
-          :disabled="loading"
+        <!-- System Type -->
+        <UFormGroup
+          :label="t('systems.create.type')"
+          helper="Тип системы определяет набор доступных параметров"
         >
-          <option value="active">{{ t('systems.status.active') }}</option>
-          <option value="maintenance">{{ t('systems.status.maintenance') }}</option>
-          <option value="inactive">{{ t('systems.status.inactive') }}</option>
-        </select>
-        <Icon 
-          name="heroicons:chevron-down" 
-          class="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-steel-light pointer-events-none" 
-        />
-      </div>
+          <USelect 
+            v-model="form.type"
+            :disabled="loading"
+          >
+            <option value="industrial">{{ t('systems.types.industrial') }}</option>
+            <option value="mobile">{{ t('systems.types.mobile') }}</option>
+            <option value="marine">{{ t('systems.types.marine') }}</option>
+            <option value="construction">{{ t('systems.types.construction') }}</option>
+            <option value="mining">{{ t('systems.types.mining') }}</option>
+            <option value="agricultural">{{ t('systems.types.agricultural') }}</option>
+          </USelect>
+        </UFormGroup>
 
-      <!-- Description -->
-      <div>
-        <label class="u-label" for="system-description">
-          {{ t('ui.description') }} 
-          <span class="text-text-secondary font-normal">({{ t('ui.optional') }})</span>
-        </label>
-        <textarea 
-          id="system-description" 
-          v-model.trim="form.description" 
-          class="u-input resize-none" 
-          :placeholder="t('systems.create.descriptionPlaceholder')" 
-          :disabled="loading" 
-          rows="3" 
-          maxlength="500" 
-        />
-      </div>
+        <!-- Initial Status -->
+        <UFormGroup
+          :label="t('systems.create.initialStatus')"
+          helper="Статус можно изменить позже в настройках"
+        >
+          <USelect 
+            v-model="form.status"
+            :disabled="loading"
+          >
+            <option value="active">{{ t('systems.status.active') }}</option>
+            <option value="maintenance">{{ t('systems.status.maintenance') }}</option>
+            <option value="inactive">{{ t('systems.status.inactive') }}</option>
+          </USelect>
+        </UFormGroup>
 
-      <!-- Setup Info -->
-      <div class="rounded-lg bg-primary-500/5 border border-primary-500/30 p-4">
-        <div class="flex items-start gap-3">
-          <Icon name="heroicons:information-circle" class="h-5 w-5 text-primary-400 mt-0.5 shrink-0" />
+        <!-- Description -->
+        <UFormGroup
+          :label="t('ui.description')"
+          helper="Опишите назначение и особенности системы (опционально)"
+        >
+          <UTextarea 
+            v-model="form.description"
+            :placeholder="t('systems.create.descriptionPlaceholder')" 
+            :disabled="loading" 
+            rows="3" 
+            maxlength="500" 
+          />
+        </UFormGroup>
+
+        <!-- Next Steps Info -->
+        <div class="alert-info">
+          <Icon name="heroicons:information-circle" class="w-5 h-5" />
           <div>
-            <p class="text-sm font-medium text-primary-900">{{ t('systems.create.nextStepsTitle') }}</p>
-            <p class="text-sm text-primary-600 mt-1">{{ t('systems.create.nextStepsDesc') }}</p>
+            <p class="font-medium">
+              {{ t('systems.create.nextStepsTitle') }}
+            </p>
+            <p class="text-sm mt-1">
+              {{ t('systems.create.nextStepsDesc') }}
+            </p>
           </div>
         </div>
-      </div>
-    </div>
+      </form>
 
-    <template #footer>
-      <button 
-        class="u-btn u-btn-secondary" 
-        @click="handleCancel" 
-        :disabled="loading" 
-        type="button"
-      >
-        {{ t('ui.cancel') }}
-      </button>
-      <button 
-        class="u-btn u-btn-primary min-w-[120px]" 
-        @click="handleSubmit" 
-        :disabled="!isValid || loading" 
-        type="button"
-      >
-        <Icon v-if="loading" name="heroicons:arrow-path" class="h-4 w-4 animate-spin mr-2" />
-        <Icon v-else name="heroicons:plus" class="h-4 w-4 mr-2" />
-        {{ loading ? t('systems.create.creating') : t('systems.create.createBtn') }}
-      </button>
-    </template>
-  </UModal>
+      <UDialogFooter>
+        <UButton 
+          variant="secondary"
+          @click="handleCancel" 
+          :disabled="loading"
+        >
+          {{ t('ui.cancel') }}
+        </UButton>
+        <UButton 
+          @click="handleSubmit" 
+          :disabled="!isValid || loading"
+        >
+          <Icon 
+            v-if="loading" 
+            name="heroicons:arrow-path" 
+            class="w-5 h-5 animate-spin mr-2" 
+          />
+          <Icon 
+            v-else 
+            name="heroicons:plus" 
+            class="w-5 h-5 mr-2" 
+          />
+          {{ loading ? t('systems.create.creating') : t('systems.create.createBtn') }}
+        </UButton>
+      </UDialogFooter>
+    </UDialogContent>
+  </UDialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-
 interface Props {
   modelValue: boolean
   loading?: boolean
@@ -139,7 +132,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const loading = ref(props.loading)
 
 const form = ref({
   name: '',
@@ -157,22 +149,19 @@ const isValid = computed(() => {
 function handleCancel() {
   emit('update:modelValue', false)
   emit('cancel')
+  errors.value = {}
 }
 
 function handleSubmit() {
-  // Validate
   errors.value.name = !form.value.name.trim() 
     ? t('systems.create.nameRequired') 
-    : ''
+    : undefined
     
   if (!isValid.value) return
   
-  loading.value = true
   emit('submit', form.value)
   
-  // Reset form after delay
   setTimeout(() => {
-    loading.value = false
     form.value = {
       name: '',
       type: 'industrial',
@@ -183,22 +172,3 @@ function handleSubmit() {
   }, 1500)
 }
 </script>
-
-<style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.15s ease-out;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-.metallic-select {
-  background-color: #191d23 !important;
-  color: #edf2fa !important;
-  border-color: #4c596f !important;
-}
-</style>
