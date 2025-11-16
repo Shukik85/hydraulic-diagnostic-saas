@@ -20,7 +20,7 @@ from django.contrib import admin
 def create_admin_for_app(app_label: str):
     """Create admin.py for an app and register all its models."""
     app_config = apps.get_app_config(app_label)
-    models = app_config.get_models()
+    models = list(app_config.get_models())  # Convert generator to list
     
     if not models:
         print(f"⏭️  {app_label}: No models found")
@@ -45,7 +45,7 @@ def create_admin_for_app(app_label: str):
         admin_classes.append(f"""
 @admin.register({model.__name__})
 class {class_name}(admin.ModelAdmin):
-    """Admin interface for {model.__name__} model."""
+    \"\"\"Admin interface for {model.__name__} model.\"\"\"
     
     list_display: ClassVar[list[str]] = ['id']  # Add your fields
     list_filter: ClassVar[list[str]] = []
