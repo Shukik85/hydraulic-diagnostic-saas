@@ -124,12 +124,10 @@ def ignore_cyrillic_in_script():
 
     # Add noqa to lines with cyrillic
     content = content.replace(
-        'f.write(f"\\nВсего протестировано: {len(rows)} записей\\n")',
-        'f.write(f"\\nВsego protestirovano: {len(rows)} zapisey\\n")  # Fixed cyrillic',
+        'f.write(f"\\nВсего протестировано: {len(rows)} записей\\n")',  # noqa: RUF001
     )
     content = content.replace(
-        'print(f"\\nОтчет готов: {REPORT_CSV}, {REPORT_MD}")',
-        'print(f"\\nOtchet gotov: {REPORT_CSV}, {REPORT_MD}")  # Fixed cyrillic',
+        'print(f"\\nОтчет готов: {REPORT_CSV}, {REPORT_MD}")',  # noqa: RUF001
     )
 
     file.write_text(content, encoding="utf-8")
