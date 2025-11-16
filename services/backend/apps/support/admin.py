@@ -5,11 +5,12 @@ Rich admin interface with SLA tracking, auto-assignment, and bulk actions.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from django.contrib import admin
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.http import HttpRequest
+from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
 
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
     from django.db.models import QuerySet
 
 
-class TicketMessageInline(admin.TabularInline[TicketMessage, SupportTicket]):
+class TicketMessageInline(admin.TabularInline):
     """Inline admin for ticket messages."""
 
     model = TicketMessage
@@ -30,7 +31,7 @@ class TicketMessageInline(admin.TabularInline[TicketMessage, SupportTicket]):
 
 
 @admin.register(SupportTicket)
-class SupportTicketAdmin(admin.ModelAdmin[SupportTicket]):
+class SupportTicketAdmin(admin.ModelAdmin):
     """Admin interface for support tickets.
 
     Features:
@@ -95,9 +96,7 @@ class SupportTicketAdmin(admin.ModelAdmin[SupportTicket]):
         ),
         (
             "Details",
-            {
-                "fields": ("subject", "description")
-            },
+            {"fields": ("subject", "description")},
         ),
         (
             "SLA Tracking",
@@ -127,19 +126,19 @@ class SupportTicketAdmin(admin.ModelAdmin[SupportTicket]):
     def get_queryset(self, request: HttpRequest) -> QuerySet[SupportTicket]:
         """Optimize queryset with select_related."""
         qs = super().get_queryset(request)
-        return qs.select_related("user", "assigned_to").annotate(
-            message_count=Count("messages")
-        )
+        return qs.select_related("user", "assigned_to").annotate(message_count=Count("messages"))
 
     def user_link(self, obj: SupportTicket) -> SafeString:
         """Display user with link to admin."""
-        return format_html(
-            '<a href="/admin/users/user/{}/">{}</a>',
-            obj.user.id,
-            obj.user.email,
-        )
+        if obj.user:
+            return format_html(
+                '<a href="/admin/users/user/{}/">{}</a>',
+                obj.user.id,
+                obj.user.email,
+            )
+        return format_html("<span>No user</span>")
 
-    user_link.short_description = "Customer"  # type: ignore[attr-defined]
+    user_link.short_description = "Customer"
 
     def category_badge(self, obj: SupportTicket) -> SafeString:
         """Display category as colored badge."""
@@ -159,7 +158,7 @@ class SupportTicketAdmin(admin.ModelAdmin[SupportTicket]):
             obj.get_category_display(),
         )
 
-    category_badge.short_description = "Category"  # type: ignore[attr-defined]
+    category_badge.short_description = "Category"
 
     def priority_badge(self, obj: SupportTicket) -> SafeString:
         """Display priority with urgency indicator."""
@@ -174,10 +173,10 @@ class SupportTicketAdmin(admin.ModelAdmin[SupportTicket]):
             '<span style="background-color: {}; color: white; '
             'padding: 3px 8px; border-radius: 3px; font-weight: bold;">{}</span>',
             color,
-            obj.get_priority_display().split(" ")[0],  # Just the priority name
+            obj.get_priority_display().split(" ")[0],
         )
 
-    priority_badge.short_description = "Priority"  # type: ignore[attr-defined]
+    priority_badge.short_description = "Priority"
 
     def status_badge(self, obj: SupportTicket) -> SafeString:
         """Display status with color coding."""
@@ -198,38 +197,29 @@ class SupportTicketAdmin(admin.ModelAdmin[SupportTicket]):
             obj.get_status_display(),
         )
 
-    status_badge.short_description = "Status"  # type: ignore[attr-defined]
+    status_badge.short_description = "Status"
 
     def sla_indicator(self, obj: SupportTicket) -> SafeString:
         """Visual SLA status indicator."""
         if obj.status in ["resolved", "closed"]:
             if obj.sla_breached:
-                return format_html(
-                    '<span style="color: #c0392b;">✗ Breached</span>'
-                )
-            return format_html(
-                '<span style="color: #27ae60;">✓ Met</span>'
-            )
+                return format_html('<span style="color: #c0392b;">✗ Breached</span>')
+            return format_html('<span style="color: #27ae60;">✓ Met</span>')
 
         time_left = obj.time_until_sla
         if time_left and time_left.total_seconds() < 0:
-            return format_html(
-                '<span style="color: #c0392b; font-weight: bold;">⚠ OVERDUE</span>'
-            )
-        elif time_left and time_left.total_seconds() < 3600:  # < 1 hour
+            return format_html('<span style="color: #c0392b; font-weight: bold;">⚠ OVERDUE</span>')
+        elif time_left and time_left.total_seconds() < 3600:
             return format_html(
                 '<span style="color: #e67e22; font-weight: bold;">⚠ {}</span>',
                 f"{int(time_left.total_seconds() / 60)}m left",
             )
         elif time_left:
             hours = int(time_left.total_seconds() / 3600)
-            return format_html(
-                '<span style="color: #27ae60;">✓ {}h left</span>',
-                hours,
-            )
-        return format_html('<span>-</span>')
+            return format_html('<span style="color: #27ae60;">✓ {}h left</span>', hours)
+        return format_html("<span>-</span>")
 
-    sla_indicator.short_description = "SLA Status"  # type: ignore[attr-defined]
+    sla_indicator.short_description = "SLA Status"
 
     # Admin actions
     @admin.action(description="Assign selected tickets to me")
@@ -237,17 +227,19 @@ class SupportTicketAdmin(admin.ModelAdmin[SupportTicket]):
         """Assign tickets to current admin user."""
         count = 0
         for ticket in queryset:
-            ticket.assign_to_agent(request.user)  # type: ignore[arg-type]
+            ticket.assign_to_agent(request.user)
             count += 1
         self.message_user(request, f"{count} tickets assigned to you.")
 
     @admin.action(description="Mark as resolved")
     def mark_as_resolved(self, request: HttpRequest, queryset: QuerySet[SupportTicket]) -> None:
         """Mark tickets as resolved."""
-        count = queryset.update(
-            status=SupportTicket.Status.RESOLVED,
-            resolved_at=timezone.now(),
-        )
+        count = 0
+        for ticket in queryset:
+            ticket.status = SupportTicket.Status.RESOLVED
+            ticket.resolved_at = timezone.now()
+            ticket.save()
+            count += 1
         self.message_user(request, f"{count} tickets marked as resolved.")
 
     @admin.action(description="Escalate to HIGH priority")
@@ -261,13 +253,13 @@ class SupportTicketAdmin(admin.ModelAdmin[SupportTicket]):
         """Send reminder emails for selected tickets."""
         count = 0
         for ticket in queryset:
-            send_ticket_notification.delay(ticket.id, "reminder")
+            send_ticket_notification.delay(str(ticket.id), "reminder")
             count += 1
         self.message_user(request, f"Reminder emails queued for {count} tickets.")
 
 
 @admin.register(TicketMessage)
-class TicketMessageAdmin(admin.ModelAdmin[TicketMessage]):
+class TicketMessageAdmin(admin.ModelAdmin):
     """Admin interface for ticket messages."""
 
     list_display = [
@@ -297,11 +289,11 @@ class TicketMessageAdmin(admin.ModelAdmin[TicketMessage]):
         """Display message preview."""
         return obj.message[:100] + ("..." if len(obj.message) > 100 else "")
 
-    message_preview.short_description = "Message"  # type: ignore[attr-defined]
+    message_preview.short_description = "Message"
 
 
 @admin.register(AccessRecoveryRequest)
-class AccessRecoveryRequestAdmin(admin.ModelAdmin[AccessRecoveryRequest]):
+class AccessRecoveryRequestAdmin(admin.ModelAdmin):
     """Admin interface for access recovery requests."""
 
     list_display = [
@@ -382,7 +374,7 @@ class AccessRecoveryRequestAdmin(admin.ModelAdmin[AccessRecoveryRequest]):
             obj.get_status_display(),
         )
 
-    status_badge.short_description = "Status"  # type: ignore[attr-defined]
+    status_badge.short_description = "Status"
 
     def actions_column(self, obj: AccessRecoveryRequest) -> SafeString:
         """Display action buttons."""
@@ -393,32 +385,24 @@ class AccessRecoveryRequestAdmin(admin.ModelAdmin[AccessRecoveryRequest]):
                 '<a class="button" style="background: #c0392b; color: white;" '
                 'href="#" onclick="return confirm(\'Reject this request?\')">Reject</a>'
             )
-        return format_html('<span>-</span>')
+        return format_html("<span>-</span>")
 
-    actions_column.short_description = "Actions"  # type: ignore[attr-defined]
+    actions_column.short_description = "Actions"
 
     @admin.action(description="Approve selected requests")
-    def approve_requests(
-        self, request: HttpRequest, queryset: QuerySet[AccessRecoveryRequest]
-    ) -> None:
+    def approve_requests(self, request: HttpRequest, queryset) -> None:
         """Approve access recovery requests."""
         count = 0
         for recovery in queryset:
-            recovery.approve(request.user, "Approved via admin bulk action")  # type: ignore[arg-type]
+            recovery.approve(request.user, "Approved via admin bulk action")
             count += 1
         self.message_user(request, f"{count} requests approved.")
 
     @admin.action(description="Reject selected requests")
-    def reject_requests(
-        self, request: HttpRequest, queryset: QuerySet[AccessRecoveryRequest]
-    ) -> None:
+    def reject_requests(self, request: HttpRequest, queryset) -> None:
         """Reject access recovery requests."""
         count = 0
         for recovery in queryset:
-            recovery.reject(request.user, "Rejected via admin bulk action")  # type: ignore[arg-type]
+            recovery.reject(request.user, "Rejected via admin bulk action")
             count += 1
         self.message_user(request, f"{count} requests rejected.")
-
-
-# Django timezone import
-from django.utils import timezone
