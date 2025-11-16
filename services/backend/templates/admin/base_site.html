@@ -5,78 +5,19 @@
 
 {% block extrastyle %}
 {{ block.super }}
-{# Load metallic theme #}
+{# Load metallic theme first (base) #}
 <link rel="stylesheet" href="{% static 'admin/css/metallic_admin.css' %}">
-{# Load FriendlyUX framework #}
+{# Load FriendlyUX framework second (overrides with higher specificity) #}
 <link rel="stylesheet" href="{% static 'admin/css/FriendlyUX.css' %}">
-<style>
-    /* Additional custom styles */
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    }
-    
-    /* Header icon */
-    #branding .brand-icon {
-        width: 32px;
-        height: 32px;
-        stroke: white;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        fill: none;
-    }
-    
-    /* Navigation styling */
-    .admin-nav {
-        display: flex;
-        gap: 24px;
-        padding: 12px 20px;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 6px;
-    }
-    
-    .admin-nav a {
-        color: #d1d5db !important;
-        text-decoration: none !important;
-        font-weight: 600;
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        padding: 6px 12px;
-        border-radius: 4px;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .admin-nav a:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: #f9fafb !important;
-    }
-    
-    .admin-nav a:hover .nav-icon {
-        stroke: #f9fafb;
-    }
-    
-    .nav-icon {
-        width: 18px;
-        height: 18px;
-        stroke: #d1d5db;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-        fill: none;
-        transition: stroke 0.2s ease;
-    }
-</style>
+{# Load custom admin navigation styles last #}
+<link rel="stylesheet" href="{% static 'admin/css/admin_custom.css' %}">
 {% endblock %}
 
 {% block branding %}
 <div id="branding">
     <h1 id="site-name">
-        <a href="{% url 'admin:index' %}" style="display: flex; align-items: center; gap: 10px;">
-            <svg class="brand-icon">
+        <a href="{% url 'admin:index' %}" class="BrandLink">
+            <svg class="BrandIcon">
                 <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-equipment"></use>
             </svg>
             <span>Hydraulic Diagnostics</span>
@@ -86,27 +27,27 @@
 {% endblock %}
 
 {% block nav-global %}
-<nav class="admin-nav">
-    <a href="{% url 'admin:index' %}">
-        <svg class="nav-icon">
+<nav class="AdminNav">
+    <a href="{% url 'admin:index' %}" class="NavLink">
+        <svg class="NavIcon">
             <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-dashboard"></use>
         </svg>
         Dashboard
     </a>
-    <a href="{% url 'docs:index' %}">
-        <svg class="nav-icon">
+    <a href="{% url 'docs:index' %}" class="NavLink">
+        <svg class="NavIcon">
             <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-documentation"></use>
         </svg>
         Documentation
     </a>
-    <a href="{% url 'admin:users_user_changelist' %}">
-        <svg class="nav-icon">
+    <a href="{% url 'admin:users_user_changelist' %}" class="NavLink">
+        <svg class="NavIcon">
             <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-users"></use>
         </svg>
         Users
     </a>
-    <a href="{% url 'admin:support_supportticket_changelist' %}">
-        <svg class="nav-icon">
+    <a href="{% url 'admin:support_supportticket_changelist' %}" class="NavLink">
+        <svg class="NavIcon">
             <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-support"></use>
         </svg>
         Support
