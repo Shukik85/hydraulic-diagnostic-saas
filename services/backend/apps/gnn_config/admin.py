@@ -205,5 +205,5 @@ class GNNTrainingJobAdmin(admin.ModelAdmin):
             except Exception as e:
                 self.message_user(request, f"Status update failed: {e!s}", messages.ERROR)
 
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002  # noqa: ARG002
         return False
