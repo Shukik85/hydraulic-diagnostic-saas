@@ -4,7 +4,7 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-    typeCheck: true, // ✅ ВКЛЮЧЕНО: проверка типов для production
+    typeCheck: true,
     shim: false,
   },
 
@@ -18,6 +18,8 @@ export default defineNuxtConfig({
 
   css: [
     '~/styles/metallic.css',
+    '~/styles/premium-tokens.css',
+    '~/styles/components.css',
   ],
 
   postcss: {
@@ -89,19 +91,18 @@ export default defineNuxtConfig({
   nitro: {
     compressPublicAssets: {
       gzip: true,
-      brotli: true, // ✅ ДОБАВЛЕНО: Brotli сжатие
+      brotli: true,
     },
     routeRules: {
-      // ✅ УЛУЧШЕНО: детальные правила кэширования
       '/': { 
-        swr: 3600,  // Stale-while-revalidate 1 час
+        swr: 3600,
       },
       '/dashboard': { 
         ssr: true,
-        swr: 600,   // 10 минут для дашборда
+        swr: 600,
       },
       '/diagnosis/**': { 
-        ssr: false  // SPA mode для diagnosis
+        ssr: false
       },
       '/api/**': { 
         cors: true,
@@ -109,7 +110,6 @@ export default defineNuxtConfig({
           'cache-control': 'max-age=300'
         }
       },
-      // Блокировка тестовых страниц в production
       '/api-test': process.env.NODE_ENV === 'production' ? { redirect: '/' } : {},
       '/demo': process.env.NODE_ENV === 'production' ? { redirect: '/' } : {},
     },
@@ -128,10 +128,9 @@ export default defineNuxtConfig({
     dirs: ['composables/**', 'utils/**', 'types/**', 'stores/**'],
   },
 
-  // ✅ ДОБАВЛЕНО: Nuxt 4 experimental features
   experimental: {
-    typescriptBundlerResolution: true, // Лучшее разрешение типов
-    granularCachedData: true,          // Детальное управление кешированием
-    purgeCachedData: true,              // Автоматический cleanup данных
+    typescriptBundlerResolution: true,
+    granularCachedData: true,
+    purgeCachedData: true,
   },
 })
