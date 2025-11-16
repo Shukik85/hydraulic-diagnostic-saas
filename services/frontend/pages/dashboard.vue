@@ -204,7 +204,7 @@
       </div>
     </div>
 
-    <!-- Modal Components remain unchanged -->
+    <!-- Modal Components -->
     <URunDiagnosticModal  v-model="openDiagnosticModal" :loading="diagnosticLoading" @submit="onRunDiagnostic" @cancel="onCancelDiagnostic" />
     <UReportGenerateModal v-model="openReportModal" :loading="reportLoading" @submit="onGenerateReport" @cancel="onCancelReport" />
     <UCreateSystemModal   v-model="openSystemModal" :loading="systemLoading" @submit="onCreateSystem" @cancel="onCancelSystem" />
@@ -212,5 +212,160 @@
 </template>
 
 <script setup lang="ts">
-// ...оставить нынешнюю бизнес-логику...
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart } from 'echarts/charts'
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+} from 'echarts/components'
+
+use([
+  CanvasRenderer,
+  LineChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+])
+
+// ✅ FIX: Add i18n composable
+const { t } = useI18n()
+
+// Modal states
+const openDiagnosticModal = ref(false)
+const openReportModal = ref(false)
+const openSystemModal = ref(false)
+
+const diagnosticLoading = ref(false)
+const reportLoading = ref(false)
+const systemLoading = ref(false)
+
+// Modal handlers
+const onRunDiagnostic = (data: any) => {
+  console.log('Run diagnostic:', data)
+  diagnosticLoading.value = true
+  setTimeout(() => {
+    diagnosticLoading.value = false
+    openDiagnosticModal.value = false
+  }, 2000)
+}
+
+const onCancelDiagnostic = () => {
+  openDiagnosticModal.value = false
+}
+
+const onGenerateReport = (data: any) => {
+  console.log('Generate report:', data)
+  reportLoading.value = true
+  setTimeout(() => {
+    reportLoading.value = false
+    openReportModal.value = false
+  }, 2000)
+}
+
+const onCancelReport = () => {
+  openReportModal.value = false
+}
+
+const onCreateSystem = (data: any) => {
+  console.log('Create system:', data)
+  systemLoading.value = true
+  setTimeout(() => {
+    systemLoading.value = false
+    openSystemModal.value = false
+  }, 2000)
+}
+
+const onCancelSystem = () => {
+  openSystemModal.value = false
+}
+
+// Chart options
+const performanceChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: '#1e293b',
+    borderColor: '#334155',
+    textStyle: { color: '#e2e8f0' },
+  },
+  grid: { left: '5%', right: '5%', bottom: '10%', top: '10%', containLabel: true },
+  xAxis: {
+    type: 'category',
+    data: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+    axisLine: { lineStyle: { color: '#475569' } },
+    axisLabel: { color: '#94a3b8' },
+  },
+  yAxis: {
+    type: 'value',
+    axisLine: { lineStyle: { color: '#475569' } },
+    axisLabel: { color: '#94a3b8' },
+    splitLine: { lineStyle: { color: '#334155' } },
+  },
+  series: [
+    {
+      data: [87, 92, 89, 95, 91, 97],
+      type: 'line',
+      smooth: true,
+      lineStyle: { color: '#4f46e5', width: 3 },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(79, 70, 229, 0.3)' },
+            { offset: 1, color: 'rgba(79, 70, 229, 0)' },
+          ],
+        },
+      },
+    },
+  ],
+}))
+
+const aiChartOption = computed(() => ({
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: '#1e293b',
+    borderColor: '#334155',
+    textStyle: { color: '#e2e8f0' },
+  },
+  grid: { left: '5%', right: '5%', bottom: '10%', top: '10%', containLabel: true },
+  xAxis: {
+    type: 'category',
+    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+    axisLine: { lineStyle: { color: '#475569' } },
+    axisLabel: { color: '#94a3b8' },
+  },
+  yAxis: {
+    type: 'value',
+    axisLine: { lineStyle: { color: '#475569' } },
+    axisLabel: { color: '#94a3b8' },
+    splitLine: { lineStyle: { color: '#334155' } },
+  },
+  series: [
+    {
+      data: [12, 19, 15, 23, 18, 25, 21],
+      type: 'line',
+      smooth: true,
+      lineStyle: { color: '#a855f7', width: 3 },
+      areaStyle: {
+        color: {
+          type: 'linear',
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(168, 85, 247, 0.3)' },
+            { offset: 1, color: 'rgba(168, 85, 247, 0)' },
+          ],
+        },
+      },
+    },
+  ],
+}))
 </script>
