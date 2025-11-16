@@ -27,16 +27,15 @@ class DocumentCategoryAdmin(admin.ModelAdmin):
     ordering = ("order", "name")
     readonly_fields = ("created_at", "updated_at", "document_count_display")
     fieldsets = (
-        (None, {
-            "fields": ("name", "slug", "icon", "description")
-        }),
-        ("Display", {
-            "fields": ("order", "is_active")
-        }),
-        ("Statistics", {
-            "fields": ("document_count_display", "created_at", "updated_at"),
-            "classes": ("collapse",)
-        }),
+        (None, {"fields": ("name", "slug", "icon", "description")}),
+        ("Display", {"fields": ("order", "is_active")}),
+        (
+            "Statistics",
+            {
+                "fields": ("document_count_display", "created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     def get_queryset(self, request):
@@ -50,10 +49,7 @@ class DocumentCategoryAdmin(admin.ModelAdmin):
     def icon_display(self, obj: DocumentCategory) -> str:
         """Display icon with styling."""
         if obj.icon:
-            return format_html(
-                '<span style="font-size: 1.5em;">{}</span>',
-                obj.icon
-            )
+            return format_html('<span style="font-size: 1.5em;">{}</span>', obj.icon)
         return "-"
 
     @admin.display(description="Documents", ordering="doc_count")
@@ -65,7 +61,7 @@ class DocumentCategoryAdmin(admin.ModelAdmin):
             '<span style="background: {}; color: white; padding: 2px 8px; '
             'border-radius: 12px; font-weight: 550;">{}</span>',
             color,
-            count
+            count,
         )
 
 
@@ -94,23 +90,17 @@ class DocumentAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at", "view_count", "preview_link")
     autocomplete_fields = ["author"]
     fieldsets = (
-        (None, {
-            "fields": ("title", "slug", "category", "summary")
-        }),
-        ("Content", {
-            "fields": ("content",),
-            "description": "Use Markdown syntax for formatting"
-        }),
-        ("Metadata", {
-            "fields": ("tags", "author")
-        }),
-        ("Display Options", {
-            "fields": ("order", "is_published", "is_featured")
-        }),
-        ("Statistics", {
-            "fields": ("view_count", "created_at", "updated_at", "preview_link"),
-            "classes": ("collapse",)
-        }),
+        (None, {"fields": ("title", "slug", "category", "summary")}),
+        ("Content", {"fields": ("content",), "description": "Use Markdown syntax for formatting"}),
+        ("Metadata", {"fields": ("tags", "author")}),
+        ("Display Options", {"fields": ("order", "is_published", "is_featured")}),
+        (
+            "Statistics",
+            {
+                "fields": ("view_count", "created_at", "updated_at", "preview_link"),
+                "classes": ("collapse",),
+            },
+        ),
     )
 
     @admin.display(description="Preview")
@@ -121,7 +111,7 @@ class DocumentAdmin(admin.ModelAdmin):
             return format_html(
                 '<a href="{}" target="_blank" style="color: #21808D; '
                 'font-weight: 550;">View Document →</a>',
-                url
+                url,
             )
         return "-"
 

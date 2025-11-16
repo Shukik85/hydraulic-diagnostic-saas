@@ -42,9 +42,7 @@ class User(AbstractUser):
         updated_at: Last update timestamp
     """
 
-    id: uuid.UUID = models.UUIDField(
-        primary_key=True, default=uuid.uuid4, editable=False
-    )
+    id: uuid.UUID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email: str = models.EmailField(unique=True)
     api_key: str = models.CharField(max_length=128, unique=True, blank=True)
 
@@ -63,9 +61,7 @@ class User(AbstractUser):
 
     # Billing
     stripe_customer_id: str = models.CharField(max_length=255, blank=True, null=True)
-    stripe_subscription_id: str = models.CharField(
-        max_length=255, blank=True, null=True
-    )
+    stripe_subscription_id: str = models.CharField(max_length=255, blank=True, null=True)
 
     # Usage tracking
     api_requests_count: int = models.IntegerField(default=0)

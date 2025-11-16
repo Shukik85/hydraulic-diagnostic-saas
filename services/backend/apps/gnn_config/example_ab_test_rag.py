@@ -1,7 +1,9 @@
 """Интеграционный AB-пайплайн: сравнение reasoning RAG для prod и test GNN моделей."""
+
 # Пример (может быть оформлен как management команды или CI job)
-from apps.gnn_config.gnn_service_client import GNNAdminClient
 import requests
+
+from apps.gnn_config.gnn_service_client import GNNAdminClient
 
 GNN_SERVICE_URL = "http://gnn-service:8002"
 RAG_SERVICE_URL = "http://rag-service:8003"
@@ -16,16 +18,18 @@ prod_result = client.get_inference(equipment_id, time_window)  # реализо�
 test_model_path = "/app/models/test/experiment_v20251115.onnx"
 test_result = client.test_inference(equipment_id, time_window, test_model_path)
 
+
 def call_rag_diagnosis(gnn_result: dict):
     url = f"{RAG_SERVICE_URL}/interpret/diagnosis"
     payload = {
         "gnn_result": gnn_result,
         "equipment_context": {"equipment_id": equipment_id},
-        "historical_context": None
+        "historical_context": None,
     }
     r = requests.post(url, json=payload, timeout=10)
     r.raise_for_status()
     return r.json()
+
 
 prod_diag = call_rag_diagnosis(prod_result)
 test_diag = call_rag_diagnosis(test_result)

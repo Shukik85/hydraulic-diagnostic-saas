@@ -32,9 +32,7 @@ def send_ticket_notification(
         Dict with status and details
     """
     try:
-        ticket = SupportTicket.objects.select_related("user", "assigned_to").get(
-            id=ticket_id
-        )
+        ticket = SupportTicket.objects.select_related("user", "assigned_to").get(id=ticket_id)
 
         # Determine recipients
         recipients = [ticket.user.email]
@@ -169,9 +167,7 @@ def auto_assign_tickets() -> dict[str, int]:
         .annotate(
             active_tickets=Count(
                 "assigned_tickets",
-                filter=models.Q(
-                    assigned_tickets__status__in=["new", "open", "in_progress"]
-                ),
+                filter=models.Q(assigned_tickets__status__in=["new", "open", "in_progress"]),
             )
         )
         .order_by("active_tickets")

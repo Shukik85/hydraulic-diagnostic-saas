@@ -12,31 +12,19 @@ class DocumentCategory(models.Model):
     """Category for organizing documentation."""
 
     name = models.CharField(
-        max_length=100,
-        help_text="Category name (e.g., 'Quick Start', 'API Reference')"
+        max_length=100, help_text="Category name (e.g., 'Quick Start', 'API Reference')"
     )
     slug = models.SlugField(
-        unique=True,
-        max_length=100,
-        help_text="URL-friendly identifier (auto-generated from name)"
+        unique=True, max_length=100, help_text="URL-friendly identifier (auto-generated from name)"
     )
     icon = models.CharField(
         max_length=50,
         blank=True,
-        help_text="Icon for category (emoji or SVG class, e.g., '🚀' or 'icon-rocket')"
+        help_text="Icon for category (emoji or SVG class, e.g., '🚀' or 'icon-rocket')",
     )
-    description = models.TextField(
-        blank=True,
-        help_text="Brief description of this category"
-    )
-    order = models.IntegerField(
-        default=0,
-        help_text="Display order (lower numbers appear first)"
-    )
-    is_active = models.BooleanField(
-        default=True,
-        help_text="Whether this category is visible"
-    )
+    description = models.TextField(blank=True, help_text="Brief description of this category")
+    order = models.IntegerField(default=0, help_text="Display order (lower numbers appear first)")
+    is_active = models.BooleanField(default=True, help_text="Whether this category is visible")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -72,45 +60,33 @@ class DocumentCategory(models.Model):
 class Document(models.Model):
     """Documentation article/guide."""
 
-    title = models.CharField(
-        max_length=200,
-        help_text="Document title (displayed as header)"
-    )
+    title = models.CharField(max_length=200, help_text="Document title (displayed as header)")
     slug = models.SlugField(
-        unique=True,
-        max_length=200,
-        help_text="URL-friendly identifier (auto-generated from title)"
+        unique=True, max_length=200, help_text="URL-friendly identifier (auto-generated from title)"
     )
     category = models.ForeignKey(
         DocumentCategory,
         on_delete=models.CASCADE,
         related_name="documents",
-        help_text="Category this document belongs to"
+        help_text="Category this document belongs to",
     )
     summary = models.CharField(
-        max_length=300,
-        blank=True,
-        help_text="Short summary for search results and previews"
+        max_length=300, blank=True, help_text="Short summary for search results and previews"
     )
-    content = models.TextField(
-        help_text="Full document content in Markdown format"
-    )
+    content = models.TextField(help_text="Full document content in Markdown format")
     tags = models.CharField(
         max_length=200,
         blank=True,
-        help_text="Comma-separated tags for search (e.g., 'api, rest, authentication')"
+        help_text="Comma-separated tags for search (e.g., 'api, rest, authentication')",
     )
     order = models.IntegerField(
-        default=0,
-        help_text="Display order within category (lower numbers appear first)"
+        default=0, help_text="Display order within category (lower numbers appear first)"
     )
     is_published = models.BooleanField(
-        default=True,
-        help_text="Whether this document is visible to users"
+        default=True, help_text="Whether this document is visible to users"
     )
     is_featured = models.BooleanField(
-        default=False,
-        help_text="Show this document prominently on the docs homepage"
+        default=False, help_text="Show this document prominently on the docs homepage"
     )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -118,13 +94,12 @@ class Document(models.Model):
         null=True,
         blank=True,
         related_name="authored_documents",
-        help_text="User who created this document"
+        help_text="User who created this document",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     view_count = models.PositiveIntegerField(
-        default=0,
-        help_text="Number of times this document has been viewed"
+        default=0, help_text="Number of times this document has been viewed"
     )
 
     class Meta:
@@ -169,21 +144,19 @@ class UserProgress(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="doc_progress",
-        help_text="User tracking progress"
+        help_text="User tracking progress",
     )
     document = models.ForeignKey(
         Document,
         on_delete=models.CASCADE,
         related_name="user_progress",
-        help_text="Document that was viewed"
+        help_text="Document that was viewed",
     )
     completed = models.BooleanField(
-        default=False,
-        help_text="Whether user marked this as completed"
+        default=False, help_text="Whether user marked this as completed"
     )
     last_viewed_at = models.DateTimeField(
-        auto_now=True,
-        help_text="Last time user viewed this document"
+        auto_now=True, help_text="Last time user viewed this document"
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

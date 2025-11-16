@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from django.db import models
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    pass
 
 
 class APILog(models.Model):
@@ -233,10 +233,7 @@ class ErrorLog(models.Model):
         Returns:
             Detailed error info for debugging
         """
-        return (
-            f"<ErrorLog id={self.id} severity={self.severity!r} "
-            f"type={self.error_type!r}>"
-        )
+        return f"<ErrorLog id={self.id} severity={self.severity!r} type={self.error_type!r}>"
 
     @property
     def severity_enum(self) -> Severity:

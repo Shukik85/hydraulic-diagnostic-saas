@@ -7,7 +7,8 @@ Performance improvement: ~20-30% faster than sync version.
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Callable
+from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from asgiref.sync import sync_to_async
 from django.http import HttpRequest, HttpResponse

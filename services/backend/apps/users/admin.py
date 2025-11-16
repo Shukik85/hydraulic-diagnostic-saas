@@ -9,12 +9,12 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
 
-from apps.core.enums import SubscriptionStatus, SubscriptionTier
+from apps.core.enums import SubscriptionTier
 
 from .models import User
 
 if TYPE_CHECKING:
-    from django.http import HttpRequest
+    pass
 
 
 @admin.register(User)
