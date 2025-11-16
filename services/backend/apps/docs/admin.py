@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from django.contrib import admin
 from django.db.models import Count, Q
 from django.utils.html import format_html
@@ -13,7 +15,7 @@ from .models import Document, DocumentCategory, UserProgress
 class DocumentCategoryAdmin(admin.ModelAdmin):
     """Admin interface for DocumentCategory."""
 
-    list_display = (
+    list_display: ClassVar = (
         "icon_display",
         "name",
         "document_count_display",
@@ -21,11 +23,11 @@ class DocumentCategoryAdmin(admin.ModelAdmin):
         "is_active",
         "updated_at",
     )
-    list_filter = ("is_active", "created_at")
-    search_fields = ("name", "description")
-    prepopulated_fields = {"slug": ("name",)}
-    ordering = ("order", "name")
-    readonly_fields = ("created_at", "updated_at", "document_count_display")
+    list_filter: ClassVar = ("is_active", "created_at")
+    search_fields: ClassVar = ("name", "description")
+    prepopulated_fields: ClassVar = {"slug": ("name",)}
+    ordering: ClassVar = ("order", "name")
+    readonly_fields: ClassVar = ("created_at", "updated_at", "document_count_display")
     fieldsets = (
         (None, {"fields": ("name", "slug", "icon", "description")}),
         ("Display", {"fields": ("order", "is_active")}),
@@ -69,7 +71,7 @@ class DocumentCategoryAdmin(admin.ModelAdmin):
 class DocumentAdmin(admin.ModelAdmin):
     """Admin interface for Document."""
 
-    list_display = (
+    list_display: ClassVar = (
         "title",
         "category",
         "is_published",
@@ -78,17 +80,17 @@ class DocumentAdmin(admin.ModelAdmin):
         "author",
         "updated_at",
     )
-    list_filter = (
+    list_filter: ClassVar = (
         "is_published",
         "is_featured",
         "category",
         "created_at",
     )
-    search_fields = ("title", "summary", "content", "tags")
-    prepopulated_fields = {"slug": ("title",)}
-    ordering = ("category__order", "order", "title")
-    readonly_fields = ("created_at", "updated_at", "view_count", "preview_link")
-    autocomplete_fields = ["author"]
+    search_fields: ClassVar = ("title", "summary", "content", "tags")
+    prepopulated_fields: ClassVar = {"slug": ("title",)}
+    ordering: ClassVar = ("category__order", "order", "title")
+    readonly_fields: ClassVar = ("created_at", "updated_at", "view_count", "preview_link")
+    autocomplete_fields: ClassVar = ["author"]
     fieldsets = (
         (None, {"fields": ("title", "slug", "category", "summary")}),
         ("Content", {"fields": ("content",), "description": "Use Markdown syntax for formatting"}),
@@ -126,23 +128,23 @@ class DocumentAdmin(admin.ModelAdmin):
 class UserProgressAdmin(admin.ModelAdmin):
     """Admin interface for UserProgress."""
 
-    list_display = (
+    list_display: ClassVar = (
         "user",
         "document",
         "completed",
         "last_viewed_at",
     )
-    list_filter = (
+    list_filter: ClassVar = (
         "completed",
         "last_viewed_at",
         "document__category",
     )
-    search_fields = (
+    search_fields: ClassVar = (
         "user__email",
         "user__first_name",
         "user__last_name",
         "document__title",
     )
-    readonly_fields = ("created_at", "last_viewed_at")
-    autocomplete_fields = ["user", "document"]
-    ordering = ("-last_viewed_at",)
+    readonly_fields: ClassVar = ("created_at", "last_viewed_at")
+    autocomplete_fields: ClassVar = ["user", "document"]
+    ordering: ClassVar = ("-last_viewed_at",)

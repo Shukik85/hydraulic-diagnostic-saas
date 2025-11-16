@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class UserAdmin(BaseUserAdmin):
     """Admin interface for User model."""
 
-    list_display = [
+    list_display: ClassVar = [
         "email",
         "subscription_badge",
         "status_badge",
@@ -29,9 +29,9 @@ class UserAdmin(BaseUserAdmin):
         "created_at",
         "actions_column",
     ]
-    list_filter = ["subscription_tier", "subscription_status", "is_active", "is_staff"]
-    search_fields = ["email", "first_name", "last_name", "api_key"]
-    ordering = ["-created_at"]
+    list_filter: ClassVar = ["subscription_tier", "subscription_status", "is_active", "is_staff"]
+    search_fields: ClassVar = ["email", "first_name", "last_name", "api_key"]
+    ordering: ClassVar = ["-created_at"]
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
@@ -53,7 +53,7 @@ class UserAdmin(BaseUserAdmin):
         ),
     )
 
-    readonly_fields = ["created_at", "updated_at", "api_key"]
+    readonly_fields: ClassVar = ["created_at", "updated_at", "api_key"]
 
     def subscription_badge(self, obj: User) -> SafeString:
         """Display subscription tier as colored badge."""

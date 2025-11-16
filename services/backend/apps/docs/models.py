@@ -165,7 +165,7 @@ class UserProgress(models.Model):
     class Meta:
         verbose_name = "User Progress"
         verbose_name_plural = "User Progress Records"
-        unique_together = [("user", "document")]
+        unique_together: ClassVar = [("user", "document")]
         indexes: ClassVar[list] = [
             models.Index(fields=["user", "completed"]),
             models.Index(fields=["last_viewed_at"]),

@@ -1,5 +1,7 @@
 """Расширенный Django Admin: экшены для деплоя, rollback и live sync c FastAPI GNN service"""
 
+from typing import ClassVar
+
 from django.conf import settings
 from django.contrib import admin, messages
 from django.utils.html import format_html
@@ -10,7 +12,7 @@ from .models import GNNModelConfig, GNNTrainingJob
 
 @admin.register(GNNModelConfig)
 class GNNModelConfigAdmin(admin.ModelAdmin):
-    list_display = (
+    list_display: ClassVar = (
         "model_version",
         "is_active",
         "deployed_at",
@@ -21,11 +23,11 @@ class GNNModelConfigAdmin(admin.ModelAdmin):
         "deployed_by",
         "prod_status",
     )
-    list_filter = ("is_active", "framework", "deployed_at")
-    search_fields = ("model_version", "description")
-    readonly_fields = ("deployed_at", "deployed_by", "size_mb", "prod_sync_status")
-    ordering = ("-is_active", "-deployed_at")
-    actions = ["deploy_to_production", "sync_from_service"]
+    list_filter: ClassVar = ("is_active", "framework", "deployed_at")
+    search_fields: ClassVar = ("model_version", "description")
+    readonly_fields: ClassVar = ("deployed_at", "deployed_by", "size_mb", "prod_sync_status")
+    ordering: ClassVar = ("-is_active", "-deployed_at")
+    actions: ClassVar = ["deploy_to_production", "sync_from_service"]
     fieldsets = (
         (
             "Model Info",
@@ -99,7 +101,7 @@ class GNNModelConfigAdmin(admin.ModelAdmin):
         """Update Django model metadata from GNN service."""
         try:
             info = self.client.get_model_info()
-            fields = [
+            fields: ClassVar = [
                 "model_version",
                 "framework",
                 "input_shape",
@@ -131,7 +133,7 @@ class GNNModelConfigAdmin(admin.ModelAdmin):
 
 @admin.register(GNNTrainingJob)
 class GNNTrainingJobAdmin(admin.ModelAdmin):
-    list_display = (
+    list_display: ClassVar = (
         "job_id",
         "status",
         "experiment_name",
@@ -140,11 +142,11 @@ class GNNTrainingJobAdmin(admin.ModelAdmin):
         "finished_at",
         "tensorboard_url",
     )
-    list_filter = ("status", "started_at", "started_by")
-    search_fields = ("job_id", "experiment_name", "dataset_path")
-    readonly_fields = ("started_at", "finished_at", "tensorboard_url")
-    ordering = ("-started_at",)
-    actions = ["trigger_training", "refresh_status"]
+    list_filter: ClassVar = ("status", "started_at", "started_by")
+    search_fields: ClassVar = ("job_id", "experiment_name", "dataset_path")
+    readonly_fields: ClassVar = ("started_at", "finished_at", "tensorboard_url")
+    ordering: ClassVar = ("-started_at",)
+    actions: ClassVar = ["trigger_training", "refresh_status"]
     fieldsets = (
         (
             "Overview",

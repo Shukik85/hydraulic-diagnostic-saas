@@ -5,7 +5,7 @@ Rich admin interface with SLA tracking, auto-assignment, and bulk actions.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
 from django.db.models import Count
@@ -26,8 +26,8 @@ class TicketMessageInline(admin.TabularInline):
 
     model = TicketMessage
     extra = 1
-    fields = ["author", "message", "is_internal", "created_at"]
-    readonly_fields = ["created_at"]
+    fields: ClassVar = ["author", "message", "is_internal", "created_at"]
+    readonly_fields: ClassVar = ["created_at"]
 
 
 @admin.register(SupportTicket)
@@ -42,7 +42,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
     - Email notifications
     """
 
-    list_display = [
+    list_display: ClassVar = [
         "ticket_number",
         "subject",
         "user_link",
@@ -54,7 +54,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
-    list_filter = [
+    list_filter: ClassVar = [
         "status",
         "priority",
         "category",
@@ -62,7 +62,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
-    search_fields = [
+    search_fields: ClassVar = [
         "ticket_number",
         "subject",
         "description",
@@ -71,7 +71,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
         "user__last_name",
     ]
 
-    readonly_fields = [
+    readonly_fields: ClassVar = [
         "ticket_number",
         "sla_due_date",
         "sla_breached",
@@ -114,9 +114,9 @@ class SupportTicketAdmin(admin.ModelAdmin):
         ),
     )
 
-    inlines = [TicketMessageInline]
+    inlines: ClassVar = [TicketMessageInline]
 
-    actions = [
+    actions: ClassVar = [
         "assign_to_me",
         "mark_as_resolved",
         "escalate_priority",
@@ -262,7 +262,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
 class TicketMessageAdmin(admin.ModelAdmin):
     """Admin interface for ticket messages."""
 
-    list_display = [
+    list_display: ClassVar = [
         "ticket",
         "author",
         "message_preview",
@@ -271,19 +271,19 @@ class TicketMessageAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
-    list_filter = [
+    list_filter: ClassVar = [
         "is_internal",
         "is_system",
         "created_at",
     ]
 
-    search_fields = [
+    search_fields: ClassVar = [
         "message",
         "ticket__ticket_number",
         "author__email",
     ]
 
-    readonly_fields = ["created_at"]
+    readonly_fields: ClassVar = ["created_at"]
 
     def message_preview(self, obj: TicketMessage) -> str:
         """Display message preview."""
@@ -296,7 +296,7 @@ class TicketMessageAdmin(admin.ModelAdmin):
 class AccessRecoveryRequestAdmin(admin.ModelAdmin):
     """Admin interface for access recovery requests."""
 
-    list_display = [
+    list_display: ClassVar = [
         "user",
         "request_type",
         "status_badge",
@@ -306,19 +306,19 @@ class AccessRecoveryRequestAdmin(admin.ModelAdmin):
         "actions_column",
     ]
 
-    list_filter = [
+    list_filter: ClassVar = [
         "status",
         "request_type",
         "verification_method",
         "created_at",
     ]
 
-    search_fields = [
+    search_fields: ClassVar = [
         "user__email",
         "admin_notes",
     ]
 
-    readonly_fields = [
+    readonly_fields: ClassVar = [
         "created_at",
         "processed_at",
         "processed_by",
@@ -355,7 +355,7 @@ class AccessRecoveryRequestAdmin(admin.ModelAdmin):
         ),
     )
 
-    actions = ["approve_requests", "reject_requests"]
+    actions: ClassVar = ["approve_requests", "reject_requests"]
 
     def status_badge(self, obj: AccessRecoveryRequest) -> SafeString:
         """Display status badge."""

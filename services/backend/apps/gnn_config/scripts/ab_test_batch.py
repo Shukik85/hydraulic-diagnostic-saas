@@ -106,6 +106,6 @@ with open(REPORT_MD, "w", encoding="utf-8") as f:
         f.write(
             f"| {row['equipment_id']} | {row['prod_score']} | {row['test_score']} | {row['prod_anomaly_cnt']} | {row['test_anomaly_cnt']} | {row['prod_summary'][:60]} | {row['test_summary'][:60]} |\n"
         )
-    f.write(f"\nВсего протестировано: {len(rows)} записей\n")
+    f.write(f"\nВsego protestirovano: {len(rows)} zapisey\n")  # Fixed cyrillic
 
-print(f"\nОтчет готов: {REPORT_CSV}, {REPORT_MD}")
+print(f"\nOtchet gotov: {REPORT_CSV}, {REPORT_MD}")  # Fixed cyrillic

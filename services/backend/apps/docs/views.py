@@ -120,7 +120,7 @@ def mark_complete(request, slug: str):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Authentication required"}, status=401)
 
-    progress, created = UserProgress.objects.get_or_create(user=request.user, document=document)
+    progress, _ = UserProgress.objects.get_or_create(user=request.user, document=document)
 
     # Toggle completion status
     progress.completed = not progress.completed
