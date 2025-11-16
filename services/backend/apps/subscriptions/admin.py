@@ -1,10 +1,11 @@
-"""Subscription admin interface with type-safe attributes."""
+"""Subscription admin interface with Friendly UX."""
 
 from __future__ import annotations
 
 from typing import ClassVar
 
 from django.contrib import admin
+from django.templatetags.static import static
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
 
@@ -13,7 +14,7 @@ from .models import Payment, Subscription
 
 @admin.register(Subscription)
 class SubscriptionAdmin(admin.ModelAdmin):
-    """Admin interface for subscriptions."""
+    """Admin interface for subscriptions with Friendly UX."""
 
     list_display: ClassVar[list[str]] = [
         "user_email",
@@ -33,33 +34,75 @@ class SubscriptionAdmin(admin.ModelAdmin):
     user_email.short_description = "User"  # type: ignore[attr-defined]
 
     def tier_badge(self, obj: Subscription) -> SafeString:
-        """Display tier as colored badge."""
-        colors = {"free": "gray", "pro": "blue", "enterprise": "green"}
-        color = colors.get(obj.tier, "gray")
+        """Display tier with FriendlyUX badge and icon."""
+        badge_classes = {
+            "free": "BadgeMuted",
+            "pro": "BadgeInfo",
+            "enterprise": "BadgeSuccess",
+        }
+        badge_class = badge_classes.get(obj.tier, "BadgeMuted")
+
+        icon_name = {
+            "free": "icon-users",
+            "pro": "icon-star",
+            "enterprise": "icon-crown",
+        }.get(obj.tier, "icon-users")
+
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
+            '<span class="Badge {}">'
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">'
+            '<use href="{}#{}"></use></svg> '
+            "{}"
+            "</span>",
+            badge_class,
+            static("admin/icons/icons-sprite.svg"),
+            icon_name,
             obj.get_tier_display(),
         )
 
     tier_badge.short_description = "Tier"  # type: ignore[attr-defined]
 
     def status_badge(self, obj: Subscription) -> SafeString:
-        """Display status as colored badge."""
-        colors = {"active": "green", "trial": "orange", "past_due": "red", "cancelled": "red"}
-        color = colors.get(obj.status, "gray")
+        """Display status with FriendlyUX badge and icon."""
+        badge_classes = {
+            "active": "BadgeSuccess",
+            "trial": "BadgeWarning",
+            "past_due": "BadgeError",
+            "cancelled": "BadgeError",
+        }
+        badge_class = badge_classes.get(obj.status, "BadgeMuted")
+
+        icon_name = {
+            "active": "icon-check",
+            "trial": "icon-clock",
+            "past_due": "icon-alert",
+            "cancelled": "icon-x",
+        }.get(obj.status, "icon-minus")
+
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
+            '<span class="Badge {}">'
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">'
+            '<use href="{}#{}"></use></svg> '
+            "{}"
+            "</span>",
+            badge_class,
+            static("admin/icons/icons-sprite.svg"),
+            icon_name,
             obj.get_status_display(),
         )
 
     status_badge.short_description = "Status"  # type: ignore[attr-defined]
 
     def actions_column(self, obj: Subscription) -> SafeString:
-        """Display action buttons."""
+        """Display action buttons with FriendlyUX styling."""
         return format_html(
-            '<a class="button" href="/admin/subscriptions/subscription/{}/change/">Edit</a>', obj.pk
+            '<a class="Btn BtnSecondary" style="padding: 6px 12px; font-size: 12px;" href="/admin/subscriptions/subscription/{}/change/">'
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle; margin-right: 4px;">'
+            '<use href="{}#icon-edit"></use></svg>'
+            "Edit"
+            "</a>",
+            obj.pk,
+            static("admin/icons/icons-sprite.svg"),
         )
 
     actions_column.short_description = "Actions"  # type: ignore[attr-defined]
@@ -67,7 +110,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    """Admin interface for payments."""
+    """Admin interface for payments with Friendly UX."""
 
     list_display: ClassVar[list[str]] = [
         "user_email",
@@ -97,21 +140,48 @@ class PaymentAdmin(admin.ModelAdmin):
     amount_formatted.short_description = "Amount"  # type: ignore[attr-defined]
 
     def status_badge(self, obj: Payment) -> SafeString:
-        """Display status as colored badge."""
-        colors = {"succeeded": "green", "pending": "orange", "failed": "red", "refunded": "gray"}
-        color = colors.get(obj.status, "gray")
+        """Display status with FriendlyUX badge and icon."""
+        badge_classes = {
+            "succeeded": "BadgeSuccess",
+            "pending": "BadgeWarning",
+            "failed": "BadgeError",
+            "refunded": "BadgeMuted",
+        }
+        badge_class = badge_classes.get(obj.status, "BadgeMuted")
+
+        icon_name = {
+            "succeeded": "icon-check",
+            "pending": "icon-clock",
+            "failed": "icon-x",
+            "refunded": "icon-refresh",
+        }.get(obj.status, "icon-minus")
+
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
+            '<span class="Badge {}">'
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">'
+            '<use href="{}#{}"></use></svg> '
+            "{}"
+            "</span>",
+            badge_class,
+            static("admin/icons/icons-sprite.svg"),
+            icon_name,
             obj.get_status_display(),
         )
 
     status_badge.short_description = "Status"  # type: ignore[attr-defined]
 
     def invoice_link(self, obj: Payment) -> SafeString | str:
-        """Display invoice link if available."""
+        """Display invoice link with FriendlyUX button if available."""
         if obj.invoice_url:
-            return format_html('<a href="{}" target="_blank">View Invoice</a>', obj.invoice_url)
+            return format_html(
+                '<a class="Btn BtnSecondary" style="padding: 4px 10px; font-size: 11px;" href="{}" target="_blank">'
+                '<svg style="width: 12px; height: 12px; stroke: currentColor; fill: none; vertical-align: middle; margin-right: 4px;">'
+                '<use href="{}#icon-external"></use></svg>'
+                "View Invoice"
+                "</a>",
+                obj.invoice_url,
+                static("admin/icons/icons-sprite.svg"),
+            )
         return "-"
 
     invoice_link.short_description = "Invoice"  # type: ignore[attr-defined]
