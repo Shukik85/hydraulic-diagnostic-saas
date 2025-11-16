@@ -40,7 +40,7 @@ class APILogAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
-    def has_add_permission(self, request: HttpRequest) -> bool:
+    def has_add_permission(self, request: HttpRequest) -> bool:  # noqa: ARG002
         """Disable manual log creation."""
         return False
 
@@ -86,7 +86,7 @@ class ErrorLogAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
-    def has_add_permission(self, request: HttpRequest) -> bool:
+    def has_add_permission(self, request: HttpRequest) -> bool:  # noqa: ARG002
         """Disable manual log creation."""
         return False
 

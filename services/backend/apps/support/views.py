@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 @staff_member_required
 @require_POST
-def reset_password(request: HttpRequest, user_id: str) -> JsonResponse:
+def reset_password(request: HttpRequest, user_id: str) -> JsonResponse:  # noqa: ARG001
     """Reset user password (admin only).
 
     Args:

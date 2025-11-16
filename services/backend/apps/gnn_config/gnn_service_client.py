@@ -1,6 +1,6 @@
 """Update: метод test_inference для sandbox-тестирования моделей GNN."""
 
-from typing import Any, Dict
+from typing import Any
 
 import requests
 
@@ -15,8 +15,8 @@ class GNNAdminClient:
     # ... существующие методы ...
 
     def test_inference(
-        self, equipment_id: str, time_window: dict, model_path: str, sensor_data: dict = None
-    ) -> Dict[str, Any]:
+        self, equipment_id: str, time_window: dict, model_path: str, sensor_data: dict | None = None
+    ) -> dict[str, Any]:
         url = f"{self.base_url}/admin/model/test_inference"
         data = {
             "equipment_id": equipment_id,

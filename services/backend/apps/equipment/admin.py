@@ -24,8 +24,8 @@ class EquipmentAdmin(admin.ModelAdmin):
         "updated_at",
     ]
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request):  # noqa: ARG002
         return False  # Managed by FastAPI only
 
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002
         return False  # Managed by FastAPI only

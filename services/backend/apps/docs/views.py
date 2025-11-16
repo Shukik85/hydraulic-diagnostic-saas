@@ -72,7 +72,7 @@ def docs_detail(request, slug: str):
     # Track user progress
     user_completed = False
     if request.user.is_authenticated:
-        progress, created = UserProgress.objects.get_or_create(user=request.user, document=document)
+        progress, _ = UserProgress.objects.get_or_create(user=request.user, document=document)
         user_completed = progress.completed
 
     # Get related documents from same category

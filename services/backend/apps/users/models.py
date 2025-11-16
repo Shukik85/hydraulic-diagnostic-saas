@@ -60,8 +60,8 @@ class User(AbstractUser):
     trial_end_date: datetime | None = models.DateTimeField(null=True, blank=True)
 
     # Billing
-    stripe_customer_id: str = models.CharField(max_length=255, blank=True, null=True)
-    stripe_subscription_id: str = models.CharField(max_length=255, blank=True, null=True)
+    stripe_customer_id: str = models.CharField(max_length=255, blank=True, default="")
+    stripe_subscription_id: str = models.CharField(max_length=255, blank=True, default="")
 
     # Usage tracking
     api_requests_count: int = models.IntegerField(default=0)
@@ -72,7 +72,7 @@ class User(AbstractUser):
     updated_at: datetime = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS: list[str] = []
+    REQUIRED_FIELDS: ClassVar[list[str]] = []
 
     if TYPE_CHECKING:
         # Type hints for reverse relations
