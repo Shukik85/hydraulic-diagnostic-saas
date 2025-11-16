@@ -174,9 +174,13 @@
 **Файл:** `apps/equipment/admin.py`
 
 **Изменения:**
-- System type badges (Hydraulic, Pneumatic, Mechanical)
-- Status badges (Active/Inactive) с иконками
+- System type badges:
+  - Hydraulic → BadgeInfo + icon-equipment
+  - Pneumatic → BadgeWarning + icon-wind
+  - Electrical → BadgeSuccess + icon-zap
+  - Other → BadgeMuted + icon-box
 - Удален legacy код с inline styles
+- **FIX:** Убрано несуществующее поле `is_active` (модель управляется FastAPI)
 
 **Zero State:** `templates/admin/equipment/change_list.html`
 - Иконка #icon-equipment
@@ -298,7 +302,7 @@ def tier_badge(self, obj: Subscription) -> SafeString:
 - icon-star, icon-crown, icon-users, icon-support
 - icon-key, icon-refresh, icon-circle, icon-info
 - icon-add, icon-edit, icon-external, icon-bell
-- icon-equipment
+- icon-equipment, icon-wind, icon-zap, icon-box
 
 ### Naming Convention
 
@@ -354,7 +358,7 @@ from apps.support.models import SupportTicket
 
 context = {
     'total_users': User.objects.count(),
-    'active_systems': Equipment.objects.filter(is_active=True).count(),
+    'active_systems': Equipment.objects.count(),
     'open_tickets': SupportTicket.objects.filter(status='open').count(),
 }
 ```
@@ -417,21 +421,27 @@ e73600b feat(admin): add Zero State for Users changelist
 1f55f76 feat(admin): add Zero State for Equipment changelist
 a15623b feat(admin): add Zero State for Subscriptions changelist
 15258b3 feat(admin): add Zero State for Notifications changelist
+04396292 docs(admin): update Friendly UX implementation guide
+4d2f4ad docs(admin): add changelog for Friendly UX implementation
+2e245c0 fix(admin): remove non-existent is_active field from EquipmentAdmin
 ```
 
 ---
 
 ## Статистика
 
-**Файлы изменены:** 14  
-**CSS файлов создано:** 1 (FriendlyUX.css)  
-**Admin классов обновлено:** 5 (Users, Support, Equipment, Subscriptions, Notifications)  
+**Файлов изменено:** 14  
+**CSS файлов создано:** 1 (FriendlyUX.css, ~12.5KB)  
+**Admin классов обновлено:** 5  
 **Zero State шаблонов создано:** 5  
 **Legacy inline styles удалено:** ~200+ строк  
 **SVG иконок добавлено:** ~50+ использований  
+**Git коммитов:** 17  
+**Багов исправлено:** 1 (Equipment.is_active)  
 
 ---
 
 **Автор:** AI Assistant  
 **Дата обновления:** 17.11.2025  
-**Версия:** 2.0 (Final)
+**Версия:** 2.1 (Final + Bugfix)  
+**Статус:** ✅ Complete (HIGH + MEDIUM priorities)
