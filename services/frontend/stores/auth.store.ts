@@ -1,4 +1,4 @@
-// Fixed auth store with proper nullable types
+// Fixed auth store with proper nullable types and null safety
 import type { User } from '~/types/api';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -64,7 +64,8 @@ export const useAuthStore = defineStore('auth', () => {
   };
 
   const fetchCurrentUser = async () => {
-    if (!api.isAuthenticated.value) return null;
+    // ✅ FIX: Add null safety for api.isAuthenticated
+    if (!api?.isAuthenticated?.value) return null;
 
     loading.value = true;
     try {
@@ -103,7 +104,8 @@ export const useAuthStore = defineStore('auth', () => {
   const initialize = async () => {
     if (process.server) return;
 
-    if (api.isAuthenticated.value) {
+    // ✅ FIX: Add null safety for api.isAuthenticated (line 107)
+    if (api?.isAuthenticated?.value) {
       try {
         await fetchCurrentUser();
       } catch {
