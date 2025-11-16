@@ -1,24 +1,62 @@
 {% extends "admin/base.html" %}
 {% load static %}
 
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | Hydraulic Diagnostics{% endblock %}
+
 {% block extrastyle %}
 {{ block.super }}
-<link rel="stylesheet" href="{% static 'admin/css/variables.css' %}">
-<link rel="stylesheet" href="{% static 'admin/css/custom_admin.css' %}">
+{# Load metallic theme #}
+<link rel="stylesheet" href="{% static 'admin/css/metallic_admin.css' %}">
+<style>
+    /* Additional custom styles */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+    
+    /* Navigation styling */
+    .admin-nav {
+        display: flex;
+        gap: 24px;
+        padding: 12px 20px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+    }
+    
+    .admin-nav a {
+        color: #d1d5db !important;
+        text-decoration: none !important;
+        font-weight: 600;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 6px 12px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
+    
+    .admin-nav a:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #f9fafb !important;
+    }
+</style>
 {% endblock %}
 
 {% block branding %}
-<h1 id="site-name"><a href="{% url 'admin:index' %}">Hydraulic Diagnostic Admin</a></h1>
+<div id="branding">
+    <h1 id="site-name">
+        <a href="{% url 'admin:index' %}" style="display: flex; align-items: center; gap: 8px;">
+            <span>⚙️</span>
+            <span>Hydraulic Diagnostics</span>
+        </a>
+    </h1>
+</div>
 {% endblock %}
 
 {% block nav-global %}
 <nav class="admin-nav">
-  <a href="{% url 'admin:index' %}">Dashboard</a>
-  <a href="{% url 'docs:index' %}">📚 Документация</a>
-  <!-- можно добавить другие разделы -->
+    <a href="{% url 'admin:index' %}">🏠 Dashboard</a>
+    <a href="{% url 'docs:index' %}">📚 Documentation</a>
+    <a href="{% url 'admin:users_user_changelist' %}">👥 Users</a>
+    <a href="{% url 'admin:support_supportticket_changelist' %}">🎟️ Support</a>
 </nav>
-{% endblock %}
-
-{% block content %}
-{{ block.super }}
 {% endblock %}
