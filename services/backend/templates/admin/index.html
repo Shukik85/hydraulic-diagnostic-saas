@@ -1,0 +1,224 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Dashboard Cards */
+    .dashboard-widgets {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .widget-card {
+        background: linear-gradient(135deg, var(--metal-dark) 0%, var(--metal-medium) 100%);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        transition: all 0.2s ease;
+    }
+    
+    .widget-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .widget-icon {
+        font-size: 36px;
+        margin-bottom: 12px;
+        display: block;
+    }
+    
+    .widget-title {
+        font-size: 14px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+    
+    .widget-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--primary-300);
+        margin-bottom: 4px;
+    }
+    
+    .widget-label {
+        font-size: 12px;
+        color: var(--text-secondary);
+    }
+    
+    .quick-actions {
+        background: var(--metal-medium);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .quick-actions h2 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        color: var(--text-primary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .action-btn {
+        background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 13px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(99, 102, 241, 0.4);
+        color: white;
+    }
+    
+    .welcome-message {
+        background: linear-gradient(135deg, var(--primary-700) 0%, var(--primary-800) 100%);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .welcome-message h1 {
+        margin: 0 0 8px 0;
+        font-size: 24px;
+        color: white;
+    }
+    
+    .welcome-message p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    
+    {# Welcome Message #}
+    <div class="welcome-message">
+        <h1>👋 Добро пожаловать, {{ user.first_name|default:user.username }}!</h1>
+        <p>Панель управления гидравлической диагностикой</p>
+    </div>
+    
+    {# Dashboard Widgets #}
+    <div class="dashboard-widgets">
+        <div class="widget-card">
+            <span class="widget-icon">👥</span>
+            <div class="widget-title">Пользователи</div>
+            <div class="widget-value">-</div>
+            <div class="widget-label">Всего в системе</div>
+        </div>
+        
+        <div class="widget-card">
+            <span class="widget-icon">⚙️</span>
+            <div class="widget-title">Оборудование</div>
+            <div class="widget-value">-</div>
+            <div class="widget-label">Активных систем</div>
+        </div>
+        
+        <div class="widget-card">
+            <span class="widget-icon">🎟️</span>
+            <div class="widget-title">Поддержка</div>
+            <div class="widget-value">-</div>
+            <div class="widget-label">Открытых тикетов</div>
+        </div>
+        
+        <div class="widget-card">
+            <span class="widget-icon">🧠</span>
+            <div class="widget-title">GNN Модели</div>
+            <div class="widget-value">-</div>
+            <div class="widget-label">Активных моделей</div>
+        </div>
+    </div>
+    
+    {# Quick Actions #}
+    <div class="quick-actions">
+        <h2>⚡ Быстрые действия</h2>
+        <div class="action-buttons">
+            <a href="{% url 'admin:users_user_add' %}" class="action-btn">
+                ➕ Добавить пользователя
+            </a>
+            <a href="{% url 'admin:support_supportticket_changelist' %}" class="action-btn">
+                📝 Смотреть тикеты
+            </a>
+            <a href="{% url 'docs:index' %}" class="action-btn">
+                📚 Документация
+            </a>
+            <a href="{% url 'admin:monitoring_apilog_changelist' %}" class="action-btn">
+                📊 Логи
+            </a>
+        </div>
+    </div>
+    
+    {# App List #}
+    <div class="app-list">
+        {% if app_list %}
+            {% for app in app_list %}
+                <div class="module">
+                    <table>
+                        <caption>
+                            <a href="{{ app.app_url }}" class="section" title="{% blocktranslate with name=app.name %}Модели в приложении {{ name }}{% endblocktranslate %}">
+                                {{ app.name }}
+                            </a>
+                        </caption>
+                        {% for model in app.models %}
+                            <tr class="model-{{ model.object_name|lower }}">
+                                {% if model.admin_url %}
+                                    <th scope="row"><a href="{{ model.admin_url }}">{{ model.name }}</a></th>
+                                {% else %}
+                                    <th scope="row">{{ model.name }}</th>
+                                {% endif %}
+
+                                {% if model.add_url %}
+                                    <td><a href="{{ model.add_url }}" class="addlink">Добавить</a></td>
+                                {% else %}
+                                    <td>&nbsp;</td>
+                                {% endif %}
+
+                                {% if model.admin_url %}
+                                    {% if model.view_only %}
+                                        <td><a href="{{ model.admin_url }}" class="viewlink">Просмотр</a></td>
+                                    {% else %}
+                                        <td><a href="{{ model.admin_url }}" class="changelink">Изменить</a></td>
+                                    {% endif %}
+                                {% else %}
+                                    <td>&nbsp;</td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Нет доступных моделей.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
