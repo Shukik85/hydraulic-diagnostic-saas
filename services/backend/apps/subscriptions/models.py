@@ -95,7 +95,7 @@ class Payment(models.Model):
         db_table = "payments"
         verbose_name = "Payment"
         verbose_name_plural = "Payments"
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
 
     def __str__(self) -> str:
         return f"{self.user.email} - ${self.amount} - {self.status_enum.name.title()}"

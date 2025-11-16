@@ -34,7 +34,7 @@ class EmailCampaign(models.Model):
         db_table = "email_campaigns"
         verbose_name = "Email Campaign"
         verbose_name_plural = "Email Campaigns"
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
 
     def __str__(self):
         return self.name
@@ -62,7 +62,7 @@ class Notification(models.Model):
         db_table = "notifications"
         verbose_name = "Notification"
         verbose_name_plural = "Notifications"
-        ordering = ["-sent_at"]
+        ordering: ClassVar[list[str]] = ["-sent_at"]
 
     def __str__(self):
         return f"{self.type}: {self.title}"

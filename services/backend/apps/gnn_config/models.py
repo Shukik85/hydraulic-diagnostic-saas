@@ -40,8 +40,8 @@ class GNNModelConfig(models.Model):
         db_table = "gnn_model_config"
         verbose_name = "GNN Model Configuration"
         verbose_name_plural = "GNN Model Configurations"
-        ordering = ["-deployed_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-deployed_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["model_version", "is_active"], name="model_version_active_idx")
         ]
 
@@ -83,8 +83,10 @@ class GNNTrainingJob(models.Model):
         db_table = "gnn_training_job"
         verbose_name = "GNN Training Job"
         verbose_name_plural = "GNN Training Jobs"
-        ordering = ["-started_at"]
-        indexes = [models.Index(fields=["job_id", "status"], name="jobid_status_idx")]
+        ordering: ClassVar[list[str]] = ["-started_at"]
+        indexes: ClassVar[list] = [
+            models.Index(fields=["job_id", "status"], name="jobid_status_idx")
+        ]
 
     def __str__(self) -> str:
         return f"GNN TrainJob {self.job_id} ({self.status})"

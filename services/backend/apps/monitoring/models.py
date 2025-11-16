@@ -96,8 +96,8 @@ class APILog(models.Model):
         db_table = "api_logs"
         verbose_name = "API Log"
         verbose_name_plural = "API Logs"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["-created_at", "user_id"], name="api_log_user_time_idx"),
             models.Index(fields=["path", "-created_at"], name="api_log_path_time_idx"),
             models.Index(fields=["status_code"], name="api_log_status_idx"),
@@ -213,8 +213,8 @@ class ErrorLog(models.Model):
         db_table = "error_logs"
         verbose_name = "Error Log"
         verbose_name_plural = "Error Logs"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["-created_at", "severity"], name="error_log_sev_time_idx"),
             models.Index(fields=["error_type"], name="error_log_type_idx"),
         ]

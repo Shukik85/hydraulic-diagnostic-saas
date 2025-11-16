@@ -175,8 +175,8 @@ class SupportTicket(models.Model):
         db_table = "support_tickets"
         verbose_name = "Support Ticket"
         verbose_name_plural = "Support Tickets"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["-created_at", "status"], name="ticket_time_status_idx"),
             models.Index(fields=["priority", "status"], name="ticket_pri_status_idx"),
             models.Index(fields=["sla_due_date"], name="ticket_sla_idx"),
@@ -333,8 +333,8 @@ class TicketMessage(models.Model):
         db_table = "ticket_messages"
         verbose_name = "Ticket Message"
         verbose_name_plural = "Ticket Messages"
-        ordering = ["created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["ticket", "created_at"], name="msg_ticket_time_idx"),
         ]
 
@@ -460,8 +460,8 @@ class AccessRecoveryRequest(models.Model):
         db_table = "access_recovery_requests"
         verbose_name = "Access Recovery Request"
         verbose_name_plural = "Access Recovery Requests"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["-created_at", "status"], name="recovery_time_status_idx"),
         ]
 

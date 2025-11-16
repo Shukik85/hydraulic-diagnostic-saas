@@ -29,10 +29,10 @@ class DocumentCategory(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["order", "name"]
+        ordering: ClassVar[list[str]] = ["order", "name"]
         verbose_name = "Document Category"
         verbose_name_plural = "Document Categories"
-        indexes = [
+        indexes: ClassVar[list] = [
             models.Index(fields=["slug"]),
             models.Index(fields=["order"]),
         ]
@@ -103,10 +103,10 @@ class Document(models.Model):
     )
 
     class Meta:
-        ordering = ["category__order", "order", "title"]
+        ordering: ClassVar[list[str]] = ["category__order", "order", "title"]
         verbose_name = "Document"
         verbose_name_plural = "Documents"
-        indexes = [
+        indexes: ClassVar[list] = [
             models.Index(fields=["slug"]),
             models.Index(fields=["category", "order"]),
             models.Index(fields=["is_published"]),
@@ -164,7 +164,7 @@ class UserProgress(models.Model):
         verbose_name = "User Progress"
         verbose_name_plural = "User Progress Records"
         unique_together = [("user", "document")]
-        indexes = [
+        indexes: ClassVar[list] = [
             models.Index(fields=["user", "completed"]),
             models.Index(fields=["last_viewed_at"]),
         ]

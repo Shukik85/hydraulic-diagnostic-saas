@@ -83,8 +83,8 @@ class User(AbstractUser):
         db_table = "users"
         verbose_name = "User"
         verbose_name_plural = "Users"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["-created_at"]),
             models.Index(fields=["subscription_tier", "subscription_status"]),
         ]

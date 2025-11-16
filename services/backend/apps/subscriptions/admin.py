@@ -78,7 +78,11 @@ class PaymentAdmin(admin.ModelAdmin):
     ]
     list_filter: ClassVar[list[str]] = ["status", "currency", "created_at"]
     search_fields: ClassVar[list[str]] = ["user__email", "stripe_payment_intent_id"]
-    readonly_fields: ClassVar[list[str]] = ["stripe_payment_intent_id", "stripe_invoice_id", "created_at"]
+    readonly_fields: ClassVar[list[str]] = [
+        "stripe_payment_intent_id",
+        "stripe_invoice_id",
+        "created_at",
+    ]
 
     def user_email(self, obj: Payment) -> str:
         """Get user email."""
