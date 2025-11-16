@@ -103,22 +103,35 @@ TEMPLATES = [
 ]
 
 # ============================================================
-# DATABASE (PostgreSQL)
+# Use SQLite for development, PostgreSQL for production
 # ============================================================
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DATABASE_NAME", "hydraulic_db"),
-        "USER": os.getenv("DATABASE_USER", "postgres"),
-        "PASSWORD": os.getenv("DATABASE_PASSWORD", "postgres"),
-        "HOST": os.getenv("DATABASE_HOST", "postgres"),
-        "PORT": os.getenv("DATABASE_PORT", "5432"),
-        "CONN_MAX_AGE": 600,  # Connection pooling
-        "OPTIONS": {
-            "connect_timeout": 10,
-        },
+if DEBUG:
+    # Development: SQLite (no setup needed)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
     }
-}
+    print("🔧 Using SQLite database (DEBUG=True)")
+else:
+    # ============================================================
+    # DATABASE (PostgreSQL)
+    # ============================================================
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.getenv("DATABASE_NAME", "hydraulic_db"),
+            "USER": os.getenv("DATABASE_USER", "postgres"),
+            "PASSWORD": os.getenv("DATABASE_PASSWORD", "postgres"),
+            "HOST": os.getenv("DATABASE_HOST", "postgres"),
+            "PORT": os.getenv("DATABASE_PORT", "5432"),
+            "CONN_MAX_AGE": 600,  # Connection pooling
+            "OPTIONS": {
+                "connect_timeout": 10,
+            },
+        }
+    }
 
 # ============================================================
 # AUTHENTICATION
