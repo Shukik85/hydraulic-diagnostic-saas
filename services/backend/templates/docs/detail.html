@@ -113,7 +113,6 @@ const markCompleteBtn = document.getElementById('markCompleteBtn');
 if (markCompleteBtn) {
     markCompleteBtn.addEventListener('click', async function() {
         const slug = this.dataset.docSlug;
-        const wasCompleted = this.dataset.completed === 'true';
         
         try {
             const response = await fetch(`/admin/docs/api/mark-complete/${slug}/`, {

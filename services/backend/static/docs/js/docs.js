@@ -120,16 +120,33 @@
 
     content.forEach((element) => {
       const text = element.textContent;
-      let highlightedText = text;
-
-      terms.forEach((term) => {
-        if (term.length < 3) return;
-        const regex = new RegExp(`(${term})`, 'gi');
-        highlightedText = highlightedText.replace(regex, '<mark>$1</mark>');
-      });
-
-      if (highlightedText !== text) {
-        element.innerHTML = highlightedText;
+      if (!text) return;
+      // Prepare regex for terms >= 3 chars
+      const validTerms = terms.filter(term => term.length >= 3);
+      if (validTerms.length === 0) return;
+      // Build RegExp for all valid terms, escape regex special characters
+      const escapeRegex = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const combinedRegex = new RegExp("(" + validTerms.map(escapeRegex).join("|") + ")", "gi");
+      // Split and highlight parts
+      const frag = document.createDocumentFragment();
+      let lastIndex = 0;
+      let m;
+      while ((m = combinedRegex.exec(text)) !== null) {
+        if (m.index > lastIndex) {
+          frag.appendChild(document.createTextNode(text.substring(lastIndex, m.index)));
+        }
+        const mark = document.createElement('mark');
+        mark.textContent = m[0];
+        frag.appendChild(mark);
+        lastIndex = combinedRegex.lastIndex;
+      }
+      if (lastIndex < text.length) {
+        frag.appendChild(document.createTextNode(text.substring(lastIndex)));
+      }
+      // Only update if there were any matches
+      if (lastIndex > 0) {
+        element.innerHTML = '';
+        element.appendChild(frag);
       }
     });
   }
