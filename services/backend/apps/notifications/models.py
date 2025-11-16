@@ -3,6 +3,7 @@ Refactored EmailCampaign and Notification models to use shared enums. Added prop
 """
 
 import uuid
+from typing import ClassVar
 
 from django.db import models
 

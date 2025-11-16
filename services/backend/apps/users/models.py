@@ -12,7 +12,7 @@ from __future__ import annotations
 import secrets
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib.auth.models import AbstractUser
 from django.db import IntegrityError, models, transaction

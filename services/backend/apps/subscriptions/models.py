@@ -4,6 +4,7 @@ Business logic includes type-safe accessors and property methods.
 """
 
 import uuid
+from typing import ClassVar
 
 from django.db import models
 
