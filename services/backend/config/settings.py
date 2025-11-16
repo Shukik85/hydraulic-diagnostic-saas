@@ -15,14 +15,19 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Загрузка .env
+load_dotenv(BASE_DIR / ".env")
 
 # ============================================================
 # SECURITY
 # ============================================================
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-secret-key-change-in-production")
-DEBUG = os.getenv("DEBUG", "False") == "True"
+DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS: list[str] = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # ============================================================
@@ -59,17 +64,18 @@ MIDDLEWARE = [
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",  # Static files
-    "apps.core.middleware.RateLimitMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.core.middleware.RateLimitMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Custom async middleware (comment out for sync-only deployment)
-    "apps.monitoring.middleware.AsyncRequestLoggingMiddleware",
-    "django_prometheus.middleware.PrometheusAfterMiddleware",
+    # "apps.core.middleware.AsyncRequestLoggingMiddleware",
+    # "apps.monitoring.middleware.AsyncRequestLoggingMiddleware",
+    # "django_prometheus.middleware.PrometheusAfterMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -113,7 +119,7 @@ if DEBUG:
             "NAME": BASE_DIR / "db.sqlite3",
         }
     }
-    print("🔧 Using SQLite database (DEBUG=True)")
+    print("🔧 Development mode: Using SQLite database")
 else:
     # ============================================================
     # DATABASE (PostgreSQL)
@@ -132,6 +138,7 @@ else:
             },
         }
     }
+    print("🚀 Production mode: Using PostgreSQL database")
 
 # ============================================================
 # AUTHENTICATION
@@ -159,23 +166,73 @@ PASSWORD_HASHERS = [
 # ============================================================
 # INTERNATIONALIZATION
 # ============================================================
-LANGUAGE_CODE = "en-us"
-TIME_ZONE = "UTC"
+
+LANGUAGE_CODE = "ru-ru"  # Было: "en-us"
+TIME_ZONE = "Europe/Moscow"  # Твой часовой пояс
 USE_I18N = True
+USE_L10N = True
 USE_TZ = True
 
+# Поддерживаемые языки
+LANGUAGES = [
+    ("ru", "Русский"),
+    ("en", "English"),
+]
+
+# Путь к файлам переводов
+LOCALE_PATHS = [
+    BASE_DIR / "locale",
+]
+
+
 # ============================================================
-# STATIC & MEDIA FILES
+# TEMPLATES
 # ============================================================
+
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.static",
+                "django.template.context_processors.media",
+                "django.template.context_processors.i18n",
+                "django.template.context_processors.tz",
+            ],
+        },
+    },
+]
+
+
+# ============================================================
+# STATIC FILES (CSS, JavaScript, Images)
+# ============================================================
+
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 
-# WhiteNoise configuration
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # Дополнительная папка для твоих файлов
+]
+
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
+
+# Whitenoise для статики (уже должно быть)
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# Media files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
 
 # ============================================================
 # REST FRAMEWORK
@@ -341,20 +398,31 @@ LOGGING = {
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ============================================================
-# SENTRY CONFIGURATION (Optional)
+# SENTRY - Error tracking (only in production)
 # ============================================================
-if SENTRY_DSN := os.getenv("SENTRY_DSN"):
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+
+# Only initialize Sentry in production with valid DSN
+if not DEBUG and SENTRY_DSN and SENTRY_DSN.startswith("https://"):
     import sentry_sdk
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
 
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         integrations=[
             DjangoIntegration(),
             CeleryIntegration(),
+            RedisIntegration(),
         ],
         traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
         profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.1")),
         environment=os.getenv("ENVIRONMENT", "production"),
     )
+    print("✓ Sentry error tracking enabled")
+else:
+    if DEBUG:
+        print("🆎  Sentry disabled in development mode")
+    else:
+        print("⚠️  Sentry DSN not configured")
