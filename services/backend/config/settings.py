@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "apps.core",  # Shared enums, utilities
     "apps.users",
     "apps.subscriptions",
+    "apps.gnn_config",
     "apps.equipment",
     "apps.notifications",
     "apps.monitoring",
