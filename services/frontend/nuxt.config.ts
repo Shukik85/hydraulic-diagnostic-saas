@@ -4,7 +4,7 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-    typeCheck: false, // ✅ Включена проверка типов для production
+    typeCheck: true, // ✅ ВКЛЮЧЕНО: проверка типов для production
     shim: false,
   },
 
@@ -35,13 +35,10 @@ export default defineNuxtConfig({
         'echarts/charts',
         'echarts/components',
         'vue-echarts',
-        // TODO: Проверить использование three.js - если не используется, удалить
-        // 'three',
-        // 'three/examples/jsm/controls/OrbitControls',
       ],
     },
     ssr: {
-      noExternal: ['vue-echarts', 'echarts'], // Удалён 'three' - проверить необходимость
+      noExternal: ['vue-echarts', 'echarts'],
     },
   },
 
@@ -49,7 +46,6 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
       wsBase: process.env.NUXT_PUBLIC_WS_BASE || 'ws://localhost:8000/ws',
-      // ✅ ИСПРАВЛЕНО: моки включены только в dev или через явную переменную
       enableMocks: process.env.ENABLE_MOCKS === 'true' || process.env.NODE_ENV === 'development',
     },
   },
@@ -91,18 +87,36 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    compressPublicAssets: true,
+    compressPublicAssets: {
+      gzip: true,
+      brotli: true, // ✅ ДОБАВЛЕНО: Brotli сжатие
+    },
     routeRules: {
-      '/api/**': { cors: true },
-      '/diagnosis/demo': { ssr: false },
-      // ✅ ДОБАВЛЕНО: блокировка тестовых страниц в production
+      // ✅ УЛУЧШЕНО: детальные правила кэширования
+      '/': { 
+        swr: 3600,  // Stale-while-revalidate 1 час
+      },
+      '/dashboard': { 
+        ssr: true,
+        swr: 600,   // 10 минут для дашборда
+      },
+      '/diagnosis/**': { 
+        ssr: false  // SPA mode для diagnosis
+      },
+      '/api/**': { 
+        cors: true,
+        headers: {
+          'cache-control': 'max-age=300'
+        }
+      },
+      // Блокировка тестовых страниц в production
       '/api-test': process.env.NODE_ENV === 'production' ? { redirect: '/' } : {},
       '/demo': process.env.NODE_ENV === 'production' ? { redirect: '/' } : {},
     },
   },
 
   build: {
-    transpile: ['tslib'], // Удалён 'three' - проверить необходимость
+    transpile: ['tslib'],
   },
 
   devServer: {
@@ -116,7 +130,8 @@ export default defineNuxtConfig({
 
   // ✅ ДОБАВЛЕНО: Nuxt 4 experimental features
   experimental: {
-    granularCachedData: true, // Детальное управление кешированием
-    purgeCachedData: true,     // Автоматический cleanup данных
+    typescriptBundlerResolution: true, // Лучшее разрешение типов
+    granularCachedData: true,          // Детальное управление кешированием
+    purgeCachedData: true,              // Автоматический cleanup данных
   },
 })
