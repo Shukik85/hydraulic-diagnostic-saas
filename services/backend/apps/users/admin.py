@@ -1,4 +1,4 @@
-"""User admin interface with type safety."""
+"""User admin interface with type safety and Friendly UX."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.templatetags.static import static
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    """Admin interface for User model."""
+    """Admin interface for User model with Friendly UX."""
 
     list_display: ClassVar = [
         "email",
@@ -38,7 +39,14 @@ class UserAdmin(BaseUserAdmin):
         ("Personal Info", {"fields": ("first_name", "last_name")}),
         (
             "Subscription",
-            {"fields": ("subscription_tier", "subscription_status", "trial_end_date")},
+            {
+                "fields": ("subscription_tier", "subscription_status", "trial_end_date"),
+                "description": "<span class='Help'>"
+                "<svg class='FormHelperIcon' style='width: 14px; height: 14px; stroke: var(--color-primary); fill: none;'>"
+                "<use href='" + static('admin/icons/icons-sprite.svg') + "#icon-info'></use></svg> "
+                "Управление подпиской пользователя и пробным периодом"
+                "</span>",
+            },
         ),
         (
             "Billing",
@@ -56,41 +64,67 @@ class UserAdmin(BaseUserAdmin):
     readonly_fields: ClassVar = ["created_at", "updated_at", "api_key"]
 
     def subscription_badge(self, obj: User) -> SafeString:
-        """Display subscription tier as colored badge."""
+        """Display subscription tier as FriendlyUX badge with icon."""
         tier = obj.tier_enum
-        colors = {
-            SubscriptionTier.FREE: "gray",
-            SubscriptionTier.PRO: "blue",
-            SubscriptionTier.ENTERPRISE: "green",
+        badge_classes = {
+            SubscriptionTier.FREE: "BadgeMuted",
+            SubscriptionTier.PRO: "BadgeInfo",
+            SubscriptionTier.ENTERPRISE: "BadgeSuccess",
         }
-        color = colors.get(tier, "gray")
+        badge_class = badge_classes.get(tier, "BadgeMuted")
+
+        icon_name = {
+            SubscriptionTier.FREE: "icon-users",
+            SubscriptionTier.PRO: "icon-star",
+            SubscriptionTier.ENTERPRISE: "icon-crown",
+        }.get(tier, "icon-users")
+
         return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
+            '<span class="Badge {}">' 
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">' 
+            '<use href="{}#{}"></use></svg> '
+            "{}"
+            "</span>",
+            badge_class,
+            static("admin/icons/icons-sprite.svg"),
+            icon_name,
             tier.display_name,
         )
 
     subscription_badge.short_description = "Tier"  # type: ignore[attr-defined]
 
     def status_badge(self, obj: User) -> SafeString:
-        """Display subscription status as colored badge."""
-        status = obj.status_enum
-        color = status.display_color
+        """Display status with FriendlyUX badge and icon."""
+        if obj.is_active:
+            return format_html(
+                '<span class="Badge BadgeSuccess">' 
+                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">' 
+                '<use href="{}#icon-check"></use></svg> '
+                "Активен"
+                "</span>",
+                static("admin/icons/icons-sprite.svg"),
+            )
         return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
-            status.value.title(),
+            '<span class="Badge BadgeError">' 
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">' 
+            '<use href="{}#icon-x"></use></svg> '
+            "Неактивен"
+            "</span>",
+            static("admin/icons/icons-sprite.svg"),
         )
 
     status_badge.short_description = "Status"  # type: ignore[attr-defined]
 
     def actions_column(self, obj: User) -> SafeString:
-        """Display action buttons."""
+        """Display action buttons with FriendlyUX styling."""
         return format_html(
-            '<a class="button" href="/admin/users/user/{}/password/">Reset Password</a>',
+            '<a class="Btn BtnSecondary" style="padding: 6px 12px; font-size: 12px;" href="/admin/users/user/{}/password/">'
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle; margin-right: 4px;">'
+            '<use href="{}#icon-key"></use></svg>'
+            "Reset Password"
+            "</a>",
             obj.pk,
+            static("admin/icons/icons-sprite.svg"),
         )
 
     actions_column.short_description = "Actions"  # type: ignore[attr-defined]
