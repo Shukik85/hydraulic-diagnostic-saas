@@ -1,4 +1,4 @@
-"""Django Admin for Support Management.
+"""Django Admin for Support Management with Friendly UX.
 
 Rich admin interface with SLA tracking, auto-assignment, and bulk actions.
 """
@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, ClassVar
 from django.contrib import admin
 from django.db.models import Count
 from django.http import HttpRequest
+from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
@@ -32,7 +33,7 @@ class TicketMessageInline(admin.TabularInline):
 
 @admin.register(SupportTicket)
 class SupportTicketAdmin(admin.ModelAdmin):
-    """Admin interface for support tickets.
+    """Admin interface for support tickets with Friendly UX.
 
     Features:
     - SLA tracking with visual indicators
@@ -40,6 +41,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
     - Bulk actions (assign, close, escalate)
     - Inline message thread
     - Email notifications
+    - FriendlyUX badges with SVG icons
     """
 
     list_display: ClassVar = [
@@ -141,82 +143,139 @@ class SupportTicketAdmin(admin.ModelAdmin):
     user_link.short_description = "Customer"
 
     def category_badge(self, obj: SupportTicket) -> SafeString:
-        """Display category as colored badge."""
-        colors = {
-            "technical": "#3498db",
-            "billing": "#2ecc71",
-            "access": "#e74c3c",
-            "feature": "#9b59b6",
-            "bug": "#e67e22",
-            "other": "#95a5a6",
+        """Display category as FriendlyUX badge."""
+        badge_classes = {
+            "technical": "BadgeInfo",
+            "billing": "BadgeSuccess",
+            "access": "BadgeError",
+            "feature": "BadgeWarning",
+            "bug": "BadgeError",
+            "other": "BadgeMuted",
         }
-        color = colors.get(obj.category, "#95a5a6")
+        badge_class = badge_classes.get(obj.category, "BadgeMuted")
         return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
+            '<span class="Badge {}">{}</span>',
+            badge_class,
             obj.get_category_display(),
         )
 
     category_badge.short_description = "Category"
 
     def priority_badge(self, obj: SupportTicket) -> SafeString:
-        """Display priority with urgency indicator."""
-        colors = {
-            "low": "#95a5a6",
-            "medium": "#f39c12",
-            "high": "#e67e22",
-            "critical": "#c0392b",
+        """Display priority with FriendlyUX badge and icon."""
+        badge_classes = {
+            "low": "BadgeMuted",
+            "medium": "BadgeWarning",
+            "high": "BadgeError",
+            "critical": "BadgeError",
         }
-        color = colors.get(obj.priority, "#95a5a6")
+        badge_class = badge_classes.get(obj.priority, "BadgeMuted")
+
+        icon_name = {
+            "low": "icon-arrow-down",
+            "medium": "icon-minus",
+            "high": "icon-arrow-up",
+            "critical": "icon-alert",
+        }.get(obj.priority, "icon-minus")
+
         return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 3px 8px; border-radius: 3px; font-weight: bold;">{}</span>',
-            color,
+            '<span class="Badge {}">'
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">'
+            '<use href="{}#{}"></use></svg> '
+            "{}"
+            "</span>",
+            badge_class,
+            static("admin/icons/icons-sprite.svg"),
+            icon_name,
             obj.get_priority_display().split(" ")[0],
         )
 
     priority_badge.short_description = "Priority"
 
     def status_badge(self, obj: SupportTicket) -> SafeString:
-        """Display status with color coding."""
-        colors = {
-            "new": "#3498db",
-            "open": "#1abc9c",
-            "pending": "#f39c12",
-            "in_progress": "#9b59b6",
-            "resolved": "#27ae60",
-            "closed": "#7f8c8d",
-            "reopened": "#e74c3c",
+        """Display status with FriendlyUX badge and icon."""
+        badge_classes = {
+            "new": "BadgeInfo",
+            "open": "BadgeWarning",
+            "pending": "BadgeWarning",
+            "in_progress": "BadgeInfo",
+            "resolved": "BadgeSuccess",
+            "closed": "BadgeMuted",
+            "reopened": "BadgeError",
         }
-        color = colors.get(obj.status, "#95a5a6")
+        badge_class = badge_classes.get(obj.status, "BadgeMuted")
+
+        icon_name = {
+            "new": "icon-star",
+            "open": "icon-circle",
+            "pending": "icon-clock",
+            "in_progress": "icon-refresh",
+            "resolved": "icon-check",
+            "closed": "icon-x",
+            "reopened": "icon-alert",
+        }.get(obj.status, "icon-circle")
+
         return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
+            '<span class="Badge {}">'
+            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">'
+            '<use href="{}#{}"></use></svg> '
+            "{}"
+            "</span>",
+            badge_class,
+            static("admin/icons/icons-sprite.svg"),
+            icon_name,
             obj.get_status_display(),
         )
 
     status_badge.short_description = "Status"
 
     def sla_indicator(self, obj: SupportTicket) -> SafeString:
-        """Visual SLA status indicator."""
+        """Visual SLA status indicator with FriendlyUX badges."""
         if obj.status in ["resolved", "closed"]:
             if obj.sla_breached:
-                return format_html('<span style="color: #c0392b;">✗ Breached</span>')
-            return format_html('<span style="color: #27ae60;">✓ Met</span>')
+                return format_html(
+                    '<span class="Badge BadgeError">'
+                    '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
+                    '<use href="{}#icon-x"></use></svg> Breached'
+                    "</span>",
+                    static("admin/icons/icons-sprite.svg"),
+                )
+            return format_html(
+                '<span class="Badge BadgeSuccess">'
+                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
+                '<use href="{}#icon-check"></use></svg> Met'
+                "</span>",
+                static("admin/icons/icons-sprite.svg"),
+            )
 
         time_left = obj.time_until_sla
         if time_left and time_left.total_seconds() < 0:
-            return format_html('<span style="color: #c0392b; font-weight: bold;">⚠ OVERDUE</span>')
+            return format_html(
+                '<span class="Badge BadgeError">'
+                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
+                '<use href="{}#icon-alert"></use></svg> OVERDUE'
+                "</span>",
+                static("admin/icons/icons-sprite.svg"),
+            )
         elif time_left and time_left.total_seconds() < 3600:
             return format_html(
-                '<span style="color: #e67e22; font-weight: bold;">⚠ {}</span>',
+                '<span class="Badge BadgeWarning">'
+                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
+                '<use href="{}#icon-clock"></use></svg> {}'
+                "</span>",
+                static("admin/icons/icons-sprite.svg"),
                 f"{int(time_left.total_seconds() / 60)}m left",
             )
         elif time_left:
             hours = int(time_left.total_seconds() / 3600)
-            return format_html('<span style="color: #27ae60;">✓ {}h left</span>', hours)
+            return format_html(
+                '<span class="Badge BadgeSuccess">'
+                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
+                '<use href="{}#icon-check"></use></svg> {}h left'
+                "</span>",
+                static("admin/icons/icons-sprite.svg"),
+                hours,
+            )
         return format_html("<span>-</span>")
 
     sla_indicator.short_description = "SLA Status"
@@ -358,32 +417,39 @@ class AccessRecoveryRequestAdmin(admin.ModelAdmin):
     actions: ClassVar = ["approve_requests", "reject_requests"]
 
     def status_badge(self, obj: AccessRecoveryRequest) -> SafeString:
-        """Display status badge."""
-        colors = {
-            "pending": "#3498db",
-            "verified": "#1abc9c",
-            "approved": "#27ae60",
-            "rejected": "#c0392b",
-            "completed": "#7f8c8d",
+        """Display status badge with FriendlyUX."""
+        badge_classes = {
+            "pending": "BadgeWarning",
+            "verified": "BadgeInfo",
+            "approved": "BadgeSuccess",
+            "rejected": "BadgeError",
+            "completed": "BadgeMuted",
         }
-        color = colors.get(obj.status, "#95a5a6")
+        badge_class = badge_classes.get(obj.status, "BadgeMuted")
         return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
+            '<span class="Badge {}">{}</span>',
+            badge_class,
             obj.get_status_display(),
         )
 
     status_badge.short_description = "Status"
 
     def actions_column(self, obj: AccessRecoveryRequest) -> SafeString:
-        """Display action buttons."""
+        """Display action buttons with FriendlyUX."""
         if obj.status == "pending":
             return format_html(
-                '<a class="button" style="margin-right: 5px; background: #27ae60; color: white;" '
-                'href="#" onclick="return confirm(\'Approve this request?\')">Approve</a>'
-                '<a class="button" style="background: #c0392b; color: white;" '
-                'href="#" onclick="return confirm(\'Reject this request?\')">Reject</a>'
+                '<a class="Btn" style="padding: 6px 12px; font-size: 12px; margin-right: 4px;" '
+                'href="#" onclick="return confirm(\'Approve this request?\')">' 
+                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
+                '<use href="{}#icon-check"></use></svg> Approve'
+                "</a>"
+                '<a class="Btn" style="padding: 6px 12px; font-size: 12px; background: var(--color-error);" '
+                'href="#" onclick="return confirm(\'Reject this request?\')">' 
+                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
+                '<use href="{}#icon-x"></use></svg> Reject'
+                "</a>",
+                static("admin/icons/icons-sprite.svg"),
+                static("admin/icons/icons-sprite.svg"),
             )
         return format_html("<span>-</span>")
 
