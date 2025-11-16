@@ -230,8 +230,36 @@ use([
   LegendComponent,
 ])
 
-// ✅ FIX: Add i18n composable
+// ✅ i18n composable
 const { t } = useI18n()
+
+// ✅ SEO Meta Tags
+useSeoMeta({
+  title: 'Dashboard | Hydraulic Diagnostic SaaS',
+  description: 'Real-time hydraulic system monitoring dashboard with AI-powered diagnostics, predictive maintenance, and performance analytics',
+  
+  // Open Graph
+  ogTitle: 'Dashboard | Hydraulic Diagnostic SaaS',
+  ogDescription: 'Monitor your hydraulic systems in real-time with AI-powered insights',
+  ogType: 'website',
+  ogUrl: 'https://hydraulic-diagnostic.com/dashboard',
+  ogImage: 'https://hydraulic-diagnostic.com/og-dashboard.jpg',
+  
+  // Twitter Card
+  twitterCard: 'summary_large_image',
+  twitterTitle: 'Dashboard | Hydraulic Diagnostic SaaS',
+  twitterDescription: 'Monitor your hydraulic systems in real-time with AI-powered insights',
+  twitterImage: 'https://hydraulic-diagnostic.com/og-dashboard.jpg',
+})
+
+// ✅ Global title template
+useHead({
+  titleTemplate: (titleChunk) => {
+    return titleChunk 
+      ? `${titleChunk} | Hydraulic Diagnostic` 
+      : 'Hydraulic Diagnostic SaaS'
+  }
+})
 
 // Modal states
 const openDiagnosticModal = ref(false)
