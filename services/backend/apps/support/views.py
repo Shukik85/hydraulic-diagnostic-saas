@@ -1,9 +1,9 @@
-# views.py - ЗАМЕНИТЬ ВЕСЬ ФАЙЛ:
-"""
-Support action views
-"""
+"""Support action views for admin quick actions."""
+
+from __future__ import annotations
 
 from datetime import timedelta
+from typing import TYPE_CHECKING
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
@@ -12,14 +12,22 @@ from django.views.decorators.http import require_POST
 
 from apps.users.models import User
 
-# УДАЛИТЬ эту строку - модели SupportAction не существует
-# from .models import SupportAction
+if TYPE_CHECKING:
+    from django.http import HttpRequest
 
 
 @staff_member_required
 @require_POST
-def reset_password(request, user_id):
-    """Reset user password (admin only)"""
+def reset_password(request: HttpRequest, user_id: str) -> JsonResponse:
+    """Reset user password (admin only).
+
+    Args:
+        request: HTTP request (unused, required by decorator)
+        user_id: UUID of the user
+
+    Returns:
+        JsonResponse with status and temporary password
+    """
     try:
         user = User.objects.get(id=user_id)
         # Generate temporary password
@@ -40,8 +48,16 @@ def reset_password(request, user_id):
 
 @staff_member_required
 @require_POST
-def extend_trial(request, user_id):
-    """Extend user trial period"""
+def extend_trial(request: HttpRequest, user_id: str) -> JsonResponse:
+    """Extend user trial period.
+
+    Args:
+        request: HTTP request with 'days' parameter
+        user_id: UUID of the user
+
+    Returns:
+        JsonResponse with status and new trial end date
+    """
     try:
         user = User.objects.get(id=user_id)
         days = int(request.POST.get("days", 7))
