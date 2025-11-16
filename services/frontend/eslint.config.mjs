@@ -32,6 +32,21 @@ export default withNuxt({
     'vue/no-v-html': 'warn',
     'vue/require-default-prop': 'warn',
     'vue/require-prop-types': 'error',
+    // ✅ ДОБАВЛЕНО: Дополнительные Vue rules
+    'vue/require-explicit-emits': 'error',
+    'vue/no-unused-refs': 'warn',
+    'vue/padding-line-between-blocks': 'warn',
+    'vue/component-api-style': ['error', ['script-setup']],
+    'vue/block-order': ['error', {
+      order: ['script', 'template', 'style']
+    }],
+    'vue/html-self-closing': ['error', {
+      html: {
+        void: 'always',
+        normal: 'never',
+        component: 'always'
+      }
+    }],
     
     // TypeScript rules
     '@typescript-eslint/no-explicit-any': 'warn',
@@ -39,10 +54,33 @@ export default withNuxt({
       argsIgnorePattern: '^_',
       varsIgnorePattern: '^_',
     }],
+    // ✅ ДОБАВЛЕНО: Дополнительные TypeScript rules
+    '@typescript-eslint/explicit-function-return-type': ['warn', {
+      allowExpressions: true,
+      allowTypedFunctionExpressions: true,
+      allowHigherOrderFunctions: true
+    }],
+    '@typescript-eslint/no-non-null-assertion': 'warn',
+    '@typescript-eslint/consistent-type-imports': ['error', {
+      prefer: 'type-imports',
+      fixStyle: 'inline-type-imports'
+    }],
     
     // General code quality
     'prefer-const': 'error',
     'no-var': 'error',
-    'eqeqeq': ['error', 'always'],
+    'eqeqeq': ['error', 'always', { null: 'ignore' }],
+    'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
+    'no-unused-expressions': 'error',
+    'no-duplicate-imports': 'error',
+    
+    // Best practices
+    'curly': ['error', 'all'],
+    'default-case': 'warn',
+    'dot-notation': 'warn',
+    'no-empty-function': ['warn', { allow: ['arrowFunctions'] }],
+    'no-implicit-coercion': 'error',
+    'no-return-await': 'error',
+    'require-await': 'warn',
   },
 })
