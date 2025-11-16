@@ -13,6 +13,17 @@
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
     
+    /* Header icon */
+    #branding .brand-icon {
+        width: 32px;
+        height: 32px;
+        stroke: white;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+    }
+    
     /* Navigation styling */
     .admin-nav {
         display: flex;
@@ -32,11 +43,29 @@
         padding: 6px 12px;
         border-radius: 4px;
         transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
     }
     
     .admin-nav a:hover {
         background: rgba(255, 255, 255, 0.1);
         color: #f9fafb !important;
+    }
+    
+    .admin-nav a:hover .nav-icon {
+        stroke: #f9fafb;
+    }
+    
+    .nav-icon {
+        width: 18px;
+        height: 18px;
+        stroke: #d1d5db;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        fill: none;
+        transition: stroke 0.2s ease;
     }
 </style>
 {% endblock %}
@@ -44,8 +73,10 @@
 {% block branding %}
 <div id="branding">
     <h1 id="site-name">
-        <a href="{% url 'admin:index' %}" style="display: flex; align-items: center; gap: 8px;">
-            <span>⚙️</span>
+        <a href="{% url 'admin:index' %}" style="display: flex; align-items: center; gap: 10px;">
+            <svg class="brand-icon">
+                <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-equipment"></use>
+            </svg>
             <span>Hydraulic Diagnostics</span>
         </a>
     </h1>
@@ -54,9 +85,29 @@
 
 {% block nav-global %}
 <nav class="admin-nav">
-    <a href="{% url 'admin:index' %}">🏠 Dashboard</a>
-    <a href="{% url 'docs:index' %}">📚 Documentation</a>
-    <a href="{% url 'admin:users_user_changelist' %}">👥 Users</a>
-    <a href="{% url 'admin:support_supportticket_changelist' %}">🎟️ Support</a>
+    <a href="{% url 'admin:index' %}">
+        <svg class="nav-icon">
+            <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-dashboard"></use>
+        </svg>
+        Dashboard
+    </a>
+    <a href="{% url 'docs:index' %}">
+        <svg class="nav-icon">
+            <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-documentation"></use>
+        </svg>
+        Documentation
+    </a>
+    <a href="{% url 'admin:users_user_changelist' %}">
+        <svg class="nav-icon">
+            <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-users"></use>
+        </svg>
+        Users
+    </a>
+    <a href="{% url 'admin:support_supportticket_changelist' %}">
+        <svg class="nav-icon">
+            <use href="{% static 'admin/icons/icons-sprite.svg' %}#icon-support"></use>
+        </svg>
+        Support
+    </a>
 </nav>
 {% endblock %}
