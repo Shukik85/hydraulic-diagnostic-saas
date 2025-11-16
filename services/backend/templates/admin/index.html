@@ -14,14 +14,14 @@
         stroke-linejoin: round;
         fill: none;
     }
-    
+
     .icon-small {
         width: 20px;
         height: 20px;
         vertical-align: middle;
         margin-right: 8px;
     }
-    
+
     /* Dashboard Cards */
     .dashboard-widgets {
         display: grid;
@@ -29,7 +29,7 @@
         gap: 20px;
         margin-bottom: 30px;
     }
-    
+
     .widget-card {
         background: linear-gradient(135deg, var(--metal-dark) 0%, var(--metal-medium) 100%);
         border: 1px solid var(--border-color);
@@ -39,22 +39,22 @@
                     inset 0 1px 0 rgba(255, 255, 255, 0.05);
         transition: all 0.2s ease;
     }
-    
+
     .widget-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4),
                     inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
-    
+
     .widget-card:hover .icon {
         stroke: var(--primary-200);
     }
-    
+
     .widget-icon {
         margin-bottom: 16px;
         display: block;
     }
-    
+
     .widget-title {
         font-size: 14px;
         color: var(--text-muted);
@@ -62,19 +62,19 @@
         letter-spacing: 0.5px;
         margin-bottom: 8px;
     }
-    
+
     .widget-value {
         font-size: 32px;
         font-weight: 700;
         color: var(--primary-300);
         margin-bottom: 4px;
     }
-    
+
     .widget-label {
         font-size: 12px;
         color: var(--text-secondary);
     }
-    
+
     .quick-actions {
         background: var(--metal-medium);
         border: 1px solid var(--border-color);
@@ -82,7 +82,7 @@
         padding: 20px;
         margin-bottom: 20px;
     }
-    
+
     .quick-actions h2 {
         margin: 0 0 16px 0;
         font-size: 16px;
@@ -93,13 +93,13 @@
         align-items: center;
         gap: 8px;
     }
-    
+
     .action-buttons {
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
     }
-    
+
     .action-btn {
         background: linear-gradient(135deg, var(--primary-600) 0%, var(--primary-700) 100%);
         color: white;
@@ -114,18 +114,18 @@
         align-items: center;
         gap: 8px;
     }
-    
+
     .action-btn:hover {
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(99, 102, 241, 0.4);
         color: white;
     }
-    
+
     .action-btn .icon-small {
         stroke: white;
         margin: 0;
     }
-    
+
     .welcome-message {
         background: linear-gradient(135deg, var(--primary-700) 0%, var(--primary-800) 100%);
         border-radius: 12px;
@@ -136,18 +136,18 @@
         align-items: center;
         gap: 20px;
     }
-    
+
     .welcome-message .icon {
         stroke: white;
         opacity: 0.9;
     }
-    
+
     .welcome-message-content h1 {
         margin: 0 0 8px 0;
         font-size: 24px;
         color: white;
     }
-    
+
     .welcome-message-content p {
         margin: 0;
         color: var(--text-secondary);
@@ -160,10 +160,9 @@
 
 {% block content %}
 {# Load SVG sprite #}
-<div style="display: none;">{% include "admin/icons/icons-sprite.html" %}</div>
 
 <div id="content-main">
-    
+
     {# Welcome Message #}
     <div class="welcome-message">
         <svg class="icon">
@@ -174,7 +173,7 @@
             <p>Панель управления гидравлической диагностикой</p>
         </div>
     </div>
-    
+
     {# Dashboard Widgets #}
     <div class="dashboard-widgets">
         <div class="widget-card">
@@ -187,7 +186,7 @@
             <div class="widget-value">-</div>
             <div class="widget-label">Всего в системе</div>
         </div>
-        
+
         <div class="widget-card">
             <div class="widget-icon">
                 <svg class="icon">
@@ -198,7 +197,7 @@
             <div class="widget-value">-</div>
             <div class="widget-label">Активных систем</div>
         </div>
-        
+
         <div class="widget-card">
             <div class="widget-icon">
                 <svg class="icon">
@@ -209,7 +208,7 @@
             <div class="widget-value">-</div>
             <div class="widget-label">Открытых тикетов</div>
         </div>
-        
+
         <div class="widget-card">
             <div class="widget-icon">
                 <svg class="icon">
@@ -221,7 +220,7 @@
             <div class="widget-label">Активных моделей</div>
         </div>
     </div>
-    
+
     {# Quick Actions #}
     <div class="quick-actions">
         <h2>
@@ -257,7 +256,7 @@
             </a>
         </div>
     </div>
-    
+
     {# App List #}
     <div class="app-list">
         {% if app_list %}
