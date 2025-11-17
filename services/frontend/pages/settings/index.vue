@@ -2,15 +2,21 @@
   <div class="space-y-8">
     <!-- Header -->
     <div>
-      <h1 class="u-h2">{{ t('settings.title') }}</h1>
-      <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.subtitle') }}</p>
+      <h1 class="text-3xl font-bold text-white">{{ t('settings.title') }}</h1>
+      <p class="text-steel-shine mt-2">{{ t('settings.subtitle') }}</p>
     </div>
 
     <!-- Settings Navigation -->
-    <div class="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
-      <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
-        class="px-4 py-2 text-sm font-medium rounded-md u-transition-fast"
-        :class="activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'">
+    <div class="flex space-x-1 bg-steel-900/50 p-1 rounded-lg w-fit">
+      <button 
+        v-for="tab in tabs" 
+        :key="tab.id" 
+        @click="activeTab = tab.id"
+        class="px-6 py-3 text-sm font-medium rounded-md transition-all"
+        :class="activeTab === tab.id 
+          ? 'bg-primary-600 text-white shadow-lg' 
+          : 'text-steel-shine hover:text-white hover:bg-steel-800/50'"
+      >
         <Icon :name="tab.icon" class="w-4 h-4 mr-2 inline" />
         {{ tab.name }}
       </button>
@@ -18,74 +24,108 @@
 
     <!-- Profile Settings -->
     <div v-if="activeTab === 'profile'" class="space-y-6">
-      <div class="u-card p-6">
-        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-          <h3 class="u-h4">{{ t('settings.profile.title') }}</h3>
-          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.profile.subtitle') }}</p>
+      <div class="card-glass p-6">
+        <div class="border-b border-steel-700/50 pb-4 mb-6">
+          <h3 class="text-xl font-bold text-white">{{ t('settings.profile.title') }}</h3>
+          <p class="text-steel-shine mt-1">{{ t('settings.profile.subtitle') }}</p>
         </div>
 
         <div class="space-y-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="u-label">{{ t('settings.profile.firstName') }}</label>
-              <input v-model="profile.firstName" class="u-input" />
-            </div>
-            <div>
-              <label class="u-label">{{ t('settings.profile.lastName') }}</label>
-              <input v-model="profile.lastName" class="u-input" />
-            </div>
+            <UFormGroup
+              :label="t('settings.profile.firstName')"
+              helper="Ваше имя для отображения в системе"
+            >
+              <UInput v-model="profile.firstName" />
+            </UFormGroup>
+            <UFormGroup
+              :label="t('settings.profile.lastName')"
+              helper="Ваша фамилия для официальных документов"
+            >
+              <UInput v-model="profile.lastName" />
+            </UFormGroup>
           </div>
 
-          <div>
-            <label class="u-label">{{ t('settings.profile.emailAddress') }}</label>
-            <input v-model="profile.email" type="email" class="u-input" />
-          </div>
+          <UFormGroup
+            :label="t('settings.profile.emailAddress')"
+            helper="Используется для входа и уведомлений"
+            required
+          >
+            <UInput v-model="profile.email" type="email" />
+          </UFormGroup>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="u-label">{{ t('settings.profile.company') }}</label>
-              <input v-model="profile.company" class="u-input" />
-            </div>
-            <div>
-              <label class="u-label">{{ t('settings.profile.phone') }}</label>
-              <input v-model="profile.phone" type="tel" class="u-input" />
-            </div>
+            <UFormGroup
+              :label="t('settings.profile.company')"
+              helper="Название вашей организации"
+            >
+              <UInput v-model="profile.company" />
+            </UFormGroup>
+            <UFormGroup
+              :label="t('settings.profile.phone')"
+              helper="Контактный телефон"
+            >
+              <UInput v-model="profile.phone" type="tel" />
+            </UFormGroup>
           </div>
 
           <div class="pt-4">
-            <button class="u-btn u-btn-primary u-btn-md">
-              <Icon name="heroicons:check" class="w-4 h-4 mr-2" />
+            <UButton size="lg" @click="saveProfile">
+              <Icon name="heroicons:check" class="w-5 h-5 mr-2" />
               {{ t('settings.profile.saveChanges') }}
-            </button>
+            </UButton>
           </div>
         </div>
       </div>
 
-      <div class="u-card p-6">
-        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-          <h3 class="u-h4">{{ t('settings.profile.changePassword') }}</h3>
-          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.profile.changePasswordSubtitle') }}</p>
+      <div class="card-glass p-6">
+        <div class="border-b border-steel-700/50 pb-4 mb-6">
+          <h3 class="text-xl font-bold text-white">{{ t('settings.profile.changePassword') }}</h3>
+          <p class="text-steel-shine mt-1">{{ t('settings.profile.changePasswordSubtitle') }}</p>
         </div>
 
         <div class="space-y-4">
-          <div>
-            <label class="u-label">{{ t('settings.profile.currentPassword') }}</label>
-            <input type="password" class="u-input" :placeholder="t('settings.profile.currentPasswordPlaceholder')" />
-          </div>
-          <div>
-            <label class="u-label">{{ t('settings.profile.newPassword') }}</label>
-            <input type="password" class="u-input" :placeholder="t('settings.profile.newPasswordPlaceholder')" />
-          </div>
-          <div>
-            <label class="u-label">{{ t('settings.profile.confirmPassword') }}</label>
-            <input type="password" class="u-input" :placeholder="t('settings.profile.confirmPasswordPlaceholder')" />
-          </div>
+          <UFormGroup
+            :label="t('settings.profile.currentPassword')"
+            helper="Введите текущий пароль для подтверждения"
+            required
+          >
+            <UInput 
+              v-model="passwords.current"
+              type="password" 
+              :placeholder="t('settings.profile.currentPasswordPlaceholder')" 
+            />
+          </UFormGroup>
+          
+          <UFormGroup
+            :label="t('settings.profile.newPassword')"
+            helper="Минимум 8 символов, включая цифры и спецсимволы"
+            required
+          >
+            <UInput 
+              v-model="passwords.new"
+              type="password" 
+              :placeholder="t('settings.profile.newPasswordPlaceholder')" 
+            />
+          </UFormGroup>
+          
+          <UFormGroup
+            :label="t('settings.profile.confirmPassword')"
+            helper="Повторите новый пароль"
+            required
+          >
+            <UInput 
+              v-model="passwords.confirm"
+              type="password" 
+              :placeholder="t('settings.profile.confirmPasswordPlaceholder')" 
+            />
+          </UFormGroup>
 
           <div class="pt-4">
-            <button class="u-btn u-btn-primary u-btn-md">
-              <Icon name="heroicons:key" class="w-4 h-4 mr-2" />
+            <UButton size="lg" @click="updatePassword">
+              <Icon name="heroicons:key" class="w-5 h-5 mr-2" />
               {{ t('settings.profile.updatePassword') }}
-            </button>
+            </UButton>
           </div>
         </div>
       </div>
@@ -93,68 +133,62 @@
 
     <!-- Notifications Settings -->
     <div v-if="activeTab === 'notifications'" class="space-y-6">
-      <div class="u-card p-6">
-        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-          <h3 class="u-h4">{{ t('settings.notifications.title') }}</h3>
-          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.notifications.subtitle') }}</p>
+      <div class="card-glass p-6">
+        <div class="border-b border-steel-700/50 pb-4 mb-6">
+          <h3 class="text-xl font-bold text-white">{{ t('settings.notifications.title') }}</h3>
+          <p class="text-steel-shine mt-1">{{ t('settings.notifications.subtitle') }}</p>
         </div>
 
         <div class="space-y-6">
-          <div class="u-flex-between">
+          <div class="flex items-center justify-between">
             <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.systemAlerts') }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.systemAlertsDesc') }}
-              </p>
+              <p class="font-medium text-white">{{ t('settings.notifications.systemAlerts') }}</p>
+              <p class="text-sm text-steel-shine">{{ t('settings.notifications.systemAlertsDesc') }}</p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="notifications.systemAlerts" type="checkbox" class="sr-only peer" />
-              <div
-                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
-              </div>
+              <div class="w-11 h-6 bg-steel-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-steel-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
             </label>
           </div>
 
-          <div class="u-flex-between">
+          <div class="flex items-center justify-between">
             <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.maintenanceReminders')
-              }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.maintenanceRemindersDesc') }}</p>
+              <p class="font-medium text-white">{{ t('settings.notifications.maintenanceReminders') }}</p>
+              <p class="text-sm text-steel-shine">{{ t('settings.notifications.maintenanceRemindersDesc') }}</p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="notifications.maintenanceReminders" type="checkbox" class="sr-only peer" />
-              <div
-                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
-              </div>
+              <div class="w-11 h-6 bg-steel-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-steel-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
             </label>
           </div>
 
-          <div class="u-flex-between">
+          <div class="flex items-center justify-between">
             <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.diagnosticReports') }}
-              </p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.diagnosticReportsDesc')
-              }}</p>
+              <p class="font-medium text-white">{{ t('settings.notifications.diagnosticReports') }}</p>
+              <p class="text-sm text-steel-shine">{{ t('settings.notifications.diagnosticReportsDesc') }}</p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="notifications.diagnosticReports" type="checkbox" class="sr-only peer" />
-              <div
-                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
-              </div>
+              <div class="w-11 h-6 bg-steel-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-steel-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
             </label>
           </div>
 
-          <div class="u-flex-between">
+          <div class="flex items-center justify-between">
             <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.notifications.weeklySummary') }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.notifications.weeklySummaryDesc') }}
-              </p>
+              <p class="font-medium text-white">{{ t('settings.notifications.weeklySummary') }}</p>
+              <p class="text-sm text-steel-shine">{{ t('settings.notifications.weeklySummaryDesc') }}</p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
               <input v-model="notifications.weeklySummary" type="checkbox" class="sr-only peer" />
-              <div
-                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
-              </div>
+              <div class="w-11 h-6 bg-steel-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-steel-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
             </label>
+          </div>
+
+          <div class="pt-4">
+            <UButton size="lg" @click="saveNotifications">
+              <Icon name="heroicons:check" class="w-5 h-5 mr-2" />
+              Сохранить настройки уведомлений
+            </UButton>
           </div>
         </div>
       </div>
@@ -162,173 +196,178 @@
 
     <!-- Integrations Settings -->
     <div v-if="activeTab === 'integrations'" class="space-y-6">
-      <div class="u-card p-6">
-        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-          <h3 class="u-h4">{{ t('settings.integrations.title') }}</h3>
-          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.integrations.subtitle') }}</p>
+      <div class="card-glass p-6">
+        <div class="border-b border-steel-700/50 pb-4 mb-6">
+          <h3 class="text-xl font-bold text-white">{{ t('settings.integrations.title') }}</h3>
+          <p class="text-steel-shine mt-1">{{ t('settings.integrations.subtitle') }}</p>
         </div>
 
         <div class="space-y-4">
-          <div class="u-flex-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div class="flex items-center justify-between p-4 border border-steel-700/50 rounded-lg card-hover">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg u-flex-center">
-                <Icon name="heroicons:cloud" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div class="w-10 h-10 bg-blue-600/10 rounded-lg flex items-center justify-center">
+                <Icon name="heroicons:cloud" class="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.integrations.scadaSystem') }}</p>
-                <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.integrations.scadaSystemDesc') }}
-                </p>
+                <p class="font-medium text-white">{{ t('settings.integrations.scadaSystem') }}</p>
+                <p class="text-sm text-steel-shine">{{ t('settings.integrations.scadaSystemDesc') }}</p>
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <span class="u-badge u-badge-success">{{ t('settings.integrations.connected') }}</span>
-              <button class="u-btn u-btn-secondary u-btn-sm">{{ t('settings.integrations.configure') }}</button>
+              <UBadge variant="success">{{ t('settings.integrations.connected') }}</UBadge>
+              <UButton variant="secondary" size="sm">{{ t('settings.integrations.configure') }}</UButton>
             </div>
           </div>
 
-          <div class="u-flex-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div class="flex items-center justify-between p-4 border border-steel-700/50 rounded-lg card-hover">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-lg u-flex-center">
-                <Icon name="heroicons:circle-stack" class="w-5 h-5 text-green-600 dark:text-green-400" />
+              <div class="w-10 h-10 bg-green-600/10 rounded-lg flex items-center justify-center">
+                <Icon name="heroicons:circle-stack" class="w-5 h-5 text-green-400" />
               </div>
               <div>
-                <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.integrations.erpSystem') }}</p>
-                <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.integrations.erpSystemDesc') }}</p>
+                <p class="font-medium text-white">{{ t('settings.integrations.erpSystem') }}</p>
+                <p class="text-sm text-steel-shine">{{ t('settings.integrations.erpSystemDesc') }}</p>
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <span class="u-badge u-badge-warning">{{ t('settings.integrations.notConnected') }}</span>
-              <button class="u-btn u-btn-primary u-btn-sm">{{ t('settings.integrations.connect') }}</button>
+              <UBadge variant="warning">{{ t('settings.integrations.notConnected') }}</UBadge>
+              <UButton size="sm">{{ t('settings.integrations.connect') }}</UButton>
             </div>
           </div>
 
-          <div class="u-flex-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <div class="flex items-center justify-between p-4 border border-steel-700/50 rounded-lg card-hover">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg u-flex-center">
-                <Icon name="heroicons:chat-bubble-left-right" class="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <div class="w-10 h-10 bg-purple-600/10 rounded-lg flex items-center justify-center">
+                <Icon name="heroicons:chat-bubble-left-right" class="w-5 h-5 text-purple-400" />
               </div>
               <div>
-                <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.integrations.slackIntegration') }}
-                </p>
-                <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.integrations.slackIntegrationDesc')
-                }}</p>
+                <p class="font-medium text-white">{{ t('settings.integrations.slackIntegration') }}</p>
+                <p class="text-sm text-steel-shine">{{ t('settings.integrations.slackIntegrationDesc') }}</p>
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <span class="u-badge u-badge-warning">{{ t('settings.integrations.notConnected') }}</span>
-              <button class="u-btn u-btn-primary u-btn-sm">{{ t('settings.integrations.connect') }}</button>
+              <UBadge variant="warning">{{ t('settings.integrations.notConnected') }}</UBadge>
+              <UButton size="sm">{{ t('settings.integrations.connect') }}</UButton>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="u-card p-6">
-        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-          <h3 class="u-h4">{{ t('settings.integrations.apiKeys') }}</h3>
-          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.integrations.apiKeysSubtitle') }}</p>
+      <div class="card-glass p-6">
+        <div class="border-b border-steel-700/50 pb-4 mb-6">
+          <h3 class="text-xl font-bold text-white">{{ t('settings.integrations.apiKeys') }}</h3>
+          <p class="text-steel-shine mt-1">{{ t('settings.integrations.apiKeysSubtitle') }}</p>
         </div>
 
         <div class="space-y-4">
-          <div class="u-flex-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div class="flex items-center justify-between p-4 bg-steel-800/50 rounded-lg">
             <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.integrations.primaryApiKey') }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400 font-mono">hds_sk_...aBcD1234</p>
+              <p class="font-medium text-white">{{ t('settings.integrations.primaryApiKey') }}</p>
+              <p class="text-sm text-steel-shine font-mono">hds_sk_...aBcD1234</p>
             </div>
             <div class="flex items-center gap-2">
-              <button class="u-btn u-btn-secondary u-btn-sm">
+              <UButton variant="secondary" size="sm">
                 <Icon name="heroicons:clipboard" class="w-4 h-4 mr-1" />
                 {{ t('settings.integrations.copy') }}
-              </button>
-              <button class="u-btn u-btn-ghost u-btn-sm">
-                <Icon name="heroicons:arrow-path" class="w-4 h-4" />
-              </button>
+              </UButton>
+              <UButton variant="ghost" size="icon">
+                <Icon name="heroicons:arrow-path" class="w-5 h-5" />
+              </UButton>
             </div>
           </div>
 
-          <button class="u-btn u-btn-ghost u-btn-md">
-            <Icon name="heroicons:plus" class="w-4 h-4 mr-2" />
+          <UButton variant="ghost" size="lg">
+            <Icon name="heroicons:plus" class="w-5 h-5 mr-2" />
             {{ t('settings.integrations.generateNewKey') }}
-          </button>
+          </UButton>
         </div>
       </div>
     </div>
 
     <!-- Team Settings -->
     <div v-if="activeTab === 'team'" class="space-y-6">
-      <div class="u-flex-between">
+      <div class="flex items-center justify-between">
         <div>
-          <h3 class="u-h4">{{ t('settings.team.title') }}</h3>
-          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.team.subtitle') }}</p>
+          <h3 class="text-xl font-bold text-white">{{ t('settings.team.title') }}</h3>
+          <p class="text-steel-shine mt-1">{{ t('settings.team.subtitle') }}</p>
         </div>
-        <button class="u-btn u-btn-primary u-btn-md">
-          <Icon name="heroicons:user-plus" class="w-4 h-4 mr-2" />
+        <UButton size="lg">
+          <Icon name="heroicons:user-plus" class="w-5 h-5 mr-2" />
           {{ t('settings.team.inviteUser') }}
-        </button>
+        </UButton>
       </div>
 
-      <div class="u-card">
+      <div class="card-glass overflow-hidden">
         <div class="overflow-x-auto">
-          <table class="u-table">
-            <thead>
+          <table class="w-full">
+            <thead class="bg-steel-900/50 border-b border-steel-700/50">
               <tr>
-                <th>{{ t('settings.team.user') }}</th>
-                <th>{{ t('settings.team.role') }}</th>
-                <th>{{ t('settings.team.lastActive') }}</th>
-                <th>{{ t('settings.team.status') }}</th>
-                <th>{{ t('settings.team.actions') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-steel-shine uppercase tracking-wider">{{ t('settings.team.user') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-steel-shine uppercase tracking-wider">{{ t('settings.team.role') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-steel-shine uppercase tracking-wider">{{ t('settings.team.lastActive') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-steel-shine uppercase tracking-wider">{{ t('settings.team.status') }}</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-steel-shine uppercase tracking-wider">{{ t('settings.team.actions') }}</th>
               </tr>
             </thead>
-            <tbody>
-              <tr>
-                <td>
+            <tbody class="divide-y divide-steel-700/50">
+              <tr class="hover:bg-steel-900/30 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-linear-to-br from-blue-500 to-purple-500 rounded-full u-flex-center">
+                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                       <Icon name="heroicons:user" class="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <p class="font-medium text-gray-900 dark:text-white">John Doe</p>
-                      <p class="u-body-sm text-gray-500 dark:text-gray-400">john.doe@company.com</p>
+                      <p class="font-medium text-white">John Doe</p>
+                      <p class="text-sm text-steel-shine">john.doe@company.com</p>
                     </div>
                   </div>
                 </td>
-                <td><span class="u-badge u-badge-info">{{ t('settings.team.admin') }}</span></td>
-                <td class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.team.hoursAgo', ['2']) }}</td>
-                <td><span class="u-badge u-badge-success">{{ t('settings.team.active') }}</span></td>
-                <td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <UBadge variant="default">{{ t('settings.team.admin') }}</UBadge>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-steel-shine">{{ t('settings.team.hoursAgo', ['2']) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <UBadge variant="success">{{ t('settings.team.active') }}</UBadge>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center gap-1">
-                    <button class="u-btn u-btn-ghost u-btn-sm">
-                      <Icon name="heroicons:pencil" class="w-4 h-4" />
-                    </button>
-                    <button class="u-btn u-btn-ghost u-btn-sm">
-                      <Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" />
-                    </button>
+                    <UButton variant="ghost" size="icon">
+                      <Icon name="heroicons:pencil" class="w-5 h-5" />
+                    </UButton>
+                    <UButton variant="ghost" size="icon">
+                      <Icon name="heroicons:ellipsis-horizontal" class="w-5 h-5" />
+                    </UButton>
                   </div>
                 </td>
               </tr>
 
-              <tr>
-                <td>
+              <tr class="hover:bg-steel-900/30 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-linear-to-br from-green-500 to-teal-500 rounded-full u-flex-center">
+                    <div class="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center">
                       <Icon name="heroicons:user" class="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <p class="font-medium text-gray-900 dark:text-white">Jane Smith</p>
-                      <p class="u-body-sm text-gray-500 dark:text-gray-400">jane.smith@company.com</p>
+                      <p class="font-medium text-white">Jane Smith</p>
+                      <p class="text-sm text-steel-shine">jane.smith@company.com</p>
                     </div>
                   </div>
                 </td>
-                <td><span class="u-badge u-badge-warning">{{ t('settings.team.engineer') }}</span></td>
-                <td class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.team.dayAgo', ['1']) }}</td>
-                <td><span class="u-badge u-badge-success">{{ t('settings.team.active') }}</span></td>
-                <td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <UBadge variant="warning">{{ t('settings.team.engineer') }}</UBadge>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-steel-shine">{{ t('settings.team.dayAgo', ['1']) }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <UBadge variant="success">{{ t('settings.team.active') }}</UBadge>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
                   <div class="flex items-center gap-1">
-                    <button class="u-btn u-btn-ghost u-btn-sm">
-                      <Icon name="heroicons:pencil" class="w-4 h-4" />
-                    </button>
-                    <button class="u-btn u-btn-ghost u-btn-sm">
-                      <Icon name="heroicons:ellipsis-horizontal" class="w-4 h-4" />
-                    </button>
+                    <UButton variant="ghost" size="icon">
+                      <Icon name="heroicons:pencil" class="w-5 h-5" />
+                    </UButton>
+                    <UButton variant="ghost" size="icon">
+                      <Icon name="heroicons:ellipsis-horizontal" class="w-5 h-5" />
+                    </UButton>
                   </div>
                 </td>
               </tr>
@@ -340,51 +379,54 @@
 
     <!-- System Settings -->
     <div v-if="activeTab === 'system'" class="space-y-6">
-      <div class="u-card p-6">
-        <div class="border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
-          <h3 class="u-h4">{{ t('settings.system.title') }}</h3>
-          <p class="u-body text-gray-600 dark:text-gray-400 mt-1">{{ t('settings.system.subtitle') }}</p>
+      <div class="card-glass p-6">
+        <div class="border-b border-steel-700/50 pb-4 mb-6">
+          <h3 class="text-xl font-bold text-white">{{ t('settings.system.title') }}</h3>
+          <p class="text-steel-shine mt-1">{{ t('settings.system.subtitle') }}</p>
         </div>
 
         <div class="space-y-6">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="u-label">{{ t('settings.system.defaultAlertThreshold') }}</label>
-              <select class="u-input">
-                <option>{{ t('settings.system.warningAt75') }}</option>
-                <option>{{ t('settings.system.warningAt80') }}</option>
-                <option>{{ t('settings.system.warningAt90') }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="u-label">{{ t('settings.system.dataRetentionPeriod') }}</label>
-              <select class="u-input">
-                <option>{{ t('settings.system.months3') }}</option>
-                <option>{{ t('settings.system.months6') }}</option>
-                <option>{{ t('settings.system.year1') }}</option>
-                <option>{{ t('settings.system.years2') }}</option>
-              </select>
-            </div>
+            <UFormGroup
+              :label="t('settings.system.defaultAlertThreshold')"
+              helper="Порог для автоматических предупреждений"
+            >
+              <USelect v-model="systemSettings.alertThreshold">
+                <option value="75">{{ t('settings.system.warningAt75') }}</option>
+                <option value="80">{{ t('settings.system.warningAt80') }}</option>
+                <option value="90">{{ t('settings.system.warningAt90') }}</option>
+              </USelect>
+            </UFormGroup>
+            
+            <UFormGroup
+              :label="t('settings.system.dataRetentionPeriod')"
+              helper="Как долго хранить исторические данные"
+            >
+              <USelect v-model="systemSettings.dataRetention">
+                <option value="3">{{ t('settings.system.months3') }}</option>
+                <option value="6">{{ t('settings.system.months6') }}</option>
+                <option value="12">{{ t('settings.system.year1') }}</option>
+                <option value="24">{{ t('settings.system.years2') }}</option>
+              </USelect>
+            </UFormGroup>
           </div>
 
-          <div class="u-flex-between">
+          <div class="flex items-center justify-between">
             <div>
-              <p class="font-medium text-gray-900 dark:text-white">{{ t('settings.system.autoBackup') }}</p>
-              <p class="u-body-sm text-gray-500 dark:text-gray-400">{{ t('settings.system.autoBackupDesc') }}</p>
+              <p class="font-medium text-white">{{ t('settings.system.autoBackup') }}</p>
+              <p class="text-sm text-steel-shine">{{ t('settings.system.autoBackupDesc') }}</p>
             </div>
             <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" checked class="sr-only peer" />
-              <div
-                class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
-              </div>
+              <input v-model="systemSettings.autoBackup" type="checkbox" class="sr-only peer" />
+              <div class="w-11 h-6 bg-steel-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-500/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:border-steel-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
             </label>
           </div>
 
           <div class="pt-4">
-            <button class="u-btn u-btn-primary u-btn-md">
-              <Icon name="heroicons:check" class="w-4 h-4 mr-2" />
+            <UButton size="lg" @click="saveSystemSettings">
+              <Icon name="heroicons:check" class="w-5 h-5 mr-2" />
               {{ t('settings.system.saveSystemSettings') }}
-            </button>
+            </UButton>
           </div>
         </div>
       </div>
@@ -402,7 +444,13 @@ definePageMeta({
 const { t } = useI18n()
 const activeTab = ref('profile')
 
-const tabs = computed(() => [
+interface Tab {
+  id: string
+  name: string
+  icon: string
+}
+
+const tabs = computed((): Tab[] => [
   { id: 'profile', name: t('settings.tabs.profile'), icon: 'heroicons:user' },
   { id: 'notifications', name: t('settings.tabs.notifications'), icon: 'heroicons:bell' },
   { id: 'integrations', name: t('settings.tabs.integrations'), icon: 'heroicons:puzzle-piece' },
@@ -410,7 +458,50 @@ const tabs = computed(() => [
   { id: 'system', name: t('settings.tabs.system'), icon: 'heroicons:cog-6-tooth' }
 ])
 
-const profile = ref({ firstName: 'John', lastName: 'Doe', email: 'john.doe@company.com', company: 'ABC Manufacturing', phone: '+1 (555) 123-4567' })
+const profile = ref({ 
+  firstName: 'John', 
+  lastName: 'Doe', 
+  email: 'john.doe@company.com', 
+  company: 'ABC Manufacturing', 
+  phone: '+1 (555) 123-4567' 
+})
 
-const notifications = ref({ systemAlerts: true, maintenanceReminders: true, diagnosticReports: true, weeklySummary: false })
+const passwords = ref({
+  current: '',
+  new: '',
+  confirm: ''
+})
+
+const notifications = ref({ 
+  systemAlerts: true, 
+  maintenanceReminders: true, 
+  diagnosticReports: true, 
+  weeklySummary: false 
+})
+
+const systemSettings = ref({
+  alertThreshold: '80',
+  dataRetention: '12',
+  autoBackup: true
+})
+
+const saveProfile = (): void => {
+  console.log('Saving profile:', profile.value)
+  // TODO: Implement API call
+}
+
+const updatePassword = (): void => {
+  console.log('Updating password')
+  // TODO: Implement API call
+}
+
+const saveNotifications = (): void => {
+  console.log('Saving notifications:', notifications.value)
+  // TODO: Implement API call
+}
+
+const saveSystemSettings = (): void => {
+  console.log('Saving system settings:', systemSettings.value)
+  // TODO: Implement API call
+}
 </script>
