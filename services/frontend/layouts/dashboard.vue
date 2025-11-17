@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 
-/**
- * Dashboard Layout Component
- * Enterprise-grade responsive layout с sidebar, header, breadcrumbs
- * Features: i18n, accessibility, mobile-first, real-time indicators
- */
-
-// ==================== TYPES ====================
 type AppLocale = 'ru' | 'en'
 
 interface NavigationLink {
@@ -21,7 +14,7 @@ interface NavigationLink {
 interface LocaleOption {
   code: AppLocale
   name: string
-  flag: string
+  icon: string
 }
 
 interface Breadcrumb {
@@ -29,17 +22,10 @@ interface Breadcrumb {
   href: string
 }
 
-interface UserProfile {
-  name: string
-  email: string
-}
-
-// ==================== COMPOSABLES ====================
 const route = useRoute()
 const { locale, setLocale, t } = useI18n()
 const config = useRuntimeConfig()
 
-// ==================== STATE ====================
 let authStore: any = null
 const isMobileMenuOpen = ref(false)
 const isSidebarCollapsed = ref(false)
@@ -48,9 +34,7 @@ const showUserDropdown = ref(false)
 const isOnline = ref(true)
 const unreadNotifications = ref(3)
 
-// ==================== LIFECYCLE ====================
 onMounted(() => {
-  // Auth store (fallback для dev)
   try {
     authStore = useAuthStore()
   } catch {
@@ -62,7 +46,6 @@ onMounted(() => {
     }
   }
 
-  // Close dropdowns on outside click
   const handleOutsideClick = (event: Event) => {
     const target = event.target as HTMLElement
     if (!target.closest('.language-dropdown')) {
@@ -75,14 +58,12 @@ onMounted(() => {
 
   document.addEventListener('click', handleOutsideClick)
 
-  // Detect online/offline status
   const handleOnline = () => { isOnline.value = true }
   const handleOffline = () => { isOnline.value = false }
   
   window.addEventListener('online', handleOnline)
   window.addEventListener('offline', handleOffline)
 
-  // Restore sidebar state from localStorage
   const savedSidebarState = localStorage.getItem('sidebarCollapsed')
   if (savedSidebarState !== null) {
     isSidebarCollapsed.value = savedSidebarState === 'true'
@@ -95,10 +76,9 @@ onMounted(() => {
   })
 })
 
-// ==================== LOCALES ====================
 const availableLocales: LocaleOption[] = [
-  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
-  { code: 'en', name: 'English', flag: '🇺🇸' }
+  { code: 'ru', name: 'Русский', icon: 'circle-flags:ru' },
+  { code: 'en', name: 'English', icon: 'circle-flags:us' }
 ]
 
 const currentLocale = computed<LocaleOption>(() =>
@@ -110,7 +90,6 @@ const switchLanguage = async (code: string) => {
   showLanguageDropdown.value = false
 }
 
-// ==================== USER ====================
 const userName = computed(() => authStore?.user?.name || 'Пользователь')
 const userEmail = computed(() => authStore?.user?.email || 'user@example.com')
 const userInitials = computed(() =>
@@ -122,7 +101,6 @@ const userInitials = computed(() =>
     .slice(0, 2)
 )
 
-// ==================== NAVIGATION ====================
 const navigationLinks = computed<NavigationLink[]>(() => [
   {
     to: '/dashboard',
@@ -163,14 +141,6 @@ const navigationLinks = computed<NavigationLink[]>(() => [
   }
 ])
 
-const isActiveLink = (linkPath: string): boolean => {
-  if (linkPath === '/dashboard') {
-    return route.path === '/dashboard'
-  }
-  return route.path.startsWith(linkPath)
-}
-
-// ==================== BREADCRUMBS ====================
 const showBreadcrumbs = computed(() => route.path.split('/').filter(Boolean).length > 1)
 
 const mapName = (path: string): string => {
@@ -216,7 +186,6 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
   return acc
 })
 
-// ==================== ACTIONS ====================
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value
 }
@@ -247,12 +216,10 @@ const handleLogout = async () => {
   await navigateTo('/auth/login')
 }
 
-// ==================== WATCHERS ====================
 watch(() => route.path, () => {
   closeMobileMenu()
 })
 
-// ==================== FOOTER ====================
 const emailUser = computed(() => t('landing.footer.contact.emailUser'))
 const emailDomain = computed(() => t('landing.footer.contact.emailDomain'))
 const emailLabel = computed(() => t('landing.footer.contact.emailLabel'))
@@ -261,38 +228,25 @@ const version = computed(() => config?.public?.version || '1.0.0')
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 flex">
+  <div class="min-h-screen bg-background-primary flex">
     <!-- Desktop Sidebar -->
     <aside
       :class="[
-        'hidden lg:flex lg:flex-col bg-white border-r border-gray-200 fixed h-screen z-30 transition-all duration-300',
+        'hidden lg:flex lg:flex-col card-glass border-r border-steel-700/50 fixed h-screen z-30 transition-all duration-300',
         isSidebarCollapsed ? 'w-20' : 'w-64'
       ]"
     >
       <!-- Sidebar Header -->
-      <div class="flex items-center justify-between p-4 border-b border-gray-100">
-        <NuxtLink
+      <div class="flex items-center justify-between p-4 border-b border-steel-700/50">
+        <UAppLogo 
           v-if="!isSidebarCollapsed"
-          to="/"
-          class="flex items-center space-x-2 group"
-        >
-          <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-            <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white" />
-          </div>
-          <div>
-            <span class="text-sm font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-              {{ t('app.title') }}
-            </span>
-            <span class="block text-xs text-gray-500 leading-tight">
-              {{ t('app.subtitle') }}
-            </span>
-          </div>
-        </NuxtLink>
+          :to="'/'"
+        />
         
         <button
           @click="toggleSidebar"
-          class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-          :title="isSidebarCollapsed ? t('ui.expand') : t('ui.collapse')"
+          class="btn-icon"
+          :title="isSidebarCollapsed ? 'Раскрыть' : t('ui.collapse')"
           :aria-label="isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
         >
           <Icon
@@ -303,52 +257,31 @@ const version = computed(() => config?.public?.version || '1.0.0')
       </div>
 
       <!-- Sidebar Navigation -->
-      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <NuxtLink
+      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
+        <UAppNavLink
           v-for="link in navigationLinks"
           :key="link.to"
           :to="link.to"
-          :class="[
-            'flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium group relative',
-            link.isActive
-              ? 'bg-blue-50 text-blue-700'
-              : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
-          ]"
-          :title="isSidebarCollapsed ? link.label : undefined"
-        >
-          <Icon :name="link.icon" class="w-5 h-5 flex-shrink-0" />
-          <span v-if="!isSidebarCollapsed" class="flex-1">{{ link.label }}</span>
-          
-          <!-- Badge -->
-          <span
-            v-if="link.badge && link.badge > 0 && !isSidebarCollapsed"
-            class="px-2 py-0.5 text-xs font-semibold bg-red-500 text-white rounded-full"
-          >
-            {{ link.badge }}
-          </span>
-          
-          <!-- Collapsed badge indicator -->
-          <span
-            v-if="link.badge && link.badge > 0 && isSidebarCollapsed"
-            class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
-          ></span>
-        </NuxtLink>
+          :label="link.label"
+          :icon="link.icon"
+          :badge="link.badge"
+          :is-active="link.isActive"
+          :is-collapsed="isSidebarCollapsed"
+        />
       </nav>
 
       <!-- Sidebar Footer (Online Status) -->
-      <div class="p-4 border-t border-gray-100">
+      <div class="p-4 border-t border-steel-700/50">
         <div
           :class="[
             'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm',
-            isOnline ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            isOnline ? 'bg-success-500/10 text-success-400' : 'bg-red-500/10 text-red-400'
           ]"
         >
-          <div
-            :class="[
-              'w-2 h-2 rounded-full flex-shrink-0',
-              isOnline ? 'bg-green-500' : 'bg-red-500'
-            ]"
-          ></div>
+          <UStatusDot 
+            :status="isOnline ? 'success' : 'error'"
+            :animated="isOnline"
+          />
           <span v-if="!isSidebarCollapsed">
             {{ isOnline ? t('ui.online') : t('ui.offline') }}
           </span>
@@ -364,246 +297,50 @@ const version = computed(() => config?.public?.version || '1.0.0')
       ]"
     >
       <!-- Top Navbar -->
-      <nav class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-        <div class="px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between h-16">
-            <!-- Mobile Logo -->
-            <div class="flex items-center space-x-3 lg:hidden">
-              <NuxtLink to="/" class="flex items-center space-x-2">
-                <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                  <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white" />
-                </div>
-                <span class="text-sm font-bold text-gray-900">{{ t('app.title') }}</span>
-              </NuxtLink>
-            </div>
-
-            <!-- Desktop Actions -->
-            <div class="hidden lg:flex items-center flex-1 justify-end space-x-3">
-              <!-- Search (placeholder) -->
-              <button
-                class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                :title="t('ui.search')"
-                aria-label="Search"
-              >
-                <Icon name="heroicons:magnifying-glass" class="w-5 h-5" />
-              </button>
-
-              <!-- Help -->
-              <NuxtLink
-                to="/chat"
-                class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                :title="t('ui.help')"
-                aria-label="Help"
-              >
-                <Icon name="heroicons:question-mark-circle" class="w-5 h-5" />
-              </NuxtLink>
-
-              <!-- Notifications -->
-              <button
-                class="relative p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                :title="t('nav.notifications')"
-                aria-label="Notifications"
-              >
-                <Icon name="heroicons:bell" class="w-5 h-5" />
-                <span
-                  v-if="unreadNotifications > 0"
-                  class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold"
-                >
-                  {{ unreadNotifications }}
-                </span>
-              </button>
-
-              <!-- Language Dropdown -->
-              <div class="relative language-dropdown">
-                <button
-                  @click="showLanguageDropdown = !showLanguageDropdown"
-                  class="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors flex items-center gap-1"
-                  :aria-label="t('ui.language.switch')"
-                  aria-haspopup="true"
-                  :aria-expanded="showLanguageDropdown"
-                >
-                  <Icon name="heroicons:language" class="w-5 h-5" />
-                  <span class="text-sm font-medium">{{ currentLocale.code.toUpperCase() }}</span>
-                  <Icon
-                    name="heroicons:chevron-down"
-                    class="w-3 h-3 transition-transform"
-                    :class="{ 'rotate-180': showLanguageDropdown }"
-                  />
-                </button>
-
-                <transition
-                  enter-active-class="transition ease-out duration-200"
-                  enter-from-class="transform opacity-0 scale-95"
-                  enter-to-class="transform opacity-100 scale-100"
-                  leave-active-class="transition ease-in duration-150"
-                  leave-from-class="transform opacity-100 scale-100"
-                  leave-to-class="opacity-0 scale-95"
-                >
-                  <div
-                    v-show="showLanguageDropdown"
-                    class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-50"
-                    role="menu"
-                  >
-                    <button
-                      v-for="langOption in availableLocales"
-                      :key="langOption.code"
-                      @click="switchLanguage(langOption.code)"
-                      class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
-                      :class="{ 'bg-blue-50 text-blue-600': currentLocale.code === langOption.code }"
-                      role="menuitem"
-                    >
-                      <span class="text-base">{{ langOption.flag }}</span>
-                      <span>{{ langOption.name }}</span>
-                      <Icon
-                        v-if="currentLocale.code === langOption.code"
-                        name="heroicons:check"
-                        class="w-4 h-4 ml-auto text-blue-600"
-                      />
-                    </button>
-                  </div>
-                </transition>
-              </div>
-
-              <!-- User Dropdown -->
-              <div class="relative user-dropdown">
-                <button
-                  @click="toggleUserDropdown"
-                  class="flex items-center space-x-2 p-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
-                  aria-label="User menu"
-                  aria-haspopup="true"
-                  :aria-expanded="showUserDropdown"
-                >
-                  <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md">
-                    {{ userInitials }}
-                  </div>
-                  <Icon
-                    name="heroicons:chevron-down"
-                    :class="['w-4 h-4 transition-transform', showUserDropdown ? 'rotate-180' : '']"
-                  />
-                </button>
-
-                <transition
-                  enter-active-class="transition ease-out duration-200"
-                  enter-from-class="transform opacity-0 scale-95"
-                  enter-to-class="transform opacity-100 scale-100"
-                  leave-active-class="transition ease-in duration-150"
-                  leave-from-class="transform opacity-100 scale-100"
-                  leave-to-class="opacity-0 scale-95"
-                >
-                  <div
-                    v-show="showUserDropdown"
-                    class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50"
-                    role="menu"
-                  >
-                    <div class="px-4 py-3 border-b border-gray-100">
-                      <div class="flex items-center space-x-3">
-                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
-                          {{ userInitials }}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                          <p class="text-sm font-semibold text-gray-900 truncate">{{ userName }}</p>
-                          <p class="text-xs text-gray-600 truncate">{{ userEmail }}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="py-1">
-                      <NuxtLink
-                        to="/profile"
-                        class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        role="menuitem"
-                      >
-                        <Icon name="heroicons:user" class="w-4 h-4 mr-3" />
-                        {{ t('ui.profile') }}
-                      </NuxtLink>
-                      <NuxtLink
-                        to="/settings"
-                        class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                        role="menuitem"
-                      >
-                        <Icon name="heroicons:cog-6-tooth" class="w-4 h-4 mr-3" />
-                        {{ t('ui.settings') }}
-                      </NuxtLink>
-                      <button
-                        @click="handleLogout"
-                        class="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                        role="menuitem"
-                      >
-                        <Icon name="heroicons:arrow-right-on-rectangle" class="w-4 h-4 mr-3" />
-                        {{ t('ui.logout') }}
-                      </button>
-                    </div>
-                  </div>
-                </transition>
-              </div>
-            </div>
-
-            <!-- Mobile Burger -->
-            <button
-              @click="toggleMobileMenu"
-              class="lg:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-              aria-label="Toggle mobile menu"
-            >
-              <Icon
-                :name="isMobileMenuOpen ? 'heroicons:x-mark' : 'heroicons:bars-3'"
-                class="w-6 h-6"
-              />
-            </button>
-          </div>
-        </div>
-      </nav>
+      <UAppNavbar 
+        :user-name="userName"
+        :user-email="userEmail"
+        :user-initials="userInitials"
+        :unread-notifications="unreadNotifications"
+        :is-mobile-menu-open="isMobileMenuOpen"
+        :show-user-dropdown="showUserDropdown"
+        @toggle-mobile-menu="toggleMobileMenu"
+        @toggle-user-dropdown="toggleUserDropdown"
+        @logout="handleLogout"
+      />
 
       <!-- Breadcrumbs -->
-      <div v-if="showBreadcrumbs" class="bg-white border-b border-gray-100 sticky top-16 z-30">
-        <div class="px-4 sm:px-6 lg:px-8">
-          <nav class="flex items-center space-x-2 text-sm py-3" aria-label="Breadcrumb">
-            <Icon name="heroicons:home" class="w-4 h-4 text-gray-500" />
-            <template v-for="(crumb, i) in breadcrumbs" :key="crumb.href">
-              <NuxtLink
-                v-if="i < breadcrumbs.length - 1"
-                :to="crumb.href"
-                class="text-gray-600 hover:text-blue-600 hover:underline transition-colors"
-              >
-                {{ crumb.name }}
-              </NuxtLink>
-              <span v-else class="font-medium text-gray-900">{{ crumb.name }}</span>
-              <Icon
-                v-if="i < breadcrumbs.length - 1"
-                name="heroicons:chevron-right"
-                class="w-4 h-4 text-gray-400"
-              />
-            </template>
-          </nav>
-        </div>
-      </div>
+      <UBreadcrumb 
+        v-if="showBreadcrumbs"
+        :breadcrumbs="breadcrumbs"
+      />
 
       <!-- Main Content -->
-      <main class="flex-1 py-6">
-        <div class="px-4 sm:px-6 lg:px-8">
+      <main class="flex-1 py-8">
+        <div class="container-dashboard">
           <slot />
         </div>
       </main>
 
       <!-- Footer -->
-      <footer class="bg-white border-t border-gray-200 mt-auto">
+      <footer class="card-glass border-t border-steel-700/50 mt-auto">
         <div class="px-4 sm:px-6 lg:px-8 py-6">
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-steel-shine">
             <div class="flex items-center gap-2">
               <Icon name="heroicons:cpu-chip" class="w-4 h-4" />
               <span>&copy; 2025 {{ t('app.title') }}. {{ t('footer.copyright') }}.</span>
             </div>
             <div class="flex items-center flex-wrap gap-6">
               <div class="flex items-center gap-1">
-                <span>{{ emailLabel }}</span>
-                <a class="hover:text-blue-600 transition-colors" :href="`mailto:${email}`">
+                <span>{{ emailLabel }}:</span>
+                <a class="hover:text-primary-400 transition-colors" :href="`mailto:${email}`">
                   {{ email }}
                 </a>
               </div>
-              <span>{{ t('landing.footer.contact.phone') }}</span>
-              <NuxtLink to="/chat" class="hover:text-blue-600 transition-colors">
-                {{ t('landing.footer.contact.chat') }}
+              <NuxtLink to="/chat" class="hover:text-primary-400 transition-colors">
+                {{ t('ui.help') }}
               </NuxtLink>
-              <span class="text-xs">{{ t('app.version') }} {{ version }}</span>
+              <span class="text-xs text-steel-400">{{ t('app.version') }} {{ version }}</span>
             </div>
           </div>
         </div>
@@ -621,22 +358,17 @@ const version = computed(() => config?.public?.version || '1.0.0')
     >
       <div
         v-if="isMobileMenuOpen"
-        class="fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-white border-l border-gray-200 shadow-2xl z-50 lg:hidden"
+        class="fixed top-0 right-0 h-full w-80 max-w-[90vw] card-glass border-l border-steel-700 shadow-2xl z-50 lg:hidden"
         role="dialog"
         aria-modal="true"
       >
         <div class="flex flex-col h-full">
           <!-- Mobile Header -->
-          <div class="flex items-center justify-between p-4 border-b border-gray-200">
-            <div class="flex items-center space-x-2">
-              <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white" />
-              </div>
-              <span class="text-sm font-bold text-gray-900">{{ t('app.title') }}</span>
-            </div>
+          <div class="flex items-center justify-between p-4 border-b border-steel-700/50">
+            <UAppLogo :to="'/'" />
             <button
               @click="closeMobileMenu"
-              class="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+              class="btn-icon"
               aria-label="Close menu"
             >
               <Icon name="heroicons:x-mark" class="w-5 h-5" />
@@ -644,108 +376,93 @@ const version = computed(() => config?.public?.version || '1.0.0')
           </div>
 
           <!-- User Section -->
-          <div class="p-4 border-b border-gray-200">
+          <div class="p-4 border-b border-steel-700/50">
             <div class="flex items-center space-x-3">
-              <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+              <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
                 {{ userInitials }}
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-gray-900 truncate">{{ userName }}</p>
-                <p class="text-xs text-gray-600 truncate">{{ userEmail }}</p>
+                <p class="text-sm font-semibold text-white truncate">{{ userName }}</p>
+                <p class="text-xs text-steel-shine truncate">{{ userEmail }}</p>
               </div>
             </div>
           </div>
 
           <!-- Navigation -->
-          <div class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-            <NuxtLink
+          <div class="flex-1 px-4 py-4 space-y-1 overflow-y-auto scrollbar-thin">
+            <UAppNavLink
               v-for="link in navigationLinks"
               :key="link.to"
               :to="link.to"
+              :label="link.label"
+              :icon="link.icon"
+              :badge="link.badge"
+              :is-active="link.isActive"
               @click="closeMobileMenu"
-              :class="[
-                'flex items-center justify-between px-4 py-3 rounded-lg transition-colors text-base font-medium',
-                link.isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-700 hover:text-blue-700 hover:bg-gray-50'
-              ]"
-            >
-              <div class="flex items-center space-x-3">
-                <Icon :name="link.icon" class="w-5 h-5" />
-                <span>{{ link.label }}</span>
-              </div>
-              <span
-                v-if="link.badge && link.badge > 0"
-                class="px-2 py-0.5 text-xs font-semibold bg-red-500 text-white rounded-full"
-              >
-                {{ link.badge }}
-              </span>
-            </NuxtLink>
+            />
 
-            <div class="border-t border-gray-200 pt-4 mt-4 space-y-1">
-              <NuxtLink
+            <div class="border-t border-steel-700/50 pt-4 mt-4 space-y-1">
+              <UAppNavLink
                 to="/profile"
+                :label="t('ui.profile')"
+                icon="heroicons:user"
                 @click="closeMobileMenu"
-                class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-base font-medium text-gray-700 hover:text-blue-700 hover:bg-gray-50"
-              >
-                <Icon name="heroicons:user" class="w-5 h-5" />
-                <span>{{ t('ui.profile') }}</span>
-              </NuxtLink>
-              <NuxtLink
+              />
+              <UAppNavLink
                 to="/chat"
+                :label="t('ui.help')"
+                icon="heroicons:question-mark-circle"
                 @click="closeMobileMenu"
-                class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors text-base font-medium text-gray-700 hover:text-blue-700 hover:bg-gray-50"
-              >
-                <Icon name="heroicons:question-mark-circle" class="w-5 h-5" />
-                <span>{{ t('ui.help') }}</span>
-              </NuxtLink>
+              />
             </div>
           </div>
 
           <!-- Mobile Footer -->
-          <div class="p-4 border-t border-gray-200 space-y-3">
+          <div class="p-4 border-t border-steel-700/50 space-y-3">
             <!-- Online Status -->
             <div
               :class="[
                 'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm',
-                isOnline ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                isOnline ? 'bg-success-500/10 text-success-400' : 'bg-red-500/10 text-red-400'
               ]"
             >
-              <div
-                :class="['w-2 h-2 rounded-full', isOnline ? 'bg-green-500' : 'bg-red-500']"
-              ></div>
+              <UStatusDot 
+                :status="isOnline ? 'success' : 'error'"
+                :animated="isOnline"
+              />
               <span>{{ isOnline ? t('ui.online') : t('ui.offline') }}</span>
             </div>
 
             <!-- Language Switcher -->
             <div class="flex items-center justify-between">
-              <span class="text-sm text-gray-600">{{ t('ui.language.switch') }}</span>
+              <span class="text-sm text-steel-shine">{{ t('ui.language.switch') }}</span>
               <div class="flex items-center gap-2">
                 <button
                   v-for="langOption in availableLocales"
                   :key="langOption.code"
                   @click="switchLanguage(langOption.code)"
                   :class="[
-                    'px-3 py-1.5 rounded-md text-sm transition-colors flex items-center gap-2',
+                    'px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2',
                     currentLocale.code === langOption.code
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'bg-primary-600/20 text-primary-400 border border-primary-500/50'
+                      : 'text-steel-shine hover:bg-steel-800/50'
                   ]"
                 >
-                  <span class="text-base">{{ langOption.flag }}</span>
+                  <Icon :name="langOption.icon" class="w-4 h-4" />
                   <span>{{ langOption.code.toUpperCase() }}</span>
                 </button>
               </div>
             </div>
 
             <!-- Logout -->
-            <button
+            <UButton
+              variant="destructive"
+              class="w-full"
               @click="handleLogout"
-              class="w-full flex items-center justify-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             >
-              <Icon name="heroicons:arrow-right-on-rectangle" class="w-4 h-4" />
-              <span>{{ t('ui.logout') }}</span>
-            </button>
+              <Icon name="heroicons:arrow-right-on-rectangle" class="w-5 h-5" />
+              {{ t('ui.logout') }}
+            </UButton>
           </div>
         </div>
       </div>
@@ -762,21 +479,25 @@ const version = computed(() => config?.public?.version || '1.0.0')
     >
       <div
         v-if="isMobileMenuOpen"
-        class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden"
         @click="closeMobileMenu"
         aria-hidden="true"
-      ></div>
+      />
     </transition>
 
     <!-- Modal Portal -->
     <Teleport to="body">
-      <div id="modal-portal"></div>
+      <div id="modal-portal" />
     </Teleport>
   </div>
 </template>
 
 <style scoped>
-/* Custom scrollbar for sidebar */
+.container-dashboard {
+  @apply px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto;
+}
+
+/* Custom scrollbar */
 aside::-webkit-scrollbar {
   width: 6px;
 }
@@ -786,15 +507,14 @@ aside::-webkit-scrollbar-track {
 }
 
 aside::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: rgba(76, 89, 111, 0.5);
   border-radius: 3px;
 }
 
 aside::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: rgba(76, 89, 111, 0.8);
 }
 
-/* Modal portal z-index */
 #modal-portal {
   position: relative;
   z-index: 60;
