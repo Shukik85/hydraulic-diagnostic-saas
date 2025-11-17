@@ -172,7 +172,7 @@ const systems = ref<HydraulicSystem[]>([
   }
 ])
 
-const handleCreateSystem = async (data: any) => {
+const handleCreateSystem = async (data: any): Promise<void> => {
   isCreating.value = true
   try {
     const newSystem: HydraulicSystem = {
@@ -199,7 +199,7 @@ const handleCreateSystem = async (data: any) => {
   }
 }
 
-const handleSettings = (systemId: number) => {
+const handleSettings = (systemId: number): void => {
   navigateTo(`/systems/${systemId}/settings`)
 }
 
