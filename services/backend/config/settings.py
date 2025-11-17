@@ -39,9 +39,6 @@ INSTALLED_APPS = [
     "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
-    "unfold.contrib.import_export",
-    "unfold.contrib.guardian",
-    "unfold.contrib.simple_history",
     
     # Django core
     "django.contrib.admin",
@@ -205,27 +202,6 @@ UNFOLD = {
     "SITE_TITLE": "Hydraulic Diagnostics",
     "SITE_HEADER": "Hydraulic Diagnostics",
     "SITE_URL": "/",
-    "SITE_ICON": {
-        "light": lambda request: static("icon-light.svg"),
-        "dark": lambda request: static("icon-dark.svg"),
-    },
-    
-    # Цвета (опционально)
-    "COLORS": {
-        "primary": {
-            "50": "238 242 255",
-            "100": "224 231 255",
-            "200": "199 210 254",
-            "300": "165 180 252",
-            "400": "129 140 248",
-            "500": "99 102 241",  # Основной цвет
-            "600": "79 70 229",
-            "700": "67 56 202",
-            "800": "55 48 163",
-            "900": "49 46 129",
-            "950": "30 27 75",
-        },
-    },
     
     # Навигация в сайдбаре
     "SIDEBAR": {
@@ -266,11 +242,11 @@ UNFOLD = {
                     {
                         "title": _("GNN Модели"),
                         "icon": "psychology",
-                        "link": reverse_lazy("admin:gnn_config_gnnmodelconfiguration_changelist"),
+                        "link": reverse_lazy("admin:gnn_config_gnnmodelconfig_changelist"),
                     },
                     {
-                        "title": _("Мониторинг"),
-                        "icon": "monitoring",
+                        "title": _("Логи API"),
+                        "icon": "api",
                         "link": reverse_lazy("admin:monitoring_apilog_changelist"),
                     },
                     {
@@ -289,14 +265,8 @@ UNFOLD = {
     },
     
     # Дополнительные настройки
-    "ENVIRONMENT": "apps.core.utils.environment_callback",  # Показывать окружение (dev/staging/prod)
-    "DASHBOARD_CALLBACK": "apps.core.admin.dashboard_callback",  # Кастомный dashboard
-    "STYLES": [
-        lambda request: static("admin/css/custom.css"),
-    ],
-    "SCRIPTS": [
-        lambda request: static("admin/js/custom.js"),
-    ],
+    "ENVIRONMENT": "apps.core.utils.environment_callback",
+    "DASHBOARD_CALLBACK": "apps.core.admin.dashboard_callback",
 }
 
 # ============================================================
@@ -430,6 +400,84 @@ LOGGING = {
 # DEFAULT PRIMARY KEY
 # ============================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ============================================================
+# DJANGO UNFOLD CONFIGURATION
+# ============================================================
+from django.templatetags.static import static
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
+
+UNFOLD = {
+    "SITE_TITLE": "Hydraulic Diagnostics",
+    "SITE_HEADER": "Hydraulic Diagnostics",
+    "SITE_URL": "/",
+    
+    # Навигация в сайдбаре
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": _("Основное"),
+                "separator": True,
+                "items": [
+                    {
+                        "title": _("Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                    {
+                        "title": _("Пользователи"),
+                        "icon": "people",
+                        "link": reverse_lazy("admin:users_user_changelist"),
+                    },
+                    {
+                        "title": _("Поддержка"),
+                        "icon": "support_agent",
+                        "link": reverse_lazy("admin:support_supportticket_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Система"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Оборудование"),
+                        "icon": "settings_input_component",
+                        "link": reverse_lazy("admin:equipment_equipment_changelist"),
+                    },
+                    {
+                        "title": _("GNN Модели"),
+                        "icon": "psychology",
+                        "link": reverse_lazy("admin:gnn_config_gnnmodelconfig_changelist"),
+                    },
+                    {
+                        "title": _("Логи API"),
+                        "icon": "api",
+                        "link": reverse_lazy("admin:monitoring_apilog_changelist"),
+                    },
+                    {
+                        "title": _("Уведомления"),
+                        "icon": "notifications",
+                        "link": reverse_lazy("admin:notifications_notification_changelist"),
+                    },
+                    {
+                        "title": _("Подписки"),
+                        "icon": "credit_card",
+                        "link": reverse_lazy("admin:subscriptions_subscription_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
+    
+    # Дополнительные настройки
+    "ENVIRONMENT": "apps.core.utils.environment_callback",
+    "DASHBOARD_CALLBACK": "apps.core.admin.dashboard_callback",
+}
 
 # ============================================================
 # SENTRY
