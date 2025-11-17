@@ -1,0 +1,13 @@
+# Legacy admin files removed:
+# - services/backend/static/admin/css/admin_custom.css
+# - services/backend/static/admin/css/metallic_admin.css
+# - services/backend/static/admin/css/variables.css
+# - services/backend/static/admin/icons/dashboard.svg
+# - services/backend/static/admin/icons/icons-sprite.svg
+# 
+# Manual deletion required via Git:
+# git rm services/backend/static/admin/css/admin_custom.css
+# git rm services/backend/static/admin/css/metallic_admin.css
+# git rm services/backend/static/admin/css/variables.css
+# git rm services/backend/static/admin/icons/dashboard.svg
+# git rm services/backend/static/admin/icons/icons-sprite.svg
