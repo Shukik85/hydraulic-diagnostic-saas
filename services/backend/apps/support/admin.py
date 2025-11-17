@@ -1,4 +1,4 @@
-"""Django Admin for Support Management with Friendly UX.
+"""Django Admin for Support Management with Django Unfold.
 
 Rich admin interface with SLA tracking, auto-assignment, and bulk actions.
 """
@@ -10,10 +10,11 @@ from typing import TYPE_CHECKING, ClassVar
 from django.contrib import admin
 from django.db.models import Count
 from django.http import HttpRequest
-from django.templatetags.static import static
 from django.utils import timezone
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
+from unfold.admin import ModelAdmin, TabularInline
+from unfold.decorators import display
 
 from .models import AccessRecoveryRequest, SupportTicket, TicketMessage
 from .tasks import send_ticket_notification
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from django.db.models import QuerySet
 
 
-class TicketMessageInline(admin.TabularInline):
+class TicketMessageInline(TabularInline):
     """Inline admin for ticket messages."""
 
     model = TicketMessage
@@ -32,17 +33,8 @@ class TicketMessageInline(admin.TabularInline):
 
 
 @admin.register(SupportTicket)
-class SupportTicketAdmin(admin.ModelAdmin):
-    """Admin interface for support tickets with Friendly UX.
-
-    Features:
-    - SLA tracking with visual indicators
-    - Auto-assignment to agents
-    - Bulk actions (assign, close, escalate)
-    - Inline message thread
-    - Email notifications
-    - FriendlyUX badges with SVG icons
-    """
+class SupportTicketAdmin(ModelAdmin):
+    """Admin interface for support tickets with Unfold theme."""
 
     list_display: ClassVar = [
         "ticket_number",
@@ -117,19 +109,14 @@ class SupportTicketAdmin(admin.ModelAdmin):
     )
 
     inlines: ClassVar = [TicketMessageInline]
-
-    actions: ClassVar = [
-        "assign_to_me",
-        "mark_as_resolved",
-        "escalate_priority",
-        "send_reminder_email",
-    ]
+    actions: ClassVar = ["assign_to_me", "mark_as_resolved", "escalate_priority", "send_reminder_email"]
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[SupportTicket]:
         """Optimize queryset with select_related."""
         qs = super().get_queryset(request)
         return qs.select_related("user", "assigned_to").annotate(message_count=Count("messages"))
 
+    @display(description="Customer")
     def user_link(self, obj: SupportTicket) -> SafeString:
         """Display user with link to admin."""
         if obj.user:
@@ -140,147 +127,80 @@ class SupportTicketAdmin(admin.ModelAdmin):
             )
         return format_html("<span>No user</span>")
 
-    user_link.short_description = "Customer"
-
+    @display(description="Category", label=True)
     def category_badge(self, obj: SupportTicket) -> SafeString:
-        """Display category as FriendlyUX badge."""
+        """Display category as badge."""
         badge_classes = {
-            "technical": "BadgeInfo",
-            "billing": "BadgeSuccess",
-            "access": "BadgeError",
-            "feature": "BadgeWarning",
-            "bug": "BadgeError",
-            "other": "BadgeMuted",
+            "technical": "info",
+            "billing": "success",
+            "access": "danger",
+            "feature": "warning",
+            "bug": "danger",
+            "other": "secondary",
         }
-        badge_class = badge_classes.get(obj.category, "BadgeMuted")
+        badge_class = badge_classes.get(obj.category, "secondary")
         return format_html(
-            '<span class="Badge {}">{}</span>',
+            '<span class="badge bg-{}">{}</span>',
             badge_class,
             obj.get_category_display(),
         )
 
-    category_badge.short_description = "Category"
-
+    @display(description="Priority", label=True)
     def priority_badge(self, obj: SupportTicket) -> SafeString:
-        """Display priority with FriendlyUX badge and icon."""
+        """Display priority badge."""
         badge_classes = {
-            "low": "BadgeMuted",
-            "medium": "BadgeWarning",
-            "high": "BadgeError",
-            "critical": "BadgeError",
+            "low": "secondary",
+            "medium": "warning",
+            "high": "danger",
+            "critical": "danger",
         }
-        badge_class = badge_classes.get(obj.priority, "BadgeMuted")
-
-        icon_name = {
-            "low": "icon-arrow-down",
-            "medium": "icon-minus",
-            "high": "icon-arrow-up",
-            "critical": "icon-alert",
-        }.get(obj.priority, "icon-minus")
-
+        badge_class = badge_classes.get(obj.priority, "secondary")
         return format_html(
-            '<span class="Badge {}">'
-            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">'
-            '<use href="{}#{}"></use></svg> '
-            "{}"
-            "</span>",
+            '<span class="badge bg-{}">{}</span>',
             badge_class,
-            static("admin/icons/icons-sprite.svg"),
-            icon_name,
-            obj.get_priority_display().split(" ")[0],
+            obj.get_priority_display(),
         )
 
-    priority_badge.short_description = "Priority"
-
+    @display(description="Status", label=True)
     def status_badge(self, obj: SupportTicket) -> SafeString:
-        """Display status with FriendlyUX badge and icon."""
+        """Display status badge."""
         badge_classes = {
-            "new": "BadgeInfo",
-            "open": "BadgeWarning",
-            "pending": "BadgeWarning",
-            "in_progress": "BadgeInfo",
-            "resolved": "BadgeSuccess",
-            "closed": "BadgeMuted",
-            "reopened": "BadgeError",
+            "new": "info",
+            "open": "warning",
+            "pending": "warning",
+            "in_progress": "info",
+            "resolved": "success",
+            "closed": "secondary",
+            "reopened": "danger",
         }
-        badge_class = badge_classes.get(obj.status, "BadgeMuted")
-
-        icon_name = {
-            "new": "icon-star",
-            "open": "icon-circle",
-            "pending": "icon-clock",
-            "in_progress": "icon-refresh",
-            "resolved": "icon-check",
-            "closed": "icon-x",
-            "reopened": "icon-alert",
-        }.get(obj.status, "icon-circle")
-
+        badge_class = badge_classes.get(obj.status, "secondary")
         return format_html(
-            '<span class="Badge {}">'
-            '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none; vertical-align: middle;">'
-            '<use href="{}#{}"></use></svg> '
-            "{}"
-            "</span>",
+            '<span class="badge bg-{}">{}</span>',
             badge_class,
-            static("admin/icons/icons-sprite.svg"),
-            icon_name,
             obj.get_status_display(),
         )
 
-    status_badge.short_description = "Status"
-
+    @display(description="SLA Status", label=True)
     def sla_indicator(self, obj: SupportTicket) -> SafeString:
-        """Visual SLA status indicator with FriendlyUX badges."""
+        """Visual SLA status indicator."""
         if obj.status in ["resolved", "closed"]:
             if obj.sla_breached:
-                return format_html(
-                    '<span class="Badge BadgeError">'
-                    '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
-                    '<use href="{}#icon-x"></use></svg> Breached'
-                    "</span>",
-                    static("admin/icons/icons-sprite.svg"),
-                )
-            return format_html(
-                '<span class="Badge BadgeSuccess">'
-                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
-                '<use href="{}#icon-check"></use></svg> Met'
-                "</span>",
-                static("admin/icons/icons-sprite.svg"),
-            )
+                return format_html('<span class="badge bg-danger">Breached</span>')
+            return format_html('<span class="badge bg-success">Met</span>')
 
         time_left = obj.time_until_sla
         if time_left and time_left.total_seconds() < 0:
-            return format_html(
-                '<span class="Badge BadgeError">'
-                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
-                '<use href="{}#icon-alert"></use></svg> OVERDUE'
-                "</span>",
-                static("admin/icons/icons-sprite.svg"),
-            )
+            return format_html('<span class="badge bg-danger">OVERDUE</span>')
         elif time_left and time_left.total_seconds() < 3600:
             return format_html(
-                '<span class="Badge BadgeWarning">'
-                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
-                '<use href="{}#icon-clock"></use></svg> {}'
-                "</span>",
-                static("admin/icons/icons-sprite.svg"),
-                f"{int(time_left.total_seconds() / 60)}m left",
+                '<span class="badge bg-warning">{}m left</span>',
+                int(time_left.total_seconds() / 60),
             )
         elif time_left:
             hours = int(time_left.total_seconds() / 3600)
-            return format_html(
-                '<span class="Badge BadgeSuccess">'
-                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
-                '<use href="{}#icon-check"></use></svg> {}h left'
-                "</span>",
-                static("admin/icons/icons-sprite.svg"),
-                hours,
-            )
+            return format_html('<span class="badge bg-success">{}h left</span>', hours)
         return format_html("<span>-</span>")
 
-    sla_indicator.short_description = "SLA Status"
-
-    # Admin actions
     @admin.action(description="Assign selected tickets to me")
     def assign_to_me(self, request: HttpRequest, queryset: QuerySet[SupportTicket]) -> None:
         """Assign tickets to current admin user."""
@@ -318,7 +238,7 @@ class SupportTicketAdmin(admin.ModelAdmin):
 
 
 @admin.register(TicketMessage)
-class TicketMessageAdmin(admin.ModelAdmin):
+class TicketMessageAdmin(ModelAdmin):
     """Admin interface for ticket messages."""
 
     list_display: ClassVar = [
@@ -344,15 +264,14 @@ class TicketMessageAdmin(admin.ModelAdmin):
 
     readonly_fields: ClassVar = ["created_at"]
 
+    @display(description="Message")
     def message_preview(self, obj: TicketMessage) -> str:
         """Display message preview."""
         return obj.message[:100] + ("..." if len(obj.message) > 100 else "")
 
-    message_preview.short_description = "Message"
-
 
 @admin.register(AccessRecoveryRequest)
-class AccessRecoveryRequestAdmin(admin.ModelAdmin):
+class AccessRecoveryRequestAdmin(ModelAdmin):
     """Admin interface for access recovery requests."""
 
     list_display: ClassVar = [
@@ -362,7 +281,6 @@ class AccessRecoveryRequestAdmin(admin.ModelAdmin):
         "verification_method",
         "processed_by",
         "created_at",
-        "actions_column",
     ]
 
     list_filter: ClassVar = [
@@ -416,44 +334,22 @@ class AccessRecoveryRequestAdmin(admin.ModelAdmin):
 
     actions: ClassVar = ["approve_requests", "reject_requests"]
 
+    @display(description="Status", label=True)
     def status_badge(self, obj: AccessRecoveryRequest) -> SafeString:
-        """Display status badge with FriendlyUX."""
+        """Display status badge."""
         badge_classes = {
-            "pending": "BadgeWarning",
-            "verified": "BadgeInfo",
-            "approved": "BadgeSuccess",
-            "rejected": "BadgeError",
-            "completed": "BadgeMuted",
+            "pending": "warning",
+            "verified": "info",
+            "approved": "success",
+            "rejected": "danger",
+            "completed": "secondary",
         }
-        badge_class = badge_classes.get(obj.status, "BadgeMuted")
+        badge_class = badge_classes.get(obj.status, "secondary")
         return format_html(
-            '<span class="Badge {}">{}</span>',
+            '<span class="badge bg-{}">{}</span>',
             badge_class,
             obj.get_status_display(),
         )
-
-    status_badge.short_description = "Status"
-
-    def actions_column(self, obj: AccessRecoveryRequest) -> SafeString:
-        """Display action buttons with FriendlyUX."""
-        if obj.status == "pending":
-            return format_html(
-                '<a class="Btn" style="padding: 6px 12px; font-size: 12px; margin-right: 4px;" '
-                'href="#" onclick="return confirm(\'Approve this request?\')">' 
-                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
-                '<use href="{}#icon-check"></use></svg> Approve'
-                "</a>"
-                '<a class="Btn" style="padding: 6px 12px; font-size: 12px; background: var(--color-error);" '
-                'href="#" onclick="return confirm(\'Reject this request?\')">' 
-                '<svg style="width: 14px; height: 14px; stroke: currentColor; fill: none;">'
-                '<use href="{}#icon-x"></use></svg> Reject'
-                "</a>",
-                static("admin/icons/icons-sprite.svg"),
-                static("admin/icons/icons-sprite.svg"),
-            )
-        return format_html("<span>-</span>")
-
-    actions_column.short_description = "Actions"
 
     @admin.action(description="Approve selected requests")
     def approve_requests(self, request: HttpRequest, queryset) -> None:
