@@ -536,18 +536,18 @@ const startDiagnostic = async (data: any) => {
   }, 500)
 }
 
-const cancelSession = (sessionId: number) => {
+const cancelSession = (sessionId: number): void => {
   activeSessions.value = activeSessions.value.filter(s => s.id !== sessionId)
   if (activeSessions.value.length === 0) {
     isRunning.value = false
   }
 }
 
-const viewResult = (resultId: number) => {
+const viewResult = (resultId: number): void => {
   const result = recentResults.value.find(r => r.id === resultId)
   if (result) {
     selectedResult.value = result
-    showResultsModal = true
+    showResultsModal.value = true // ✅ FIXED: добавлен .value
   }
 }
 
