@@ -14,7 +14,41 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxt/icon',
     '@vueuse/nuxt',
+    'nuxt-security',
   ],
+
+  security: {
+    headers: {
+      crossOriginResourcePolicy: 'same-origin',
+      referrerPolicy: 'strict-origin-when-cross-origin',
+      xContentTypeOptions: 'nosniff',
+      xFrameOptions: 'SAMEORIGIN',
+      strictTransportSecurity: 'max-age=31536000; includeSubDomains; preload',
+      xssProtection: '1; mode=block',
+    },
+    csp: {
+      enabled: true,
+      hashAlgorithm: 'sha256',
+      policies: {
+        'default-src': ["'self'"],
+        'script-src': ["'self'", 'https://cdn.jsdelivr.net'],
+        'style-src': ["'self'", 'https://fonts.googleapis.com', 'unsafe-inline'],
+        'img-src': ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
+        'font-src': ["'self'", 'https://fonts.gstatic.com'],
+        'connect-src': ["'self'", 'https://api.segment.io', 'wss://*', 'http://localhost:8000', 'https://api.openai.com'],
+        'frame-ancestors': ["'self'"],
+      },
+    },
+    rateLimiter: {
+      tokensPerInterval: 100,
+      interval: 'minute'
+    },
+    audit: {
+      enabled: true,
+      logHeaders: true,
+      logBody: true,
+    },
+  },
 
   css: [
     '~/styles/metallic.css',
