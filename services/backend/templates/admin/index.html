@@ -1,145 +1,165 @@
 {% extends "admin/base_site.html" %}
 {% load i18n static %}
 
-{% block extrastyle %}
-{{ block.super }}
-<style>
-.quick-actions {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 24px;
-    margin-bottom: 32px;
-}
-
-.quick-actions h2 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 20px;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.welcome-banner {
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    border-radius: 12px;
-    padding: 32px;
-    margin-bottom: 32px;
-    color: white;
-    display: flex;
-    align-items: center;
-    gap: 24px;
-}
-
-.welcome-banner h1 {
-    margin: 0 0 8px 0;
-    color: white;
-    font-size: 28px;
-}
-
-.welcome-banner p {
-    margin: 0;
-    opacity: 0.9;
-}
-</style>
-{% endblock %}
-
 {% block breadcrumbs %}{% endblock %}
 
 {% block content %}
-<div id="content-main">
-    <!-- Welcome Banner -->
-    <div class="welcome-banner">
-        <svg style="width: 56px; height: 56px; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+<div class="container-fluid mt-4">
+
+  <!-- Welcome Banner -->
+  <div class="card bg-primary text-white mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="me-3">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
         </svg>
         <div>
-            <h1>Добро пожаловать, {{ user.first_name|default:user.username }}!</h1>
-            <p>Панель управления гидравлической диагностикой</p>
+          <h2 class="mb-1">Добро пожаловать, {{ user.first_name|default:user.username }}!</h2>
+          <p class="mb-0 opacity-75">Панель управления гидравлической диагностикой</p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Widgets -->
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="p-3 bg-light rounded me-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-muted text-uppercase small mb-1">Пользователи</p>
+              <h3 class="mb-0">{{ user_count|default:"-" }}</h3>
+              <small class="text-muted">Всего в системе</small>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Dashboard Widgets -->
-    <div class="dashboard-widgets">
-        <div class="widget-card">
-            <div class="widget-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
+    <div class="col-md-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="p-3 bg-light rounded me-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#6366f1" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+              </svg>
             </div>
-            <div class="widget-title">Пользователи</div>
-            <div class="widget-value">{{ user_count|default:"-" }}</div>
-            <div class="widget-label">Всего в системе</div>
-        </div>
-
-        <div class="widget-card">
-            <div class="widget-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
-                </svg>
+            <div>
+              <p class="text-muted text-uppercase small mb-1">Оборудование</p>
+              <h3 class="mb-0">{{ equipment_count|default:"-" }}</h3>
+              <small class="text-muted">Активных систем</small>
             </div>
-            <div class="widget-title">Оборудование</div>
-            <div class="widget-value">{{ equipment_count|default:"-" }}</div>
-            <div class="widget-label">Активных систем</div>
+          </div>
         </div>
-
-        <div class="widget-card">
-            <div class="widget-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
-            </div>
-            <div class="widget-title">Поддержка</div>
-            <div class="widget-value">{{ ticket_count|default:"-" }}</div>
-            <div class="widget-label">Открытых тикетов</div>
-        </div>
-
-        <div class="widget-card">
-            <div class="widget-icon">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>
-            </div>
-            <div class="widget-title">GNN Модели</div>
-            <div class="widget-value">{{ gnn_count|default:"-" }}</div>
-            <div class="widget-label">Активных моделей</div>
-        </div>
+      </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="quick-actions">
-        <h2>
-            <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-            </svg>
-            Быстрые действия
-        </h2>
-        <div class="action-buttons">
-            <a href="{% url 'admin:users_user_add' %}" class="Btn">
-                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Добавить пользователя
-            </a>
-            <a href="{% url 'admin:support_supportticket_changelist' %}" class="Btn BtnSecondary">
-                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
-                </svg>
-                Смотреть тикеты
-            </a>
-            <a href="{% url 'docs:index' %}" class="Btn BtnSecondary">
-                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                </svg>
-                Документация
-            </a>
+    <div class="col-md-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="p-3 bg-light rounded me-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-muted text-uppercase small mb-1">Поддержка</p>
+              <h3 class="mb-0">{{ ticket_count|default:"-" }}</h3>
+              <small class="text-muted">Открытых тикетов</small>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
+
+    <div class="col-md-3">
+      <div class="card h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center mb-3">
+            <div class="p-3 bg-light rounded me-3">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#10b981" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="text-muted text-uppercase small mb-1">GNN Модели</p>
+              <h3 class="mb-0">{{ gnn_count|default:"-" }}</h3>
+              <small class="text-muted">Активных моделей</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card mb-4">
+    <div class="card-header bg-white">
+      <h5 class="mb-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 8px;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Быстрые действия
+      </h5>
+    </div>
+    <div class="card-body">
+      <a href="{% url 'admin:users_user_add' %}" class="btn btn-primary me-2 mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align: middle; margin-right: 4px;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Добавить пользователя
+      </a>
+      <a href="{% url 'admin:support_supportticket_changelist' %}" class="btn btn-outline-primary me-2 mb-2">
+        Смотреть тикеты
+      </a>
+      <a href="{% url 'docs:index' %}" class="btn btn-outline-secondary mb-2">
+        Документация
+      </a>
+    </div>
+  </div>
+
+  <!-- App List -->
+  {% if app_list %}
+    <div class="row g-4">
+      {% for app in app_list %}
+        <div class="col-md-6">
+          <div class="card">
+            <div class="card-header bg-white">
+              <h5 class="mb-0">{{ app.name }}</h5>
+            </div>
+            <div class="list-group list-group-flush">
+              {% for model in app.models %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                  <div>
+                    {% if model.admin_url %}
+                      <a href="{{ model.admin_url }}" class="text-decoration-none">{{ model.name }}</a>
+                    {% else %}
+                      <span class="text-muted">{{ model.name }}</span>
+                    {% endif %}
+                  </div>
+                  <div>
+                    {% if model.add_url %}
+                      <a href="{{ model.add_url }}" class="btn btn-sm btn-primary">Добавить</a>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">Нет доступных моделей.</div>
+  {% endif %}
 
 </div>
 {% endblock %}
