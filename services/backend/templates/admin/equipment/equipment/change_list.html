@@ -1,0 +1,30 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block content_title %}
+{% include "admin/includes/nav_breadcrumbs.html" with page_title=cl.opts.verbose_name_plural %}
+<h1>{{ cl.opts.verbose_name_plural|capfirst }}</h1>
+{% endblock %}
+
+{% block result_list %}
+{% if cl.result_count %}
+    {{ block.super }}
+{% else %}
+    <div class="empty-state">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Icon будет разным для каждого приложения -->
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        <h2>Нет записей</h2>
+        <p>{{ empty_message|default:"Список пуст. Добавьте первую запись для начала работы." }}</p>
+        {% if cl.opts.has_add_permission %}
+            <a href="{% url cl.opts|admin_urlname:'add' %}" class="Btn BtnLg">
+                <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Создать {{ cl.opts.verbose_name }}
+            </a>
+        {% endif %}
+    </div>
+{% endif %}
+{% endblock %}
