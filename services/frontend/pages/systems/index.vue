@@ -14,7 +14,6 @@
         {{ t('systems.addNew') }}
       </UButton>
     </div>
-
     <!-- Zero State -->
     <UZeroState
       v-if="!loading && systems.length === 0"
@@ -25,7 +24,6 @@
       :action-text="t('systems.empty.action')"
       @action="showCreateModal = true"
     />
-
     <!-- Systems Grid -->
     <div v-else class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <div 
@@ -48,7 +46,6 @@
             :label="t(`systems.status.${system.status}`)"
           />
         </div>
-
         <!-- Metrics -->
         <div class="space-y-3 mb-4">
           <div class="flex justify-between items-center">
@@ -81,7 +78,6 @@
             </div>
           </div>
         </div>
-
         <!-- Footer -->
         <div class="flex items-center justify-between pt-4 border-t border-steel-700/50">
           <div class="flex items-center gap-1.5 text-xs text-steel-400">
@@ -94,13 +90,12 @@
               @click.stop="handleSettings(system.id)"
               aria-label="Настройки"
             >
-              <Icon name="heroicons:cog-6-tooth" class="w-5 h-5" />
+              <Icon name="heroicons:cog-6-tooth" class="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
         </div>
       </div>
     </div>
-
     <!-- Create System Modal -->
     <UCreateSystemModal
       v-model="showCreateModal"
@@ -109,9 +104,9 @@
     />
   </div>
 </template>
-
 <script setup lang="ts">
 import type { HydraulicSystem } from '~/types/api'
+import { useSeoMeta } from '#imports'
 
 definePageMeta({
   layout: 'dashboard' as const,
@@ -119,6 +114,15 @@ definePageMeta({
 })
 
 const { t } = useI18n()
+
+useSeoMeta({
+  title: 'Системы | Hydraulic Diagnostic SaaS',
+  description: 'Список и мониторинг всех подключённых гидравлических систем предприятия. AI-анализ и статус в реальном времени.',
+  ogTitle: 'Systems | Hydraulic Diagnostic SaaS',
+  ogDescription: 'Hydraulic systems monitoring, status, and real-time anomaly analysis',
+  ogType: 'website',
+  twitterCard: 'summary_large_image'
+})
 
 const showCreateModal = ref(false)
 const isCreating = ref(false)
