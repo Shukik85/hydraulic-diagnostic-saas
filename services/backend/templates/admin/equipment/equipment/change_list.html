@@ -1,0 +1,35 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block content_title %}
+<div class="AdminNav" style="background: rgba(0,0,0,0.2); padding: 12px 20px; border-radius: 6px; margin: 0 0 20px;">
+    <a href="{% url 'admin:index' %}" class="NavLink">
+        <svg class="NavIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Dashboard
+    </a>
+    <a href="{% url 'admin:equipment_equipment_changelist' %}" class="NavLink">
+        <svg class="NavIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+        Equipment
+    </a>
+</div>
+<h1>{{ cl.opts.verbose_name_plural|capfirst }}</h1>
+<p style="color: #6b7280; font-size: 14px; margin: -10px 0 15px;">Данные управляются через FastAPI (read-only)</p>
+{% endblock %}
+
+{% block result_list %}
+{% if cl.result_count %}
+{{ block.super }}
+{% else %}
+<div style="text-align: center; padding: 80px 20px; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+    <svg style="width: 80px; height: 80px; margin: 0 auto 20px; stroke: #626C71; stroke-width: 1.5;" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+    </svg>
+    <h2 style="font-size: 22px; font-weight: 700; color: #1a1d24; margin-bottom: 10px;">Нет оборудования</h2>
+    <p style="color: #6b7280; margin-bottom: 30px; font-size: 14px;">Оборудование управляется через FastAPI и будет отображаться здесь</p>
+    <a href="/api/docs" class="Btn BtnLg">
+        <svg style="width: 18px; height: 18px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+        API Documentation
+    </a>
+</div>
+{% endif %}
+{% endblock %}
