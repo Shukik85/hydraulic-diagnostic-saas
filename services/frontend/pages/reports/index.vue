@@ -309,7 +309,7 @@ const getStatusText = (s: string): string => {
   return texts[s] || s
 }
 
-const generateReport = async () => {
+const generateReport = async (): Promise<void> => {
   isGenerating.value = true
   setTimeout(() => {
     const templateName = reportTemplates.find(t => t.key === form.value.template)?.name || ''
@@ -331,11 +331,11 @@ const generateReport = async () => {
   }, 2000)
 }
 
-const viewReport = (reportId: number) => {
+const viewReport = (reportId: number): void => {
   navigateTo(`/reports/${reportId}`)
 }
 
-const downloadReport = (reportId: number) => {
+const downloadReport = (reportId: number): void => {
   console.log('Downloading report:', reportId)
   // TODO: Implement download logic
 }
