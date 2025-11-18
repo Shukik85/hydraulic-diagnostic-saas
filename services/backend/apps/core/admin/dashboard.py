@@ -1,12 +1,12 @@
 """
 Django Unfold Dashboard Callback — KPI виджеты + метрики.
 Teal/Steel metallic theme с материал-иконками.
-"""
+"""  # noqa: RUF002
 
 from django.utils.translation import gettext_lazy as _
 
 
-def dashboard_callback(request, context):
+def dashboard_callback(request, context):  # noqa: ARG001
     """
     Custom dashboard для Unfold admin.
 

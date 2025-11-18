@@ -421,11 +421,6 @@ if not DEBUG and SENTRY_DSN and SENTRY_DSN.startswith("https://"):
     print("✓ Sentry error tracking enabled")
 else:
     print("🆎  Sentry disabled in development mode" if DEBUG else "⚠️  Sentry DSN not configured")
-from config.settings.unfold import UNFOLD  # noqa: E402
+from config.uf_settings.unfold import UNFOLD  # noqa: E402
 
 print(f"UNFOLD config loaded: {len(UNFOLD)} keys")
-# Явно экспортируем для других модулей
-__all__ = [
-    ...,
-    "UNFOLD",
-]

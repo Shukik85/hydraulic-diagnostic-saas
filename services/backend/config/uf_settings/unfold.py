@@ -27,7 +27,7 @@ UNFOLD = {
     # =========================================================================
     "SITE_TITLE": _("Hydraulic Diagnostics"),
     "SITE_HEADER": _("Hydraulic Diagnostic Platform"),
-    "SITE_URL": "/",
+    # "SITE_URL": "/",
     "SITE_SYMBOL": "precision_manufacturing",  # Material Icons
     # Логотип (если будут файлы)
     # "SITE_ICON": {
@@ -49,8 +49,8 @@ UNFOLD = {
     # =========================================================================
     # DASHBOARD & ENVIRONMENT
     # =========================================================================
-    "DASHBOARD_CALLBACK": "apps.core.admin.dashboard.dashboard_callback",
-    "ENVIRONMENT": "apps.core.admin.environment.environment_callback",
+    # "DASHBOARD_CALLBACK": "apps.core.admin.dashboard.dashboard_callback",
+    # "ENVIRONMENT": "apps.core.admin.environment.environment_callback",
     # =========================================================================
     # EXTENSIONS
     # =========================================================================

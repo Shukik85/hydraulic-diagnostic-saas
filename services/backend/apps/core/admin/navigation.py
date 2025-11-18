@@ -48,11 +48,11 @@ def get_sidebar_navigation() -> list:
                     "icon": "hub",
                     "link": reverse_lazy("admin:gnn_config_gnnmodelconfig_changelist"),
                 },
-                {
-                    "title": _("Predictions"),
-                    "icon": "troubleshoot",
-                    "link": reverse_lazy("admin:gnn_config_predictionresult_changelist"),
-                },
+                # {
+                #     "title": _("Predictions"),
+                #     "icon": "troubleshoot",
+                #     "link": reverse_lazy("admin:gnn_config_predictionresult_changelist"),
+                # },
             ],
         },
         # =====================================================================
@@ -93,11 +93,11 @@ def get_sidebar_navigation() -> list:
                     "icon": "notifications",
                     "link": reverse_lazy("admin:notifications_notification_changelist"),
                 },
-                {
-                    "title": _("Docs"),
-                    "icon": "description",
-                    "link": reverse_lazy("admin:docs_documentation_changelist"),
-                },
+                # {
+                #     "title": _("Docs"),
+                #     "icon": "description",
+                #     "link": reverse_lazy("admin:docs_documentation_changelist"),
+                # },
             ],
         },
     ]
