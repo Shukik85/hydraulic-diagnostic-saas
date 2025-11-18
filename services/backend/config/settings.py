@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
-    
     # Django core
     "django.contrib.admin",
     "django.contrib.auth",
@@ -47,7 +46,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    
     # Third-party
     "rest_framework",
     "rest_framework_simplejwt",
@@ -56,7 +54,6 @@ INSTALLED_APPS = [
     "django_celery_beat",
     "django_celery_results",
     "django_prometheus",
-    
     # Local apps
     "apps.core",
     "apps.users",
@@ -191,83 +188,6 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# ============================================================
-# DJANGO UNFOLD CONFIGURATION
-# ============================================================
-from django.templatetags.static import static
-from django.urls import reverse_lazy
-from django.utils.translation import gettext_lazy as _
-
-UNFOLD = {
-    "SITE_TITLE": "Hydraulic Diagnostics",
-    "SITE_HEADER": "Hydraulic Diagnostics",
-    "SITE_URL": "/",
-    
-    # Навигация в сайдбаре
-    "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": False,
-        "navigation": [
-            {
-                "title": _("Основное"),
-                "separator": True,
-                "items": [
-                    {
-                        "title": _("Dashboard"),
-                        "icon": "dashboard",
-                        "link": reverse_lazy("admin:index"),
-                    },
-                    {
-                        "title": _("Пользователи"),
-                        "icon": "people",
-                        "link": reverse_lazy("admin:users_user_changelist"),
-                    },
-                    {
-                        "title": _("Поддержка"),
-                        "icon": "support_agent",
-                        "link": reverse_lazy("admin:support_supportticket_changelist"),
-                    },
-                ],
-            },
-            {
-                "title": _("Система"),
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Оборудование"),
-                        "icon": "settings_input_component",
-                        "link": reverse_lazy("admin:equipment_equipment_changelist"),
-                    },
-                    {
-                        "title": _("GNN Модели"),
-                        "icon": "psychology",
-                        "link": reverse_lazy("admin:gnn_config_gnnmodelconfig_changelist"),
-                    },
-                    {
-                        "title": _("Логи API"),
-                        "icon": "api",
-                        "link": reverse_lazy("admin:monitoring_apilog_changelist"),
-                    },
-                    {
-                        "title": _("Уведомления"),
-                        "icon": "notifications",
-                        "link": reverse_lazy("admin:notifications_notification_changelist"),
-                    },
-                    {
-                        "title": _("Подписки"),
-                        "icon": "credit_card",
-                        "link": reverse_lazy("admin:subscriptions_subscription_changelist"),
-                    },
-                ],
-            },
-        ],
-    },
-    
-    # Дополнительные настройки
-    "ENVIRONMENT": "apps.core.utils.environment_callback",
-    "DASHBOARD_CALLBACK": "apps.core.admin.dashboard_callback",
-}
 
 # ============================================================
 # REST FRAMEWORK
@@ -404,80 +324,77 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ============================================================
 # DJANGO UNFOLD CONFIGURATION
 # ============================================================
-from django.templatetags.static import static
-from django.urls import reverse_lazy
-from django.utils.translation import gettext_lazy as _
+# from django.urls import reverse_lazy
+# from django.utils.translation import gettext_lazy as _
 
-UNFOLD = {
-    "SITE_TITLE": "Hydraulic Diagnostics",
-    "SITE_HEADER": "Hydraulic Diagnostics",
-    "SITE_URL": "/",
-    
-    # Навигация в сайдбаре
-    "SIDEBAR": {
-        "show_search": True,
-        "show_all_applications": False,
-        "navigation": [
-            {
-                "title": _("Основное"),
-                "separator": True,
-                "items": [
-                    {
-                        "title": _("Dashboard"),
-                        "icon": "dashboard",
-                        "link": reverse_lazy("admin:index"),
-                    },
-                    {
-                        "title": _("Пользователи"),
-                        "icon": "people",
-                        "link": reverse_lazy("admin:users_user_changelist"),
-                    },
-                    {
-                        "title": _("Поддержка"),
-                        "icon": "support_agent",
-                        "link": reverse_lazy("admin:support_supportticket_changelist"),
-                    },
-                ],
-            },
-            {
-                "title": _("Система"),
-                "separator": True,
-                "collapsible": True,
-                "items": [
-                    {
-                        "title": _("Оборудование"),
-                        "icon": "settings_input_component",
-                        "link": reverse_lazy("admin:equipment_equipment_changelist"),
-                    },
-                    {
-                        "title": _("GNN Модели"),
-                        "icon": "psychology",
-                        "link": reverse_lazy("admin:gnn_config_gnnmodelconfig_changelist"),
-                    },
-                    {
-                        "title": _("Логи API"),
-                        "icon": "api",
-                        "link": reverse_lazy("admin:monitoring_apilog_changelist"),
-                    },
-                    {
-                        "title": _("Уведомления"),
-                        "icon": "notifications",
-                        "link": reverse_lazy("admin:notifications_notification_changelist"),
-                    },
-                    {
-                        "title": _("Подписки"),
-                        "icon": "credit_card",
-                        "link": reverse_lazy("admin:subscriptions_subscription_changelist"),
-                    },
-                ],
-            },
-        ],
-    },
-    
-    # Дополнительные настройки
-    "ENVIRONMENT": "apps.core.utils.environment_callback",
-    "DASHBOARD_CALLBACK": "apps.core.admin.dashboard_callback",
-}
+# UNFOLD = {
+#     "SITE_TITLE": "Hydraulic Diagnostics",
+#     "SITE_HEADER": "Hydraulic Diagnostics",
+#     "SITE_URL": "/",
+#     # Навигация в сайдбаре
+#     "SIDEBAR": {
+#         "show_search": True,
+#         "show_all_applications": False,
+#         "navigation": [
+#             {
+#                 "title": _("Основное"),
+#                 "separator": True,
+#                 "items": [
+#                     {
+#                         "title": _("Dashboard"),
+#                         "icon": "dashboard",
+#                         "link": reverse_lazy("admin:index"),
+#                     },
+#                     {
+#                         "title": _("Пользователи"),
+#                         "icon": "people",
+#                         "link": reverse_lazy("admin:users_user_changelist"),
+#                     },
+#                     {
+#                         "title": _("Поддержка"),
+#                         "icon": "support_agent",
+#                         "link": reverse_lazy("admin:support_supportticket_changelist"),
+#                     },
+#                 ],
+#             },
+#             {
+#                 "title": _("Система"),
+#                 "separator": True,
+#                 "collapsible": True,
+#                 "items": [
+#                     {
+#                         "title": _("Оборудование"),
+#                         "icon": "settings_input_component",
+#                         "link": reverse_lazy("admin:equipment_equipment_changelist"),
+#                     },
+#                     {
+#                         "title": _("GNN Модели"),
+#                         "icon": "psychology",
+#                         "link": reverse_lazy("admin:gnn_config_gnnmodelconfig_changelist"),
+#                     },
+#                     {
+#                         "title": _("Логи API"),
+#                         "icon": "api",
+#                         "link": reverse_lazy("admin:monitoring_apilog_changelist"),
+#                     },
+#                     {
+#                         "title": _("Уведомления"),
+#                         "icon": "notifications",
+#                         "link": reverse_lazy("admin:notifications_notification_changelist"),
+#                     },
+#                     {
+#                         "title": _("Подписки"),
+#                         "icon": "credit_card",
+#                         "link": reverse_lazy("admin:subscriptions_subscription_changelist"),
+#                     },
+#                 ],
+#             },
+#         ],
+#     },
+#     # Дополнительные настройки
+#     "ENVIRONMENT": "apps.core.utils.environment_callback",
+#     # "DASHBOARD_CALLBACK": "apps.core.admin.dashboard_callback",
+# }
 
 # ============================================================
 # SENTRY
@@ -504,3 +421,11 @@ if not DEBUG and SENTRY_DSN and SENTRY_DSN.startswith("https://"):
     print("✓ Sentry error tracking enabled")
 else:
     print("🆎  Sentry disabled in development mode" if DEBUG else "⚠️  Sentry DSN not configured")
+from config.settings.unfold import UNFOLD  # noqa: E402
+
+print(f"UNFOLD config loaded: {len(UNFOLD)} keys")
+# Явно экспортируем для других модулей
+__all__ = [
+    ...,
+    "UNFOLD",
+]
