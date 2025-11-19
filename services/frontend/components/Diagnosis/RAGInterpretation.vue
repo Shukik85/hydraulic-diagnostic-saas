@@ -31,19 +31,19 @@
     </div>
 
     <!-- Interpretation Content -->
-    <div v-else-if="safeInterpretation" class="space-y-6">
+    <div v-else-if="interpretation" class="space-y-6">
       <!-- Summary -->
       <div class="u-card p-6 border-l-4 border-blue-500 bg-blue-50">
         <h4 class="font-semibold text-blue-900 mb-2">
           📊 Краткая сводка
         </h4>
         <p class="u-body text-blue-800 whitespace-pre-wrap">
-          {{ safeInterpretation.summary }}
+          {{ interpretation.summary }}
         </p>
       </div>
 
       <!-- Reasoning -->
-      <div v-if="reasoning" class="u-card">
+      <div v-if="interpretation.reasoning" class="u-card">
         <details class="group">
           <summary class="cursor-pointer p-6 flex items-center justify-between hover:bg-gray-50 transition">
             <h4 class="font-semibold text-gray-900">
@@ -54,18 +54,18 @@
             </svg>
           </summary>
           <div class="p-6 pt-0 border-t">
-            <ReasoningViewer :reasoning="reasoning" />
+            <ReasoningViewer :reasoning="interpretation.reasoning" />
           </div>
         </details>
       </div>
 
       <!-- Recommendations -->
-      <div v-if="recommendations.length" class="u-card p-6">
+      <div v-if="interpretation.recommendations?.length" class="u-card p-6">
         <h4 class="font-semibold text-gray-900 mb-4">
           💡 Рекомендации
         </h4>
         <div class="space-y-3">
-          <div v-for="(rec, index) in recommendations" :key="index" class="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div v-for="(rec, index) in interpretation.recommendations" :key="index" class="flex items-start gap-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
             <div class="shrink-0 w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
               {{ index + 1 }}
             </div>
@@ -76,28 +76,15 @@
         </div>
       </div>
 
-      <!-- Severity & Confidence -->
-      <div class="grid grid-cols-2 gap-4">
-        <div class="u-card p-4">
-          <div class="text-sm text-gray-600 mb-1">Степень серьёзности</div>
-          <div class="text-lg font-semibold" :class="{
-            'text-green-600': severity === 'low',
-            'text-yellow-600': severity === 'normal',
-            'text-orange-600': severity === 'medium',
-            'text-red-600': severity === 'high' || severity === 'critical'
-          }">
-            {{ severityLabel }}
-          </div>
-        </div>
-        <div class="u-card p-4">
-          <div class="text-sm text-gray-600 mb-1">Уверенность</div>
-          <div class="text-lg font-semibold" :class="{
-            'text-green-600': confidence >= 0.8,
-            'text-yellow-600': confidence >= 0.5,
-            'text-red-600': confidence < 0.5
-          }">
-            {{ Math.round(confidence * 100) }}%
-          </div>
+      <!-- Confidence -->
+      <div class="u-card p-4">
+        <div class="text-sm text-gray-600 mb-1">Уверенность</div>
+        <div class="text-lg font-semibold" :class="{
+          'text-green-600': interpretation.confidence >= 0.8,
+          'text-yellow-600': interpretation.confidence >= 0.5,
+          'text-red-600': interpretation.confidence < 0.5
+        }">
+          {{ Math.round(interpretation.confidence * 100) }}%
         </div>
       </div>
     </div>
@@ -105,8 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watchEffect } from '#imports'
-import { validateConfidence, validateSeverity, validateRecommendations, validateReasoning } from '~/utils/validation'
+import { ref, computed } from '#imports'
 import type { RAGInterpretationResponse } from '~/types/rag'
 import ReasoningViewer from './ReasoningViewer.vue'
 
@@ -119,37 +105,5 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
   error: null,
-})
-
-const safeInterpretation = computed(() => {
-  if (!props.interpretation) return undefined
-  return {
-    summary: props.interpretation.summary || '',
-    reasoning: validateReasoning(props.interpretation.reasoning),
-    recommendations: validateRecommendations(props.interpretation.recommendations),
-    severity: validateSeverity(props.interpretation.severity),
-    confidence: validateConfidence(props.interpretation.confidence),
-    prognosis: props.interpretation.prognosis || null,
-    model_version: props.interpretation.model_version,
-    processing_time: props.interpretation.processing_time,
-    tokens_used: props.interpretation.tokens_used,
-    metadata: props.interpretation.metadata || undefined,
-  }
-})
-
-const recommendations = computed(() => safeInterpretation.value?.recommendations || [])
-const reasoning = computed(() => safeInterpretation.value?.reasoning || '')
-const severity = computed(() => safeInterpretation.value?.severity || 'normal')
-const confidence = computed(() => safeInterpretation.value?.confidence || 0)
-
-const severityLabel = computed(() => {
-  const labels: Record<string, string> = {
-    low: 'Низкая',
-    normal: 'Нормальная',
-    medium: 'Средняя',
-    high: 'Высокая',
-    critical: 'Критическая',
-  }
-  return labels[severity.value] || severity.value
 })
 </script>
