@@ -86,7 +86,7 @@ export const useApi = () => {
 
 ```vue
 <script setup lang="ts">
-const { api } = useApi()
+const { api } = useGeneratedApi()
 
 const { data: equipment } = await useAsyncData('equipment', () =>
   api.getEquipmentMetadata({ userId: 'user123', systemId: 'press_01' })

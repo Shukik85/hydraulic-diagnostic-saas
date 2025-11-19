@@ -17,20 +17,34 @@ import { useRuntimeConfig } from 'nuxt/app'
 /**
  * Создает configured API clients для всех сервисов.
  */
-export const useGeneratedApi = () => {
-  const config = useRuntimeConfig()
+// export const useGeneratedApi = () => {
+//   const config = useRuntimeConfig()
 
-  // OpenAPI config доступен напрямую (новый openapi-typescript)
-  OpenAPI.BASE = config.public.apiBase
-  OpenAPI.TOKEN = undefined // TODO: добавить интеграцию с authStore
+//   // OpenAPI config доступен напрямую (новый openapi-typescript)
+//   OpenAPI.BASE = config.public.apiBase
+//   OpenAPI.TOKEN = undefined // TODO: добавить интеграцию с authStore
 
-  return {
-    diagnosis: new DiagnosisService(),
-    equipment: new EquipmentService(),
-    gnn: new GNNService(),
-    rag: new RAGService()
-  }
-}
+//   return {
+//     diagnosis: new DiagnosisService(),
+//     equipment: new EquipmentService(),
+//     gnn: new GNNService(),
+//     rag: new RAGService()
+//   }
+// }
 
-// Типобезопасный алиас
-export const useApi = useGeneratedApi
+// Временно!
+export const useGeneratedApi = () => ({
+  login: async () => undefined,
+  register: async () => undefined,
+  logout: async () => undefined,
+  isAuthenticated: async () => true,
+  getCurrentUser: async () => null,
+  updateUser: async () => undefined,
+  api: { request: async () => undefined }, // Для systems.store.ts (api.request)
+  request: async () => undefined,
+  // Сервисы, чтобы не ломать существующий код:
+  diagnosis: {},
+  equipment: {},
+  gnn: {},
+  rag: {},
+});
