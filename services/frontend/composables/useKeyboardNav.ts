@@ -3,7 +3,7 @@
  * Обеспечивает accessibility для keyboard-only пользователей
  */
 
-import { ref, onMounted, onUnmounted, type Ref } from 'vue'
+import { ref, onMounted, onUnmounted, type Ref } from '#imports'
 
 /**
  * Опции для keyboard navigation
