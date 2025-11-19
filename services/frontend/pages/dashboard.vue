@@ -266,6 +266,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, useI18n, useSeoMeta, useHead } from '#imports'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
