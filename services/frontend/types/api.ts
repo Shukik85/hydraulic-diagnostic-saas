@@ -2,11 +2,11 @@
  * TypeScript Types для Hydraulic Diagnostic Platform API
  *
  * @see https://github.com/Shukik85/hydraulic-diagnostic-saas
- * @version 1.0.0
+ * @version 1.0.1 - Fixed missing properties
  */
 
-// ==================== EXISTING TYPES (PRESERVED) ====================
-// !!! УДАЛЁНЫ DiagnosticResult, ChatMessage, ChatSession !!!
+// ==================== BASE TYPES ====================
+
 export interface User {
   id: number
   email: string
@@ -46,6 +46,8 @@ export interface ApiResponse<T = any> {
   error?: string
 }
 
+// ==================== SYSTEM TYPES ====================
+
 export interface HydraulicSystem {
   id: number
   name: string
@@ -63,6 +65,63 @@ export interface HydraulicSystem {
   updated_at: string
 }
 
+export interface SystemStatus {
+  id: number
+  name: string
+  status: 'online' | 'offline' | 'warning' | 'error'
+  health: number
+  health_score?: number  // Alias for compatibility
+  component_statuses?: ComponentStatus[]
+}
+
+export interface ComponentStatus {
+  component_id: number
+  name: string
+  status: 'online' | 'offline' | 'warning' | 'error'
+  value?: number
+}
+
+// ==================== ANOMALIES ====================
+
+export type AnomalySeverity = 'low' | 'medium' | 'high' | 'critical'
+
+export interface Anomaly {
+  id: number
+  prediction_id?: number  // Alias for id
+  system_id: number
+  severity: AnomalySeverity
+  score: number
+  anomaly_score?: number  // Alias for score
+  created_at: string
+  description?: string
+}
+
+export interface AnomaliesQueryParams {
+  system_id?: number
+  severity?: AnomalySeverity
+  limit?: number
+  offset?: number
+  page?: number
+  per_page?: number
+  start_date?: string
+  end_date?: string
+}
+
+export interface AnomaliesListResponse {
+  items: Anomaly[]
+  total: number
+  limit: number
+  offset: number
+  pagination?: {
+    page: number
+    per_page: number
+    total: number
+    pages: number
+  }
+}
+
+// ==================== DIAGNOSTICS ====================
+
 export interface DiagnosticSession {
   id: number
   system_id: number
@@ -71,9 +130,63 @@ export interface DiagnosticSession {
   progress: number
   started_at: string
   completed_at?: string
-  results?: any[] // !!! DiagnosticResult удалён, оставить any[] для совместимости
+  results?: any[]
   created_by: number
 }
+
+// ==================== WEBSOCKET TYPES ====================
+
+export interface WSMessage {
+  type: string
+  payload: any
+  data?: any  // For backward compatibility
+}
+
+export interface WSNewSensorReading {
+  sensor_id: number
+  value: number
+  timestamp: string
+}
+
+export interface WSNewAnomaly {
+  anomaly_id: number
+  severity: AnomalySeverity
+  message: string
+}
+
+export interface WSSystemStatusUpdate {
+  system_id: number
+  status: string
+}
+
+// Type guard
+export function isValidWSMessage(message: any): message is WSMessage {
+  return typeof message === 'object' && 'type' in message && ('payload' in message || 'data' in message)
+}
+
+// ==================== ASYNC STATE ====================
+
+export interface AsyncState<T> {
+  data: T | null
+  loading: boolean
+  error: ErrorResponse | null
+}
+
+export interface ErrorResponse {
+  message: string
+  code?: string
+  name?: string  // For Error compatibility
+  timestamp?: string
+  request_id?: string
+  error?: {
+    message: string
+    code?: string
+    timestamp?: string
+    request_id?: string
+  }
+}
+
+// ==================== UI TYPES ====================
 
 export interface ApiError {
   message: string
@@ -115,4 +228,28 @@ export interface PasswordStrength {
   }
 }
 
-// ... остальной файл ОСТАВИТЬ без изменений ...
+// ==================== UTILITY FUNCTIONS ====================
+
+export function formatAnomalyScore(score: number): string {
+  return `${(score * 100).toFixed(1)}%`
+}
+
+export function getSeverityColor(severity: AnomalySeverity): string {
+  const colors: Record<AnomalySeverity, string> = {
+    low: 'text-blue-500',
+    medium: 'text-yellow-500',
+    high: 'text-orange-500',
+    critical: 'text-red-500'
+  }
+  return colors[severity] || 'text-gray-500'
+}
+
+export function getComponentStatusColor(status: string): string {
+  const colors: Record<string, string> = {
+    online: 'text-green-500',
+    offline: 'text-gray-500',
+    warning: 'text-yellow-500',
+    error: 'text-red-500'
+  }
+  return colors[status as keyof typeof colors] || 'text-gray-500'
+}
