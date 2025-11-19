@@ -12,7 +12,7 @@ from __future__ import annotations
 import secrets
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib.auth.models import AbstractUser
 from django.db import IntegrityError, models, transaction
@@ -42,9 +42,7 @@ class User(AbstractUser):
         updated_at: Last update timestamp
     """
 
-    id: uuid.UUID = models.UUIDField(
-        primary_key=True, default=uuid.uuid4, editable=False
-    )
+    id: uuid.UUID = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email: str = models.EmailField(unique=True)
     api_key: str = models.CharField(max_length=128, unique=True, blank=True)
 
@@ -62,10 +60,8 @@ class User(AbstractUser):
     trial_end_date: datetime | None = models.DateTimeField(null=True, blank=True)
 
     # Billing
-    stripe_customer_id: str = models.CharField(max_length=255, blank=True, null=True)
-    stripe_subscription_id: str = models.CharField(
-        max_length=255, blank=True, null=True
-    )
+    stripe_customer_id: str = models.CharField(max_length=255, blank=True, default="")
+    stripe_subscription_id: str = models.CharField(max_length=255, blank=True, default="")
 
     # Usage tracking
     api_requests_count: int = models.IntegerField(default=0)
@@ -76,7 +72,7 @@ class User(AbstractUser):
     updated_at: datetime = models.DateTimeField(auto_now=True)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS: list[str] = []
+    REQUIRED_FIELDS: ClassVar[list[str]] = []
 
     if TYPE_CHECKING:
         # Type hints for reverse relations
@@ -87,8 +83,8 @@ class User(AbstractUser):
         db_table = "users"
         verbose_name = "User"
         verbose_name_plural = "Users"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["-created_at"]),
             models.Index(fields=["subscription_tier", "subscription_status"]),
         ]

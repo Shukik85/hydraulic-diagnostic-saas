@@ -1,16 +1,24 @@
-"""
-Monitoring admin
-"""
+"""Monitoring admin with type-safe class attributes."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
 from django.utils.html import format_html
+from django.utils.safestring import SafeString
 
 from .models import APILog, ErrorLog
+
+if TYPE_CHECKING:
+    from django.http import HttpRequest
 
 
 @admin.register(APILog)
 class APILogAdmin(admin.ModelAdmin):
-    list_display = [
+    """Admin interface for API logs."""
+
+    list_display: ClassVar[list[str]] = [
         "method",
         "path_short",
         "status_code_colored",
@@ -18,9 +26,9 @@ class APILogAdmin(admin.ModelAdmin):
         "user_id",
         "created_at",
     ]
-    list_filter = ["method", "status_code", "created_at"]
-    search_fields = ["path", "user_id"]
-    readonly_fields = [
+    list_filter: ClassVar[list[str]] = ["method", "status_code", "created_at"]
+    search_fields: ClassVar[list[str]] = ["path", "user_id"]
+    readonly_fields: ClassVar[list[str]] = [
         "id",
         "user_id",
         "method",
@@ -32,15 +40,18 @@ class APILogAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: HttpRequest) -> bool:  # noqa: ARG002
+        """Disable manual log creation."""
         return False
 
-    def path_short(self, obj):
+    def path_short(self, obj: APILog) -> str:
+        """Truncate long paths."""
         return f"{obj.path[:50]}..." if len(obj.path) > 50 else obj.path
 
-    path_short.short_description = "Path"
+    path_short.short_description = "Path"  # type: ignore[attr-defined]
 
-    def status_code_colored(self, obj):
+    def status_code_colored(self, obj: APILog) -> SafeString:
+        """Display status code with color."""
         color = "green" if obj.status_code < 400 else "red"
         return format_html(
             '<span style="color: {}; font-weight: bold;">{}</span>',
@@ -48,21 +59,23 @@ class APILogAdmin(admin.ModelAdmin):
             obj.status_code,
         )
 
-    status_code_colored.short_description = "Status"
+    status_code_colored.short_description = "Status"  # type: ignore[attr-defined]
 
 
 @admin.register(ErrorLog)
 class ErrorLogAdmin(admin.ModelAdmin):
-    list_display = [
+    """Admin interface for error logs."""
+
+    list_display: ClassVar[list[str]] = [
         "severity_badge",
         "error_type",
         "message_short",
         "user_id",
         "created_at",
     ]
-    list_filter = ["severity", "error_type", "created_at"]
-    search_fields = ["error_type", "message"]
-    readonly_fields = [
+    list_filter: ClassVar[list[str]] = ["severity", "error_type", "created_at"]
+    search_fields: ClassVar[list[str]] = ["error_type", "message"]
+    readonly_fields: ClassVar[list[str]] = [
         "id",
         "user_id",
         "severity",
@@ -73,10 +86,12 @@ class ErrorLogAdmin(admin.ModelAdmin):
         "created_at",
     ]
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: HttpRequest) -> bool:  # noqa: ARG002
+        """Disable manual log creation."""
         return False
 
-    def severity_badge(self, obj):
+    def severity_badge(self, obj: ErrorLog) -> SafeString:
+        """Display severity as colored badge."""
         colors = {
             "low": "blue",
             "medium": "orange",
@@ -90,9 +105,10 @@ class ErrorLogAdmin(admin.ModelAdmin):
             obj.get_severity_display(),
         )
 
-    severity_badge.short_description = "Severity"
+    severity_badge.short_description = "Severity"  # type: ignore[attr-defined]
 
-    def message_short(self, obj):
+    def message_short(self, obj: ErrorLog) -> str:
+        """Truncate long messages."""
         return f"{obj.message[:100]}..." if len(obj.message) > 100 else obj.message
 
-    message_short.short_description = "Message"
+    message_short.short_description = "Message"  # type: ignore[attr-defined]

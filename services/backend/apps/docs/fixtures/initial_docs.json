@@ -1,0 +1,149 @@
+[
+  {
+    "model": "docs.documentcategory",
+    "pk": 1,
+    "fields": {
+      "name": "Quick Start",
+      "slug": "quick-start",
+      "icon": "🚀",
+      "description": "Get started with the Hydraulic Diagnostic System in minutes",
+      "order": 0,
+      "is_active": true
+    }
+  },
+  {
+    "model": "docs.documentcategory",
+    "pk": 2,
+    "fields": {
+      "name": "Configuration",
+      "slug": "configuration",
+      "icon": "🔧",
+      "description": "System configuration and settings",
+      "order": 1,
+      "is_active": true
+    }
+  },
+  {
+    "model": "docs.documentcategory",
+    "pk": 3,
+    "fields": {
+      "name": "Working with Data",
+      "slug": "working-with-data",
+      "icon": "📊",
+      "description": "Data management and processing",
+      "order": 2,
+      "is_active": true
+    }
+  },
+  {
+    "model": "docs.documentcategory",
+    "pk": 4,
+    "fields": {
+      "name": "ML Pipeline",
+      "slug": "ml-pipeline",
+      "icon": "🤖",
+      "description": "Machine learning models and pipeline",
+      "order": 3,
+      "is_active": true
+    }
+  },
+  {
+    "model": "docs.documentcategory",
+    "pk": 5,
+    "fields": {
+      "name": "API Reference",
+      "slug": "api-reference",
+      "icon": "📡",
+      "description": "REST API endpoints and documentation",
+      "order": 4,
+      "is_active": true
+    }
+  },
+  {
+    "model": "docs.documentcategory",
+    "pk": 6,
+    "fields": {
+      "name": "FAQ & Troubleshooting",
+      "slug": "faq-troubleshooting",
+      "icon": "❓",
+      "description": "Common questions and solutions",
+      "order": 5,
+      "is_active": true
+    }
+  },
+  {
+    "model": "docs.document",
+    "pk": 1,
+    "fields": {
+      "title": "Getting Started with Admin Panel",
+      "slug": "getting-started-admin-panel",
+      "category": 1,
+      "summary": "Learn how to navigate and use the Django Admin panel for the first time",
+      "content": "# Getting Started with Admin Panel\n\n## Introduction\n\nWelcome to the Hydraulic Diagnostic System! This guide will help you get started with the admin panel.\n\n## Accessing the Admin Panel\n\n1. Navigate to: `http://localhost:8000/admin/`\n2. Enter your credentials\n3. Click **Log In**\n\n## Dashboard Overview\n\nThe dashboard displays:\n\n- **Statistics**: System metrics and usage\n- **Quick Actions**: Common tasks\n- **Recent Activity**: Latest changes\n\n## Navigation\n\nUse the left sidebar to access:\n\n- 🏠 **Home**: Dashboard\n- 📚 **Documentation**: This help system\n- 📦 **Equipment**: Manage hydraulic equipment\n- 👥 **Users**: User management\n\n## Next Steps\n\n- [Add Your First Equipment](./add-first-equipment)\n- [Run a Diagnostic](./run-diagnostic)\n- [Configure ML Models](./configure-ml-models)",
+      "tags": "getting-started, admin, dashboard",
+      "order": 0,
+      "is_published": true,
+      "is_featured": true
+    }
+  },
+  {
+    "model": "docs.document",
+    "pk": 2,
+    "fields": {
+      "title": "Adding Equipment",
+      "slug": "add-first-equipment",
+      "category": 1,
+      "summary": "Step-by-step guide to adding hydraulic equipment to the system",
+      "content": "# Adding Equipment\n\n## Overview\n\nThis guide shows you how to add new hydraulic equipment to the system.\n\n## Steps\n\n### 1. Navigate to Equipment Section\n\nFrom the dashboard, click **Equipment** in the sidebar.\n\n### 2. Create New Equipment\n\n1. Click the **+ Add Equipment** button\n2. Fill in the required fields:\n   - **Name**: Equipment identifier\n   - **Type**: System type (pump, valve, cylinder, etc.)\n   - **Serial Number**: Manufacturer serial number\n   - **Installation Date**: When it was installed\n\n### 3. Optional Fields\n\n- **Description**: Additional notes\n- **Location**: Physical location\n- **Maintenance Schedule**: Regular maintenance intervals\n\n### 4. Save\n\nClick **Save** to create the equipment record.\n\n## Data Format\n\n```json\n{\n  \"name\": \"Hydraulic Pump A-123\",\n  \"type\": \"pump\",\n  \"serial_number\": \"SN-2024-001\",\n  \"installation_date\": \"2024-01-15\"\n}\n```\n\n## Next Steps\n\n- [Upload Equipment Data](./upload-equipment-data)\n- [Run Diagnostic Analysis](./run-diagnostic)",
+      "tags": "equipment, getting-started, setup",
+      "order": 1,
+      "is_published": true,
+      "is_featured": true
+    }
+  },
+  {
+    "model": "docs.document",
+    "pk": 3,
+    "fields": {
+      "title": "Understanding GNN Models",
+      "slug": "understanding-gnn-models",
+      "category": 4,
+      "summary": "Learn about Graph Neural Network models used for hydraulic diagnostics",
+      "content": "# Understanding GNN Models\n\n## What are GNNs?\n\nGraph Neural Networks (GNNs) are specialized machine learning models designed to work with graph-structured data.\n\n## Why GNNs for Hydraulics?\n\nHydraulic systems are naturally represented as graphs:\n\n- **Nodes**: Components (pumps, valves, cylinders)\n- **Edges**: Connections (pipes, hoses)\n- **Features**: Sensor readings, pressures, flows\n\n## Model Architecture\n\n### Input Layer\n\nAccepts:\n- Node features (component state)\n- Edge features (flow rate, pressure)\n- Graph structure\n\n### Hidden Layers\n\nPerform:\n- Message passing between nodes\n- Feature aggregation\n- Non-linear transformations\n\n### Output Layer\n\nProduces:\n- Fault predictions\n- Anomaly scores\n- Component health metrics\n\n## Training Process\n\n1. **Data Collection**: Gather sensor data\n2. **Graph Construction**: Build system topology\n3. **Feature Engineering**: Process raw data\n4. **Training**: Optimize model parameters\n5. **Validation**: Test on held-out data\n6. **Deployment**: Use in production\n\n## Performance Metrics\n\n- **Accuracy**: Overall correctness\n- **Precision**: False positive rate\n- **Recall**: False negative rate\n- **F1 Score**: Harmonic mean of precision/recall\n\n## Next Steps\n\n- [Configure GNN Parameters](./configure-gnn-parameters)\n- [Train Custom Models](./train-custom-models)",
+      "tags": "ml, gnn, models, theory",
+      "order": 0,
+      "is_published": true,
+      "is_featured": true
+    }
+  },
+  {
+    "model": "docs.document",
+    "pk": 4,
+    "fields": {
+      "title": "API Authentication",
+      "slug": "api-authentication",
+      "category": 5,
+      "summary": "How to authenticate with the REST API using JWT tokens",
+      "content": "# API Authentication\n\n## Overview\n\nThe Hydraulic Diagnostic API uses JWT (JSON Web Tokens) for authentication.\n\n## Getting an Access Token\n\n### 1. Login Endpoint\n\n```bash\ncurl -X POST http://localhost:8000/api/auth/token/ \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"email\": \"user@example.com\",\n    \"password\": \"your-password\"\n  }'\n```\n\n### 2. Response\n\n```json\n{\n  \"access\": \"eyJ0eXAiOiJKV1QiLC...\",\n  \"refresh\": \"eyJ0eXAiOiJKV1QiLC...\"\n}\n```\n\n## Using the Access Token\n\nInclude the token in the `Authorization` header:\n\n```bash\ncurl -X GET http://localhost:8000/api/equipment/ \\\n  -H \"Authorization: Bearer eyJ0eXAiOiJKV1QiLC...\"\n```\n\n## Token Lifetime\n\n- **Access Token**: 1 hour\n- **Refresh Token**: 7 days\n\n## Refreshing Tokens\n\nWhen the access token expires, use the refresh token:\n\n```bash\ncurl -X POST http://localhost:8000/api/auth/token/refresh/ \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"refresh\": \"eyJ0eXAiOiJKV1QiLC...\"\n  }'\n```\n\n## Security Best Practices\n\n1. **Never** commit tokens to version control\n2. Store tokens securely (environment variables, secure storage)\n3. Rotate tokens regularly\n4. Use HTTPS in production\n\n## Next Steps\n\n- [API Endpoints Reference](./api-endpoints-reference)\n- [Rate Limiting](./api-rate-limiting)",
+      "tags": "api, authentication, jwt, security",
+      "order": 0,
+      "is_published": true,
+      "is_featured": false
+    }
+  },
+  {
+    "model": "docs.document",
+    "pk": 5,
+    "fields": {
+      "title": "Common Errors and Solutions",
+      "slug": "common-errors-solutions",
+      "category": 6,
+      "summary": "Troubleshooting guide for frequently encountered issues",
+      "content": "# Common Errors and Solutions\n\n## Database Connection Errors\n\n### Error Message\n\n```\ndjango.db.utils.OperationalError: could not connect to server\n```\n\n### Solution\n\n1. Check if PostgreSQL is running\n2. Verify database credentials in `.env`\n3. Ensure `DATABASE_HOST` is correct\n\n## Model Training Failures\n\n### Error Message\n\n```\nRuntimeError: CUDA out of memory\n```\n\n### Solution\n\n1. Reduce batch size\n2. Use CPU instead of GPU\n3. Add more GPU memory\n4. Enable gradient checkpointing\n\n## API 401 Unauthorized\n\n### Error Message\n\n```json\n{\n  \"detail\": \"Authentication credentials were not provided.\"\n}\n```\n\n### Solution\n\n1. Include `Authorization` header\n2. Check token expiration\n3. Refresh access token\n\n## File Upload Errors\n\n### Error Message\n\n```\nValueError: Invalid data format\n```\n\n### Solution\n\n1. Check file format (CSV, JSON)\n2. Validate data schema\n3. Ensure proper encoding (UTF-8)\n\n## Getting Help\n\nIf you can't resolve the issue:\n\n1. Check the [FAQ](./faq)\n2. Search existing documentation\n3. Contact support team\n4. Submit a bug report\n\n## Support Channels\n\n- **Email**: support@hydraulic-diagnostics.com\n- **Slack**: #support channel\n- **GitHub**: Create an issue\n",
+      "tags": "troubleshooting, errors, faq, support",
+      "order": 0,
+      "is_published": true,
+      "is_featured": false
+    }
+  }
+]

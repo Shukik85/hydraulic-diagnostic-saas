@@ -2,7 +2,9 @@
 Refactored Subscription and Payment models to use shared enums for all status/tier fields.
 Business logic includes type-safe accessors and property methods.
 """
+
 import uuid
+from typing import ClassVar
 
 from django.db import models
 
@@ -12,6 +14,7 @@ from apps.users.models import User
 
 class Subscription(models.Model):
     """User subscription details"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="subscription_detail")
 
@@ -69,8 +72,10 @@ class Subscription(models.Model):
         self.status = SubscriptionStatus.EXPIRED.value
         self.save(update_fields=["status", "updated_at"])
 
+
 class Payment(models.Model):
     """Payment history"""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="payments")
 
@@ -91,7 +96,7 @@ class Payment(models.Model):
         db_table = "payments"
         verbose_name = "Payment"
         verbose_name_plural = "Payments"
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
 
     def __str__(self) -> str:
         return f"{self.user.email} - ${self.amount} - {self.status_enum.name.title()}"

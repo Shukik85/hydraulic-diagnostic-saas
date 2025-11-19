@@ -2,77 +2,77 @@
 name = "hydraulic-diagnostic-backend"
 version = "1.0.0"
 description = "Django Admin Panel for Hydraulic Diagnostics SaaS - Production Ready"
-requires-python = ">=3.11,<3.15"
+requires-python = ">=3.14,<3.15"  # Updated to Python 3.14+
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
     {name = "Plotnikov Aleksandr", email = "shukik85@ya.ru"}
 ]
-keywords = ["django", "hydraulic", "diagnostics", "saas", "admin", "celery"]
+keywords = ["django", "hydraulic", "diagnostics", "saas", "admin", "celery", "async"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Framework :: Django :: 5.1",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+    "Typing :: Typed",
 ]
 
 dependencies = [
-    "Django>=5.1,<6.0",
-    "djangorestframework>=3.15,<4.0",
-    "psycopg[binary]>=3.1,<4.0",
-    "celery>=5.3,<6.0",
-    "django-celery-beat>=2.5,<3.0",
-    "django-celery-results>=2.5,<3.0",
-    "redis>=5.0,<6.0",
-    "gunicorn>=21.2,<22.0",
-    "whitenoise>=6.6,<7.0",
-    "django-anymail[sendgrid]>=10.2,<11.0",
-    "stripe>=7.4,<9.0",
-    "python-dotenv>=1.0,<2.0",
-    "Pillow>=11.0,<12.0",
-    "structlog>=24.1,<26.0",
-    "sentry-sdk>=2.0,<3.0",
-    "django-prometheus>=2.3,<3.0",
-    "djangorestframework-simplejwt>=5.3,<6.0",
-    "django-cors-headers>=4.3,<5.0",
-    "argon2-cffi>=23.1,<24.0",
-    "drf-spectacular>=0.27,<1.0",
+    "Django>=5.1.3,<6.0",
+    "djangorestframework>=3.15.2,<4.0",
+    "psycopg[binary]>=3.2.3,<4.0",
+    "celery>=5.4.0,<6.0",
+    "django-celery-beat>=2.7.0,<3.0",
+    "django-celery-results>=2.5.1,<3.0",
+    "redis>=5.2.0,<6.0",
+    "gunicorn>=23.0.0,<24.0",
+    "whitenoise>=6.8.2,<7.0",
+    "django-anymail[sendgrid]>=12.0,<13.0",
+    "stripe>=11.1.1,<12.0",
+    "python-dotenv>=1.0.1,<2.0",
+    "Pillow>=11.0.0,<12.0",
+    "structlog>=24.4.0,<26.0",
+    "sentry-sdk>=2.17.0,<3.0",
+    "django-prometheus>=2.3.1,<3.0",
+    "djangorestframework-simplejwt>=5.3.1,<6.0",
+    "django-cors-headers>=4.6.0,<5.0",
+    "argon2-cffi>=23.1.0,<24.0",
+    "drf-spectacular>=0.27.2,<1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "mypy>=1.11,<2.0",
-    "django-stubs[compatible-mypy]>=5.1,<6.0",
-    "types-redis>=4.6,<5.0",
-    "ruff>=0.8,<1.0",
-    "pre-commit>=4.0,<5.0",
-    "django-debug-toolbar>=4.4,<5.0",
-    "django-extensions>=3.2,<4.0",
-    "ipython>=8.20,<9.0",
+    "mypy>=1.13.0,<2.0",
+    "django-stubs[compatible-mypy]>=5.1.1,<6.0",
+    "types-redis>=4.6.0.20240425,<5.0",
+    "ruff>=0.8.2,<1.0",
+    "pre-commit>=4.0.1,<5.0",
+    "django-debug-toolbar>=4.4.6,<5.0",
+    "django-extensions>=3.2.3,<4.0",
+    "ipython>=8.29.0,<9.0",
 ]
 
 test = [
-    "pytest>=8.3,<9.0",
-    "pytest-django>=4.9,<5.0",
-    "pytest-cov>=6.0,<7.0",
-    "pytest-asyncio>=0.24,<1.0",
-    "factory-boy>=3.3,<4.0",
-    "faker>=33.0,<34.0",
+    "pytest>=8.3.3,<9.0",
+    "pytest-django>=4.9.0,<5.0",
+    "pytest-cov>=6.0.0,<7.0",
+    "pytest-asyncio>=0.24.0,<1.0",
+    "factory-boy>=3.3.1,<4.0",
+    "faker>=33.0.0,<34.0",
 ]
 
 [build-system]
-requires = ["setuptools>=75.0", "wheel>=0.45"]
+requires = ["setuptools>=75.6.0", "wheel>=0.45.1"]
 build-backend = "setuptools.build_meta"
 
 # ============================================================
-# RUFF Configuration
+# RUFF Configuration (Python 3.14 optimized)
 # ============================================================
 [tool.ruff]
-target-version = "py311"
+target-version = "py314"  # Updated to Python 3.14
 line-length = 100
 indent-width = 4
 
@@ -83,15 +83,37 @@ exclude = [
     "migrations",
     "staticfiles",
     "media",
+    "*.egg-info",
 ]
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "C4", "UP", "ARG", "SIM", "DJ", "N"]
-ignore = ["E501", "B008", "B904"]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "DJ",  # flake8-django
+    "N",   # pep8-naming
+    "ASYNC",  # flake8-async (important for async code)
+    "RUF",    # Ruff-specific rules
+]
+
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "B904",  # raise from usage
+    "UP006", # use type instead of Type for annotations (we use | syntax)
+    "UP007", # use X | Y for Union (we already do this)
+]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
-"*/migrations/*.py" = ["E501", "F401", "N806"]
+"*/migrations/*.py" = ["E501", "F401", "N806", "N999"]
 "*/tests/*.py" = ["ARG", "SIM"]
 "*/admin.py" = ["N802"]
 "config/settings.py" = ["F405"]
@@ -104,14 +126,15 @@ quote-style = "double"
 indent-style = "space"
 
 # ============================================================
-# MYPY Configuration
+# MYPY Configuration (Python 3.14 compatible)
 # ============================================================
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 plugins = ["mypy_django_plugin.main"]
+strict_optional = true
 
 exclude = ["migrations/", "tests/", ".venv/"]
 
@@ -144,6 +167,7 @@ addopts = [
     "--cov-report=html",
     "--cov-report=term-missing",
     "--cov-fail-under=80",
+    "--asyncio-mode=auto",  # Auto-detect async tests
 ]
 
 testpaths = ["tests"]
@@ -167,4 +191,5 @@ exclude_lines = [
     "def __repr__",
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
 ]

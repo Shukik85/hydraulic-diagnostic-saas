@@ -1,0 +1,360 @@
+name: CI/CD Pipeline
+
+# Trigger on push to main branches and all PRs
+on:
+  push:
+    branches: [master, staging, develop]
+  pull_request:
+    branches: [master, staging, develop]
+  workflow_dispatch:  # Manual trigger
+
+# Environment variables
+env:
+  PYTHON_VERSION: '3.14'
+  NODE_VERSION: '20'
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+# Concurrency: cancel in-progress runs for same PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================
+  # STAGE 1: Code Quality Checks
+  # ============================================================
+  code-quality:
+    name: 🧪 Code Quality
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        check: [ruff-lint, ruff-format, mypy]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: 'services/backend/requirements.txt'
+
+      - name: Install dependencies
+        working-directory: services/backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install mypy django-stubs ruff bandit safety
+
+      - name: Run Ruff Linter
+        if: matrix.check == 'ruff-lint'
+        working-directory: services/backend
+        run: ruff check . --output-format=github
+
+      - name: Run Ruff Formatter
+        if: matrix.check == 'ruff-format'
+        working-directory: services/backend
+        run: ruff format --check .
+
+      - name: Run MyPy Type Checker
+        if: matrix.check == 'mypy'
+        working-directory: services/backend
+        run: mypy apps/ config/ --config-file=pyproject.toml
+
+  # ============================================================
+  # STAGE 2: Security Checks
+  # ============================================================
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install security tools
+        working-directory: services/backend
+        run: |
+          pip install bandit[toml] safety pip-audit
+
+      - name: Run Bandit Security Scanner
+        working-directory: services/backend
+        run: bandit -r apps/ config/ -f json -o bandit-report.json || true
+
+      - name: Check Dependencies for Vulnerabilities
+        working-directory: services/backend
+        run: |
+          safety check --json || true
+          pip-audit --desc || true
+
+      - name: Upload Security Reports
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: security-reports
+          path: services/backend/*-report.json
+          retention-days: 30
+
+  # ============================================================
+  # STAGE 3: Backend Tests
+  # ============================================================
+  backend-tests:
+    name: 🧪 Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_hydraulic_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: 'services/backend/requirements.txt'
+
+      - name: Install dependencies
+        working-directory: services/backend
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-django pytest-cov pytest-asyncio factory-boy faker
+
+      - name: Run Database Migrations
+        working-directory: services/backend
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_NAME: test_hydraulic_db
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+          DEBUG: 'False'
+        run: |
+          python manage.py migrate --noinput
+
+      - name: Run Tests with Coverage
+        working-directory: services/backend
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_NAME: test_hydraulic_db
+          DATABASE_USER: postgres
+          DATABASE_PASSWORD: postgres
+          REDIS_URL: redis://localhost:6379/0
+          DJANGO_SECRET_KEY: test-secret-key-for-ci
+          DEBUG: 'False'
+        run: |
+          pytest --cov=apps --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          file: services/backend/coverage.xml
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+
+  # ============================================================
+  # STAGE 4: Frontend Tests
+  # ============================================================
+  frontend-tests:
+    name: ⚙️ Frontend Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'services/frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: services/frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: services/frontend
+        run: npm run lint
+
+      - name: Run Type Check
+        working-directory: services/frontend
+        run: npm run type-check
+
+      - name: Run Tests
+        working-directory: services/frontend
+        run: npm run test:unit
+
+      - name: Build Frontend
+        working-directory: services/frontend
+        run: npm run build
+
+  # ============================================================
+  # STAGE 5: Docker Build
+  # ============================================================
+  docker-build:
+    name: 🐳 Docker Build
+    runs-on: ubuntu-latest
+    needs: [code-quality, security, backend-tests]
+    if: github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: services/backend
+          file: services/backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================
+  # STAGE 6: Performance Benchmarks
+  # ============================================================
+  performance:
+    name: 📊 Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: [backend-tests]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        working-directory: services/backend
+        run: |
+          pip install -r requirements.txt
+          pip install locust django-silk
+
+      - name: Run Performance Tests
+        working-directory: services/backend
+        run: |
+          # TODO: Add actual performance benchmarks
+          echo "Performance benchmarks placeholder"
+
+  # ============================================================
+  # STAGE 7: Deploy to Staging
+  # ============================================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [docker-build, frontend-tests]
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.hydraulic-diagnostics.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Deploy to Staging Server
+        env:
+          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+        run: |
+          echo "Deploying to staging..."
+          # TODO: Add actual deployment script
+          # ssh -i $DEPLOY_KEY deploy@$STAGING_HOST 'cd /app && docker-compose pull && docker-compose up -d'
+
+      - name: Run Health Checks
+        run: |
+          echo "Running health checks..."
+          # curl -f https://staging.hydraulic-diagnostics.com/api/health/ || exit 1
+
+  # ============================================================
+  # STAGE 8: Notifications
+  # ============================================================
+  notify:
+    name: 📢 Notify
+    runs-on: ubuntu-latest
+    needs: [code-quality, security, backend-tests, frontend-tests]
+    if: always()
+    
+    steps:
+      - name: Check Job Statuses
+        id: check
+        run: |
+          echo "code_quality=${{ needs.code-quality.result }}" >> $GITHUB_OUTPUT
+          echo "security=${{ needs.security.result }}" >> $GITHUB_OUTPUT
+          echo "backend=${{ needs.backend-tests.result }}" >> $GITHUB_OUTPUT
+          echo "frontend=${{ needs.frontend-tests.result }}" >> $GITHUB_OUTPUT
+
+      - name: Send Notification
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        run: |
+          echo "CI/CD Pipeline completed"
+          echo "Code Quality: ${{ steps.check.outputs.code_quality }}"
+          echo "Security: ${{ steps.check.outputs.security }}"
+          echo "Backend Tests: ${{ steps.check.outputs.backend }}"
+          echo "Frontend Tests: ${{ steps.check.outputs.frontend }}"
+          # TODO: Send to Slack/Discord

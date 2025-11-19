@@ -1,44 +1,47 @@
-"""User admin interface with type safety."""
+"""User admin interface with Django Unfold."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from django.utils.safestring import SafeString
+from unfold.admin import ModelAdmin
+from unfold.decorators import display
 
-from apps.core.enums import SubscriptionStatus, SubscriptionTier
+from apps.core.enums import SubscriptionTier
 
 from .models import User
 
 if TYPE_CHECKING:
-    from django.http import HttpRequest
+    pass
 
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin):
-    """Admin interface for User model."""
+class UserAdmin(ModelAdmin):
+    """Admin interface for User model with Unfold theme."""
 
-    list_display = [
+    list_display: ClassVar = [
         "email",
         "subscription_badge",
         "status_badge",
         "api_requests_count",
         "created_at",
-        "actions_column",
     ]
-    list_filter = ["subscription_tier", "subscription_status", "is_active", "is_staff"]
-    search_fields = ["email", "first_name", "last_name", "api_key"]
-    ordering = ["-created_at"]
+    list_filter: ClassVar = ["subscription_tier", "subscription_status", "is_active", "is_staff"]
+    search_fields: ClassVar = ["email", "first_name", "last_name", "api_key"]
+    ordering: ClassVar = ["-created_at"]
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal Info", {"fields": ("first_name", "last_name")}),
         (
             "Subscription",
-            {"fields": ("subscription_tier", "subscription_status", "trial_end_date")},
+            {
+                "fields": ("subscription_tier", "subscription_status", "trial_end_date"),
+                "description": "Управление подпиской пользователя и пробным периодом",
+            },
         ),
         (
             "Billing",
@@ -53,44 +56,28 @@ class UserAdmin(BaseUserAdmin):
         ),
     )
 
-    readonly_fields = ["created_at", "updated_at", "api_key"]
+    readonly_fields: ClassVar = ["created_at", "updated_at", "api_key"]
 
+    @display(description="Tier", label=True)
     def subscription_badge(self, obj: User) -> SafeString:
-        """Display subscription tier as colored badge."""
+        """Display subscription tier as badge."""
         tier = obj.tier_enum
-        colors = {
-            SubscriptionTier.FREE: "gray",
-            SubscriptionTier.PRO: "blue",
-            SubscriptionTier.ENTERPRISE: "green",
+        badge_classes = {
+            SubscriptionTier.FREE: "secondary",
+            SubscriptionTier.PRO: "info",
+            SubscriptionTier.ENTERPRISE: "success",
         }
-        color = colors.get(tier, "gray")
+        badge_class = badge_classes.get(tier, "secondary")
+        
         return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
+            '<span class="badge bg-{}">{}</span>',
+            badge_class,
             tier.display_name,
         )
 
-    subscription_badge.short_description = "Tier"  # type: ignore[attr-defined]
-
+    @display(description="Status", label=True)
     def status_badge(self, obj: User) -> SafeString:
-        """Display subscription status as colored badge."""
-        status = obj.status_enum
-        color = status.display_color
-        return format_html(
-            '<span style="background-color: {}; color: white; '
-            'padding: 3px 8px; border-radius: 3px;">{}</span>',
-            color,
-            status.value.title(),
-        )
-
-    status_badge.short_description = "Status"  # type: ignore[attr-defined]
-
-    def actions_column(self, obj: User) -> SafeString:
-        """Display action buttons."""
-        return format_html(
-            '<a class="button" href="/admin/users/user/{}/password/">Reset Password</a>',
-            obj.pk,
-        )
-
-    actions_column.short_description = "Actions"  # type: ignore[attr-defined]
+        """Display status badge."""
+        if obj.is_active:
+            return format_html('<span class="badge bg-success">Активен</span>')
+        return format_html('<span class="badge bg-danger">Неактивен</span>')

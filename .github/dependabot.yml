@@ -1,0 +1,64 @@
+version: 2
+updates:
+  # Backend Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/services/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Shukik85"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "📦"
+      include: "scope"
+
+  # Frontend npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/services/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Shukik85"
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "📦"
+      include: "scope"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Shukik85"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "📦"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/services/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Shukik85"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "🐳"
