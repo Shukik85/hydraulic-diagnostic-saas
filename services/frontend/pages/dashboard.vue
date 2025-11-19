@@ -217,7 +217,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
