@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { definePageMeta } from '#imports'
+import { ref, definePageMeta, useRouter, useAuthStore } from '#imports'
 
 // Redirect if already authenticated
 definePageMeta({
