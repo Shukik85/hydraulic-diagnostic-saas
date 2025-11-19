@@ -175,8 +175,8 @@ class SupportTicket(models.Model):
         db_table = "support_tickets"
         verbose_name = "Support Ticket"
         verbose_name_plural = "Support Tickets"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["-created_at", "status"], name="ticket_time_status_idx"),
             models.Index(fields=["priority", "status"], name="ticket_pri_status_idx"),
             models.Index(fields=["sla_due_date"], name="ticket_sla_idx"),
@@ -213,11 +213,7 @@ class SupportTicket(models.Model):
             .first()
         )
 
-        if last_ticket:
-            # Extract sequence number and increment
-            seq = int(last_ticket.ticket_number.split("-")[-1]) + 1
-        else:
-            seq = 1
+        seq = int(last_ticket.ticket_number.split("-")[-1]) + 1 if last_ticket else 1
 
         return f"TKT-{year}-{seq:05d}"
 
@@ -228,9 +224,11 @@ class SupportTicket(models.Model):
 
     def _check_sla_breach(self) -> None:
         """Check if SLA has been breached."""
-        if self.status not in [self.Status.RESOLVED, self.Status.CLOSED]:
-            if timezone.now() > self.sla_due_date:
-                self.sla_breached = True
+        if (
+            self.status not in [self.Status.RESOLVED, self.Status.CLOSED]
+            and timezone.now() > self.sla_due_date
+        ):
+            self.sla_breached = True
 
     @property
     def time_until_sla(self) -> timedelta | None:
@@ -333,8 +331,8 @@ class TicketMessage(models.Model):
         db_table = "ticket_messages"
         verbose_name = "Ticket Message"
         verbose_name_plural = "Ticket Messages"
-        ordering = ["created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["ticket", "created_at"], name="msg_ticket_time_idx"),
         ]
 
@@ -415,11 +413,11 @@ class AccessRecoveryRequest(models.Model):
         help_text="Current request status",
     )
 
-    verification_method: str | None = models.CharField(
+    verification_method: str = models.CharField(
         max_length=20,
         choices=VerificationMethod.choices,
-        null=True,
         blank=True,
+        default="",
         help_text="How user identity was verified",
     )
 
@@ -460,8 +458,8 @@ class AccessRecoveryRequest(models.Model):
         db_table = "access_recovery_requests"
         verbose_name = "Access Recovery Request"
         verbose_name_plural = "Access Recovery Requests"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list] = [
             models.Index(fields=["-created_at", "status"], name="recovery_time_status_idx"),
         ]
 

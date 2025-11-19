@@ -10,6 +10,9 @@ from typing import Any
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
+
+# Import models for tasks
+from django.db import models
 from django.template.loader import render_to_string
 from django.utils import timezone
 
@@ -32,9 +35,7 @@ def send_ticket_notification(
         Dict with status and details
     """
     try:
-        ticket = SupportTicket.objects.select_related("user", "assigned_to").get(
-            id=ticket_id
-        )
+        ticket = SupportTicket.objects.select_related("user", "assigned_to").get(id=ticket_id)
 
         # Determine recipients
         recipients = [ticket.user.email]
@@ -152,7 +153,7 @@ def auto_assign_tickets() -> dict[str, int]:
     from django.contrib.auth import get_user_model
     from django.db.models import Count
 
-    User = get_user_model()
+    user_model = get_user_model()
 
     # Get unassigned tickets
     unassigned = SupportTicket.objects.filter(
@@ -162,16 +163,14 @@ def auto_assign_tickets() -> dict[str, int]:
 
     # Get available agents (staff with least active tickets)
     agents = (
-        User.objects.filter(
+        user_model.objects.filter(
             is_staff=True,
             is_active=True,
         )
         .annotate(
             active_tickets=Count(
                 "assigned_tickets",
-                filter=models.Q(
-                    assigned_tickets__status__in=["new", "open", "in_progress"]
-                ),
+                filter=models.Q(assigned_tickets__status__in=["new", "open", "in_progress"]),
             )
         )
         .order_by("active_tickets")
@@ -181,24 +180,17 @@ def auto_assign_tickets() -> dict[str, int]:
         return {"assigned": 0, "skipped": unassigned.count()}
 
     assigned_count = 0
-    agent_index = 0
 
-    for ticket in unassigned:
-        # Round-robin assignment
-        agent = agents[agent_index % agents.count()]
+    for agent_index, ticket in enumerate(unassigned):
+        agent = agents[agent_index % len(agents)]
         ticket.assign_to_agent(agent)
 
         # Send notification
         send_ticket_notification.delay(str(ticket.id), "assigned")
 
         assigned_count += 1
-        agent_index += 1
 
     return {
         "assigned": assigned_count,
         "total_agents": agents.count(),
     }
-
-
-# Import models for tasks
-from django.db import models

@@ -1,6 +1,7 @@
 """
 Unified enums for all status, tier, action, and kind fields in backend apps.
 """
+
 from enum import StrEnum, auto
 
 
@@ -90,7 +91,7 @@ class SupportTicketStatus(StrEnum):
 
     @classmethod
     def choices(cls):
-        return [(status.value, status.name.replace('_', ' ').title()) for status in cls]
+        return [(status.value, status.name.replace("_", " ").title()) for status in cls]
 
 
 class SupportPriority(StrEnum):
@@ -123,4 +124,4 @@ class SupportActionType(StrEnum):
 
     @classmethod
     def choices(cls):
-        return [(action.value, action.name.replace('_', ' ').title()) for action in cls]
+        return [(action.value, action.name.replace("_", " ").title()) for action in cls]
