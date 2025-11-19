@@ -236,7 +236,7 @@
 
 ```vue
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 
 const modalRef = ref<HTMLElement | null>(null)
 const previousActiveElement = ref<HTMLElement | null>(null)
@@ -434,4 +434,4 @@ textarea:focus-visible {
 ---
 
 **Статус:** 🟢 Готов к применению  
-**Последнее обновление:** 16 ноября 2025
+**Последнее обновление:** 19 ноября 2025
