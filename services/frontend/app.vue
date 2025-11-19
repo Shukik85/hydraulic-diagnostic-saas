@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted, onErrorCaptured } from '#imports'
+
 // Application root with SEO optimization
 useSeoMeta({
   titleTemplate: '%s | Hydraulic Diagnostic SaaS',
