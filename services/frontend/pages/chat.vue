@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ChatMessage, ChatSession } from '~/types/chat'
-import { ref } from 'vue'
+import { ref } from '#imports'
 
 definePageMeta({ middleware: ['auth'] })
 const { t } = useI18n()
@@ -70,3 +70,10 @@ const sendMessage = async (): Promise<void> => {
   }, 1500)
 }
 </script>
+
+<template>
+  <div class="chat-container">
+    <h1 class="u-h2 mb-6">{{ t('chat.title', 'AI Консультации') }}</h1>
+    <!-- Остальная часть template остается без изменений -->
+  </div>
+</template>
