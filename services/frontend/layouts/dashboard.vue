@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted, nextTick } from '#imports'
+import { computed, ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 
 type AppLocale = 'ru' | 'en'
 
@@ -42,7 +42,7 @@ const previousActiveElement = ref<HTMLElement | null>(null)
 const openMobileMenu = () => {
   isMobileMenuOpen.value = true
   previousActiveElement.value = document.activeElement as HTMLElement
-  
+
   nextTick(() => {
     const firstFocusable = mobileMenuRef.value?.querySelector(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -55,7 +55,7 @@ const closeMobileMenu = () => {
   isMobileMenuOpen.value = false
   showLanguageDropdown.value = false
   showUserDropdown.value = false
-  
+
   // Restore focus
   nextTick(() => {
     previousActiveElement.value?.focus()
@@ -65,22 +65,22 @@ const closeMobileMenu = () => {
 // Focus trap for mobile menu
 const handleMobileMenuKeydown = (event: KeyboardEvent) => {
   if (!isMobileMenuOpen.value) return
-  
+
   if (event.key === 'Escape') {
     closeMobileMenu()
     return
   }
-  
+
   if (event.key === 'Tab') {
     const focusableElements = mobileMenuRef.value?.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     )
-    
+
     if (!focusableElements?.length) return
-    
+
     const first = focusableElements[0] as HTMLElement
     const last = focusableElements[focusableElements.length - 1] as HTMLElement
-    
+
     if (event.shiftKey && document.activeElement === first) {
       event.preventDefault()
       last.focus()
@@ -124,7 +124,7 @@ onMounted(() => {
     isOnline.value = false
     statusMessage.value = t('ui.offline')
   }
-  
+
   window.addEventListener('online', handleOnline)
   window.addEventListener('offline', handleOffline)
 
@@ -225,12 +225,12 @@ const mapName = (path: string): string => {
 const breadcrumbs = computed<Breadcrumb[]>(() => {
   const parts = route.path.split('/').filter(Boolean)
   const acc: Breadcrumb[] = [{ name: t('breadcrumbs.home'), href: '/' }]
-  
+
   let current = ''
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i] || ''
     current += `/${part}`
-    
+
     if (part === 'systems') {
       acc.push({ name: t('nav.systems'), href: current })
     } else if (part === 'equipments') {
@@ -248,7 +248,7 @@ const breadcrumbs = computed<Breadcrumb[]>(() => {
       acc.push({ name: mapName(current), href: current })
     }
   }
-  
+
   return acc
 })
 
@@ -294,84 +294,44 @@ const version = computed(() => config?.public?.version || '1.0.0')
 <template>
   <div class="min-h-screen bg-background-primary flex">
     <!-- Skip to main content link (A11y) -->
-    <a 
-      href="#main-content" 
-      class="sr-only-focusable"
-    >
+    <a href="#main-content" class="sr-only-focusable">
       {{ t('ui.skipToMainContent') || 'Skip to main content' }}
     </a>
 
     <!-- Live region for status updates (A11y) -->
-    <div 
-      aria-live="polite" 
-      aria-atomic="true"
-      class="sr-only"
-    >
+    <div aria-live="polite" aria-atomic="true" class="sr-only">
       {{ statusMessage }}
     </div>
 
     <!-- Desktop Sidebar -->
-    <aside
-      :class="[
-        'hidden lg:flex lg:flex-col card-glass border-r border-steel-700/50 fixed h-screen z-30 transition-all duration-300',
-        isSidebarCollapsed ? 'w-20' : 'w-64'
-      ]"
-      aria-label="Main navigation sidebar"
-    >
+    <aside :class="[
+      'hidden lg:flex lg:flex-col card-glass border-r border-steel-700/50 fixed h-screen z-30 transition-all duration-300',
+      isSidebarCollapsed ? 'w-20' : 'w-64'
+    ]" aria-label="Main navigation sidebar">
       <!-- Sidebar Header -->
       <div class="flex items-center justify-between p-4 border-b border-steel-700/50">
-        <UAppLogo 
-          v-if="!isSidebarCollapsed"
-          :to="'/'"
-        />
-        
-        <button
-          @click="toggleSidebar"
-          class="btn-icon"
-          :title="isSidebarCollapsed ? 'Раскрыть' : t('ui.collapse')"
-          :aria-label="isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
-          :aria-expanded="!isSidebarCollapsed"
-        >
-          <Icon
-            :name="isSidebarCollapsed ? 'heroicons:chevron-right' : 'heroicons:chevron-left'"
-            class="w-5 h-5"
-            aria-hidden="true"
-          />
+        <UAppLogo v-if="!isSidebarCollapsed" :to="'/'" />
+
+        <button @click="toggleSidebar" class="btn-icon" :title="isSidebarCollapsed ? 'Раскрыть' : t('ui.collapse')"
+          :aria-label="isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'" :aria-expanded="!isSidebarCollapsed">
+          <Icon :name="isSidebarCollapsed ? 'heroicons:chevron-right' : 'heroicons:chevron-left'" class="w-5 h-5"
+            aria-hidden="true" />
         </button>
       </div>
 
       <!-- Sidebar Navigation -->
-      <nav 
-        class="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin"
-        aria-label="Primary navigation"
-      >
-        <UAppNavLink
-          v-for="link in navigationLinks"
-          :key="link.to"
-          :to="link.to"
-          :label="link.label"
-          :icon="link.icon"
-          :badge="link.badge"
-          :is-active="link.isActive"
-          :is-collapsed="isSidebarCollapsed"
-        />
+      <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin" aria-label="Primary navigation">
+        <UAppNavLink v-for="link in navigationLinks" :key="link.to" :to="link.to" :label="link.label" :icon="link.icon"
+          :badge="link.badge" :is-active="link.isActive" :is-collapsed="isSidebarCollapsed" />
       </nav>
 
       <!-- Sidebar Footer (Online Status) -->
       <div class="p-4 border-t border-steel-700/50">
-        <div
-          :class="[
-            'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm',
-            isOnline ? 'bg-success-500/10 text-success-400' : 'bg-red-500/10 text-red-400'
-          ]"
-          role="status"
-          :aria-label="isOnline ? t('ui.online') : t('ui.offline')"
-        >
-          <UStatusDot 
-            :status="isOnline ? 'success' : 'error'"
-            :animated="isOnline"
-            aria-hidden="true"
-          />
+        <div :class="[
+          'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm',
+          isOnline ? 'bg-success-500/10 text-success-400' : 'bg-red-500/10 text-red-400'
+        ]" role="status" :aria-label="isOnline ? t('ui.online') : t('ui.offline')">
+          <UStatusDot :status="isOnline ? 'success' : 'error'" :animated="isOnline" aria-hidden="true" />
           <span v-if="!isSidebarCollapsed">
             {{ isOnline ? t('ui.online') : t('ui.offline') }}
           </span>
@@ -380,37 +340,21 @@ const version = computed(() => config?.public?.version || '1.0.0')
     </aside>
 
     <!-- Main Content Area -->
-    <div
-      :class="[
-        'flex-1 flex flex-col transition-all duration-300',
-        isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
-      ]"
-    >
+    <div :class="[
+      'flex-1 flex flex-col transition-all duration-300',
+      isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'
+    ]">
       <!-- Top Navbar -->
-      <UAppNavbar 
-        :user-name="userName"
-        :user-email="userEmail"
-        :user-initials="userInitials"
-        :unread-notifications="unreadNotifications"
-        :is-mobile-menu-open="isMobileMenuOpen"
-        :show-user-dropdown="showUserDropdown"
-        @toggle-mobile-menu="toggleMobileMenu"
-        @toggle-user-dropdown="toggleUserDropdown"
-        @logout="handleLogout"
-      />
+      <UAppNavbar :user-name="userName" :user-email="userEmail" :user-initials="userInitials"
+        :unread-notifications="unreadNotifications" :is-mobile-menu-open="isMobileMenuOpen"
+        :show-user-dropdown="showUserDropdown" @toggle-mobile-menu="toggleMobileMenu"
+        @toggle-user-dropdown="toggleUserDropdown" @logout="handleLogout" />
 
       <!-- Breadcrumbs -->
-      <UBreadcrumb 
-        v-if="showBreadcrumbs"
-        :breadcrumbs="breadcrumbs"
-      />
+      <UBreadcrumb v-if="showBreadcrumbs" :breadcrumbs="breadcrumbs" />
 
       <!-- Main Content -->
-      <main 
-        id="main-content"
-        class="flex-1 py-8"
-        role="main"
-      >
+      <main id="main-content" class="flex-1 py-8" role="main">
         <div class="container-dashboard">
           <slot />
         </div>
@@ -442,31 +386,17 @@ const version = computed(() => config?.public?.version || '1.0.0')
     </div>
 
     <!-- Mobile Menu Panel -->
-    <transition
-      enter-active-class="transition-transform duration-300 ease-out"
-      enter-from-class="translate-x-full"
-      enter-to-class="translate-x-0"
-      leave-active-class="transition-transform duration-200 ease-in"
-      leave-from-class="translate-x-0"
-      leave-to-class="translate-x-full"
-    >
-      <div
-        v-if="isMobileMenuOpen"
-        ref="mobileMenuRef"
+    <transition enter-active-class="transition-transform duration-300 ease-out" enter-from-class="translate-x-full"
+      enter-to-class="translate-x-0" leave-active-class="transition-transform duration-200 ease-in"
+      leave-from-class="translate-x-0" leave-to-class="translate-x-full">
+      <div v-if="isMobileMenuOpen" ref="mobileMenuRef"
         class="fixed top-0 right-0 h-full w-80 max-w-[90vw] card-glass border-l border-steel-700 shadow-2xl z-50 lg:hidden"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Mobile navigation menu"
-      >
+        role="dialog" aria-modal="true" aria-label="Mobile navigation menu">
         <div class="flex flex-col h-full">
           <!-- Mobile Header -->
           <div class="flex items-center justify-between p-4 border-b border-steel-700/50">
             <UAppLogo :to="'/'" />
-            <button
-              @click="closeMobileMenu"
-              class="btn-icon"
-              aria-label="Close menu"
-            >
+            <button @click="closeMobileMenu" class="btn-icon" aria-label="Close menu">
               <Icon name="heroicons:x-mark" class="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
@@ -474,10 +404,9 @@ const version = computed(() => config?.public?.version || '1.0.0')
           <!-- User Section -->
           <div class="p-4 border-b border-steel-700/50">
             <div class="flex items-center space-x-3">
-              <div 
+              <div
                 class="w-12 h-12 bg-gradient-to-br from-primary-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg"
-                aria-hidden="true"
-              >
+                aria-hidden="true">
                 {{ userInitials }}
               </div>
               <div class="flex-1 min-w-0">
@@ -488,81 +417,42 @@ const version = computed(() => config?.public?.version || '1.0.0')
           </div>
 
           <!-- Navigation -->
-          <nav 
-            class="flex-1 px-4 py-4 space-y-1 overflow-y-auto scrollbar-thin"
-            aria-label="Mobile navigation"
-          >
-            <UAppNavLink
-              v-for="link in navigationLinks"
-              :key="link.to"
-              :to="link.to"
-              :label="link.label"
-              :icon="link.icon"
-              :badge="link.badge"
-              :is-active="link.isActive"
-              @click="closeMobileMenu"
-            />
+          <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto scrollbar-thin" aria-label="Mobile navigation">
+            <UAppNavLink v-for="link in navigationLinks" :key="link.to" :to="link.to" :label="link.label"
+              :icon="link.icon" :badge="link.badge" :is-active="link.isActive" @click="closeMobileMenu" />
 
             <div class="border-t border-steel-700/50 pt-4 mt-4 space-y-1">
-              <UAppNavLink
-                to="/profile"
-                :label="t('ui.profile')"
-                icon="heroicons:user"
-                @click="closeMobileMenu"
-              />
-              <UAppNavLink
-                to="/chat"
-                :label="t('ui.help')"
-                icon="heroicons:question-mark-circle"
-                @click="closeMobileMenu"
-              />
+              <UAppNavLink to="/profile" :label="t('ui.profile')" icon="heroicons:user" @click="closeMobileMenu" />
+              <UAppNavLink to="/chat" :label="t('ui.help')" icon="heroicons:question-mark-circle"
+                @click="closeMobileMenu" />
             </div>
           </nav>
 
           <!-- Mobile Footer -->
           <div class="p-4 border-t border-steel-700/50 space-y-3">
             <!-- Online Status -->
-            <div
-              :class="[
-                'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm',
-                isOnline ? 'bg-success-500/10 text-success-400' : 'bg-red-500/10 text-red-400'
-              ]"
-              role="status"
-            >
-              <UStatusDot 
-                :status="isOnline ? 'success' : 'error'"
-                :animated="isOnline"
-                aria-hidden="true"
-              />
+            <div :class="[
+              'flex items-center space-x-2 px-3 py-2 rounded-lg text-sm',
+              isOnline ? 'bg-success-500/10 text-success-400' : 'bg-red-500/10 text-red-400'
+            ]" role="status">
+              <UStatusDot :status="isOnline ? 'success' : 'error'" :animated="isOnline" aria-hidden="true" />
               <span>{{ isOnline ? t('ui.online') : t('ui.offline') }}</span>
             </div>
 
             <!-- Language Switcher -->
             <div class="flex items-center justify-between">
-              <span 
-                id="language-label" 
-                class="text-sm text-steel-shine"
-              >
+              <span id="language-label" class="text-sm text-steel-shine">
                 {{ t('ui.language.switch') }}
               </span>
-              <div 
-                class="flex items-center gap-2"
-                role="group"
-                aria-labelledby="language-label"
-              >
-                <button
-                  v-for="langOption in availableLocales"
-                  :key="langOption.code"
-                  @click="switchLanguage(langOption.code)"
-                  :class="[
+              <div class="flex items-center gap-2" role="group" aria-labelledby="language-label">
+                <button v-for="langOption in availableLocales" :key="langOption.code"
+                  @click="switchLanguage(langOption.code)" :class="[
                     'px-3 py-2 rounded-lg text-sm transition-all flex items-center gap-2',
                     currentLocale.code === langOption.code
                       ? 'bg-primary-600/20 text-primary-400 border border-primary-500/50'
                       : 'text-steel-shine hover:bg-steel-800/50'
-                  ]"
-                  :aria-label="`Switch to ${langOption.name}`"
-                  :aria-current="currentLocale.code === langOption.code ? 'true' : undefined"
-                >
+                  ]" :aria-label="`Switch to ${langOption.name}`"
+                  :aria-current="currentLocale.code === langOption.code ? 'true' : undefined">
                   <Icon :name="langOption.icon" class="w-4 h-4" aria-hidden="true" />
                   <span>{{ langOption.code.toUpperCase() }}</span>
                 </button>
@@ -570,11 +460,7 @@ const version = computed(() => config?.public?.version || '1.0.0')
             </div>
 
             <!-- Logout -->
-            <UButton
-              variant="destructive"
-              class="w-full"
-              @click="handleLogout"
-            >
+            <UButton variant="destructive" class="w-full" @click="handleLogout">
               <Icon name="heroicons:arrow-right-on-rectangle" class="w-5 h-5" aria-hidden="true" />
               {{ t('ui.logout') }}
             </UButton>
@@ -584,20 +470,11 @@ const version = computed(() => config?.public?.version || '1.0.0')
     </transition>
 
     <!-- Mobile Overlay -->
-    <transition
-      enter-active-class="transition-opacity duration-200"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition-opacity duration-150"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <div
-        v-if="isMobileMenuOpen"
-        class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden"
-        @click="closeMobileMenu"
-        aria-hidden="true"
-      />
+    <transition enter-active-class="transition-opacity duration-200" enter-from-class="opacity-0"
+      enter-to-class="opacity-100" leave-active-class="transition-opacity duration-150" leave-from-class="opacity-100"
+      leave-to-class="opacity-0">
+      <div v-if="isMobileMenuOpen" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden"
+        @click="closeMobileMenu" aria-hidden="true" />
     </transition>
 
     <!-- Modal Portal -->

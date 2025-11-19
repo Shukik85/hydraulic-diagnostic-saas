@@ -125,6 +125,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, watch } from 'vue'
+
 import { useMetadataStore } from '~/stores/metadata';
 import type { DutyCycle } from '~/types/metadata';
 

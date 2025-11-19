@@ -39,20 +39,20 @@ log_info "🔍 Поиск Vue файлов с <script setup lang='ts'>..."
 # Найти все .vue файлы
 while IFS= read -r file; do
   COUNT=$((COUNT + 1))
-  
+
   # Проверить, есть ли <script setup lang="ts">
   if ! grep -q '<script setup lang="ts">' "$file"; then
     continue
   fi
-  
+
   log_info "🔧 Обработка: $file"
-  
+
   # Создать временный файл
   TEMP_FILE="${file}.tmp"
   NEEDS_FIX=false
   HAS_IMPORTS=false
   IMPORT_LINE=""
-  
+
   # Список Vue API для импорта
   declare -A VUE_APIS
   VUE_APIS["ref"]="used"
@@ -72,7 +72,7 @@ while IFS= read -r file; do
   VUE_APIS["toRef"]="used"
   VUE_APIS["toRefs"]="used"
   VUE_APIS["reactive"]="used"
-  
+
   # Найти, какие API используются в файле
   USED_APIS=()
   for api in "${!VUE_APIS[@]}"; do
@@ -80,18 +80,18 @@ while IFS= read -r file; do
       USED_APIS+=("$api")
     fi
   done
-  
+
   # Проверить, есть ли уже импорты
   if grep -q "import.*from '#imports'" "$file" || grep -q "import.*from ['\"]vue['\"]" "$file"; then
     HAS_IMPORTS=true
   fi
-  
+
   # Если используются API и нет импортов
   if [ ${#USED_APIS[@]} -gt 0 ] && [ "$HAS_IMPORTS" = false ]; then
     NEEDS_FIX=true
-    IMPORT_LINE="import { $(IFS=, ; echo "${USED_APIS[*]}") } from '#imports'"
+    IMPORT_LINE="import { $(IFS=, ; echo "${USED_APIS[*]}") } from 'vue'"
   fi
-  
+
   if [ "$NEEDS_FIX" = true ]; then
     # Добавить импорт после <script setup lang="ts">
     awk -v import_line="$IMPORT_LINE" '
@@ -103,12 +103,12 @@ while IFS= read -r file; do
       }
       { print }
     ' "$file" > "$TEMP_FILE"
-    
+
     mv "$TEMP_FILE" "$file"
     log_success "✅ Исправлен: $file (добавлено: ${USED_APIS[*]})"
     FIXED=$((FIXED + 1))
   fi
-  
+
 done < <(find . -name '*.vue' -type f | grep -v 'node_modules' | grep -v '.nuxt')
 
 log_info ""

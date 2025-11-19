@@ -115,4 +115,100 @@ export interface PasswordStrength {
   }
 }
 
-// ... остальной файл ОСТАВИТЬ без изменений ...
+// Anomalies
+export interface AnomaliesQueryParams {
+  system_id?: number
+  severity?: AnomalySeverity
+  limit?: number
+  offset?: number
+}
+
+export interface AnomaliesListResponse {
+  items: Anomaly[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export type AnomalySeverity = 'low' | 'medium' | 'high' | 'critical'
+
+export interface Anomaly {
+  id: number
+  system_id: number
+  severity: AnomalySeverity
+  score: number
+  created_at: string
+}
+
+// System Status
+export interface SystemStatus {
+  id: number
+  name: string
+  status: 'online' | 'offline' | 'warning' | 'error'
+  health: number
+}
+
+// WebSocket
+export interface WSMessage {
+  type: string
+  payload: any
+}
+
+export interface WSNewSensorReading {
+  sensor_id: number
+  value: number
+  timestamp: string
+}
+
+export interface WSNewAnomaly {
+  anomaly_id: number
+  severity: AnomalySeverity
+  message: string
+}
+
+export interface WSSystemStatusUpdate {
+  system_id: number
+  status: string
+}
+
+// AsyncState
+export interface AsyncState<T> {
+  data: T | null
+  loading: boolean
+  error: Error | null
+}
+
+export interface ErrorResponse {
+  message: string
+  code?: string
+}
+
+// Utility functions
+export function formatAnomalyScore(score: number): string {
+  return `${(score * 100).toFixed(1)}%`
+}
+
+export function getSeverityColor(severity: AnomalySeverity): string {
+  const colors = {
+    low: 'text-blue-500',
+    medium: 'text-yellow-500',
+    high: 'text-orange-500',
+    critical: 'text-red-500'
+  }
+  return colors[severity] || 'text-gray-500'
+}
+
+export function getComponentStatusColor(status: string): string {
+  const colors = {
+    online: 'text-green-500',
+    offline: 'text-gray-500',
+    warning: 'text-yellow-500',
+    error: 'text-red-500'
+  }
+  return colors[status] || 'text-gray-500'
+}
+
+// Type guard
+export function isValidWSMessage(message: any): message is WSMessage {
+  return typeof message === 'object' && 'type' in message && 'payload' in message
+}

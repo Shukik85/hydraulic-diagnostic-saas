@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { watch } from 'vue'
+
 import { RadioGroupRoot } from 'radix-vue'
 
 interface Props {
@@ -33,14 +35,11 @@ watch(localValue, (newVal) => {
 </script>
 
 <template>
-  <RadioGroupRoot
-    v-model="localValue"
-    :class="[
-      'flex gap-3',
-      props.orientation === 'vertical' ? 'flex-col' : 'flex-row items-center',
-      props.className
-    ]"
-  >
+  <RadioGroupRoot v-model="localValue" :class="[
+    'flex gap-3',
+    props.orientation === 'vertical' ? 'flex-col' : 'flex-row items-center',
+    props.className
+  ]">
     <slot />
   </RadioGroupRoot>
 </template>

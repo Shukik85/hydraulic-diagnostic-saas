@@ -4,19 +4,16 @@
     <div>
       <h1 class="u-h2">{{ t('sensors.detail.title') }}</h1>
       <p class="u-body text-gray-600 dark:text-gray-400 mt-1">
-        {{ t('breadcrumbs.system') }} #{{ route.params.systemId }} / {{ t('breadcrumbs.sensors') }} #{{ route.params.sensorId }}
+        {{ t('breadcrumbs.system') }} #{{ route.params.systemId }} / {{ t('breadcrumbs.sensors') }} #{{
+          route.params.sensorId }}
       </p>
     </div>
 
     <!-- Tabs Navigation -->
     <div class="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        @click="activeTab = tab.id"
+      <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
         class="px-4 py-2 text-sm font-medium rounded-md u-transition-fast"
-        :class="activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
-      >
+        :class="activeTab === tab.id ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'">
         <Icon :name="tab.icon" class="w-4 h-4 mr-2 inline" />
         {{ tab.name }}
       </button>
@@ -41,7 +38,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="u-card p-6">
         <h3 class="u-h4 mb-4">{{ t('sensors.detail.currentReadings') }}</h3>
         <div class="text-center py-8">
@@ -84,6 +81,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+
 definePageMeta({
   layout: 'dashboard',
   middleware: ['auth']

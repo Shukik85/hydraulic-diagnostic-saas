@@ -23,30 +23,12 @@ export default defineNuxtConfig({
       referrerPolicy: 'strict-origin-when-cross-origin',
       xContentTypeOptions: 'nosniff',
       xFrameOptions: 'SAMEORIGIN',
-      strictTransportSecurity: 'max-age=31536000; includeSubDomains; preload',
-      xssProtection: '1; mode=block',
-    },
-    csp: {
-      enabled: true,
-      hashAlgorithm: 'sha256',
-      policies: {
-        'default-src': ["'self'"],
-        'script-src': ["'self'", 'https://cdn.jsdelivr.net'],
-        'style-src': ["'self'", 'https://fonts.googleapis.com', 'unsafe-inline'],
-        'img-src': ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
-        'font-src': ["'self'", 'https://fonts.gstatic.com'],
-        'connect-src': ["'self'", 'https://api.segment.io', 'wss://*', 'http://localhost:8000', 'https://api.openai.com'],
-        'frame-ancestors': ["'self'"],
-      },
+      strictTransportSecurity: { maxAge: 31536000, includeSubdomains: true, preload: true } as any,
+      xXSSProtection: '1; mode=block',
     },
     rateLimiter: {
       tokensPerInterval: 100,
       interval: 'minute'
-    },
-    audit: {
-      enabled: true,
-      logHeaders: true,
-      logBody: true,
     },
   },
 
@@ -94,7 +76,6 @@ export default defineNuxtConfig({
     defaultLocale: 'ru',
     strategy: 'no_prefix',
     langDir: 'locales/',
-    lazy: true,
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'i18n_locale',
@@ -128,17 +109,17 @@ export default defineNuxtConfig({
       brotli: true,
     },
     routeRules: {
-      '/': { 
+      '/': {
         swr: 3600,
       },
-      '/dashboard': { 
+      '/dashboard': {
         ssr: true,
         swr: 600,
       },
-      '/diagnosis/**': { 
+      '/diagnosis/**': {
         ssr: false
       },
-      '/api/**': { 
+      '/api/**': {
         cors: true,
         headers: {
           'cache-control': 'max-age=300'
@@ -158,12 +139,7 @@ export default defineNuxtConfig({
     host: 'localhost',
   },
 
-  imports: {
-    dirs: ['composables/**', 'utils/**', 'types/**', 'stores/**'],
-  },
-
   experimental: {
-    typescriptBundlerResolution: true,
     granularCachedData: true,
     purgeCachedData: true,
   },

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useSeoMeta } from '#imports'
 
 definePageMeta({ middleware: ['auth'] })
 const { t } = useI18n()

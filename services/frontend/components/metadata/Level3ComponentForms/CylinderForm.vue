@@ -110,6 +110,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, watch } from 'vue'
+
 import { useMetadataStore } from '~/stores/metadata';
 import type { CylinderSpecific } from '~/types/metadata';
 

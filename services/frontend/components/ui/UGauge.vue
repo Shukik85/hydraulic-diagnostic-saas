@@ -2,35 +2,15 @@
   <div class="flex flex-col items-center">
     <!-- Gauge SVG -->
     <div class="relative w-full max-w-[200px] aspect-square">
-      <svg 
-        viewBox="0 0 200 200" 
-        class="w-full h-full transform -rotate-90"
-      >
+      <svg viewBox="0 0 200 200" class="w-full h-full transform -rotate-90">
         <!-- Background Circle -->
-        <circle
-          cx="100"
-          cy="100"
-          :r="radius"
-          fill="none"
-          :stroke="bgColor"
-          :stroke-width="strokeWidth"
-          class="opacity-20"
-        />
+        <circle cx="100" cy="100" :r="radius" fill="none" :stroke="bgColor" :stroke-width="strokeWidth"
+          class="opacity-20" />
 
         <!-- Progress Arc -->
-        <circle
-          cx="100"
-          cy="100"
-          :r="radius"
-          fill="none"
-          :stroke="gaugeColor"
-          :stroke-width="strokeWidth"
-          :stroke-dasharray="circumference"
-          :stroke-dashoffset="dashOffset"
-          stroke-linecap="round"
-          class="transition-all duration-1000 ease-out"
-          :class="animated ? 'animate-gauge' : ''"
-        />
+        <circle cx="100" cy="100" :r="radius" fill="none" :stroke="gaugeColor" :stroke-width="strokeWidth"
+          :stroke-dasharray="circumference" :stroke-dashoffset="dashOffset" stroke-linecap="round"
+          class="transition-all duration-1000 ease-out" :class="animated ? 'animate-gauge' : ''" />
       </svg>
 
       <!-- Center Content -->
@@ -45,25 +25,20 @@
     </div>
 
     <!-- Label -->
-    <div 
-      v-if="label"
-      class="text-center mt-4 text-sm font-medium text-steel-shine"
-    >
+    <div v-if="label" class="text-center mt-4 text-sm font-medium text-steel-shine">
       {{ label }}
     </div>
 
     <!-- Status Badge -->
-    <UBadge 
-      v-if="showStatus"
-      :variant="statusVariant"
-      class="mt-2"
-    >
+    <UBadge v-if="showStatus" :variant="statusVariant" class="mt-2">
       {{ statusText }}
     </UBadge>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
   value: number
   max: number

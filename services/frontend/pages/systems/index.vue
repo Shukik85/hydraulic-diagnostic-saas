@@ -6,45 +6,26 @@
         <h1 class="text-3xl font-bold text-white">{{ t('systems.title') }}</h1>
         <p class="text-steel-shine mt-2">{{ t('systems.subtitle') }}</p>
       </div>
-      <UButton 
-        size="lg"
-        @click="showCreateModal = true"
-      >
+      <UButton size="lg" @click="showCreateModal = true">
         <Icon name="heroicons:plus" class="w-5 h-5 mr-2" />
         {{ t('systems.addNew') }}
       </UButton>
     </div>
     <!-- Zero State -->
-    <UZeroState
-      v-if="!loading && systems.length === 0"
-      icon-name="heroicons:cube"
-      :title="t('systems.empty.title')"
-      :description="t('systems.empty.description')"
-      action-icon="heroicons:plus"
-      :action-text="t('systems.empty.action')"
-      @action="showCreateModal = true"
-    />
+    <UZeroState v-if="!loading && systems.length === 0" icon-name="heroicons:cube" :title="t('systems.empty.title')"
+      :description="t('systems.empty.description')" action-icon="heroicons:plus"
+      :action-text="t('systems.empty.action')" @action="showCreateModal = true" />
     <!-- Systems Grid -->
     <div v-else class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <div 
-        v-for="system in systems" 
-        :key="system.id" 
-        class="card-interactive p-6"
-        role="button"
-        tabindex="0"
-        @click="navigateTo(`/systems/${system.id}`)"
-        @keydown.enter="navigateTo(`/systems/${system.id}`)"
-      >
+      <div v-for="system in systems" :key="system.id" class="card-interactive p-6" role="button" tabindex="0"
+        @click="navigateTo(`/systems/${system.id}`)" @keydown.enter="navigateTo(`/systems/${system.id}`)">
         <!-- Header with Status -->
         <div class="flex items-start justify-between mb-4">
           <div class="flex-1 min-w-0">
             <h3 class="font-semibold text-white truncate text-lg">{{ system.name }}</h3>
             <p class="text-sm text-steel-shine">{{ t(`systems.types.${system.type}`) }}</p>
           </div>
-          <UStatusDot 
-            :status="getSystemStatusType(system.status)"
-            :label="t(`systems.status.${system.status}`)"
-          />
+          <UStatusDot :status="getSystemStatusType(system.status)" :label="t(`systems.status.${system.status}`)" />
         </div>
         <!-- Metrics -->
         <div class="space-y-3 mb-4">
@@ -69,10 +50,7 @@
             </div>
             <div class="flex items-center gap-2">
               <div class="w-16 progress-bar">
-                <div 
-                  :class="getHealthColorClass(system.health_score)"
-                  :style="{ width: system.health_score + '%' }"
-                />
+                <div :class="getHealthColorClass(system.health_score)" :style="{ width: system.health_score + '%' }" />
               </div>
               <span class="text-sm font-semibold text-white">{{ system.health_score }}%</span>
             </div>
@@ -85,11 +63,7 @@
             <span>{{ formatDate(system.last_update) }}</span>
           </div>
           <div class="flex items-center gap-2">
-            <button 
-              class="btn-icon"
-              @click.stop="handleSettings(system.id)"
-              aria-label="Настройки"
-            >
+            <button class="btn-icon" @click.stop="handleSettings(system.id)" aria-label="Настройки">
               <Icon name="heroicons:cog-6-tooth" class="w-5 h-5" aria-hidden="true" />
             </button>
           </div>
@@ -97,16 +71,11 @@
       </div>
     </div>
     <!-- Create System Modal -->
-    <UCreateSystemModal
-      v-model="showCreateModal"
-      :loading="isCreating"
-      @submit="handleCreateSystem"
-    />
+    <UCreateSystemModal v-model="showCreateModal" :loading="isCreating" @submit="handleCreateSystem" />
   </div>
 </template>
 <script setup lang="ts">
 import type { HydraulicSystem } from '~/types/api'
-import { useSeoMeta } from '#imports'
 
 definePageMeta({
   layout: 'dashboard' as const,

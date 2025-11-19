@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
+
 const isDark = ref(false);
 const isHydrated = ref(false);
 
@@ -23,53 +25,37 @@ onMounted(() => {
 <template>
   <div class="min-h-screen">
     <!-- Навбар c лёгкой уместной прозрачностью и без эффектов/анимаций -->
-    <nav
-      class="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 border-b border-gray-200/70 dark:border-gray-800/70"
-    >
+    <nav class="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 border-b border-gray-200/70 dark:border-gray-800/70">
       <div class="container mx-auto px-6">
         <div class="flex items-center justify-between h-16">
           <!-- Логотип -->
           <NuxtLink to="/" class="flex items-center space-x-3 mr-8">
             <div
-              class="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center"
-            >
+              class="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
               <Icon name="heroicons:cpu-chip" class="w-5 h-5 text-white" />
             </div>
             <div>
               <span class="text-lg font-bold text-gray-900 dark:text-white">Гидравлика ИИ</span>
-              <span class="block text-xs text-gray-600 dark:text-gray-400 leading-tight"
-                >Диагностическая платформа</span
-              >
+              <span class="block text-xs text-gray-600 dark:text-gray-400 leading-tight">Диагностическая
+                платформа</span>
             </div>
           </NuxtLink>
 
           <!-- Публичные ссылки с единым стилем -->
           <div class="hidden md:flex items-center space-x-8">
-            <a
-              href="#features"
-              class="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
-              >Возможности</a
-            >
-            <a
-              href="#benefits"
-              class="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
-              >Преимущества</a
-            >
-            <NuxtLink
-              to="/investors"
-              class="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
-              >Для инвесторов</NuxtLink
-            >
+            <a href="#features"
+              class="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Возможности</a>
+            <a href="#benefits"
+              class="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">Преимущества</a>
+            <NuxtLink to="/investors" class="text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors">
+              Для инвесторов</NuxtLink>
           </div>
 
           <!-- Действия -->
           <div class="flex items-center space-x-3">
-            <button
-              @click="toggleTheme"
-              :disabled="!isHydrated"
+            <button @click="toggleTheme" :disabled="!isHydrated"
               class="p-2 rounded-lg text-gray-600 hover:text-blue-600 transition-colors disabled:opacity-50"
-              title="Переключить тему"
-            >
+              title="Переключить тему">
               <ClientOnly>
                 <Icon :name="isDark ? 'heroicons:sun' : 'heroicons:moon'" class="w-5 h-5" />
                 <template #fallback>
@@ -77,16 +63,12 @@ onMounted(() => {
                 </template>
               </ClientOnly>
             </button>
-            <NuxtLink
-              to="/auth/login"
-              class="px-4 py-2 text-sm font-medium rounded-lg text-gray-600 hover:text-blue-600 transition-colors"
-              >Войти</NuxtLink
-            >
-            <NuxtLink
-              to="/dashboard"
-              class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors"
-              >Открыть дашборд</NuxtLink
-            >
+            <NuxtLink to="/auth/login"
+              class="px-4 py-2 text-sm font-medium rounded-lg text-gray-600 hover:text-blue-600 transition-colors">Войти
+            </NuxtLink>
+            <NuxtLink to="/dashboard"
+              class="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors">
+              Открыть дашборд</NuxtLink>
           </div>
 
           <!-- Mobile button -->
@@ -107,8 +89,7 @@ onMounted(() => {
           <div class="md:col-span-2">
             <div class="flex items-center space-x-3 mb-4">
               <div
-                class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center"
-              >
+                class="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Icon name="heroicons:cpu-chip" class="w-4 h-4 text-white" />
               </div>
               <h3 class="text-lg font-bold">Гидравлика ИИ</h3>
@@ -126,19 +107,13 @@ onMounted(() => {
                 <a href="#features" class="hover:text-white transition-colors">Возможности</a>
               </li>
               <li>
-                <NuxtLink to="/auth/register" class="hover:text-white transition-colors"
-                  >Регистрация</NuxtLink
-                >
+                <NuxtLink to="/auth/register" class="hover:text-white transition-colors">Регистрация</NuxtLink>
               </li>
               <li>
-                <NuxtLink to="/auth/login" class="hover:text-white transition-colors"
-                  >Вход в систему</NuxtLink
-                >
+                <NuxtLink to="/auth/login" class="hover:text-white transition-colors">Вход в систему</NuxtLink>
               </li>
               <li>
-                <NuxtLink to="/investors" class="hover:text-white transition-colors"
-                  >Демо-версия</NuxtLink
-                >
+                <NuxtLink to="/investors" class="hover:text-white transition-colors">Демо-версия</NuxtLink>
               </li>
             </ul>
           </div>

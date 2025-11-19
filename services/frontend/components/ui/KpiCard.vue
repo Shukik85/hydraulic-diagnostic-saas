@@ -29,28 +29,15 @@
         </div>
 
         <!-- Icon -->
-        <div 
-          class="w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-300"
-          :class="iconBgClass"
-        >
-          <Icon 
-            :name="icon" 
-            class="w-6 h-6"
-            :class="iconColorClass"
-          />
+        <div class="w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-300"
+          :class="iconBgClass">
+          <Icon :name="icon" class="w-6 h-6" :class="iconColorClass" />
         </div>
       </div>
 
       <!-- Trend -->
-      <div 
-        v-if="growth !== undefined"
-        class="flex items-center gap-1.5"
-        :class="trendColorClass"
-      >
-        <Icon 
-          :name="trendIcon" 
-          class="w-4 h-4"
-        />
+      <div v-if="growth !== undefined" class="flex items-center gap-1.5" :class="trendColorClass">
+        <Icon :name="trendIcon" class="w-4 h-4" />
         <span class="text-sm font-medium">
           {{ formatGrowth(growth) }}
         </span>
@@ -60,17 +47,14 @@
       </div>
 
       <!-- Helper Text -->
-      <UHelperText 
-        v-if="description"
-        :text="description"
-        class="mt-3"
-        :show-icon="false"
-      />
+      <UHelperText v-if="description" :text="description" class="mt-3" :show-icon="false" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
   title: string
   value: string | number
@@ -136,8 +120,8 @@ const formatGrowth = (value?: number): string => {
 
 const isLoading = computed(() => {
   return (
-    props.loadingState === true || 
-    props.loadingState === 'loading' || 
+    props.loadingState === true ||
+    props.loadingState === 'loading' ||
     props.loadingState === 'true'
   )
 })

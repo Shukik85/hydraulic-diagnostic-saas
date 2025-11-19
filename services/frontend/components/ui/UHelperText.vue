@@ -1,16 +1,10 @@
 <template>
-  <div 
-    :class="[
-      'flex items-start gap-2 mt-1.5 text-sm',
-      variantClass
-    ]"
-  >
+  <div :class="[
+    'flex items-start gap-2 mt-1.5 text-sm',
+    variantClass
+  ]">
     <!-- Icon -->
-    <Icon 
-      v-if="showIcon"
-      :name="iconName" 
-      class="w-4 h-4 mt-0.5 flex-shrink-0"
-    />
+    <Icon v-if="showIcon" :name="iconName" class="w-4 h-4 mt-0.5 flex-shrink-0" />
 
     <!-- Text Content -->
     <span class="leading-relaxed">
@@ -20,6 +14,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
   text?: string
   variant?: 'default' | 'success' | 'warning' | 'error'

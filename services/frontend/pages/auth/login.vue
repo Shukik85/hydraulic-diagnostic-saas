@@ -3,7 +3,8 @@
     <div class="w-full max-w-md p-8 bg-white rounded-lg shadow-lg">
       <!-- Header -->
       <div class="text-center mb-8">
-        <div class="mx-auto w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mb-4">
+        <div
+          class="mx-auto w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center mb-4">
           <Icon name="heroicons:cpu-chip" class="w-6 h-6 text-white" />
         </div>
         <h1 class="text-2xl font-bold text-gray-900">Вход в систему</h1>
@@ -24,15 +25,9 @@
           <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
             Email адрес
           </label>
-          <input
-            id="email"
-            v-model="form.email"
-            type="email"
-            required
+          <input id="email" v-model="form.email" type="email" required
             class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            placeholder="user@company.com"
-            :disabled="authStore.loading"
-          />
+            placeholder="user@company.com" :disabled="authStore.loading" />
         </div>
 
         <div>
@@ -40,35 +35,21 @@
             Пароль
           </label>
           <div class="relative">
-            <input
-              id="password"
-              v-model="form.password"
-              :type="showPassword ? 'text' : 'password'"
-              required
+            <input id="password" v-model="form.password" :type="showPassword ? 'text' : 'password'" required
               class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              placeholder="Введите пароль"
-              :disabled="authStore.loading"
-            />
-            <button
-              type="button"
-              @click="showPassword = !showPassword"
+              placeholder="Введите пароль" :disabled="authStore.loading" />
+            <button type="button" @click="showPassword = !showPassword"
               class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 transition-colors"
-              :disabled="authStore.loading"
-            >
+              :disabled="authStore.loading">
               <Icon :name="showPassword ? 'heroicons:eye-slash' : 'heroicons:eye'" class="w-5 h-5" />
             </button>
           </div>
         </div>
 
-        <button
-          type="submit"
+        <button type="submit"
           class="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-          :disabled="authStore.loading"
-        >
-          <div
-            v-if="authStore.loading"
-            class="flex items-center justify-center gap-2"
-          >
+          :disabled="authStore.loading">
+          <div v-if="authStore.loading" class="flex items-center justify-center gap-2">
             <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
             Вход...
           </div>
@@ -99,7 +80,6 @@
 </template>
 
 <script setup lang="ts">
-import { ref, definePageMeta, useRouter, useAuthStore } from '#imports'
 
 // Redirect if already authenticated
 definePageMeta({

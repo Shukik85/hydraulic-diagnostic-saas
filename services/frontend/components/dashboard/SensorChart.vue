@@ -3,27 +3,17 @@
     <div class="u-chart-header">
       <h3 class="u-chart-title">{{ title }}</h3>
       <div class="u-chart-controls">
-        <select 
-          v-model="timeRange"
-          class="u-input text-sm py-1 px-2 w-32"
-          @change="updateChart"
-        >
+        <select v-model="timeRange" class="u-input text-sm py-1 px-2 w-32" @change="updateChart">
           <option value="1h">Last Hour</option>
           <option value="24h">Last 24h</option>
           <option value="7d">Last 7 days</option>
         </select>
       </div>
     </div>
-    
+
     <div class="u-chart-container">
       <ClientOnly>
-        <component 
-          :is="VChart"
-          v-if="chartOptions"
-          :option="chartOptions" 
-          :autoresize="true"
-          class="w-full h-full"
-        />
+        <component :is="VChart" v-if="chartOptions" :option="chartOptions" :autoresize="true" class="w-full h-full" />
         <template #fallback>
           <div class="u-flex-center h-full">
             <div class="u-spinner w-8 h-8"></div>
@@ -36,6 +26,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 interface Props {
   title: string
   type: 'line' | 'bar' | 'gauge' | 'pie'
@@ -52,7 +44,7 @@ const timeRange = ref('24h')
 
 const chartOptions = computed(() => {
   if (!props.data?.length) return null
-  
+
   const baseOptions = {
     backgroundColor: 'transparent',
     textStyle: {
@@ -60,7 +52,7 @@ const chartOptions = computed(() => {
       fontSize: 12
     }
   }
-  
+
   switch (props.type) {
     case 'line':
       return {
@@ -74,7 +66,7 @@ const chartOptions = computed(() => {
         },
         grid: {
           left: '3%',
-          right: '4%', 
+          right: '4%',
           bottom: '15%',
           top: '15%',
           containLabel: true
@@ -98,8 +90,8 @@ const chartOptions = computed(() => {
           data: props.data.map(item => item.value),
           smooth: true,
           lineStyle: { color: '#2563eb', width: 3 },
-          itemStyle: { 
-            color: '#2563eb', 
+          itemStyle: {
+            color: '#2563eb',
             borderWidth: 2,
             borderColor: '#ffffff'
           },
@@ -115,7 +107,7 @@ const chartOptions = computed(() => {
           }
         }]
       }
-      
+
     case 'gauge':
       return {
         ...baseOptions,
@@ -186,7 +178,7 @@ const chartOptions = computed(() => {
           }]
         }]
       }
-      
+
     default:
       return {
         ...baseOptions,

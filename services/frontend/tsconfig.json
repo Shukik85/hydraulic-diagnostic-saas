@@ -4,38 +4,13 @@
     "strict": true,
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowJs": true,
     "sourceMap": true,
-    "baseUrl": ".",
-    "paths": {
-      "~/*": [
-        "./*"
-      ],
-      "@/*": [
-        "./*"
-      ]
-    },
     "types": [
-      "node",
-      "@pinia/nuxt",
-      "@vueuse/core",
-      "vite/client"
-    ]
-  },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.vue",
-    ".nuxt/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    ".nuxt",
-    "dist",
-    ".output"
-  ]
+      "vitest/globals"
+    ],
+  }
 }

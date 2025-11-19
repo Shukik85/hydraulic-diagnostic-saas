@@ -1,15 +1,8 @@
 <template>
   <div class="flex flex-col items-center justify-center py-20 px-6 text-center">
     <!-- Icon Circle -->
-    <div 
-      class="mb-6 w-24 h-24 rounded-full flex items-center justify-center"
-      :class="iconBgClass"
-    >
-      <Icon 
-        :name="iconName" 
-        class="w-12 h-12"
-        :class="iconColorClass"
-      />
+    <div class="mb-6 w-24 h-24 rounded-full flex items-center justify-center" :class="iconBgClass">
+      <Icon :name="iconName" class="w-12 h-12" :class="iconColorClass" />
     </div>
 
     <!-- Title -->
@@ -23,27 +16,22 @@
     </p>
 
     <!-- Action Button -->
-    <UButton
-      v-if="showAction"
-      size="lg"
-      @click="$emit('action')"
-    >
+    <UButton v-if="showAction" size="lg" @click="$emit('action')">
       <Icon :name="actionIcon" class="w-5 h-5 mr-2" />
       {{ actionText }}
     </UButton>
 
     <!-- Secondary Action (optional) -->
-    <button
-      v-if="secondaryText"
-      class="mt-4 text-sm text-primary-400 hover:text-primary-300 transition-colors"
-      @click="$emit('secondary-action')"
-    >
+    <button v-if="secondaryText" class="mt-4 text-sm text-primary-400 hover:text-primary-300 transition-colors"
+      @click="$emit('secondary-action')">
       {{ secondaryText }}
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
   iconName: string
   title: string

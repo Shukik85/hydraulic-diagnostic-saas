@@ -84,6 +84,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, watch, reactive } from 'vue'
+
 import { useMetadataStore } from '~/stores/metadata';
 import type { EquipmentType } from '~/types/metadata';
 

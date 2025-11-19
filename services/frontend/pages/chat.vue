@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { ChatMessage, ChatSession } from '~/types/chat'
 import { ref } from 'vue'
-import { useSeoMeta } from '#imports'
 
 definePageMeta({ middleware: ['auth'] })
 const { t } = useI18n()

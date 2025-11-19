@@ -13,10 +13,7 @@
           <span class="text-sm text-white">{{ t('dashboard.liveStatus') }}</span>
           <UStatusDot status="success" :animated="true" />
         </div>
-        <UButton 
-          variant="secondary"
-          @click="refreshData"
-        >
+        <UButton variant="secondary" @click="refreshData">
           <Icon name="heroicons:arrow-path" class="w-5 h-5 mr-2" />
           {{ t('dashboard.refreshBtn') }}
         </UButton>
@@ -25,41 +22,17 @@
 
     <!-- KPI Grid using KpiCard -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <KpiCard
-        :title="t('dashboard.kpi.activeSystems')"
-        :value="127"
-        icon="heroicons:server-stack"
-        color="primary"
-        :growth="3.9"
-        :description="t('dashboard.kpi.fromYesterday')"
-      />
+      <KpiCard :title="t('dashboard.kpi.activeSystems')" :value="127" icon="heroicons:server-stack" color="primary"
+        :growth="3.9" :description="t('dashboard.kpi.fromYesterday')" />
 
-      <KpiCard
-        :title="t('dashboard.kpi.systemHealth')"
-        value="99.9%"
-        icon="heroicons:heart"
-        color="success"
-        :growth="0.1"
-        :description="t('dashboard.kpi.uptimeExcellence')"
-      />
+      <KpiCard :title="t('dashboard.kpi.systemHealth')" value="99.9%" icon="heroicons:heart" color="success"
+        :growth="0.1" :description="t('dashboard.kpi.uptimeExcellence')" />
 
-      <KpiCard
-        :title="t('dashboard.kpi.preventedFailures')"
-        :value="23"
-        icon="heroicons:shield-check"
-        color="info"
-        :growth="15.2"
-        :description="t('dashboard.kpi.aiPredictions')"
-      />
+      <KpiCard :title="t('dashboard.kpi.preventedFailures')" :value="23" icon="heroicons:shield-check" color="info"
+        :growth="15.2" :description="t('dashboard.kpi.aiPredictions')" />
 
-      <KpiCard
-        :title="t('dashboard.kpi.costSavings')"
-        value="89%"
-        icon="heroicons:currency-dollar"
-        color="warning"
-        :growth="12.5"
-        :description="t('dashboard.kpi.vsPreviousYear')"
-      />
+      <KpiCard :title="t('dashboard.kpi.costSavings')" value="89%" icon="heroicons:currency-dollar" color="warning"
+        :growth="12.5" :description="t('dashboard.kpi.vsPreviousYear')" />
     </div>
 
     <!-- Charts Grid -->
@@ -79,12 +52,7 @@
         <UCardContent class="p-6">
           <div class="h-[300px]">
             <ClientOnly>
-              <component 
-                :is="VChart"
-                :option="performanceChartOption"
-                :autoresize="true"
-                class="w-full h-full"
-              />
+              <component :is="VChart" :option="performanceChartOption" :autoresize="true" class="w-full h-full" />
               <template #fallback>
                 <div class="flex items-center justify-center h-full">
                   <div class="w-8 h-8 border-4 border-primary-600 border-t-transparent rounded-full animate-spin" />
@@ -109,12 +77,7 @@
         <UCardContent class="p-6">
           <div class="h-[300px]">
             <ClientOnly>
-              <component 
-                :is="VChart"
-                :option="aiChartOption"
-                :autoresize="true"
-                class="w-full h-full"
-              />
+              <component :is="VChart" :option="aiChartOption" :autoresize="true" class="w-full h-full" />
               <template #fallback>
                 <div class="flex items-center justify-center h-full">
                   <div class="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
@@ -134,31 +97,31 @@
           <UCardTitle>{{ t('dashboard.quickActions.title') }}</UCardTitle>
         </UCardHeader>
         <UCardContent class="space-y-3 p-6">
-          <button 
+          <button
             class="w-full flex items-center gap-3 p-4 rounded-lg bg-primary-600/10 hover:bg-primary-600/20 border border-primary-500/30 hover:border-primary-500/50 transition-all text-left group"
-            @click="openDiagnosticModal = true"
-          >
-            <div class="w-10 h-10 rounded-lg bg-primary-600/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+            @click="openDiagnosticModal = true">
+            <div
+              class="w-10 h-10 rounded-lg bg-primary-600/20 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Icon name="heroicons:play" class="w-5 h-5 text-primary-400" />
             </div>
             <span class="text-sm font-medium text-white">{{ t('dashboard.quickActions.runDiagnostics') }}</span>
           </button>
 
-          <button 
+          <button
             class="w-full flex items-center gap-3 p-4 rounded-lg bg-success-600/10 hover:bg-success-600/20 border border-success-500/30 hover:border-success-500/50 transition-all text-left group"
-            @click="openReportModal = true"
-          >
-            <div class="w-10 h-10 rounded-lg bg-success-600/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+            @click="openReportModal = true">
+            <div
+              class="w-10 h-10 rounded-lg bg-success-600/20 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Icon name="heroicons:document-text" class="w-5 h-5 text-success-400" />
             </div>
             <span class="text-sm font-medium text-white">{{ t('dashboard.quickActions.generateReport') }}</span>
           </button>
 
-          <button 
+          <button
             class="w-full flex items-center gap-3 p-4 rounded-lg bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 hover:border-purple-500/50 transition-all text-left group"
-            @click="openSystemModal = true"
-          >
-            <div class="w-10 h-10 rounded-lg bg-purple-600/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+            @click="openSystemModal = true">
+            <div
+              class="w-10 h-10 rounded-lg bg-purple-600/20 flex items-center justify-center group-hover:scale-110 transition-transform">
               <Icon name="heroicons:plus" class="w-5 h-5 text-purple-400" />
             </div>
             <span class="text-sm font-medium text-white">{{ t('dashboard.quickActions.addSystem') }}</span>
@@ -245,27 +208,17 @@
     </div>
 
     <!-- Modals -->
-    <URunDiagnosticModal 
-      v-model="openDiagnosticModal" 
-      :loading="diagnosticLoading" 
-      @submit="onRunDiagnostic"
-    />
-    
-    <UReportGenerateModal 
-      v-model="openReportModal" 
-      :loading="reportLoading" 
-      @submit="onGenerateReport"
-    />
-    
-    <UCreateSystemModal 
-      v-model="openSystemModal" 
-      :loading="systemLoading" 
-      @submit="onCreateSystem"
-    />
+    <URunDiagnosticModal v-model="openDiagnosticModal" :loading="diagnosticLoading" @submit="onRunDiagnostic" />
+
+    <UReportGenerateModal v-model="openReportModal" :loading="reportLoading" @submit="onGenerateReport" />
+
+    <UCreateSystemModal v-model="openSystemModal" :loading="systemLoading" @submit="onCreateSystem" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -297,8 +250,8 @@ useSeoMeta({
 
 useHead({
   titleTemplate: (titleChunk) => {
-    return titleChunk 
-      ? `${titleChunk} | Hydraulic Diagnostic` 
+    return titleChunk
+      ? `${titleChunk} | Hydraulic Diagnostic`
       : 'Hydraulic Diagnostic SaaS'
   }
 })
@@ -349,12 +302,12 @@ const performanceChartOption = computed(() => ({
     borderColor: '#334155',
     textStyle: { color: '#e2e8f0' },
   },
-  grid: { 
-    left: '5%', 
-    right: '5%', 
-    bottom: '10%', 
-    top: '10%', 
-    containLabel: true 
+  grid: {
+    left: '5%',
+    right: '5%',
+    bottom: '10%',
+    top: '10%',
+    containLabel: true
   },
   xAxis: {
     type: 'category',
@@ -398,12 +351,12 @@ const aiChartOption = computed(() => ({
     borderColor: '#334155',
     textStyle: { color: '#e2e8f0' },
   },
-  grid: { 
-    left: '5%', 
-    right: '5%', 
-    bottom: '10%', 
-    top: '10%', 
-    containLabel: true 
+  grid: {
+    left: '5%',
+    right: '5%',
+    bottom: '10%',
+    top: '10%',
+    containLabel: true
   },
   xAxis: {
     type: 'category',

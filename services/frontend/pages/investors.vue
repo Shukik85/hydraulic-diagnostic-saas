@@ -246,7 +246,6 @@
 </template>
 
 <script setup lang="ts">
-import { definePageMeta } from '#imports'
 
 // Business Analytics page uses dashboard layout for authenticated internal pages
 definePageMeta({

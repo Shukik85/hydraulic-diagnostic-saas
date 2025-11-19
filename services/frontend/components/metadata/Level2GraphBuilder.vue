@@ -163,6 +163,8 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
+
 import { useMetadataStore } from '~/stores/metadata';
 import type { ComponentType } from '~/types/metadata';
 

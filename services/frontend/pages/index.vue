@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { definePageMeta, useSeoMeta } from '#imports'
 import { computed, ref } from 'vue'
 
 type AppLocale = 'ru' | 'en'
