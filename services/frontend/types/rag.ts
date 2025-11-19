@@ -42,6 +42,26 @@ export interface RAGInterpretationRequest {
 }
 
 /**
+ * Шаг рассуждения (Reasoning Step)
+ */
+export interface ReasoningStep {
+  /**
+   * Заголовок шага
+   */
+  title: string
+  
+  /**
+   * Описание шага
+   */
+  description: string
+  
+  /**
+   * Доказательства/ключевые точки
+   */
+  evidence: string[]
+}
+
+/**
  * Ответ от RAG Service с интерпретацией.
  */
 export interface RAGInterpretationResponse {
