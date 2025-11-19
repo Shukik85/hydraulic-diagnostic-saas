@@ -13,6 +13,9 @@
     "api:validate": "redocly lint ../../specs/combined-api.json",
     "api:bundle": "redocly bundle ../../specs/combined-api.json -o dist/api.json"
   },
+  "overrides": {
+    "glob": "^11.1.0"
+  },
   "dependencies": {
     "@nuxt/icon": "^2.1.0",
     "@nuxt/image": "^2.0.0",
@@ -25,6 +28,7 @@
     "clsx": "^2.1.1",
     "echarts": "^6.0.0",
     "nuxt": "^4.2.1",
+    "nuxt-security": "^2.4.0",
     "pinia": "^3.0.4",
     "radix-vue": "^1.9.17",
     "tailwind-merge": "^3.4.0",

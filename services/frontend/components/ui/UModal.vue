@@ -90,7 +90,7 @@ interface Props {
   title?: string
   description?: string
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
-  closeOnBackdrop?: boolean
+  showCloseButton?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {

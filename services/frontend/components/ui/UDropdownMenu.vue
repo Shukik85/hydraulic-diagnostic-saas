@@ -3,7 +3,6 @@
     <DropdownMenuTrigger as-child>
       <slot name="trigger" />
     </DropdownMenuTrigger>
-
     <DropdownMenuPortal>
       <DropdownMenuContent
         :class="
@@ -14,7 +13,7 @@
             'p-1',
             'animate-in fade-in-80 zoom-in-95',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-            contentClass
+            props.contentClass
           )
         "
         :side-offset="4"
@@ -25,7 +24,6 @@
     </DropdownMenuPortal>
   </DropdownMenuRoot>
 </template>
-
 <script setup lang="ts">
 import {
   DropdownMenuContent,
@@ -35,12 +33,9 @@ import {
 } from 'radix-vue'
 import { ref } from 'vue'
 import { cn } from './utils'
-
 interface Props {
   contentClass?: string
 }
-
-withDefaults(defineProps<Props>(), {})
-
+const props = withDefaults(defineProps<Props>(), {})
 const isOpen = ref(false)
 </script>

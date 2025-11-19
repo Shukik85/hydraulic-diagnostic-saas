@@ -24,6 +24,23 @@ export interface EquipmentState {
   motor_swing: ComponentState & { angle: number }
 }
 
+export interface FaultPrediction {
+  fault_detected: boolean
+  confidence: number
+  fault_type: string | null
+  reasoning: string
+}
+
+export interface UseDigitalTwinReturn {
+  equipment: EquipmentState
+  latestPrediction: Ref<FaultPrediction | null>
+  updatePhysics: (deltaTime: number) => void
+  moveBoom: (target: number) => FaultPrediction
+  moveStick: (target: number) => FaultPrediction
+  moveBucket: (target: number) => FaultPrediction
+  rotateSwing: (angle: number) => FaultPrediction
+}
+
 // Физические параметры системы
 const PHYSICS = {
   boom: { mass: 500, length: 6, cog: 3, leverArm: 1.8 },
@@ -43,7 +60,13 @@ const PHYSICS = {
   }
 }
 
-export function useDigitalTwin() {
+/**
+ * Physics-based Digital Twin composable for hydraulic systems
+ * Provides realistic simulation of hydraulic equipment with thermodynamic calculations
+ * 
+ * @returns Digital twin instance with equipment state and control methods
+ */
+export function useDigitalTwin(): UseDigitalTwinReturn {
   const equipment = reactive<EquipmentState>({
     cylinder_boom: { position: 0, velocity: 0, pressure: 50, temperature: 45, fault: false },
     cylinder_stick: { position: 0, velocity: 0, pressure: 50, temperature: 45, fault: false },
@@ -52,9 +75,16 @@ export function useDigitalTwin() {
     motor_swing: { position: 0, velocity: 0, pressure: 50, temperature: 50, fault: false, angle: 0 }
   })
 
-  const latestPrediction = ref<any>(null)
+  const latestPrediction = ref<FaultPrediction | null>(null)
 
   // 🌡️ РЕАЛИСТИЧНАЯ ТЕРМОДИНАМИКА
+  /**
+   * Calculate heat transfer for a component
+   * @param component - Component state to update
+   * @param flowRate - Flow rate in L/min
+   * @param workPower - Work power in kW
+   * @returns Temperature change in °C/s
+   */
   function calculateHeatTransfer(
     component: ComponentState,
     flowRate: number,  // L/min
@@ -86,6 +116,11 @@ export function useDigitalTwin() {
   }
 
   // 🎯 Расчёт давления на основе момента силы
+  /**
+   * Calculate pressure for a cylinder based on boom position
+   * @param component - Component type ('boom' | 'stick' | 'bucket')
+   * @returns Pressure in bar
+   */
   function calculatePressure(component: 'boom' | 'stick' | 'bucket'): number {
     const boomAngle = (equipment.cylinder_boom.position / 100) * (Math.PI / 3)
     const stickAngle = (equipment.cylinder_stick.position / 100) * (Math.PI / 2.5)
@@ -111,7 +146,11 @@ export function useDigitalTwin() {
     return Math.max(50, Math.min(280, 50 + pressureBar))
   }
 
-  function updatePhysics(deltaTime: number) {
+  /**
+   * Update physics simulation for all equipment
+   * @param deltaTime - Time delta in seconds
+   */
+  function updatePhysics(deltaTime: number): void {
     updateCylinder(equipment.cylinder_boom, deltaTime, 'boom')
     updateCylinder(equipment.cylinder_stick, deltaTime, 'stick')
     updateCylinder(equipment.cylinder_bucket, deltaTime, 'bucket')
@@ -143,11 +182,17 @@ export function useDigitalTwin() {
     )
   }
 
+  /**
+   * Update cylinder state based on velocity and thermal properties
+   * @param cylinder - Cylinder component to update
+   * @param deltaTime - Time delta in seconds
+   * @param type - Cylinder type for pressure calculation
+   */
   function updateCylinder(
     cylinder: ComponentState,
     deltaTime: number,
     type: 'boom' | 'stick' | 'bucket'
-  ) {
+  ): void {
     if (Math.abs(cylinder.velocity) > 0.01) {
       cylinder.position += cylinder.velocity * deltaTime * 50
       cylinder.position = Math.max(0, Math.min(100, cylinder.position))
@@ -168,35 +213,60 @@ export function useDigitalTwin() {
     cylinder.pressure = calculatePressure(type)
   }
 
-  function moveBoom(target: number) {
+  /**
+   * Move boom to target position
+   * @param target - Target position (0-100)
+   * @returns Fault prediction
+   */
+  function moveBoom(target: number): FaultPrediction {
     const dist = target - equipment.cylinder_boom.position
     equipment.cylinder_boom.velocity = Math.sign(dist) * Math.min(2.5, Math.abs(dist) / 15)
     return predictFault('cylinder_boom')
   }
 
-  function moveStick(target: number) {
+  /**
+   * Move stick to target position
+   * @param target - Target position (0-100)
+   * @returns Fault prediction
+   */
+  function moveStick(target: number): FaultPrediction {
     const dist = target - equipment.cylinder_stick.position
     equipment.cylinder_stick.velocity = Math.sign(dist) * Math.min(2.5, Math.abs(dist) / 15)
     return predictFault('cylinder_stick')
   }
 
-  function moveBucket(target: number) {
+  /**
+   * Move bucket to target position
+   * @param target - Target position (0-100)
+   * @returns Fault prediction
+   */
+  function moveBucket(target: number): FaultPrediction {
     const dist = target - equipment.cylinder_bucket.position
     equipment.cylinder_bucket.velocity = Math.sign(dist) * Math.min(2.5, Math.abs(dist) / 15)
     return predictFault('cylinder_bucket')
   }
 
-  function rotateSwing(angle: number) {
+  /**
+   * Rotate swing motor to target angle
+   * @param angle - Target angle in degrees
+   * @returns Fault prediction
+   */
+  function rotateSwing(angle: number): FaultPrediction {
     equipment.motor_swing.angle = angle
     equipment.motor_swing.velocity = (angle - equipment.motor_swing.position) / 100
     return predictFault('motor_swing')
   }
 
-  async function predictFault(component: keyof EquipmentState) {
+  /**
+   * Predict faults based on current component state
+   * @param component - Component to analyze
+   * @returns Fault prediction with confidence and reasoning
+   */
+  function predictFault(component: keyof EquipmentState): FaultPrediction {
     const state = equipment[component] as any
     const isFault = state.pressure > 220 || state.temperature > 85
 
-    const prediction = {
+    const prediction: FaultPrediction = {
       fault_detected: isFault,
       confidence: Math.random() * 0.3 + 0.7,
       fault_type: isFault ? (state.pressure > 220 ? 'overpressure' : 'overheating') : null,
