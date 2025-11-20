@@ -1,62 +1,45 @@
 <script setup lang="ts">
-import { RadioGroupIndicator, RadioGroupItem } from 'radix-vue'
+import { RadioGroupItem, RadioGroupIndicator } from 'radix-vue'
 
 interface Props {
   value: string | number
   disabled?: boolean
-  className?: string
+  id?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  disabled: false
+  disabled: false,
 })
+
+// Конвертируем number в string
+const stringValue = String(props.value)
 </script>
 
 <template>
-  <RadioGroupItem
-    :value="props.value"
-    :disabled="props.disabled"
-    :class="[
-      'group relative flex items-center gap-3 cursor-pointer select-none',
-      'text-text-primary font-medium text-sm',
-      'transition-all duration-200',
-      props.disabled && 'cursor-not-allowed opacity-50',
-      props.className
-    ]"
-  >
-    <RadioGroupIndicator
-      :class="[
-        'relative flex items-center justify-center',
-        'w-5 h-5 rounded-full',
-        'border-2 transition-all duration-200',
-        'bg-background-secondary',
-        'border-steel-medium group-hover:border-primary-400',
-        'group-data-[state=checked]:border-primary-500',
-        'group-data-[state=checked]:bg-primary-500/10',
-        'group-data-[state=checked]:shadow-[0_0_8px_rgba(79,70,229,0.3)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30',
-        'focus-visible:ring-offset-2 focus-visible:ring-offset-background-primary',
-        props.disabled && 'border-steel-dark bg-steel-dark group-hover:border-steel-dark',
-      ]"
+  <div class="flex items-center gap-2">
+    <RadioGroupItem
+      :id="id"
+      :value="stringValue"
+      :disabled="disabled"
+      class="radio-item"
     >
-      <span
-        :class="[
-          'w-2.5 h-2.5 rounded-full',
-          'bg-primary-500 shadow-sm',
-          'transition-all duration-200',
-          'scale-0 group-data-[state=checked]:scale-100',
-        ]"
-      />
-    </RadioGroupIndicator>
-    <label
-      :for="props.value?.toString()"
-      :class="[
-        'cursor-pointer group-hover:text-primary-300',
-        'transition-colors duration-200',
-        props.disabled && 'cursor-not-allowed',
-      ]"
-    >
+      <RadioGroupIndicator class="radio-indicator" />
+    </RadioGroupItem>
+    <label v-if="id" :for="id" class="cursor-pointer">
       <slot />
     </label>
-  </RadioGroupItem>
+    <div v-else>
+      <slot />
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.radio-item {
+  @apply w-5 h-5 rounded-full border-2 border-gray-300 flex items-center justify-center;
+}
+
+.radio-indicator {
+  @apply w-3 h-3 rounded-full bg-blue-600;
+}
+</style>

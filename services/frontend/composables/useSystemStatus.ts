@@ -15,12 +15,13 @@ export function useSystemStatus(systemId: string, refreshInterval = 10000) {
     state.value.loading = true
     state.value.error = null
     try {
-      const resp = await request(`/systems/${systemId}/status`, { method: 'GET' }) as SystemStatus | ErrorResponse
+      const resp = await request(`/systems/${systemId}/status`, { method: 'GET' })
       
-      if (resp && 'data' in resp) {
-        state.value.data = resp as SystemStatus
-      } else if (resp && 'error' in resp) {
+      // Предполагаем что resp это либо данные, либо ошибка
+      if (resp && typeof resp === 'object' && 'error' in resp) {
         state.value.error = resp as ErrorResponse
+      } else {
+        state.value.data = resp as SystemStatus
       }
     } catch (err) {
       state.value.error = { 
