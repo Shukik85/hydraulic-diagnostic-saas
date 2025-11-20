@@ -251,7 +251,7 @@ const getStatusBorderClass = (status: string): string => {
     critical: 'border-l-4 border-red-500 bg-red-50',
     unknown: 'border-l-4 border-gray-500 bg-gray-50',
   }
-  return classes[status] || classes.unknown
+  return classes[status] ?? classes.unknown!
 }
 
 const getStatusTextClass = (status: string): string => {
@@ -261,7 +261,7 @@ const getStatusTextClass = (status: string): string => {
     critical: 'text-red-700',
     unknown: 'text-gray-700',
   }
-  return classes[status] || classes.unknown
+  return classes[status] ?? classes.unknown!
 }
 
 const getPredictionColor = (prediction: string): string => {
