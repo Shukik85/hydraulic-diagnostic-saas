@@ -5,10 +5,15 @@
   "type": "module",
   "scripts": {
     "typecheck": "vue-tsc --noEmit",
+    "type-check": "npm run typecheck",
     "predev": "npm run generate:api || true",
     "dev": "nuxt dev",
     "prebuild": "npm run typecheck",
     "build": "nuxt build",
+    "test:unit": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "generate:api": "npx openapi-typescript ../../specs/combined-api.json -o ./generated/api/schema.ts",
     "api:validate": "redocly lint ../../specs/combined-api.json",
     "api:bundle": "redocly bundle ../../specs/combined-api.json -o dist/api.json"
