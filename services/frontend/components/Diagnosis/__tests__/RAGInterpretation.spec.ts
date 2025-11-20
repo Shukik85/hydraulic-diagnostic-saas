@@ -20,6 +20,7 @@ describe('RAGInterpretation.vue', () => {
   it('renders loading state', () => {
     const wrapper = mount(RAGInterpretation, {
       props: {
+        interpretation: null,
         loading: true
       }
     })
@@ -29,6 +30,7 @@ describe('RAGInterpretation.vue', () => {
   it('renders error state', () => {
     const wrapper = mount(RAGInterpretation, {
       props: {
+        interpretation: null,
         error: 'Ошибка генерации интерпретации'
       }
     })

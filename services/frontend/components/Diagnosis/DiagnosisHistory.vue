@@ -9,12 +9,7 @@
       <div class="flex flex-wrap gap-4 mb-6">
         <div>
           <label for="status-filter" class="u-label mb-2 block">Фильтр по статусу</label>
-          <select 
-            id="status-filter" 
-            v-model="selectedStatus" 
-            class="u-input w-48"
-            @change="filterHistory"
-          >
+          <select id="status-filter" v-model="selectedStatus" class="u-input w-48" @change="filterHistory">
             <option value="all">Все</option>
             <option value="normal">Нормально</option>
             <option value="warning">Предупреждение</option>
@@ -24,12 +19,7 @@
 
         <div>
           <label for="date-range" class="u-label mb-2 block">Период</label>
-          <select 
-            id="date-range" 
-            v-model="selectedDateRange" 
-            class="u-input w-48"
-            @change="filterHistory"
-          >
+          <select id="date-range" v-model="selectedDateRange" class="u-input w-48" @change="filterHistory">
             <option value="all">Всё время</option>
             <option value="today">Сегодня</option>
             <option value="week">Неделя</option>
@@ -47,7 +37,8 @@
       <!-- Empty State -->
       <div v-else-if="!filteredHistory.length" class="text-center py-12">
         <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         <p class="u-body text-gray-600 mb-2">История пуста</p>
         <p class="u-body-sm text-gray-500">Нет записей, соответствующих выбранным фильтрам</p>
@@ -55,36 +46,21 @@
 
       <!-- Timeline -->
       <div v-else class="space-y-4">
-        <div 
-          v-for="(item, index) in filteredHistory" 
-          :key="item.id"
-          class="relative pl-8 pb-8 last:pb-0"
-        >
+        <div v-for="(item, index) in filteredHistory" :key="item.id" class="relative pl-8 pb-8 last:pb-0">
           <!-- Timeline Line -->
-          <div 
-            v-if="index < filteredHistory.length - 1"
-            class="absolute left-3 top-8 bottom-0 w-0.5 bg-gray-200"
-            aria-hidden="true"
-          ></div>
+          <div v-if="index < filteredHistory.length - 1" class="absolute left-3 top-8 bottom-0 w-0.5 bg-gray-200"
+            aria-hidden="true"></div>
 
           <!-- Timeline Dot -->
-          <div 
-            class="absolute left-0 top-1 w-6 h-6 rounded-full flex items-center justify-center"
-            :class="getTimelineDotClass(item.status)"
-            :aria-label="`Статус: ${getStatusLabel(item.status)}`"
-          >
+          <div class="absolute left-0 top-1 w-6 h-6 rounded-full flex items-center justify-center"
+            :class="getTimelineDotClass(item.status)" :aria-label="`Статус: ${getStatusLabel(item.status)}`">
             <div class="w-3 h-3 rounded-full bg-white"></div>
           </div>
 
           <!-- History Item Card -->
-          <div 
-            class="u-card p-4 hover:shadow-md transition-shadow cursor-pointer"
-            @click="$emit('select', item)"
-            @keypress.enter="$emit('select', item)"
-            tabindex="0"
-            role="button"
-            :aria-label="`Диагностика от ${formatDate(item.timestamp)}, статус: ${getStatusLabel(item.status)}`"
-          >
+          <div class="u-card p-4 hover:shadow-md transition-shadow cursor-pointer" @click="$emit('select', item)"
+            @keypress.enter="$emit('select', item)" tabindex="0" role="button"
+            :aria-label="`Диагностика от ${formatDate(item.timestamp)}, статус: ${getStatusLabel(item.status)}`">
             <div class="flex items-start justify-between gap-4 mb-3">
               <div class="flex-1">
                 <div class="text-sm text-gray-600 mb-1">
@@ -96,10 +72,7 @@
               </div>
 
               <!-- Status Badge -->
-              <div 
-                class="px-3 py-1 rounded-full text-xs font-medium"
-                :class="getStatusBadgeClass(item.status)"
-              >
+              <div class="px-3 py-1 rounded-full text-xs font-medium" :class="getStatusBadgeClass(item.status)">
                 {{ getStatusLabel(item.status) }}
               </div>
             </div>
@@ -128,11 +101,7 @@
 
             <!-- Tags -->
             <div v-if="item.tags?.length" class="flex flex-wrap gap-2">
-              <span 
-                v-for="tag in item.tags" 
-                :key="tag"
-                class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded"
-              >
+              <span v-for="tag in item.tags" :key="tag" class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
                 {{ tag }}
               </span>
             </div>
@@ -142,21 +111,13 @@
 
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6 pt-6 border-t">
-        <button 
-          class="u-btn u-btn-sm u-btn-secondary"
-          :disabled="currentPage === 1"
-          @click="previousPage"
-        >
+        <button class="u-btn u-btn-sm u-btn-secondary" :disabled="currentPage === 1" @click="previousPage">
           ← Предыдущая
         </button>
         <span class="text-sm text-gray-600">
           Страница {{ currentPage }} из {{ totalPages }}
         </span>
-        <button 
-          class="u-btn u-btn-sm u-btn-secondary"
-          :disabled="currentPage === totalPages"
-          @click="nextPage"
-        >
+        <button class="u-btn u-btn-sm u-btn-secondary" :disabled="currentPage === totalPages" @click="nextPage">
           Следующая →
         </button>
       </div>
@@ -269,7 +230,7 @@ const getTimelineDotClass = (status: string): string => {
     critical: 'bg-red-500',
     unknown: 'bg-gray-500',
   }
-  return classes[status] || classes.unknown
+  return classes[status] || classes.unknown!
 }
 
 const getStatusBadgeClass = (status: string): string => {
@@ -279,7 +240,7 @@ const getStatusBadgeClass = (status: string): string => {
     critical: 'bg-red-100 text-red-700 border border-red-300',
     unknown: 'bg-gray-100 text-gray-700 border border-gray-300',
   }
-  return classes[status] || classes.unknown
+  return classes[status] || classes.unknown!
 }
 
 const getConfidenceColor = (confidence: number): string => {

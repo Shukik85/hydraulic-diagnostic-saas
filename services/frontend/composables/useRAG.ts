@@ -154,19 +154,19 @@ export function parseRAGResponse(rawResponse: string): Partial<RAGInterpretation
   try {
     const reasoningMatch = rawResponse.match(/<думает>([\s\S]*?)<\/думает>/i)
     if (reasoningMatch) {
-      sections.reasoning = reasoningMatch[1].trim()
+      sections.reasoning = reasoningMatch[1]!.trim()
     }
     const summaryMatch = rawResponse.match(/<резюме>([\s\S]*?)<\/резюме>/i)
     if (summaryMatch) {
-      sections.summary = summaryMatch[1].trim()
+      sections.summary = summaryMatch[1]!.trim()
     }
     const analysisMatch = rawResponse.match(/<анализ>([\s\S]*?)<\/анализ>/i)
     if (analysisMatch) {
-      sections.analysis = analysisMatch[1].trim()
+      sections.analysis = analysisMatch[1]!.trim()
     }
     const recommendationsMatch = rawResponse.match(/<рекомендации>([\s\S]*?)<\/рекомендации>/i)
     if (recommendationsMatch) {
-      const recText = recommendationsMatch[1].trim()
+      const recText = recommendationsMatch[1]!.trim()
       sections.recommendations = recText
         .split(/\n+/)
         .map(line => line.replace(/^\d+\.\s*/, '').trim())

@@ -141,7 +141,7 @@ const statusColorClass = computed<string>(() => {
     critical: 'border-l-4 border-red-500 bg-red-50',
     unknown: 'border-l-4 border-gray-500 bg-gray-50',
   }
-  return colorMap[status] || colorMap.unknown
+  return colorMap[status] || colorMap.unknown!
 })
 
 const statusBgClass = computed<string>(() => {
@@ -152,7 +152,7 @@ const statusBgClass = computed<string>(() => {
     critical: 'bg-red-100',
     unknown: 'bg-gray-100',
   }
-  return bgMap[status] || bgMap.unknown
+  return bgMap[status] || bgMap.unknown!
 })
 
 const statusIconClass = computed<string>(() => {
@@ -163,7 +163,7 @@ const statusIconClass = computed<string>(() => {
     critical: 'text-red-600',
     unknown: 'text-gray-600',
   }
-  return iconColorMap[status] || iconColorMap.unknown
+  return iconColorMap[status] || iconColorMap.unknown!
 })
 
 const statusTextClass = computed<string>(() => {
@@ -174,7 +174,7 @@ const statusTextClass = computed<string>(() => {
     critical: 'text-red-700',
     unknown: 'text-gray-700',
   }
-  return textColorMap[status] || textColorMap.unknown
+  return textColorMap[status] || textColorMap.unknown!
 })
 
 const statusIcon = computed(() => {

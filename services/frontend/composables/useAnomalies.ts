@@ -3,7 +3,7 @@
  * Typed API integration, авто-loading, пагинация, фильтры
  */
 import { ref, watchEffect } from 'vue'
-import { useApi } from './useApi'
+import { useGeneratedApi } from './useGeneratedApi'
 import type {
   AnomaliesQueryParams,
   AnomaliesListResponse,
@@ -13,7 +13,7 @@ import type {
 } from '../types/api'
 
 export function useAnomalies(systemId: string, filters: Partial<AnomaliesQueryParams> = {}) {
-  const { request } = useApi()
+  const { request } = useGeneratedApi()
   const state = ref<AsyncState<AnomaliesListResponse>>({ data: null, loading: false, error: null })
   const page = ref(filters.page || 1)
   const perPage = ref(filters.per_page || 20)
@@ -41,7 +41,7 @@ export function useAnomalies(systemId: string, filters: Partial<AnomaliesQueryPa
       if ('data' in resp) {
         state.value.data = resp.data
       } else {
-        state.value.error = (resp as ErrorResponse)
+        state.value.error = (resp as unknown as ErrorResponse)
       }
     } catch (err) {
       state.value.error = { error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' } }

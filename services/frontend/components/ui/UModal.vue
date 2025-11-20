@@ -62,6 +62,7 @@ interface Props {
   description?: string
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
   showCloseButton?: boolean
+  closeOnBackdrop?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {

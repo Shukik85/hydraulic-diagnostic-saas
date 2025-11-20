@@ -65,6 +65,10 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
       wsBase: process.env.NUXT_PUBLIC_WS_BASE || 'ws://localhost:8000/ws',
       enableMocks: process.env.ENABLE_MOCKS === 'true' || process.env.NODE_ENV === 'development',
+      features: {
+        enableMockData: true,
+        ragInterpretation: true,
+      }
     },
   },
 
