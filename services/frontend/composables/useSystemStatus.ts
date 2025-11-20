@@ -1,9 +1,11 @@
 /**
  * useSystemStatus.ts — Composable для статуса системы
  * Typed API integration, авто-refresh, error handling
+ * Enterprise: использует type guards вместо assertions
  */
 import { ref } from 'vue'
 import { useGeneratedApi } from './useGeneratedApi'
+import { isErrorResponse, isSystemStatus } from '~/types/guards'
 import type { SystemStatus, AsyncState, ErrorResponse } from '../types/api'
 
 export function useSystemStatus(systemId: string, refreshInterval = 10000) {
@@ -17,11 +19,12 @@ export function useSystemStatus(systemId: string, refreshInterval = 10000) {
     try {
       const resp = await request(`/systems/${systemId}/status`, { method: 'GET' })
       
-      // Предполагаем что resp это либо данные, либо ошибка
-      if (resp && typeof resp === 'object' && 'error' in resp) {
-        state.value.error = resp as ErrorResponse
+      if (isErrorResponse(resp)) {
+        state.value.error = resp
+      } else if (isSystemStatus(resp)) {
+        state.value.data = resp
       } else {
-        state.value.data = resp as SystemStatus
+        throw new Error('Invalid response shape from API')
       }
     } catch (err) {
       state.value.error = { 

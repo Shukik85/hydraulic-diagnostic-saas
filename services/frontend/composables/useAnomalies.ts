@@ -1,9 +1,11 @@
 /**
  * useAnomalies.ts — Composable для работы с аномалиями
  * Typed API integration, авто-loading, пагинация, фильтры
+ * Enterprise: использует type guards вместо assertions
  */
 import { ref, watchEffect } from 'vue'
 import { useGeneratedApi } from './useGeneratedApi'
+import { isErrorResponse, isAnomaliesListResponse } from '~/types/guards'
 import type {
   AnomaliesQueryParams,
   AnomaliesListResponse,
@@ -39,10 +41,12 @@ export function useAnomalies(systemId: string, filters: Partial<AnomaliesQueryPa
         params
       })
       
-      if (resp && typeof resp === 'object' && 'error' in resp) {
-        state.value.error = resp as ErrorResponse
+      if (isErrorResponse(resp)) {
+        state.value.error = resp
+      } else if (isAnomaliesListResponse(resp)) {
+        state.value.data = resp
       } else {
-        state.value.data = resp as AnomaliesListResponse
+        throw new Error('Invalid response shape from API')
       }
     } catch (err) {
       state.value.error = { 
