@@ -3,11 +3,11 @@
  * Typed API integration, авто-refresh, error handling
  */
 import { ref } from 'vue'
-import { useApi } from './useApi'
+import { useGeneratedApi } from './useGeneratedApi'
 import type { SystemStatus, AsyncState } from '../types/api'
 
 export function useSystemStatus(systemId: string, refreshInterval = 10000) {
-  const { request } = useApi()
+  const { request } = useGeneratedApi()
   const state = ref<AsyncState<SystemStatus>>({ data: null, loading: false, error: null })
   let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -22,7 +22,11 @@ export function useSystemStatus(systemId: string, refreshInterval = 10000) {
         state.value.error = resp
       }
     } catch (err) {
-      state.value.error = { error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' } }
+      state.value.error = { 
+        message: String(err),
+        code: 'NETWORK_ERROR',
+        error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' }
+      }
     } finally {
       state.value.loading = false
     }
