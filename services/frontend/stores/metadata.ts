@@ -192,7 +192,8 @@ export const useMetadataStore = defineStore('metadata', () => {
     components.forEach((comp, i) => {
       comp.connected_to.forEach(targetId => {
         const j = components.findIndex(c => c.id === targetId)
-        if (j >= 0) {
+        // ✅ Optional chaining для безопасности
+        if (j >= 0 && matrix[i] && matrix[i][j] !== undefined) {
           matrix[i][j] = 1
         }
       })
