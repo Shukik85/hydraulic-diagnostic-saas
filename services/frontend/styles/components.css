@@ -7,46 +7,46 @@
    ========================================================================== */
 
 .btn-primary {
-  @apply px-6 py-3 rounded-lg bg-primary-600 hover:bg-primary-700 
-         text-white font-medium transition-all duration-200 
+  @apply px-6 py-3 rounded-lg bg-primary-600 hover:bg-primary-700
+         text-white font-medium transition-all duration-200
          shadow-md hover:shadow-lg active:shadow-sm
          focus:outline-none focus:ring-2 focus:ring-primary-500/50;
   min-height: 48px;
 }
 
 .btn-primary-lg {
-  @apply px-8 py-4 rounded-lg bg-primary-600 hover:bg-primary-700 
-         text-white font-bold text-lg transition-all duration-200 
+  @apply px-8 py-4 rounded-lg bg-primary-600 hover:bg-primary-700
+         text-white font-bold text-lg transition-all duration-200
          shadow-md hover:shadow-lg
          focus:outline-none focus:ring-2 focus:ring-primary-500/50;
   min-height: 56px;
 }
 
 .btn-secondary {
-  @apply px-6 py-3 rounded-lg bg-steel-600/20 hover:bg-steel-600/40 
-         text-steel-100 font-medium transition-all duration-200
-         focus:outline-none focus:ring-2 focus:ring-steel-500/50;
+  @apply px-6 py-3 rounded-lg bg-steel-dark/20 hover:bg-steel-dark/40
+         text-steel-shine font-medium transition-all duration-200
+         focus:outline-none focus:ring-2 focus:ring-steel-medium/50;
   min-height: 48px;
 }
 
 .btn-ghost {
-  @apply px-6 py-3 rounded-lg bg-transparent hover:bg-white/5 
-         text-steel-100 font-medium transition-all duration-200
+  @apply px-6 py-3 rounded-lg bg-transparent hover:bg-white/5
+         text-steel-shine font-medium transition-all duration-200
          focus:outline-none focus:ring-2 focus:ring-primary-500/50;
   min-height: 48px;
 }
 
 .btn-icon {
-  @apply w-12 h-12 rounded-lg bg-steel-600/20 hover:bg-steel-600/40 
+  @apply w-12 h-12 rounded-lg bg-steel-dark/20 hover:bg-steel-dark/40
          flex items-center justify-center
-         text-steel-100 transition-all duration-200
+         text-steel-shine transition-all duration-200
          focus:outline-none focus:ring-2 focus:ring-primary-500/50;
 }
 
 .btn-icon-lg {
-  @apply w-14 h-14 rounded-lg bg-steel-600/20 hover:bg-steel-600/40 
+  @apply w-14 h-14 rounded-lg bg-steel-dark/20 hover:bg-steel-dark/40
          flex items-center justify-center
-         text-steel-100 transition-all duration-200
+         text-steel-shine transition-all duration-200
          focus:outline-none focus:ring-2 focus:ring-primary-500/50;
 }
 
@@ -54,13 +54,13 @@
    ========================================================================== */
 
 .card-glass {
-  @apply bg-gradient-to-br from-steel-800/80 to-steel-900/80 
-         backdrop-blur-xl rounded-xl border border-steel-700/50
+  @apply bg-gradient-to-br from-steel-dark/80 to-steel-dark/80
+         backdrop-blur-xl rounded-xl border border-steel-dark/50
          shadow-2xl shadow-black/20;
 }
 
 .card-hover {
-  @apply transition-all duration-300 
+  @apply transition-all duration-300
          hover:scale-[1.02] hover:shadow-2xl hover:shadow-primary-500/10
          hover:border-primary-500/30;
 }
@@ -73,12 +73,12 @@
    ========================================================================== */
 
 .input-text {
-  @apply w-full px-4 py-3 rounded-lg 
-         bg-steel-900/50 border border-steel-700/50
-         text-white placeholder-steel-400
+  @apply w-full px-4 py-3 rounded-lg
+         bg-steel-dark/50 border border-steel-dark/50
+         text-white placeholder-steel-light
          transition-all duration-200
          focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50
-         hover:border-steel-600;
+         hover:border-steel-medium;
   min-height: 48px;
 }
 
@@ -87,22 +87,22 @@
 }
 
 .select-custom {
-  @apply w-full px-4 py-3 rounded-lg 
-         bg-steel-900/50 border border-steel-700/50
+  @apply w-full px-4 py-3 rounded-lg
+         bg-steel-dark/50 border border-steel-dark/50
          text-white
          transition-all duration-200
          focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50
-         hover:border-steel-600 cursor-pointer;
+         hover:border-steel-medium cursor-pointer;
   min-height: 48px;
 }
 
 .textarea-custom {
-  @apply w-full px-4 py-3 rounded-lg 
-         bg-steel-900/50 border border-steel-700/50
-         text-white placeholder-steel-400
+  @apply w-full px-4 py-3 rounded-lg
+         bg-steel-dark/50 border border-steel-dark/50
+         text-white placeholder-steel-light
          transition-all duration-200
          focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50
-         hover:border-steel-600 resize-none;
+         hover:border-steel-medium resize-none;
   min-height: 120px;
 }
 
@@ -110,25 +110,25 @@
    ========================================================================== */
 
 .alert-success {
-  @apply bg-success-500/10 border border-success-500/30 
-         text-success-100 rounded-lg p-4
+  @apply bg-status-success-dark/10 border border-status-success-dark/30
+         text-status-success-light rounded-lg p-4
          flex items-start gap-3;
 }
 
 .alert-warning {
-  @apply bg-yellow-500/10 border border-yellow-500/30 
+  @apply bg-yellow-500/10 border border-yellow-500/30
          text-yellow-100 rounded-lg p-4
          flex items-start gap-3;
 }
 
 .alert-error {
-  @apply bg-red-500/10 border border-red-500/30 
+  @apply bg-red-500/10 border border-red-500/30
          text-red-100 rounded-lg p-4
          flex items-start gap-3;
 }
 
 .alert-info {
-  @apply bg-primary-500/10 border border-primary-500/30 
+  @apply bg-primary-500/10 border border-primary-500/30
          text-primary-100 rounded-lg p-4
          flex items-start gap-3;
 }
@@ -138,8 +138,8 @@
 
 .badge-success {
   @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full
-         bg-success-500/20 text-success-400 text-xs font-medium
-         border border-success-500/30;
+         bg-status-success-dark/20 text-status-success-light text-xs font-medium
+         border border-status-success-dark/30;
 }
 
 .badge-warning {
@@ -164,16 +164,16 @@
    ========================================================================== */
 
 .progress-bar {
-  @apply w-full h-2 bg-steel-800 rounded-full overflow-hidden;
+  @apply w-full h-2 bg-steel-dark rounded-full overflow-hidden;
 }
 
 .progress-fill {
-  @apply h-full bg-gradient-to-r from-primary-500 to-primary-400 
+  @apply h-full bg-gradient-to-r from-primary-500 to-primary-400
          transition-all duration-500 ease-out rounded-full;
 }
 
 .progress-fill-success {
-  @apply bg-gradient-to-r from-success-500 to-success-400;
+  @apply bg-gradient-to-r from-status-success-dark to-status-success-light;
 }
 
 .progress-fill-warning {
@@ -188,7 +188,7 @@
    ========================================================================== */
 
 .skeleton {
-  @apply bg-gradient-to-r from-steel-800/50 via-steel-700/50 to-steel-800/50 
+  @apply bg-gradient-to-r from-steel-dark/50 via-steel-medium/50 to-steel-medium/50
          animate-pulse rounded-lg;
 }
 
@@ -208,18 +208,18 @@
    ========================================================================== */
 
 .text-gradient {
-  @apply bg-gradient-to-r from-primary-400 to-primary-600 
+  @apply bg-gradient-to-r from-primary-400 to-primary-600
          bg-clip-text text-transparent;
 }
 
 .text-gradient-success {
-  @apply bg-gradient-to-r from-success-400 to-success-600 
+  @apply bg-gradient-to-r from-status-success-light to-status-success-dark
          bg-clip-text text-transparent;
 }
 
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: theme('colors.steel.600') theme('colors.steel.900');
+  scrollbar-color: theme('colors.steel.medium') theme('colors.steel.dark');
 }
 
 .scrollbar-thin::-webkit-scrollbar {
@@ -227,17 +227,17 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: theme('colors.steel.900');
+  background: theme('colors.steel.dark');
   border-radius: 4px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: theme('colors.steel.600');
+  background: theme('colors.steel.medium');
   border-radius: 4px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: theme('colors.steel.500');
+  background: theme('colors.steel.light');
 }
 
 /* TRANSITIONS

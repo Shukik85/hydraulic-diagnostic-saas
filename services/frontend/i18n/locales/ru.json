@@ -289,7 +289,7 @@
       },
       "contact": {
         "title": "Контакты",
-        "email": "contact@hydraulic-diagnostic.com",
+        "email": "contact{'@'}hydraulic-diagnostic.com",
         "emailLabel": "Email:",
         "emailUser": "contact",
         "emailDomain": "hydraulic-diagnostic.com",
