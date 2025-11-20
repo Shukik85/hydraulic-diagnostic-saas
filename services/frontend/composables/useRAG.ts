@@ -12,14 +12,41 @@ import type {
 } from '~/types/rag'
 
 /**
+ * Confidence Level объект
+ */
+export interface ConfidenceLevel {
+  level: 'high' | 'medium' | 'low'
+  label: string
+  color: string
+}
+
+/**
  * Utility: Определить уровень уверенности
  * @param confidence - Значение confidence (0-1)
- * @returns 'high' | 'medium' | 'low'
+ * @returns Объект с level, label, color
  */
-export function getConfidenceLevel(confidence: number): 'high' | 'medium' | 'low' {
-  if (confidence >= 0.8) return 'high'
-  if (confidence >= 0.5) return 'medium'
-  return 'low'
+export function getConfidenceLevel(confidence: number): ConfidenceLevel {
+  if (confidence >= 0.8) {
+    return {
+      level: 'high',
+      label: 'Высокая',
+      color: 'green'
+    }
+  }
+  
+  if (confidence >= 0.5) {
+    return {
+      level: 'medium',
+      label: 'Средняя',
+      color: 'yellow'
+    }
+  }
+  
+  return {
+    level: 'low',
+    label: 'Низкая',
+    color: 'red'
+  }
 }
 
 export function useRAG() {
