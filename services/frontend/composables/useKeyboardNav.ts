@@ -131,12 +131,16 @@ export const useFocusTrap = (containerRef: Ref<HTMLElement | null>) => {
     // Shift + Tab на первом элементе -> переход к последнему
     if (event.shiftKey && document.activeElement === firstElement) {
       event.preventDefault()
-      lastElement.focus()
+      if (lastElement) {
+        lastElement.focus()
+      }
     } 
     // Tab на последнем элементе -> переход к первому
     else if (!event.shiftKey && document.activeElement === lastElement) {
       event.preventDefault()
-      firstElement.focus()
+      if (firstElement) {
+        firstElement.focus()
+      }
     }
   }
   
@@ -153,7 +157,7 @@ export const useFocusTrap = (containerRef: Ref<HTMLElement | null>) => {
     
     // Фокусируем первый focusable элемент
     const focusableElements = getFocusableElements(containerRef.value)
-    if (focusableElements.length > 0) {
+    if (focusableElements.length > 0 && focusableElements[0]) {
       focusableElements[0].focus()
     }
     
