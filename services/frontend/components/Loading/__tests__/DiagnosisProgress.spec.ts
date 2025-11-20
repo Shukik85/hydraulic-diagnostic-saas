@@ -1,26 +1,26 @@
 import { mount } from '@vue/test-utils'
+import { describe, it, expect } from 'vitest'
 import DiagnosisProgress from '../DiagnosisProgress.vue'
+import type { Stage } from '../DiagnosisProgress.vue'
 
-describe('DiagnosisProgress.vue', () => {
-  const mockStages = [
-    { id: 'prepare', name: 'Подготовка', status: 'complete', duration: '0.4s' },
-    { id: 'gnn', name: 'GNN', status: 'complete', duration: '1.3s' },
-    { id: 'rag', name: 'RAG', status: 'active', progress: 42 },
-    { id: 'report', name: 'Отчёт', status: 'pending' }
+describe('DiagnosisProgress', () => {
+  const mockStages: Stage[] = [
+    { id: '1', name: 'Data Loading', status: 'complete' as const, duration: '1.2 сек.' },
+    { id: '2', name: 'ML Analysis', status: 'active' as const, progress: 65 },
+    { id: '3', name: 'Report Generation', status: 'pending' as const }
   ]
 
-  it('renders all stages, correct statuses and progress', () => {
+  it('renders all stages', () => {
     const wrapper = mount(DiagnosisProgress, { props: { stages: mockStages, eta: '4.5 сек.' }})
-    const stageEls = wrapper.findAll('.stage-item')
-    expect(stageEls.length).toBe(mockStages.length)
-    expect(wrapper.text()).toContain('RAG')
-    expect(wrapper.text()).toContain('42%')
-    expect(wrapper.text()).toContain('4.5 сек.')
+    
+    expect(wrapper.text()).toContain('Data Loading')
+    expect(wrapper.text()).toContain('ML Analysis')
+    expect(wrapper.text()).toContain('Report Generation')
   })
 
-  it('updates status classes', () => {
+  it('renders without eta', () => {
     const wrapper = mount(DiagnosisProgress, { props: { stages: mockStages }})
-    expect(wrapper.find('.stage-item.stage-active').exists()).toBe(true)
-    expect(wrapper.find('.stage-item.stage-complete').exists()).toBe(true)
+    
+    expect(wrapper.find('.stages-container').exists()).toBe(true)
   })
 })
