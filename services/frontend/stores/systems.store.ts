@@ -2,9 +2,9 @@
 import type { HydraulicSystem } from '~/types/api'
 
 export const useSystemsStore = defineStore('systems', () => {
-  const systems = ref<HydraulicSystem[]>([])
+  const systems = ref([] as HydraulicSystem[])
   const loading = ref(false)
-  const error = ref<string | null>(null)
+  const error = ref(null as string | null)
 
   const api = () => { try { return useApi().api } catch { return null } }
 
@@ -20,7 +20,7 @@ export const useSystemsStore = defineStore('systems', () => {
     finally { loading.value = false }
   }
 
-  const getSystemById = (id: number) => systems.value.find(s => s.id === id) || null
+  const getSystemById = (id: number) => systems.value.find((s: HydraulicSystem) => s.id === id) || null
 
   const addSystem = async (systemData: Partial<HydraulicSystem>) => {
     const $api = api()

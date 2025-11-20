@@ -2,9 +2,9 @@
 import type { User } from '~/types/api';
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null);
+  const user = ref(null as User | null);
   const loading = ref(false);
-  const error = ref<string | null>(null);
+  const error = ref(null as string | null);
 
   const api = useApi();
 
