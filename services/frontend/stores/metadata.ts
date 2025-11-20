@@ -6,9 +6,13 @@ export const useMetadataStore = defineStore('metadata', () => {
 
   function processMatrix(matrix: number[][]) {
     for (let i = 0; i < matrix.length; i++) {
-      for (let j = 0; j < matrix[i]!.length; j++) {
-        if (matrix[i] && matrix[i]![j] !== undefined) {
-          matrix[i]![j] = 1
+      const row = matrix[i]
+      if (!row) continue
+      
+      for (let j = 0; j < row.length; j++) {
+        // Enterprise: безопасный доступ с проверкой
+        if (row[j] !== undefined) {
+          row[j] = 1
         }
       }
     }

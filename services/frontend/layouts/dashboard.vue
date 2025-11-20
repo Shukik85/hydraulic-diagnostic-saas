@@ -17,9 +17,11 @@ const availableLocales: LocaleOption[] = [
   { code: 'en', name: 'English' }
 ]
 
-// Добавлен ! для non-null assertion
+// Enterprise: безопасный дефолт вместо non-null assertion
+const DEFAULT_LOCALE: LocaleOption = { code: 'ru', name: 'Русский' }
+
 const currentLocale = computed<LocaleOption>(() =>
-  availableLocales.find(l => l.code === (locale.value as AppLocale)) ?? availableLocales[0]!
+  availableLocales.find(l => l.code === (locale.value as AppLocale)) ?? DEFAULT_LOCALE
 )
 
 const switchLanguage = async (code: AppLocale) => {
