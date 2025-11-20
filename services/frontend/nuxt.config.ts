@@ -33,6 +33,7 @@ export default defineNuxtConfig({
   },
 
   css: [
+    '~/styles/accessibility.css',
     '~/styles/metallic.css',
     '~/styles/premium-tokens.css',
     '~/styles/components.css',
