@@ -1,4 +1,38 @@
 # Files to Delete
-Generated: 21 ноя 2025 г.  1:31:10
+Generated: 21 ноя 2025 г.  1:47:17
 
+./DOCKER_DEPLOYMENT.md
+./docs/BACKEND_REORGANIZATION.md
+./docs/Case-Study-Guide.md
+./docs/deployment/BACKEND_REORGANIZATION.md
+./docs/deployment/DOCKER_QUICK_FIX.md
+./docs/deployment/QUICK_REBUILD.md
+./docs/development/WINDOWS_QUICKFIX.md
+./docs/Diagnostic-Guide-FINAL-v3.md
+./docs/ENTERPRISE_PLUS_PLUS_ARCHITECTURE.md
+./docs/IMPLEMENTATION_PLAN.md
+./docs/MICROSERVICES_INTEGRATION.md
+./docs/PHASE_0_COMPLETE_SUMMARY.md
+./docs/PHASE_0_COMPLETION_GUIDE.md
+./docs/project/STAGE_0_COMPLETION.md
+./docs/QUICKSTART_MICROSERVICES.md
+./docs/RAG_SERVICE_INTEGRATION.md
+./docs/REFACTORING_SUMMARY.md
+./docs/UNBLOCK_FRONTEND_NOW.md
+./DOCS_APP_DEPLOYMENT.md
+./README_SELF_SERVICE.md
+./services/backend/CHANGELOG_FRIENDLY_UX.md
+./services/backend/FIXES_SUMMARY.md
+./services/backend/FRIENDLY_ADMIN_GUIDE.md
+./services/backend/FRIENDLY_UX_IMPLEMENTATION.md
+./services/backend/METALLIC_ADMIN_THEME.md
+./services/backend/PROFESSIONAL_ADMIN_GUIDE.md
+./services/backend/RESTYLE_CHANGELOG.md
+./services/backend/RUFF_FIXES.md
 ./services/backend/UNFOLD_SETUP.md
+./services/docs/LEVEL_6_INTEGRATION_GUIDE.md
+./services/frontend/docs/metallic-showcase.md
+./services/gnn_service/_legacy/README.md
+./services/gnn_service/_legacy/README_old.md
+./services/gnn_service/README.friendly-test.md
+./services/rag_service/ollama-setup-guide.md

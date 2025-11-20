@@ -1,5 +1,5 @@
 # Documentation Files (docs/)
-Generated: 21 ноя 2025 г.  1:31:10
+Generated: 21 ноя 2025 г.  1:47:17
 
 ./docs/api/README.md
 ./docs/BACKEND_REORGANIZATION.md

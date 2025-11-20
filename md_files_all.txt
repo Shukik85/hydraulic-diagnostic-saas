@@ -1,5 +1,5 @@
 # All .md Files
-Generated: 21 ноя 2025 г.  1:31:10
+Generated: 21 ноя 2025 г.  1:47:17
 
 ./DOCKER_DEPLOYMENT.md
 ./docs/api/README.md

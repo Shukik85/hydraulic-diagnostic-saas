@@ -4,9 +4,9 @@
 # List Markdown Files Script
 # Hydraulic Diagnostic SaaS Project
 # ============================================================================
-# 
+#
 # Этот скрипт выводит список всех .md файлов проекта с анализом и фильтрацией
-# 
+#
 # Дата: 20 ноября 2025
 # Версия: 1.1.0
 #
@@ -74,7 +74,7 @@ print_file() {
     local file=$1
     local status=$2
     local details=$3
-    
+
     case $status in
         "✓")
             echo -e "${GREEN}$status ${CYAN}$file${NC} $details"
@@ -151,7 +151,7 @@ if [ ${#DOC_FILES[@]} -eq 0 ]; then
 else
     echo -e "Найдено в docs/: ${GREEN}${#DOC_FILES[@]}${NC} файлов"
     echo ""
-    
+
     print_section "Актуальная документация ✅"
     for file in "${DOC_FILES[@]}"; do
         # Проверить что это актуальные документы
@@ -160,13 +160,13 @@ else
             print_file "$file" "✓" "($size)"
         fi
     done
-    
+
     print_section "Другие документы в docs/"
     for file in "${DOC_FILES[@]}"; do
         # Проверить что это НЕ актуальные документы
         if [[ ! "$file" =~ (CRITICAL_UPDATES|KNOWN_ISSUES|IMPLEMENTATION_STATUS|billing-guide-yookassa|TYPESCRIPT_BEST_PRACTICES|FRONTEND_ARCHITECTURE|TESTING_ROADMAP|MOBILE_FIRST_GUIDE|deprecated-docs)\.md ]]; then
             size=$(get_file_size "$file")
-            
+
             # Проверить если это deprecated или старые версии
             if [[ "$file" =~ (deprecated|OLD|BACKUP|stripe|DRAFT|WIP) ]]; then
                 print_file "$file" "✗" "($size) DEPRECATED"
@@ -195,10 +195,10 @@ if [ ${#BACKEND_FILES[@]} -eq 0 ]; then
 else
     echo -e "Найдено: ${BLUE}${#BACKEND_FILES[@]}${NC} файлов"
     echo ""
-    
+
     for file in "${BACKEND_FILES[@]}"; do
         size=$(get_file_size "$file")
-        
+
         if [[ "$file" =~ (stripe|OLD|DEPRECATED|deprecated) ]]; then
             print_file "$file" "✗" "($size) DEPRECATED"
         else
@@ -225,10 +225,10 @@ if [ ${#FRONTEND_FILES[@]} -eq 0 ]; then
 else
     echo -e "Найдено: ${BLUE}${#FRONTEND_FILES[@]}${NC} файлов"
     echo ""
-    
+
     for file in "${FRONTEND_FILES[@]}"; do
         size=$(get_file_size "$file")
-        
+
         if [[ "$file" =~ (stripe|OLD|DEPRECATED|deprecated) ]]; then
             print_file "$file" "✗" "($size) DEPRECATED"
         else
@@ -255,7 +255,7 @@ if [ ${#README_FILES[@]} -eq 0 ]; then
 else
     echo -e "Найдено: ${BLUE}${#README_FILES[@]}${NC} файлов"
     echo ""
-    
+
     for file in "${README_FILES[@]}"; do
         size=$(get_file_size "$file")
         lines=$(get_line_count "$file")
@@ -356,8 +356,59 @@ print_file "md_files_docs.txt" "✓" "Документация (${#DOC_FILES[@]}
 echo "# Files to Delete" > md_files_to_delete.txt
 echo "Generated: $(date)" >> md_files_to_delete.txt
 echo "" >> md_files_to_delete.txt
+
+DEPRECATED_PATTERNS=(
+    "deprecated"
+    "OLD"
+    "BACKUP"
+    "stripe"
+    "DRAFT"
+    "WIP"
+    "_old"
+    "_legacy"
+    "UNFOLD_SETUP"
+    "REFACTORING_SUMMARY"
+    "PHASE_0"
+    "FRIENDLY_ADMIN_GUIDE"
+    "PROFESSIONAL_ADMIN_GUIDE"
+    "METALLIC_ADMIN_THEME"
+    "RESTYLE_CHANGELOG"
+    "FRIENDLY_UX"
+    "CHANGELOG_FRIENDLY"
+    "FIXES_SUMMARY"
+    "RUFF_FIXES"
+    "UNBLOCK_FRONTEND_NOW"
+    "QUICKSTART_MICROSERVICES"
+    "ENTERPRISE_PLUS_PLUS"
+    "RAG_SERVICE_INTEGRATION"
+    "MICROSERVICES_INTEGRATION"
+    "BACKEND_REORGANIZATION"
+    "DOCKER_QUICK_FIX"
+    "QUICK_REBUILD"
+    "WINDOWS_QUICKFIX"
+    "Case-Study-Guide"
+    "Diagnostic-Guide-FINAL-v3"
+    "IMPLEMENTATION_PLAN"
+    "STAGE_0_COMPLETION"
+    "README_SELF_SERVICE"
+    "DOCS_APP_DEPLOYMENT"
+    "DOCKER_DEPLOYMENT"
+    "metallic-showcase"
+    "README.friendly-test"
+    "ollama-setup-guide"
+    "LEVEL_6_INTEGRATION"
+)
+
 for file in "${ALL_FILES[@]}"; do
-    if [[ "$file" =~ (deprecated|OLD|BACKUP|stripe|DRAFT|WIP) ]]; then
+    should_delete=false
+    for pattern in "${DEPRECATED_PATTERNS[@]}"; do
+        if [[ "$file" =~ $pattern ]]; then
+            should_delete=true
+            break
+        fi
+    done
+
+    if [ "$should_delete" = true ]; then
         echo "$file" >> md_files_to_delete.txt
     fi
 done
