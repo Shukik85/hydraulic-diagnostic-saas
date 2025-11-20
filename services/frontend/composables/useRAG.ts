@@ -11,6 +11,17 @@ import type {
   RAGStatus
 } from '~/types/rag'
 
+/**
+ * Utility: Определить уровень уверенности
+ * @param confidence - Значение confidence (0-1)
+ * @returns 'high' | 'medium' | 'low'
+ */
+export function getConfidenceLevel(confidence: number): 'high' | 'medium' | 'low' {
+  if (confidence >= 0.8) return 'high'
+  if (confidence >= 0.5) return 'medium'
+  return 'low'
+}
+
 export function useRAG() {
   const status = ref<RAGStatus>('idle')
   const error = ref<string | null>(null)
@@ -27,7 +38,7 @@ export function useRAG() {
    * Получить интерпретацию результатов диагностики от RAG
    */
   async function interpretDiagnosis(
-    request: RAGInterpretationRequest
+    _request: RAGInterpretationRequest
   ): Promise<RAGInterpretationResponse | null> {
     status.value = 'loading'
     error.value = null
@@ -64,7 +75,7 @@ export function useRAG() {
    * Поиск в Knowledge Base
    */
   async function searchKnowledge(
-    request: KnowledgeBaseSearchRequest
+    _request: KnowledgeBaseSearchRequest
   ): Promise<KnowledgeBaseSearchResponse | null> {
     status.value = 'loading'
     error.value = null
@@ -91,7 +102,7 @@ export function useRAG() {
   /**
    * Объяснить конкретную аномалию
    */
-  async function explainAnomaly(anomaly: any): Promise<RAGInterpretationResponse | null> {
+  async function explainAnomaly(_anomaly: any): Promise<RAGInterpretationResponse | null> {
     status.value = 'loading'
     error.value = null
 
@@ -128,6 +139,7 @@ export function useRAG() {
     isRAGEnabled,
     interpretDiagnosis,
     searchKnowledge,
-    explainAnomaly
+    explainAnomaly,
+    getConfidenceLevel  // ✅ Экспортируем utility
   }
 }
