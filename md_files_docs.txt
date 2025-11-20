@@ -1,0 +1,32 @@
+# Documentation Files (docs/)
+Generated: 21 ноя 2025 г.  1:31:10
+
+./docs/api/README.md
+./docs/BACKEND_REORGANIZATION.md
+./docs/Case-Study-Guide.md
+./docs/CI_CD.md
+./docs/DEPLOYMENT.md
+./docs/deployment/BACKEND_REORGANIZATION.md
+./docs/deployment/DOCKER_QUICK_FIX.md
+./docs/deployment/QUICK_REBUILD.md
+./docs/development/DEVELOPMENT_QUICKSTART.md
+./docs/development/WINDOWS_QUICKFIX.md
+./docs/development/WINDOWS_SETUP.md
+./docs/Diagnostic-Guide-FINAL-v3.md
+./docs/ENTERPRISE_PLUS_PLUS_ARCHITECTURE.md
+./docs/IMPLEMENTATION_PLAN.md
+./docs/MICROSERVICES_INTEGRATION.md
+./docs/MONITORING_ENDPOINTS.md
+./docs/OPENAPI_INTEGRATION.md
+./docs/PHASE_0_COMPLETE_SUMMARY.md
+./docs/PHASE_0_COMPLETION_GUIDE.md
+./docs/project/CURRENT_STATUS.md
+./docs/project/DoD_CHECKLISTS.md
+./docs/project/ROADMAP_INCREMENTAL.md
+./docs/project/STAGE_0_COMPLETION.md
+./docs/QUICKSTART_MICROSERVICES.md
+./docs/RAG_SERVICE_INTEGRATION.md
+./docs/REFACTORING_SUMMARY.md
+./docs/SECURITY_BEST_PRACTICES.md
+./docs/UNBLOCK_FRONTEND_NOW.md
+./docs/USER_DECISION_TREE.md

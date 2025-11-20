@@ -1,0 +1,4 @@
+# Files to Delete
+Generated: 21 ноя 2025 г.  1:31:10
+
+./services/backend/UNFOLD_SETUP.md
