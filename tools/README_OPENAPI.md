@@ -58,7 +58,7 @@ bash tools/generate_typescript_clients.sh
 # Результат: services/frontend/composables/api/generated/
 ```
 
-## 📝 Использование в Frontend
+## 📝 Использование в Frontend (примеры кода)
 
 ### Nuxt Composables
 
