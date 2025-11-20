@@ -4,7 +4,7 @@
  */
 import { ref } from 'vue'
 import { useGeneratedApi } from './useGeneratedApi'
-import type { SystemStatus, AsyncState } from '../types/api'
+import type { SystemStatus, AsyncState, ErrorResponse } from '../types/api'
 
 export function useSystemStatus(systemId: string, refreshInterval = 10000) {
   const { request } = useGeneratedApi()
@@ -15,11 +15,12 @@ export function useSystemStatus(systemId: string, refreshInterval = 10000) {
     state.value.loading = true
     state.value.error = null
     try {
-      const resp = await request<SystemStatus>(`/systems/${systemId}/status`, { method: 'GET' })
-      if ('data' in resp) {
-        state.value.data = resp.data
-      } else {
-        state.value.error = resp
+      const resp = await request(`/systems/${systemId}/status`, { method: 'GET' }) as SystemStatus | ErrorResponse
+      
+      if (resp && 'data' in resp) {
+        state.value.data = resp as SystemStatus
+      } else if (resp && 'error' in resp) {
+        state.value.error = resp as ErrorResponse
       }
     } catch (err) {
       state.value.error = { 
