@@ -12,9 +12,10 @@ const props = withDefaults(defineProps<Props>(), {
   closeOnBackdrop: true,
 })
 
+// ✅ ПРАВИЛЬНЮ: Tuple syntax для emits (Vue 3.5+)
 const emit = defineEmits<{
-  close: []
-}>
+  (e: 'close'): void
+}>()
 
 const modalRef = ref<HTMLElement | null>(null)
 const titleId = `modal-title-${Math.random().toString(36).substr(2, 9)}`
