@@ -37,12 +37,12 @@ export function useAnomalies(systemId: string, filters: Partial<AnomaliesQueryPa
       const resp = await request(`/systems/${systemId}/anomalies`, {
         method: 'GET',
         params
-      }) as AnomaliesListResponse | ErrorResponse
+      })
       
-      if (resp && 'data' in resp) {
-        state.value.data = resp as AnomaliesListResponse
-      } else {
+      if (resp && typeof resp === 'object' && 'error' in resp) {
         state.value.error = resp as ErrorResponse
+      } else {
+        state.value.data = resp as AnomaliesListResponse
       }
     } catch (err) {
       state.value.error = { 
