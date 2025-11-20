@@ -4,7 +4,9 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-    typeCheck: true,
+    // ✅ Отключаем typeCheck в dev mode (конфликт vite-plugin-checker)
+    // Используем npm run typecheck вручную или в CI
+    typeCheck: false,
     shim: false,
   },
 
