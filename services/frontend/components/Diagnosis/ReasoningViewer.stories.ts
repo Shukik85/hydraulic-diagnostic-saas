@@ -1,23 +1,23 @@
+import type { Meta, StoryObj } from '@storybook/vue3'
 import ReasoningViewer from './ReasoningViewer.vue'
-import { diagnosisMocks } from '~/mocks/diagnosis-result.mock'
+import { diagnosisMocks } from '~/mocks/diagnosis'
 
-export default {
+const meta: Meta<typeof ReasoningViewer> = {
   title: 'Diagnosis/ReasoningViewer',
   component: ReasoningViewer,
-  argTypes: {
-    reasoning: { control: 'object' },
-    metadata: { control: 'object' }
-  }
+  tags: ['autodocs'],
 }
 
-const Template = (args) => ({
-  components: { ReasoningViewer },
-  setup: () => ({ args }),
-  template: '<ReasoningViewer v-bind="args"/>'
-})
+export default meta
+type Story = StoryObj<typeof ReasoningViewer>
 
-export const Default = Template.bind({})
-Default.args = {
-  reasoning: diagnosisMocks.standard.rag_interpretation.reasoning,
-  metadata: diagnosisMocks.standard.rag_interpretation.metadata
+export const Default: Story = {
+  args: {
+    reasoning: diagnosisMocks.standard.rag_interpretation?.reasoning ?? [],
+    metadata: diagnosisMocks.standard.rag_interpretation?.metadata ?? {
+      model: 'mock',
+      processingTime: 100,
+      tokensUsed: 50
+    },
+  },
 }

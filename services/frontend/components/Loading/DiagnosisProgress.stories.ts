@@ -1,29 +1,32 @@
+import type { Meta, StoryObj } from '@storybook/vue3'
 import DiagnosisProgress from './DiagnosisProgress.vue'
+import type { Stage } from './DiagnosisProgress.vue'
 
-const baseStages = [
-  { id: 'prepare', name: 'Подготовка', status: 'complete', duration: '0.7с' },
-  { id: 'gnn', name: 'GNN', status: 'complete', duration: '1.3с' },
-  { id: 'rag', name: 'RAG', status: 'active', progress: 63 },
-  { id: 'report', name: 'Отчет', status: 'pending' }
-]
-
-export default {
-  title: 'Diagnosis/DiagnosisProgress',
+const meta: Meta<typeof DiagnosisProgress> = {
+  title: 'Loading/DiagnosisProgress',
   component: DiagnosisProgress,
-  argTypes: {
-    stages: { control: 'object' },
-    eta: { control: 'text' }
-  }
+  tags: ['autodocs'],
 }
 
-const Template = (args) => ({
-  components: { DiagnosisProgress },
-  setup: () => ({ args }),
-  template: '<DiagnosisProgress v-bind="args"/>'
-})
+export default meta
+type Story = StoryObj<typeof DiagnosisProgress>
 
-export const Active = Template.bind({})
-Active.args = { stages: baseStages, eta: '4 сек.' }
+const baseStages: Stage[] = [
+  { id: '1', name: 'Загрузка данных', status: 'complete' as const, duration: '0.8 сек.' },
+  { id: '2', name: 'Анализ ML', status: 'active' as const, progress: 45 },
+  { id: '3', name: 'Генерация отчета', status: 'pending' as const },
+]
 
-export const AllComplete = Template.bind({})
-AllComplete.args = { stages: baseStages.map(s => ({ ...s, status: 'complete', progress: undefined })), eta: '0' }
+export const Active: Story = {
+  args: {
+    stages: baseStages,
+    eta: '4 сек.',
+  },
+}
+
+export const AllComplete: Story = {
+  args: {
+    stages: baseStages.map(s => ({ ...s, status: 'complete' as const, progress: undefined })),
+    eta: '0',
+  },
+}

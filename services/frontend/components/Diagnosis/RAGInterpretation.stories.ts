@@ -1,33 +1,48 @@
+import type { Meta, StoryObj } from '@storybook/vue3'
 import RAGInterpretation from './RAGInterpretation.vue'
-import { diagnosisMocks } from '~/mocks/diagnosis-result.mock'
+import { diagnosisMocks } from '~/mocks/diagnosis'
 
-export default {
+const meta: Meta<typeof RAGInterpretation> = {
   title: 'Diagnosis/RAGInterpretation',
   component: RAGInterpretation,
-  argTypes: {
-    interpretation: { control: 'object' },
-    loading: { control: 'boolean' },
-    error: { control: 'text' }
-  }
+  tags: ['autodocs'],
 }
 
-const Template = (args) => ({
-  components: { RAGInterpretation },
-  setup: () => ({ args }),
-  template: '<RAGInterpretation v-bind="args"/>'
-})
+export default meta
+type Story = StoryObj<typeof RAGInterpretation>
 
-export const Warning = Template.bind({})
-Warning.args = { interpretation: diagnosisMocks.standard.rag_interpretation }
+export const Warning: Story = {
+  args: {
+    interpretation: diagnosisMocks.standard.rag_interpretation,
+    loading: false,
+  },
+}
 
-export const Critical = Template.bind({})
-Critical.args = { interpretation: diagnosisMocks.critical.rag_interpretation }
+export const Critical: Story = {
+  args: {
+    interpretation: diagnosisMocks.critical.rag_interpretation,
+    loading: false,
+  },
+}
 
-export const Normal = Template.bind({})
-Normal.args = { interpretation: diagnosisMocks.normal.rag_interpretation }
+export const Normal: Story = {
+  args: {
+    interpretation: diagnosisMocks.normal.rag_interpretation,
+    loading: false,
+  },
+}
 
-export const Loading = Template.bind({})
-Loading.args = { loading: true }
+export const Loading: Story = {
+  args: {
+    interpretation: null,
+    loading: true,
+  },
+}
 
-export const Error = Template.bind({})
-Error.args = { error: 'Ошибка генерации ответа RAG' }
+export const Error: Story = {
+  args: {
+    interpretation: null,
+    loading: false,
+    error: 'Ошибка генерации ответа RAG',
+  },
+}

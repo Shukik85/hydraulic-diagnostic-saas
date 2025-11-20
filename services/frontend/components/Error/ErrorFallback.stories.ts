@@ -1,13 +1,23 @@
-import ErrorFallback from '~/components/Error/ErrorFallback.vue'
-export default {
-  title: 'Diagnosis/ErrorFallback',
+import type { Meta, StoryObj } from '@storybook/vue3'
+import ErrorFallback from './ErrorFallback.vue'
+
+const meta: Meta<typeof ErrorFallback> = {
+  title: 'Error/ErrorFallback',
   component: ErrorFallback,
-  argTypes: { error: { control: 'object' } }
+  tags: ['autodocs'],
 }
-const Template = (args) => ({
-  components: { ErrorFallback },
-  setup: () => ({ args }),
-  template: '<ErrorFallback v-bind="args"/>'
-})
-export const Default = Template.bind({})
-Default.args = { error: new Error('Тестовая ошибка') }
+
+export default meta
+type Story = StoryObj<typeof ErrorFallback>
+
+export const Default: Story = {
+  args: {
+    error: new Error('Тестовая ошибка'),
+  },
+}
+
+export const NetworkError: Story = {
+  args: {
+    error: new Error('Network request failed'),
+  },
+}
