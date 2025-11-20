@@ -34,17 +34,22 @@ export function useAnomalies(systemId: string, filters: Partial<AnomaliesQueryPa
         start_date: startDate.value,
         end_date: endDate.value
       }
-      const resp = await request<AnomaliesListResponse>(`/systems/${systemId}/anomalies`, {
+      const resp = await request(`/systems/${systemId}/anomalies`, {
         method: 'GET',
         params
-      })
-      if ('data' in resp) {
-        state.value.data = resp.data
+      }) as AnomaliesListResponse | ErrorResponse
+      
+      if (resp && 'data' in resp) {
+        state.value.data = resp as AnomaliesListResponse
       } else {
-        state.value.error = (resp as unknown as ErrorResponse)
+        state.value.error = resp as ErrorResponse
       }
     } catch (err) {
-      state.value.error = { error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' } }
+      state.value.error = { 
+        message: String(err),
+        code: 'NETWORK_ERROR',
+        error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' }
+      }
     } finally {
       state.value.loading = false
     }
