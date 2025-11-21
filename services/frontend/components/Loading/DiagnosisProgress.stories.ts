@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
+import { Meta, StoryObj } from '@storybook/vue3'
 import DiagnosisProgress from './DiagnosisProgress.vue'
 
 interface Stage {
@@ -9,14 +9,14 @@ interface Stage {
   duration?: string
 }
 
+/** @type {Meta<typeof DiagnosisProgress>} */
 const meta = {
   title: 'Loading/DiagnosisProgress',
   component: DiagnosisProgress,
   tags: ['autodocs'],
-} as Meta<typeof DiagnosisProgress>
+}
 
 export default meta
-type Story = StoryObj<typeof DiagnosisProgress>
 
 const baseStages: Stage[] = [
   { id: '1', name: 'Загрузка данных', status: 'complete' as const, duration: '0.8 сек.' },
@@ -24,14 +24,16 @@ const baseStages: Stage[] = [
   { id: '3', name: 'Генерация отчета', status: 'pending' as const },
 ]
 
-export const Active: Story = {
+/** @type {StoryObj<typeof DiagnosisProgress>} */
+export const Active = {
   args: {
     stages: baseStages,
     eta: '4 сек.',
   },
 }
 
-export const AllComplete: Story = {
+/** @type {StoryObj<typeof DiagnosisProgress>} */
+export const AllComplete = {
   args: {
     stages: baseStages.map(s => ({ ...s, status: 'complete' as const, progress: undefined })),
     eta: '0',
