@@ -18,6 +18,15 @@ try {
 } catch {}
 
 export default withNuxt({
+  // ✨ Игнорирование сгенерированных файлов
+  ignores: [
+    '.nuxt/**',
+    '.output/**',
+    'dist/**',
+    'node_modules/**',
+    'generated/**',
+    '.turbo/**'
+  ],
   rules: {
     // Console usage - allow only warnings and errors in production
     'no-console': ['warn', { allow: ['warn', 'error'] }],
