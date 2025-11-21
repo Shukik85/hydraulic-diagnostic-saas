@@ -1,14 +1,14 @@
-import type { Meta as MetaType, StoryObj as StoryObjType } from '@storybook/vue3'
+import type { Meta, StoryObj } from '@storybook/vue3'
 import ErrorFallback from './ErrorFallback.vue'
 
-const meta: MetaType<typeof ErrorFallback> = {
+const meta = {
   title: 'Error/ErrorFallback',
   component: ErrorFallback,
   tags: ['autodocs'],
-}
+} satisfies Meta<typeof ErrorFallback>
 
 export default meta
-type Story = StoryObjType<typeof ErrorFallback>
+type Story = StoryObj<typeof meta>
 
 export const Default: Story = {
   args: {
