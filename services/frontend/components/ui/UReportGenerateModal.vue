@@ -1,8 +1,5 @@
 <template>
-  <UDialog 
-    :model-value="modelValue" 
-    @update:model-value="$emit('update:modelValue', $event)"
-  >
+  <UDialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)">
     <UDialogContent class="max-w-2xl">
       <UDialogHeader>
         <UDialogTitle>{{ t('reports.generate.title') }}</UDialogTitle>
@@ -11,15 +8,9 @@
 
       <form @submit.prevent="handleSubmit" class="space-y-6">
         <!-- Report Template -->
-        <UFormGroup
-          :label="t('reports.generate.template')"
-          helper="Выберите тип отчёта в зависимости от аудитории"
-          required
-        >
-          <USelect 
-            v-model="form.template"
-            :disabled="loading"
-          >
+        <UFormGroup :label="t('reports.generate.template')" helper="Выберите тип отчёта в зависимости от аудитории"
+          required>
+          <USelect v-model="form.template" :disabled="loading">
             <option value="executive">{{ t('reports.templates.executive') }}</option>
             <option value="technical">{{ t('reports.templates.technical') }}</option>
             <option value="compliance">{{ t('reports.templates.compliance') }}</option>
@@ -28,15 +19,8 @@
         </UFormGroup>
 
         <!-- Date Range -->
-        <UFormGroup
-          :label="t('reports.generate.period')"
-          helper="Временной диапазон для анализа данных"
-          required
-        >
-          <USelect 
-            v-model="form.range"
-            :disabled="loading"
-          >
+        <UFormGroup :label="t('reports.generate.period')" helper="Временной диапазон для анализа данных" required>
+          <USelect v-model="form.range" :disabled="loading">
             <option value="last_24h">{{ t('reports.periods.last_24h') }}</option>
             <option value="last_7d">{{ t('reports.periods.last_7d') }}</option>
             <option value="last_30d">{{ t('reports.periods.last_30d') }}</option>
@@ -45,14 +29,8 @@
         </UFormGroup>
 
         <!-- Report Language -->
-        <UFormGroup
-          :label="t('reports.generate.language')"
-          helper="Язык генерируемого отчёта"
-        >
-          <USelect 
-            v-model="form.locale"
-            :disabled="loading"
-          >
+        <UFormGroup :label="t('reports.generate.language')" helper="Язык генерируемого отчёта">
+          <USelect v-model="form.locale" :disabled="loading">
             <option value="en-US">{{ t('reports.locales.en') }}</option>
             <option value="ru-RU">{{ t('reports.locales.ru') }}</option>
             <option value="de-DE">{{ t('reports.locales.de') }}</option>
@@ -60,16 +38,9 @@
         </UFormGroup>
 
         <!-- Custom Title -->
-        <UFormGroup
-          :label="t('reports.generate.customTitle')"
-          helper="Оставьте пустым для автоматического названия"
-        >
-          <UInput 
-            v-model="form.title"
-            :placeholder="t('reports.generate.customTitlePlaceholder')" 
-            :disabled="loading" 
-            maxlength="255" 
-          />
+        <UFormGroup :label="t('reports.generate.customTitle')" helper="Оставьте пустым для автоматического названия">
+          <UInput v-model="form.title" :placeholder="t('reports.generate.customTitlePlaceholder')" :disabled="loading"
+            maxlength="255" />
         </UFormGroup>
 
         <!-- Generation Preview -->
@@ -97,27 +68,12 @@
       </form>
 
       <UDialogFooter>
-        <UButton 
-          variant="secondary"
-          @click="handleCancel" 
-          :disabled="loading"
-        >
+        <UButton variant="secondary" @click="handleCancel" :disabled="loading">
           {{ t('ui.cancel') }}
         </UButton>
-        <UButton 
-          @click="handleSubmit" 
-          :disabled="loading"
-        >
-          <Icon 
-            v-if="loading" 
-            name="heroicons:arrow-path" 
-            class="w-5 h-5 animate-spin mr-2" 
-          />
-          <Icon 
-            v-else 
-            name="heroicons:document-plus" 
-            class="w-5 h-5 mr-2" 
-          />
+        <UButton @click="handleSubmit" :disabled="loading">
+          <Icon v-if="loading" name="heroicons:arrow-path" class="w-5 h-5 animate-spin mr-2" />
+          <Icon v-else name="heroicons:document-plus" class="w-5 h-5 mr-2" />
           {{ loading ? t('reports.generate.generating') : t('reports.generate.generateBtn') }}
         </UButton>
       </UDialogFooter>
@@ -126,6 +82,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+
 interface Props {
   modelValue: boolean
   loading?: boolean
@@ -157,7 +115,7 @@ function handleCancel() {
 
 function handleSubmit() {
   emit('submit', form.value)
-  
+
   setTimeout(() => {
     form.value = {
       template: 'executive',

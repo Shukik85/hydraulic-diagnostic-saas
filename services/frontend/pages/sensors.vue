@@ -27,7 +27,7 @@
             {{ sensor.status === 'normal' ? 'Норма' : sensor.status === 'warning' ? 'Предупреждение' : 'Критично' }}
           </span>
         </div>
-        
+
         <div class="space-y-3">
           <div class="flex justify-between items-center">
             <span class="text-sm text-gray-600">Текущее значение</span>
@@ -38,7 +38,7 @@
             <span class="text-sm text-gray-500">{{ sensor.lastUpdate }}</span>
           </div>
         </div>
-        
+
         <div class="flex items-center gap-2 mt-4">
           <button class="u-btn u-btn-ghost u-btn-sm flex-1">
             <Icon name="heroicons:chart-bar" class="w-4 h-4 mr-1" />
@@ -55,6 +55,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+
 // Page metadata
 definePageMeta({
   middleware: ['auth']
@@ -86,7 +88,7 @@ const sensors = ref([
     id: 3,
     name: 'Датчик потока F001',
     type: 'Поток',
-    system: 'HYD-002', 
+    system: 'HYD-002',
     currentValue: 185,
     unit: 'л/мин',
     status: 'critical' as const,
@@ -107,7 +109,7 @@ const getSensorStatusClass = (status: string): string => {
 const getSensorStatusIcon = (status: string): string => {
   const icons: Record<string, string> = {
     normal: 'heroicons:check-circle',
-    warning: 'heroicons:exclamation-triangle', 
+    warning: 'heroicons:exclamation-triangle',
     critical: 'heroicons:x-circle'
   }
   return icons[status] || 'heroicons:question-mark-circle'

@@ -150,6 +150,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 import { useMetadataStore } from '~/stores/metadata';
 
 const store = useMetadataStore();

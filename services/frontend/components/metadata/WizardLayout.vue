@@ -57,6 +57,8 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, computed } from 'vue'
+
 import { useMetadataStore } from '~/stores/metadata';
 import Level1BasicInfo from '~/components/metadata/Level1BasicInfo.vue';
 import Level2GraphBuilder from '~/components/metadata/Level2GraphBuilder.vue';

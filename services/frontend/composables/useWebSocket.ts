@@ -4,11 +4,11 @@
  * Типизировано по OpenAPI v3.1 спецификации
  */
 import { ref, onUnmounted, computed } from 'vue'
-import type {
-  WSMessage,
-  WSNewSensorReading,
-  WSNewAnomaly,
-  WSSystemStatusUpdate,
+import {
+  type WSMessage,
+  type WSNewSensorReading,
+  type WSNewAnomaly,
+  type WSSystemStatusUpdate,
   isValidWSMessage
 } from '../types/api'
 
@@ -49,90 +49,90 @@ const DEFAULT_OPTIONS: Required<UseWebSocketOptions> = {
  */
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options }
-  
+
   const ws = ref<WebSocket | null>(null)
   const connectionState = ref<WSConnectionState>(WSConnectionState.Disconnected)
   const isConnected = computed(() => connectionState.value === WSConnectionState.Connected)
   const lastMessage = ref<WSMessage | null>(null)
   const lastError = ref<Event | null>(null)
-  
+
   let reconnectAttempts = 0
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null
-  
+
   const messageHandlers = new Map<string, Set<(data: any) => void>>()
-  
+
   const log = (...args: any[]) => {
     if (opts.debug) console.log('[WebSocket]', ...args)
   }
-  
+
   const logError = (...args: any[]) => {
     console.error('[WebSocket ERROR]', ...args)
   }
-  
+
   function connect() {
     if (ws.value && ws.value.readyState === WebSocket.OPEN) {
       log('Already connected')
       return
     }
-    
+
     try {
       log('Connecting to', opts.url)
-      connectionState.value = reconnectAttempts > 0 
-        ? WSConnectionState.Reconnecting 
+      connectionState.value = reconnectAttempts > 0
+        ? WSConnectionState.Reconnecting
         : WSConnectionState.Connecting
-      
+
       ws.value = new WebSocket(opts.url)
-      
+
       ws.value.onopen = handleOpen
       ws.value.onmessage = handleMessage
       ws.value.onerror = handleError
       ws.value.onclose = handleClose
-      
+
     } catch (error) {
       logError('Connection failed:', error)
       connectionState.value = WSConnectionState.Error
       scheduleReconnect()
     }
   }
-  
+
   function disconnect() {
     log('Disconnecting...')
-    
+
     if (reconnectTimer) {
       clearTimeout(reconnectTimer)
       reconnectTimer = null
     }
-    
+
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer)
       heartbeatTimer = null
     }
-    
+
     if (ws.value) {
       ws.value.close(1000, 'Client disconnect')
       ws.value = null
     }
-    
+
     connectionState.value = WSConnectionState.Disconnected
     reconnectAttempts = 0
   }
-  
+
   function scheduleReconnect() {
     if (!opts.autoReconnect) return
-    
+
     if (reconnectAttempts >= opts.maxReconnectAttempts) {
       logError(`Max reconnect attempts reached`)
       connectionState.value = WSConnectionState.Error
       return
     }
-    
+
     reconnectAttempts++
     log(`Reconnect attempt ${reconnectAttempts}/${opts.maxReconnectAttempts}`)
-    
+
     reconnectTimer = setTimeout(() => connect(), opts.reconnectDelay)
   }
-  
+
   function handleOpen() {
     log('Connected')
     connectionState.value = WSConnectionState.Connected
@@ -140,19 +140,19 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     lastError.value = null
     startHeartbeat()
   }
-  
+
   function handleMessage(event: MessageEvent) {
     try {
       const message = JSON.parse(event.data) as WSMessage
-      
+
       if (!isValidWSMessage(message)) {
         logError('Invalid message format')
         return
       }
-      
+
       log('Received:', message.type)
       lastMessage.value = message
-      
+
       const handlers = messageHandlers.get(message.type)
       if (handlers) {
         handlers.forEach(h => {
@@ -163,31 +163,31 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       logError('Parse error:', error)
     }
   }
-  
+
   function handleError(event: Event) {
     logError('Error:', event)
     lastError.value = event
     connectionState.value = WSConnectionState.Error
   }
-  
+
   function handleClose(event: CloseEvent) {
     log('Closed:', event.code)
-    
+
     if (heartbeatTimer) {
       clearInterval(heartbeatTimer)
       heartbeatTimer = null
     }
-    
+
     connectionState.value = WSConnectionState.Disconnected
-    
+
     if (event.code !== 1000 && opts.autoReconnect) {
       scheduleReconnect()
     }
   }
-  
+
   function startHeartbeat() {
     if (heartbeatTimer) clearInterval(heartbeatTimer)
-    
+
     heartbeatTimer = setInterval(() => {
       if (ws.value && ws.value.readyState === WebSocket.OPEN) {
         try {
@@ -198,7 +198,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       }
     }, opts.heartbeatInterval)
   }
-  
+
   function on<T extends WSMessage['type']>(
     type: T,
     handler: (data: Extract<WSMessage, { type: T }>['data']) => void
@@ -206,19 +206,19 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     if (!messageHandlers.has(type)) {
       messageHandlers.set(type, new Set())
     }
-    
+
     const handlers = messageHandlers.get(type)!
     handlers.add(handler)
-    
+
     return () => handlers.delete(handler)
   }
-  
+
   function send(data: any): boolean {
     if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
       logError('Cannot send: not connected')
       return false
     }
-    
+
     try {
       const message = typeof data === 'string' ? data : JSON.stringify(data)
       ws.value.send(message)
@@ -228,24 +228,24 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       return false
     }
   }
-  
-  function onSensorReading(handler: (data: WSNewSensorReading['data']) => void) {
+
+  function onSensorReading(handler: (data: WSNewSensorReading) => void) {
     return on('sensor_reading', handler)
   }
-  
-  function onAnomalyDetected(handler: (data: WSNewAnomaly['data']) => void) {
+
+  function onAnomalyDetected(handler: (data: WSNewAnomaly) => void) {
     return on('anomaly_detected', handler)
   }
-  
-  function onSystemStatusUpdate(handler: (data: WSSystemStatusUpdate['data']) => void) {
+
+  function onSystemStatusUpdate(handler: (data: WSSystemStatusUpdate) => void) {
     return on('system_status_update', handler)
   }
-  
+
   onUnmounted(() => {
     log('Cleanup')
     disconnect()
   })
-  
+
   return {
     connectionState,
     isConnected,

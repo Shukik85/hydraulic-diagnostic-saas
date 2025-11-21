@@ -1,28 +1,25 @@
 <template>
   <div class="flex items-center gap-2">
     <!-- Animated Dot -->
-    <div 
-      :class="[
-        'w-3 h-3 rounded-full',
-        statusClass,
-        animated ? 'animate-pulse' : ''
-      ]" 
-    />
+    <div :class="[
+      'w-3 h-3 rounded-full',
+      statusClass,
+      animated ? 'animate-pulse' : ''
+    ]" />
 
     <!-- Optional Label -->
-    <span 
-      v-if="label"
-      :class="[
-        'text-sm font-medium',
-        labelColorClass
-      ]"
-    >
+    <span v-if="label" :class="[
+      'text-sm font-medium',
+      labelColorClass
+    ]">
       {{ label }}
     </span>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
   status: 'success' | 'warning' | 'error' | 'info' | 'offline'
   label?: string

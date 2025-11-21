@@ -46,6 +46,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+
 import { useMetadataStore } from '~/stores/metadata';
 import type { ComponentMetadata, ComponentType } from '~/types/metadata';
 import PumpForm from '~/components/metadata/Level3ComponentForms/PumpForm.vue';

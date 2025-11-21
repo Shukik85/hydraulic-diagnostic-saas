@@ -1,4 +1,6 @@
-export default defineNuxtPlugin(async (nuxtApp) => {
+import type { NuxtApp } from '#app'
+
+export default defineNuxtPlugin(async (nuxtApp: NuxtApp) => {
   // Пропускаем auth полностью для demo страниц
   const router = useRouter()
   const currentRoute = router.currentRoute.value

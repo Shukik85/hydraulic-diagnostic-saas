@@ -1,9 +1,11 @@
 /**
  * useAnomalies.ts — Composable для работы с аномалиями
  * Typed API integration, авто-loading, пагинация, фильтры
+ * Enterprise: использует type guards вместо assertions
  */
 import { ref, watchEffect } from 'vue'
-import { useApi } from './useApi'
+import { useGeneratedApi } from './useGeneratedApi'
+import { isErrorResponse, isAnomaliesListResponse } from '~/types/guards'
 import type {
   AnomaliesQueryParams,
   AnomaliesListResponse,
@@ -13,7 +15,7 @@ import type {
 } from '../types/api'
 
 export function useAnomalies(systemId: string, filters: Partial<AnomaliesQueryParams> = {}) {
-  const { request } = useApi()
+  const { request } = useGeneratedApi()
   const state = ref<AsyncState<AnomaliesListResponse>>({ data: null, loading: false, error: null })
   const page = ref(filters.page || 1)
   const perPage = ref(filters.per_page || 20)
@@ -34,17 +36,24 @@ export function useAnomalies(systemId: string, filters: Partial<AnomaliesQueryPa
         start_date: startDate.value,
         end_date: endDate.value
       }
-      const resp = await request<AnomaliesListResponse>(`/systems/${systemId}/anomalies`, {
+      const resp = await request(`/systems/${systemId}/anomalies`, {
         method: 'GET',
         params
       })
-      if ('data' in resp) {
-        state.value.data = resp.data
+      
+      if (isErrorResponse(resp)) {
+        state.value.error = resp
+      } else if (isAnomaliesListResponse(resp)) {
+        state.value.data = resp
       } else {
-        state.value.error = (resp as ErrorResponse)
+        throw new Error('Invalid response shape from API')
       }
     } catch (err) {
-      state.value.error = { error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' } }
+      state.value.error = { 
+        message: String(err),
+        code: 'NETWORK_ERROR',
+        error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' }
+      }
     } finally {
       state.value.loading = false
     }

@@ -5,49 +5,32 @@
       <table class="w-full">
         <thead class="bg-steel-darker border-b border-steel-medium">
           <tr>
-            <th
-              v-for="column in columns"
-              :key="column.key"
-              class="px-6 py-3 text-left text-xs font-bold text-text-secondary uppercase tracking-wider"
-            >
+            <th v-for="column in columns" :key="column.key"
+              class="px-6 py-3 text-left text-xs font-bold text-text-secondary uppercase tracking-wider">
               <div class="flex items-center space-x-1">
                 <span>{{ column.label }}</span>
-                <button
-                  v-if="column.sortable"
-                  @click="toggleSort(column.key)"
-                  class="ml-2 text-steel-light hover:text-primary-400 transition-colors"
-                >
+                <button v-if="column.sortable" @click="toggleSort(column.key)"
+                  class="ml-2 text-steel-light hover:text-primary-400 transition-colors">
                   <Icon name="heroicons:chevron-up-down" class="w-4 h-4" />
                 </button>
               </div>
             </th>
-            <th
-              v-if="$slots.actions"
-              class="px-6 py-3 text-right text-xs font-bold text-text-secondary uppercase tracking-wider"
-            >
+            <th v-if="$slots.actions"
+              class="px-6 py-3 text-right text-xs font-bold text-text-secondary uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
         <tbody class="bg-steel-dark divide-y divide-steel-medium">
-          <tr
-            v-for="(item, index) in sortedData"
-            :key="getItemKey(item, index)"
-            class="hover:bg-primary-600/5 transition-colors duration-200"
-          >
-            <td
-              v-for="column in columns"
-              :key="column.key"
-              class="px-6 py-4 whitespace-nowrap text-sm text-text-primary"
-            >
+          <tr v-for="(item, index) in sortedData" :key="getItemKey(item, index)"
+            class="hover:bg-primary-600/5 transition-colors duration-200">
+            <td v-for="column in columns" :key="column.key"
+              class="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
               <slot :name="column.key" :item="item" :value="getItemValue(item, column.key)">
                 {{ getItemValue(item, column.key) }}
               </slot>
             </td>
-            <td
-              v-if="$slots.actions"
-              class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"
-            >
+            <td v-if="$slots.actions" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
               <slot name="actions" :item="item" :index="index" />
             </td>
           </tr>
@@ -66,11 +49,7 @@
           </h3>
         </div>
         <div class="p-4 space-y-3 bg-steel-dark">
-          <div
-            v-for="column in columns.slice(1)"
-            :key="column.key"
-            class="flex justify-between items-center"
-          >
+          <div v-for="column in columns.slice(1)" :key="column.key" class="flex justify-between items-center">
             <span class="text-sm font-medium text-text-secondary">{{ column.label }}</span>
             <span class="text-sm text-text-primary">
               <slot :name="column.key" :item="item" :value="getItemValue(item, column.key)">
@@ -78,10 +57,7 @@
               </slot>
             </span>
           </div>
-          <div
-            v-if="$slots.actions"
-            class="flex justify-end pt-2 border-t border-steel-medium"
-          >
+          <div v-if="$slots.actions" class="flex justify-end pt-2 border-t border-steel-medium">
             <slot name="actions" :item="item" :index="index" />
           </div>
         </div>
@@ -98,6 +74,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import type { TableColumn } from '~/types/api'
 
 interface TableProps {

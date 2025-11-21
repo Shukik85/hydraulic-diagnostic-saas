@@ -1,13 +1,15 @@
 /**
  * useSystemStatus.ts — Composable для статуса системы
  * Typed API integration, авто-refresh, error handling
+ * Enterprise: использует type guards вместо assertions
  */
 import { ref } from 'vue'
-import { useApi } from './useApi'
-import type { SystemStatus, AsyncState } from '../types/api'
+import { useGeneratedApi } from './useGeneratedApi'
+import { isErrorResponse, isSystemStatus } from '~/types/guards'
+import type { SystemStatus, AsyncState, ErrorResponse } from '../types/api'
 
 export function useSystemStatus(systemId: string, refreshInterval = 10000) {
-  const { request } = useApi()
+  const { request } = useGeneratedApi()
   const state = ref<AsyncState<SystemStatus>>({ data: null, loading: false, error: null })
   let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -15,14 +17,21 @@ export function useSystemStatus(systemId: string, refreshInterval = 10000) {
     state.value.loading = true
     state.value.error = null
     try {
-      const resp = await request<SystemStatus>(`/systems/${systemId}/status`, { method: 'GET' })
-      if ('data' in resp) {
-        state.value.data = resp.data
-      } else {
+      const resp = await request(`/systems/${systemId}/status`, { method: 'GET' })
+      
+      if (isErrorResponse(resp)) {
         state.value.error = resp
+      } else if (isSystemStatus(resp)) {
+        state.value.data = resp
+      } else {
+        throw new Error('Invalid response shape from API')
       }
     } catch (err) {
-      state.value.error = { error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' } }
+      state.value.error = { 
+        message: String(err),
+        code: 'NETWORK_ERROR',
+        error: { message: String(err), code: 'NETWORK_ERROR', timestamp: '', request_id: '' }
+      }
     } finally {
       state.value.loading = false
     }

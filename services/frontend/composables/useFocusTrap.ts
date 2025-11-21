@@ -1,152 +1,100 @@
 /**
- * Composable для реализации focus trap в модальных окнах
- * Удерживает фокус внутри контейнера и возвращает его при закрытии
+ * useFocusTrap.ts - A11y Focus Trap для modal окон
+ * 
+ * Использование:
+ * ```typescript
+ * const modalRef = ref<HTMLElement | null>(null)
+ * const { activate, deactivate } = useFocusTrap(modalRef)
+ * 
+ * // При открытии modal
+ * activate()
+ * 
+ * // При закрытии
+ * deactivate()
+ * ```
  */
+import { ref, watch, onBeforeUnmount, type Ref } from 'vue'
 
-import { ref, onMounted, onUnmounted } from '#imports'
-import type { Ref } from 'vue'
-
-interface UseFocusTrapOptions {
-  /** Начальный элемент для фокуса */
-  initialFocus?: string
-  /** Включить обработку Escape */
-  escapeDeactivates?: boolean
-  /** Callback при нажатии Escape */
-  onEscape?: () => void
-}
-
-export const useFocusTrap = (
-  containerRef: Ref<HTMLElement | null>,
-  options: UseFocusTrapOptions = {}
-) => {
-  const { initialFocus, escapeDeactivates = true, onEscape } = options
-
-  const previousActiveElement: Ref<HTMLElement | null> = ref(null)
+export function useFocusTrap(containerRef: Ref<HTMLElement | null>) {
   const isActive = ref(false)
+  let cleanup: (() => void) | null = null
 
-  /**
-   * Получает все фокусируемые элементы внутри контейнера
-   */
-  const getFocusableElements = (): HTMLElement[] => {
-    if (!containerRef.value) return []
+  const focusableSelector = [
+    'a[href]',
+    'button:not([disabled])',
+    'textarea:not([disabled])',
+    'input:not([disabled])',
+    'select:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])'
+  ].join(',')
 
-    const focusableSelectors = [
-      'button:not([disabled])',
-      '[href]',
-      'input:not([disabled])',
-      'select:not([disabled])',
-      'textarea:not([disabled])',
-      '[tabindex]:not([tabindex="-1"])',
-    ].join(', ')
+  function activate() {
+    if (!containerRef.value) {
+      console.warn('useFocusTrap: containerRef is null')
+      return
+    }
 
-    return Array.from(
-      containerRef.value.querySelectorAll<HTMLElement>(focusableSelectors)
-    )
-  }
-
-  /**
-   * Активирует focus trap
-   */
-  const activate = () => {
-    if (!containerRef.value) return
-
-    // Сохраняем текущий фокус
-    previousActiveElement.value = document.activeElement as HTMLElement
     isActive.value = true
-
-    // Устанавливаем фокус на начальный элемент
-    const focusableElements = getFocusableElements()
-
-    if (initialFocus) {
-      const targetElement = containerRef.value.querySelector<HTMLElement>(initialFocus)
-      targetElement?.focus()
-    } else if (focusableElements.length > 0) {
-      focusableElements[0]?.focus()
-    } else {
-      // Если нет фокусируемых элементов, фокус на контейнере
-      containerRef.value.setAttribute('tabindex', '-1')
-      containerRef.value.focus()
-    }
-  }
-
-  /**
-   * Деактивирует focus trap и возвращает фокус
-   */
-  const deactivate = () => {
-    isActive.value = false
-
-    // Возвращаем фокус
-    if (previousActiveElement.value && typeof previousActiveElement.value.focus === 'function') {
-      previousActiveElement.value.focus()
-    }
-
-    previousActiveElement.value = null
-  }
-
-  /**
-   * Обработчик Tab для удержания фокуса внутри контейнера
-   */
-  const handleTabKey = (event: KeyboardEvent) => {
-    if (!isActive.value || event.key !== 'Tab') return
-
-    const focusableElements = getFocusableElements()
-
+    
+    const focusableElements = containerRef.value.querySelectorAll<HTMLElement>(focusableSelector)
     if (focusableElements.length === 0) {
-      event.preventDefault()
+      console.warn('useFocusTrap: no focusable elements found')
       return
     }
-
-    const first = focusableElements[0]
-    const last = focusableElements[focusableElements.length - 1]
-
-    // Shift + Tab на первом элементе → переход к последнему
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault()
-      last?.focus()
-      return
+    
+    const firstElement = focusableElements[0]
+    const lastElement = focusableElements[focusableElements.length - 1]
+    
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Tab') return
+      
+      if (event.shiftKey) {
+        // Shift+Tab: переход назад
+        if (document.activeElement === firstElement) {
+          event.preventDefault()
+          lastElement?.focus()
+        }
+      } else {
+        // Tab: переход вперёд
+        if (document.activeElement === lastElement) {
+          event.preventDefault()
+          firstElement?.focus()
+        }
+      }
     }
-
-    // Tab на последнем элементе → переход к первому
-    if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault()
-      first?.focus()
+    
+    containerRef.value.addEventListener('keydown', handleKeyDown)
+    
+    // Сохраняем cleanup функцию
+    cleanup = () => {
+      containerRef.value?.removeEventListener('keydown', handleKeyDown)
     }
+    
+    // Фокус на первом элементе
+    firstElement?.focus()
   }
 
-  /**
-   * Обработчик Escape
-   */
-  const handleEscapeKey = (event: KeyboardEvent) => {
-    if (!isActive.value || !escapeDeactivates || event.key !== 'Escape') return
-
-    event.preventDefault()
-    onEscape?.()
+  function deactivate() {
+    isActive.value = false
+    cleanup?.()
+    cleanup = null
   }
 
-  /**
-   * Общий обработчик клавиатуры
-   */
-  const handleKeydown = (event: KeyboardEvent) => {
-    handleTabKey(event)
-    handleEscapeKey(event)
-  }
-
-  // Добавляем слушатели при монтировании
-  onMounted(() => {
-    window.addEventListener('keydown', handleKeydown)
+  // Auto-activate при появлении containerRef
+  watch(() => containerRef.value, (newVal) => {
+    if (newVal && isActive.value) {
+      activate()
+    }
   })
 
-  // Удаляем слушатели при размонтировании
-  onUnmounted(() => {
-    window.removeEventListener('keydown', handleKeydown)
-    if (isActive.value) {
-      deactivate()
-    }
+  // Cleanup при unmount
+  onBeforeUnmount(() => {
+    deactivate()
   })
 
   return {
-    activate,
-    deactivate,
     isActive,
+    activate,
+    deactivate
   }
 }

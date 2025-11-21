@@ -1,3 +1,4 @@
+import { computed, type Ref } from 'vue'
 import type { UiPasswordStrength } from '~/types/api'
 
 export const usePasswordStrength = (password: Ref<string>) => {

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted, onErrorCaptured } from 'vue'
+
 // Application root with SEO optimization
 useSeoMeta({
   titleTemplate: '%s | Hydraulic Diagnostic SaaS',
@@ -27,10 +29,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    id="app"
-    class="min-h-screen bg-background-primary text-text-primary transition-colors duration-200"
-  >
+  <div id="app" class="min-h-screen bg-background-primary text-text-primary transition-colors duration-200">
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
@@ -86,6 +85,7 @@ body {
     opacity: 0;
     transform: translateY(5px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -97,6 +97,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -108,6 +109,7 @@ body {
     opacity: 0;
     transform: scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: scale(1);

@@ -1,8 +1,5 @@
 <template>
-  <UDialog 
-    :model-value="modelValue" 
-    @update:model-value="$emit('update:modelValue', $event)"
-  >
+  <UDialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)">
     <UDialogContent class="max-w-lg">
       <UDialogHeader>
         <UDialogTitle>{{ t('diagnostics.runModal.title') }}</UDialogTitle>
@@ -11,16 +8,9 @@
 
       <form @submit.prevent="handleSubmit" class="space-y-6">
         <!-- Equipment Selection -->
-        <UFormGroup
-          :label="t('diagnostics.runModal.equipment')"
-          helper="Выберите систему для запуска диагностики"
-          :error="errors.equipment"
-          required
-        >
-          <USelect 
-            v-model="form.equipment"
-            :disabled="loading"
-          >
+        <UFormGroup :label="t('diagnostics.runModal.equipment')" helper="Выберите систему для запуска диагностики"
+          :error="errors.equipment" required>
+          <USelect v-model="form.equipment" :disabled="loading">
             <option value="" disabled>{{ t('diagnostics.runModal.selectEquipment') }}</option>
             <option value="hyd-001">{{ t('diagnostics.runModal.pumpStationA') }}</option>
             <option value="hyd-002">{{ t('diagnostics.runModal.hydraulicMotorB') }}</option>
@@ -30,14 +20,9 @@
         </UFormGroup>
 
         <!-- Diagnostic Type -->
-        <UFormGroup
-          :label="t('diagnostics.runModal.diagnosticType')"
-          helper="Полный анализ занимает больше времени, но даёт полную картину"
-        >
-          <USelect 
-            v-model="form.type"
-            :disabled="loading"
-          >
+        <UFormGroup :label="t('diagnostics.runModal.diagnosticType')"
+          helper="Полный анализ занимает больше времени, но даёт полную картину">
+          <USelect v-model="form.type" :disabled="loading">
             <option value="full">{{ t('diagnostics.runModal.fullAnalysis') }}</option>
             <option value="pressure">{{ t('diagnostics.runModal.pressureCheck') }}</option>
             <option value="temperature">{{ t('diagnostics.runModal.temperatureAnalysis') }}</option>
@@ -49,27 +34,15 @@
         <!-- Options -->
         <div class="space-y-3">
           <div class="flex items-center gap-3">
-            <UCheckbox 
-              id="email-notification" 
-              v-model:checked="form.emailNotification"
-            />
-            <ULabel 
-              for="email-notification" 
-              class="text-sm text-white cursor-pointer"
-            >
+            <UCheckbox id="email-notification" v-model:checked="form.emailNotification" />
+            <ULabel for="email-notification" class="text-sm text-white cursor-pointer">
               {{ t('diagnostics.runModal.emailNotification') }}
             </ULabel>
           </div>
-          
+
           <div class="flex items-center gap-3">
-            <UCheckbox 
-              id="priority-analysis" 
-              v-model:checked="form.priorityAnalysis"
-            />
-            <ULabel 
-              for="priority-analysis" 
-              class="text-sm text-white cursor-pointer"
-            >
+            <UCheckbox id="priority-analysis" v-model:checked="form.priorityAnalysis" />
+            <ULabel for="priority-analysis" class="text-sm text-white cursor-pointer">
               {{ t('diagnostics.runModal.priorityAnalysis') }}
             </ULabel>
           </div>
@@ -90,27 +63,12 @@
       </form>
 
       <UDialogFooter>
-        <UButton 
-          variant="secondary"
-          @click="handleCancel" 
-          :disabled="loading"
-        >
+        <UButton variant="secondary" @click="handleCancel" :disabled="loading">
           {{ t('ui.cancel') }}
         </UButton>
-        <UButton 
-          @click="handleSubmit" 
-          :disabled="!isValid || loading"
-        >
-          <Icon 
-            v-if="loading" 
-            name="heroicons:arrow-path" 
-            class="w-5 h-5 animate-spin mr-2" 
-          />
-          <Icon 
-            v-else 
-            name="heroicons:play" 
-            class="w-5 h-5 mr-2" 
-          />
+        <UButton @click="handleSubmit" :disabled="!isValid || loading">
+          <Icon v-if="loading" name="heroicons:arrow-path" class="w-5 h-5 animate-spin mr-2" />
+          <Icon v-else name="heroicons:play" class="w-5 h-5 mr-2" />
           {{ loading ? t('diagnostics.runModal.starting') : t('diagnostics.runModal.startDiagnostic') }}
         </UButton>
       </UDialogFooter>
@@ -119,6 +77,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from 'vue'
+
 interface Props {
   modelValue: boolean
   loading?: boolean
@@ -156,14 +116,14 @@ function handleCancel() {
 }
 
 function handleSubmit() {
-  errors.value.equipment = !form.value.equipment 
-    ? t('diagnostics.runModal.equipmentRequired') 
+  errors.value.equipment = !form.value.equipment
+    ? t('diagnostics.runModal.equipmentRequired')
     : undefined
-    
+
   if (!isValid.value) return
-  
+
   emit('submit', form.value)
-  
+
   setTimeout(() => {
     form.value = {
       equipment: '',

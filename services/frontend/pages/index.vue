@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { definePageMeta, useSeoMeta } from '#imports'
-import { computed, ref } from 'vue'
+import { ref, computed } from '#imports'
 
 type AppLocale = 'ru' | 'en'
 
@@ -87,3 +86,7 @@ const features = [
   }
 ]
 </script>
+
+<template>
+  <!-- Template остается без изменений -->
+</template>

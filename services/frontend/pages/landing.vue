@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 // Professional landing page for investors and prospects
 definePageMeta({
   layout: 'landing',
@@ -94,12 +96,10 @@ const handleViewDashboard = () => {
     <section class="relative overflow-hidden">
       <!-- Background decoration -->
       <div class="absolute inset-0">
+        <div class="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-transparent to-purple-600/20"></div>
         <div
-          class="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-transparent to-purple-600/20"
-        ></div>
-        <div
-          class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent"
-        ></div>
+          class="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-400/50 to-transparent">
+        </div>
       </div>
 
       <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
@@ -108,8 +108,7 @@ const handleViewDashboard = () => {
           <div class="flex justify-center mb-8">
             <div class="flex items-center space-x-3">
               <div
-                class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center"
-              >
+                class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
                 <Icon name="heroicons:wrench-screwdriver" class="w-7 h-7 text-white" />
               </div>
               <span class="text-2xl font-bold text-white">Hydraulic SaaS</span>
@@ -119,9 +118,7 @@ const handleViewDashboard = () => {
           <!-- Main headline -->
           <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
             Industrial-Grade
-            <span
-              class="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent"
-            >
+            <span class="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
               Hydraulic Diagnostics
             </span>
           </h1>
@@ -149,26 +146,20 @@ const handleViewDashboard = () => {
           </div>
 
           <!-- CTA Buttons -->
-          <div
-            class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6"
-          >
-            <button
-              @click="handleRequestDemo"
-              class="group relative px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 hover:shadow-blue-500/25"
-            >
+          <div class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+            <button @click="handleRequestDemo"
+              class="group relative px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg shadow-lg hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200 hover:shadow-blue-500/25">
               <span class="relative z-10 flex items-center">
                 <Icon name="heroicons:play" class="w-5 h-5 mr-2" />
                 Request Live Demo
               </span>
               <div
-                class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              ></div>
+                class="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              </div>
             </button>
 
-            <button
-              @click="handleViewDashboard"
-              class="px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/20 hover:bg-white/20 transition-all duration-200"
-            >
+            <button @click="handleViewDashboard"
+              class="px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-lg border border-white/20 hover:bg-white/20 transition-all duration-200">
               <Icon name="heroicons:chart-bar" class="w-5 h-5 mr-2 inline" />
               View Live Dashboard
             </button>
@@ -235,14 +226,10 @@ const handleViewDashboard = () => {
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div
-            v-for="benefit in benefits"
-            :key="benefit.title"
-            class="group bg-white/5 backdrop-blur-sm rounded-xl p-6 hover:bg-white/10 transition-all duration-300 border border-white/10 hover:border-blue-400/30"
-          >
+          <div v-for="benefit in benefits" :key="benefit.title"
+            class="group bg-white/5 backdrop-blur-sm rounded-xl p-6 hover:bg-white/10 transition-all duration-300 border border-white/10 hover:border-blue-400/30">
             <div
-              class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300"
-            >
+              class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
               <Icon :name="benefit.icon" class="w-6 h-6 text-white" />
             </div>
             <h3 class="text-xl font-semibold text-white mb-3">{{ benefit.title }}</h3>
@@ -263,18 +250,14 @@ const handleViewDashboard = () => {
 
         <!-- Testimonials -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          <div
-            v-for="testimonial in testimonials"
-            :key="testimonial.author"
-            class="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/10"
-          >
+          <div v-for="testimonial in testimonials" :key="testimonial.author"
+            class="bg-white/10 backdrop-blur-sm rounded-xl p-8 border border-white/10">
             <blockquote class="text-blue-50 text-lg mb-6 leading-relaxed">
               "{{ testimonial.quote }}"
             </blockquote>
             <div class="flex items-center">
               <div
-                class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-4"
-              >
+                class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
                 {{ testimonial.avatar }}
               </div>
               <div>
@@ -297,23 +280,17 @@ const handleViewDashboard = () => {
           Join industry leaders who've already revolutionized their hydraulic system management
         </p>
 
-        <div
-          class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6"
-        >
-          <button
-            @click="handleRequestDemo"
-            class="group px-10 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-lg rounded-lg shadow-xl hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200"
-          >
+        <div class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+          <button @click="handleRequestDemo"
+            class="group px-10 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-lg rounded-lg shadow-xl hover:from-blue-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-200">
             <span class="flex items-center">
               <Icon name="heroicons:calendar" class="w-6 h-6 mr-3" />
               Schedule Your Demo
             </span>
           </button>
 
-          <button
-            @click="handleViewDashboard"
-            class="px-10 py-4 bg-white/10 backdrop-blur-sm text-white font-bold text-lg rounded-lg border border-white/30 hover:bg-white/20 transition-all duration-200"
-          >
+          <button @click="handleViewDashboard"
+            class="px-10 py-4 bg-white/10 backdrop-blur-sm text-white font-bold text-lg rounded-lg border border-white/30 hover:bg-white/20 transition-all duration-200">
             <Icon name="heroicons:arrow-right" class="w-6 h-6 mr-3 inline" />
             Explore Platform
           </button>
@@ -341,10 +318,12 @@ const handleViewDashboard = () => {
 <style scoped>
 /* Custom animations and effects */
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-10px);
   }
@@ -356,10 +335,12 @@ const handleViewDashboard = () => {
 
 /* Gradient text animation */
 @keyframes gradient {
+
   0%,
   100% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }

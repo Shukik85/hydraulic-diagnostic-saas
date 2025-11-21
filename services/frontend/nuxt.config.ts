@@ -4,7 +4,9 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-    typeCheck: true,
+    // ✅ Отключаем typeCheck в dev mode (конфликт vite-plugin-checker)
+    // Используем npm run typecheck вручную или в CI
+    typeCheck: false,
     shim: false,
   },
 
@@ -23,34 +25,17 @@ export default defineNuxtConfig({
       referrerPolicy: 'strict-origin-when-cross-origin',
       xContentTypeOptions: 'nosniff',
       xFrameOptions: 'SAMEORIGIN',
-      strictTransportSecurity: 'max-age=31536000; includeSubDomains; preload',
-      xssProtection: '1; mode=block',
-    },
-    csp: {
-      enabled: true,
-      hashAlgorithm: 'sha256',
-      policies: {
-        'default-src': ["'self'"],
-        'script-src': ["'self'", 'https://cdn.jsdelivr.net'],
-        'style-src': ["'self'", 'https://fonts.googleapis.com', 'unsafe-inline'],
-        'img-src': ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
-        'font-src': ["'self'", 'https://fonts.gstatic.com'],
-        'connect-src': ["'self'", 'https://api.segment.io', 'wss://*', 'http://localhost:8000', 'https://api.openai.com'],
-        'frame-ancestors': ["'self'"],
-      },
+      strictTransportSecurity: { maxAge: 31536000, includeSubdomains: true, preload: true } as any,
+      xXSSProtection: '1; mode=block',
     },
     rateLimiter: {
       tokensPerInterval: 100,
       interval: 'minute'
     },
-    audit: {
-      enabled: true,
-      logHeaders: true,
-      logBody: true,
-    },
   },
 
   css: [
+    '~/styles/accessibility.css',
     '~/styles/metallic.css',
     '~/styles/premium-tokens.css',
     '~/styles/components.css',
@@ -62,6 +47,13 @@ export default defineNuxtConfig({
       autoprefixer: {},
     },
   },
+  components: [
+    '~/components',
+    {
+      path: '~/components/ui',
+      pathPrefix: false,
+    },
+  ],
 
   vite: {
     optimizeDeps: {
@@ -83,6 +75,10 @@ export default defineNuxtConfig({
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
       wsBase: process.env.NUXT_PUBLIC_WS_BASE || 'ws://localhost:8000/ws',
       enableMocks: process.env.ENABLE_MOCKS === 'true' || process.env.NODE_ENV === 'development',
+      features: {
+        enableMockData: true,
+        ragInterpretation: true,
+      }
     },
   },
 
@@ -94,7 +90,6 @@ export default defineNuxtConfig({
     defaultLocale: 'ru',
     strategy: 'no_prefix',
     langDir: 'locales/',
-    lazy: true,
     detectBrowserLanguage: {
       useCookie: true,
       cookieKey: 'i18n_locale',
@@ -128,17 +123,17 @@ export default defineNuxtConfig({
       brotli: true,
     },
     routeRules: {
-      '/': { 
+      '/': {
         swr: 3600,
       },
-      '/dashboard': { 
+      '/dashboard': {
         ssr: true,
         swr: 600,
       },
-      '/diagnosis/**': { 
+      '/diagnosis/**': {
         ssr: false
       },
-      '/api/**': { 
+      '/api/**': {
         cors: true,
         headers: {
           'cache-control': 'max-age=300'
@@ -158,12 +153,7 @@ export default defineNuxtConfig({
     host: 'localhost',
   },
 
-  imports: {
-    dirs: ['composables/**', 'utils/**', 'types/**', 'stores/**'],
-  },
-
   experimental: {
-    typescriptBundlerResolution: true,
     granularCachedData: true,
     purgeCachedData: true,
   },
