@@ -9,14 +9,14 @@ interface Stage {
   duration?: string
 }
 
-const meta = {
+const meta: Meta<typeof DiagnosisProgress> = {
   title: 'Loading/DiagnosisProgress',
   component: DiagnosisProgress,
   tags: ['autodocs'],
-} satisfies Meta<typeof DiagnosisProgress>
+}
 
 export default meta
-type Story = StoryObj<typeof meta>
+type Story = StoryObj<typeof DiagnosisProgress>
 
 const baseStages: Stage[] = [
   { id: '1', name: 'Загрузка данных', status: 'complete' as const, duration: '0.8 сек.' },
