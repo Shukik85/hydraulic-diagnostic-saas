@@ -12,9 +12,13 @@ describe('RAGInterpretation', () => {
     confidence: 0.85,
     knowledgeUsed: [
       {
-        source: 'Manual Chapter 5',
-        relevance: 0.9,
-        excerpt: 'Test excerpt'
+        id: 'doc-1',
+        title: 'Manual Chapter 5',
+        content: 'Test excerpt',
+        score: 0.9,
+        metadata: {
+          source: 'Manual Chapter 5'
+        }
       }
     ],
     metadata: {
