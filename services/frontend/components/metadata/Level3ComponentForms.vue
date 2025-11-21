@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 import { useMetadataStore } from '~/stores/metadata';
 import type { ComponentMetadata, ComponentType } from '~/types/metadata';
