@@ -1,15 +1,15 @@
-import type { Meta as MetaType, StoryObj as StoryObjType } from '@storybook/vue3'
+import type { Meta, StoryObj } from '@storybook/vue3'
 import RAGInterpretation from './RAGInterpretation.vue'
 import { diagnosisMocks } from '~/mocks/diagnosis'
 
-const meta: MetaType<typeof RAGInterpretation> = {
+const meta = {
   title: 'Diagnosis/RAGInterpretation',
   component: RAGInterpretation,
   tags: ['autodocs'],
-}
+} satisfies Meta<typeof RAGInterpretation>
 
 export default meta
-type Story = StoryObjType<typeof RAGInterpretation>
+type Story = StoryObj<typeof meta>
 
 export const Warning: Story = {
   args: {
