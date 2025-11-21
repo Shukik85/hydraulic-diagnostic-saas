@@ -9,11 +9,11 @@ interface Stage {
   duration?: string
 }
 
-const meta: Meta<typeof DiagnosisProgress> = {
+const meta = {
   title: 'Loading/DiagnosisProgress',
   component: DiagnosisProgress,
   tags: ['autodocs'],
-}
+} as Meta<typeof DiagnosisProgress>
 
 export default meta
 type Story = StoryObj<typeof DiagnosisProgress>
