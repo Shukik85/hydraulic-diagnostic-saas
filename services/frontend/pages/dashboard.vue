@@ -217,7 +217,7 @@
 </template>
 
 <script setup lang="ts">
-
+import { ref, computed } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -235,6 +235,11 @@ use([
   TooltipComponent,
   LegendComponent,
 ])
+
+definePageMeta({
+  layout: 'dashboard' as const,
+  middleware: ['auth']
+})
 
 const { t } = useI18n()
 
