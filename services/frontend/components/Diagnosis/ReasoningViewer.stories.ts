@@ -1,17 +1,18 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
+import { Meta, StoryObj } from '@storybook/vue3'
 import ReasoningViewer from './ReasoningViewer.vue'
 import { diagnosisMocks } from '~/mocks/diagnosis'
 
+/** @type {Meta<typeof ReasoningViewer>} */
 const meta = {
   title: 'Diagnosis/ReasoningViewer',
   component: ReasoningViewer,
   tags: ['autodocs'],
-} as Meta<typeof ReasoningViewer>
+}
 
 export default meta
-type Story = StoryObj<typeof ReasoningViewer>
 
-export const Default: Story = {
+/** @type {StoryObj<typeof ReasoningViewer>} */
+export const Default = {
   args: {
     reasoning: diagnosisMocks.standard.rag_interpretation?.reasoning ?? [],
     metadata: diagnosisMocks.standard.rag_interpretation?.metadata ?? {
