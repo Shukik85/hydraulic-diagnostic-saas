@@ -1,7 +1,14 @@
 import { mount } from '@vue/test-utils'
 import { describe, it, expect } from 'vitest'
 import DiagnosisProgress from '../DiagnosisProgress.vue'
-import type { Stage } from '../DiagnosisProgress.vue'
+
+interface Stage {
+  id: string
+  name: string
+  status: 'pending' | 'active' | 'complete' | 'error'
+  progress?: number
+  duration?: string
+}
 
 describe('DiagnosisProgress', () => {
   const mockStages: Stage[] = [
