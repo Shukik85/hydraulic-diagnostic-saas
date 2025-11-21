@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const route = useRoute();
-const systemId = route.params.systemId;
+definePageMeta({ 
+  layout: 'dashboard' as const,
+  middleware: ['auth']
+})
 
-definePageMeta({ layout: 'dashboard' });
+const route = useRoute()
+const systemId = route.params.systemId as string
+
 const activeTab = computed(() => {
-  if (route.path.startsWith(`/systems/${systemId}/equipments`)) return 'equipments';
-  if (route.path.startsWith(`/systems/${systemId}/sensors`)) return 'sensors';
-  return '';
-});
+  if (route.path.includes('/equipment')) return 'equipment'
+  if (route.path.includes('/sensors')) return 'sensors'
+  return ''
+})
 </script>
 
 <template>
@@ -21,10 +25,10 @@ const activeTab = computed(() => {
 
     <!-- Pill Tabs (Switchers) -->
     <div class="mb-8 flex space-x-2 overflow-x-auto">
-      <NuxtLink :to="`/systems/${systemId}/equipments`"
+      <NuxtLink :to="`/systems/${systemId}/equipment`"
         class="px-5 py-2 rounded-full font-medium whitespace-nowrap transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:z-10 border"
         :class="[
-          activeTab === 'equipments'
+          activeTab === 'equipment'
             ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-500 font-bold'
             : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:text-blue-700 hover:border-blue-300',
         ]">
@@ -99,7 +103,7 @@ const activeTab = computed(() => {
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Оборудование</h3>
-            <NuxtLink :to="`/systems/${systemId}/equipments`"
+            <NuxtLink :to="`/systems/${systemId}/equipment`"
               class="text-blue-600 hover:text-blue-700 text-sm font-medium">Посмотреть всё</NuxtLink>
           </div>
         </div>
@@ -107,7 +111,7 @@ const activeTab = computed(() => {
           <div class="text-center py-8">
             <Icon name="heroicons:cog-6-tooth" class="w-12 h-12 text-gray-400 mx-auto mb-3" />
             <p class="text-gray-500 dark:text-gray-400 mb-4">Список оборудования системы</p>
-            <NuxtLink :to="`/systems/${systemId}/equipments`"
+            <NuxtLink :to="`/systems/${systemId}/equipment`"
               class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Управление
               оборудованием</NuxtLink>
           </div>
