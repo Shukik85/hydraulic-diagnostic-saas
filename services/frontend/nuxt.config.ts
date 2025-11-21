@@ -47,6 +47,13 @@ export default defineNuxtConfig({
       autoprefixer: {},
     },
   },
+  components: [
+    '~/components',
+    {
+      path: '~/components/ui',
+      pathPrefix: false,
+    },
+  ],
 
   vite: {
     optimizeDeps: {
