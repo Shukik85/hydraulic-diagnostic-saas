@@ -1,45 +1,50 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
+import { Meta, StoryObj } from '@storybook/vue3'
 import RAGInterpretation from './RAGInterpretation.vue'
 import { diagnosisMocks } from '~/mocks/diagnosis'
 
+/** @type {Meta<typeof RAGInterpretation>} */
 const meta = {
   title: 'Diagnosis/RAGInterpretation',
   component: RAGInterpretation,
   tags: ['autodocs'],
-} as Meta<typeof RAGInterpretation>
+}
 
 export default meta
-type Story = StoryObj<typeof RAGInterpretation>
 
-export const Warning: Story = {
+/** @type {StoryObj<typeof RAGInterpretation>} */
+export const Warning = {
   args: {
     interpretation: diagnosisMocks.standard.rag_interpretation,
     loading: false,
   },
 }
 
-export const Critical: Story = {
+/** @type {StoryObj<typeof RAGInterpretation>} */
+export const Critical = {
   args: {
     interpretation: diagnosisMocks.critical.rag_interpretation,
     loading: false,
   },
 }
 
-export const Normal: Story = {
+/** @type {StoryObj<typeof RAGInterpretation>} */
+export const Normal = {
   args: {
     interpretation: diagnosisMocks.normal.rag_interpretation,
     loading: false,
   },
 }
 
-export const Loading: Story = {
+/** @type {StoryObj<typeof RAGInterpretation>} */
+export const Loading = {
   args: {
     interpretation: null,
     loading: true,
   },
 }
 
-export const Error: Story = {
+/** @type {StoryObj<typeof RAGInterpretation>} */
+export const Error = {
   args: {
     interpretation: null,
     loading: false,
