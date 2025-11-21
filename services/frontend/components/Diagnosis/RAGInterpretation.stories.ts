@@ -2,11 +2,11 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import RAGInterpretation from './RAGInterpretation.vue'
 import { diagnosisMocks } from '~/mocks/diagnosis'
 
-const meta: Meta<typeof RAGInterpretation> = {
+const meta = {
   title: 'Diagnosis/RAGInterpretation',
   component: RAGInterpretation,
   tags: ['autodocs'],
-}
+} as Meta<typeof RAGInterpretation>
 
 export default meta
 type Story = StoryObj<typeof RAGInterpretation>
