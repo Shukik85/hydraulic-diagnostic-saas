@@ -20,18 +20,18 @@
       </div>
     </div>
 
-    <!-- KPI Grid using KpiCard -->
+    <!-- KPI Grid using UKpiCard -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      <KpiCard :title="t('dashboard.kpi.activeSystems')" :value="127" icon="heroicons:server-stack" color="primary"
+      <UKpiCard :title="t('dashboard.kpi.activeSystems')" :value="127" icon="heroicons:server-stack" color="primary"
         :growth="3.9" :description="t('dashboard.kpi.fromYesterday')" />
 
-      <KpiCard :title="t('dashboard.kpi.systemHealth')" value="99.9%" icon="heroicons:heart" color="success"
+      <UKpiCard :title="t('dashboard.kpi.systemHealth')" value="99.9%" icon="heroicons:heart" color="success"
         :growth="0.1" :description="t('dashboard.kpi.uptimeExcellence')" />
 
-      <KpiCard :title="t('dashboard.kpi.preventedFailures')" :value="23" icon="heroicons:shield-check" color="info"
+      <UKpiCard :title="t('dashboard.kpi.preventedFailures')" :value="23" icon="heroicons:shield-check" color="info"
         :growth="15.2" :description="t('dashboard.kpi.aiPredictions')" />
 
-      <KpiCard :title="t('dashboard.kpi.costSavings')" value="89%" icon="heroicons:currency-dollar" color="warning"
+      <UKpiCard :title="t('dashboard.kpi.costSavings')" value="89%" icon="heroicons:currency-dollar" color="warning"
         :growth="12.5" :description="t('dashboard.kpi.vsPreviousYear')" />
     </div>
 
