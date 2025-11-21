@@ -2,11 +2,11 @@ import type { Meta, StoryObj } from '@storybook/vue3'
 import ReasoningViewer from './ReasoningViewer.vue'
 import { diagnosisMocks } from '~/mocks/diagnosis'
 
-const meta: Meta<typeof ReasoningViewer> = {
+const meta = {
   title: 'Diagnosis/ReasoningViewer',
   component: ReasoningViewer,
   tags: ['autodocs'],
-}
+} as Meta<typeof ReasoningViewer>
 
 export default meta
 type Story = StoryObj<typeof ReasoningViewer>
