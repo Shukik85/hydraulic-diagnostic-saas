@@ -1,22 +1,24 @@
-import type { Meta, StoryObj } from '@storybook/vue3'
+import { Meta, StoryObj } from '@storybook/vue3'
 import ErrorFallback from './ErrorFallback.vue'
 
+/** @type {Meta<typeof ErrorFallback>} */
 const meta = {
   title: 'Error/ErrorFallback',
   component: ErrorFallback,
   tags: ['autodocs'],
-} as Meta<typeof ErrorFallback>
+}
 
 export default meta
-type Story = StoryObj<typeof ErrorFallback>
 
-export const Default: Story = {
+/** @type {StoryObj<typeof ErrorFallback>} */
+export const Default = {
   args: {
     error: new Error('Тестовая ошибка'),
   },
 }
 
-export const NetworkError: Story = {
+/** @type {StoryObj<typeof ErrorFallback>} */
+export const NetworkError = {
   args: {
     error: new Error('Network request failed'),
   },
