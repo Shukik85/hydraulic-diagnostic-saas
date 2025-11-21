@@ -1,4 +1,4 @@
-import type { Meta as MetaType, StoryObj as StoryObjType } from '@storybook/vue3'
+import type { Meta, StoryObj } from '@storybook/vue3'
 import DiagnosisProgress from './DiagnosisProgress.vue'
 
 interface Stage {
@@ -9,14 +9,14 @@ interface Stage {
   duration?: string
 }
 
-const meta: MetaType<typeof DiagnosisProgress> = {
+const meta = {
   title: 'Loading/DiagnosisProgress',
   component: DiagnosisProgress,
   tags: ['autodocs'],
-}
+} satisfies Meta<typeof DiagnosisProgress>
 
 export default meta
-type Story = StoryObjType<typeof DiagnosisProgress>
+type Story = StoryObj<typeof meta>
 
 const baseStages: Stage[] = [
   { id: '1', name: 'Загрузка данных', status: 'complete' as const, duration: '0.8 сек.' },
