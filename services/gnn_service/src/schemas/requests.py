@@ -9,7 +9,7 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import List, Annotated, Literal
+from typing import List, Dict, Any, Annotated, Literal
 from datetime import datetime
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
@@ -83,6 +83,99 @@ class TimeWindow(BaseModel):
         return self.duration_seconds / 3600.0
 
 
+# ==================== API Request Schemas ====================
+
+class PredictionRequest(BaseModel):
+    """Single equipment prediction request.
+    
+    Attributes:
+        equipment_id: Equipment ID
+        sensor_data: Sensor data (dict or pandas DataFrame compatible)
+    
+    Examples:
+        >>> request = PredictionRequest(
+        ...     equipment_id="exc_001",
+        ...     sensor_data={
+        ...         "pressure_pump_main": [100.0, 101.0, ...],
+        ...         "temperature_pump_main": [60.0, 61.0, ...],
+        ...         "vibration_pump_main": [2.5, 2.6, ...]
+        ...     }
+        ... )
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "equipment_id": "exc_001",
+                "sensor_data": {
+                    "pressure_pump_main": [100.0, 101.0, 102.0],
+                    "temperature_pump_main": [60.0, 61.0, 62.0],
+                    "vibration_pump_main": [2.5, 2.6, 2.7]
+                }
+            }
+        }
+    )
+    
+    equipment_id: str = Field(
+        ...,
+        min_length=1,
+        description="Equipment ID"
+    )
+    
+    sensor_data: Dict[str, List[float]] | Any = Field(
+        ...,
+        description="Sensor data (dict or pandas DataFrame)"
+    )
+
+
+class BatchPredictionRequest(BaseModel):
+    """Batch prediction request.
+    
+    Attributes:
+        requests: List of prediction requests
+    
+    Examples:
+        >>> batch_request = BatchPredictionRequest(
+        ...     requests=[
+        ...         PredictionRequest(equipment_id="exc_001", sensor_data={...}),
+        ...         PredictionRequest(equipment_id="exc_002", sensor_data={...})
+        ...     ]
+        ... )
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "requests": [
+                    {
+                        "equipment_id": "exc_001",
+                        "sensor_data": {
+                            "pressure_pump_main": [100.0, 101.0, 102.0],
+                            "temperature_pump_main": [60.0, 61.0, 62.0]
+                        }
+                    },
+                    {
+                        "equipment_id": "exc_002",
+                        "sensor_data": {
+                            "pressure_pump_main": [105.0, 106.0, 107.0],
+                            "temperature_pump_main": [62.0, 63.0, 64.0]
+                        }
+                    }
+                ]
+            }
+        }
+    )
+    
+    requests: List[PredictionRequest] = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="List of prediction requests"
+    )
+
+
+# ==================== Legacy Request Schemas ====================
+
 class InferenceRequest(BaseModel):
     """Запрос на inference для одной единицы оборудования.
     
@@ -150,7 +243,7 @@ class InferenceRequest(BaseModel):
     
     custom_parameters: dict[str, str | int | float | bool] = Field(
         default_factory=dict,
-        description="Дополнительные параметры для специфических use cases"
+        description="Дополнительные параметры для специфичных use cases"
     )
 
 
