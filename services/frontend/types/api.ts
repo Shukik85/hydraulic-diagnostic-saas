@@ -1,118 +1,75 @@
 /**
- * TypeScript Types для Hydraulic Diagnostic Platform API
- *
- * @see https://github.com/Shukik85/hydraulic-diagnostic-saas
- * @version 1.0.0
+ * API Types
+ * Generic types for API requests and responses
  */
 
-// ==================== EXISTING TYPES (PRESERVED) ====================
-// !!! УДАЛЁНЫ DiagnosticResult, ChatMessage, ChatSession !!!
-export interface User {
-  id: number
-  email: string
-  username?: string
-  name?: string
-  first_name?: string
-  last_name?: string
-  avatar?: string
-  is_active: boolean
-  is_staff?: boolean
-  date_joined: string
-  last_login?: string
+/**
+ * Generic API response wrapper
+ */
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+  timestamp: string;
 }
 
-export interface LoginCredentials {
-  email: string
-  password: string
-}
-
-export interface RegisterData {
-  email: string
-  password: string
-  password_confirm: string
-  first_name?: string
-  last_name?: string
-  username?: string
-}
-
-export interface AuthTokens {
-  access: string
-  refresh: string
-}
-
-export interface ApiResponse<T = any> {
-  data: T
-  message?: string
-  error?: string
-}
-
-export interface HydraulicSystem {
-  id: number
-  name: string
-  type: 'industrial' | 'mobile' | 'marine' | 'construction' | 'mining' | 'agricultural'
-  status: 'active' | 'maintenance' | 'inactive'
-  description?: string
-  location?: string
-  pressure: number
-  temperature: number
-  flow_rate?: number
-  vibration?: number
-  health_score: number
-  last_update: string
-  created_at: string
-  updated_at: string
-}
-
-export interface DiagnosticSession {
-  id: number
-  system_id: number
-  type: 'full' | 'pressure' | 'temperature' | 'vibration' | 'flow'
-  status: 'pending' | 'running' | 'completed' | 'failed'
-  progress: number
-  started_at: string
-  completed_at?: string
-  results?: any[] // !!! DiagnosticResult удалён, оставить any[] для совместимости
-  created_by: number
-}
-
+/**
+ * API error response
+ */
 export interface ApiError {
-  message: string
-  status: number
-  data?: any
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+    stack?: string;
+  };
+  timestamp: string;
 }
 
-export interface TableColumn {
-  key: string
-  label: string
-  sortable?: boolean
-  width?: string
-  align?: 'left' | 'center' | 'right'
+/**
+ * Paginated response
+ */
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 
-export interface UiPasswordStrength {
-  score: number
-  label: 'weak' | 'fair' | 'good' | 'strong'
-  color: 'red' | 'yellow' | 'green' | 'blue'
+/**
+ * API request configuration
+ */
+export interface RequestConfig {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  headers?: Record<string, string>;
+  params?: Record<string, string | number | boolean>;
+  body?: unknown;
+  timeout?: number;
+  retry?: number;
 }
 
-export interface PasswordStrength {
-  score: number
-  feedback: {
-    warning: string
-    suggestions: string[]
-  }
-  crack_times_seconds: {
-    online_throttling_100_per_hour: number
-    online_no_throttling_10_per_second: number
-    offline_slow_hashing_1e4_per_second: number
-    offline_fast_hashing_1e10_per_second: number
-  }
-  crack_times_display: {
-    online_throttling_100_per_hour: string
-    online_no_throttling_10_per_second: string
-    offline_slow_hashing_1e4_per_second: string
-    offline_fast_hashing_1e10_per_second: string
-  }
+/**
+ * WebSocket message
+ */
+export interface WebSocketMessage<T = unknown> {
+  type: string;
+  data: T;
+  timestamp: string;
 }
 
-// ... остальной файл ОСТАВИТЬ без изменений ...
+/**
+ * File upload response
+ */
+export interface UploadResponse {
+  url: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+  uploadedAt: string;
+}

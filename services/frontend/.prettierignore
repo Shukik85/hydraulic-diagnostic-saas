@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+.pnpm-store
+.npm
+
+# Build output
+.nuxt
+.output
+dist
+.cache
+
+# Coverage
+coverage
+.nyc_output
+
+# Cypress
+cypress/videos
+cypress/screenshots
+
+# Logs
+*.log
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.min.js
+*.min.css

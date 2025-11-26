@@ -32,29 +32,26 @@ export default defineNuxtConfig({
       policies: {
         'default-src': ["'self'"],
         'script-src': ["'self'", 'https://cdn.jsdelivr.net'],
-        'style-src': ["'self'", 'https://fonts.googleapis.com', 'unsafe-inline'],
+        'style-src': ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
         'img-src': ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
         'font-src': ["'self'", 'https://fonts.gstatic.com'],
-        'connect-src': ["'self'", 'https://api.segment.io', 'wss://*', 'http://localhost:8000', 'https://api.openai.com'],
+        'connect-src': [
+          "'self'",
+          'http://localhost:8000',
+          'ws://localhost:8000',
+          'https://api.hydraulic-diagnostics.com',
+          'wss://api.hydraulic-diagnostics.com',
+        ],
         'frame-ancestors': ["'self'"],
       },
     },
     rateLimiter: {
       tokensPerInterval: 100,
-      interval: 'minute'
-    },
-    audit: {
-      enabled: true,
-      logHeaders: true,
-      logBody: true,
+      interval: 'minute',
     },
   },
 
-  css: [
-    '~/styles/metallic.css',
-    '~/styles/premium-tokens.css',
-    '~/styles/components.css',
-  ],
+  css: ['~/assets/css/main.css'],
 
   postcss: {
     plugins: {
@@ -65,13 +62,7 @@ export default defineNuxtConfig({
 
   vite: {
     optimizeDeps: {
-      include: [
-        'axios',
-        'echarts/core',
-        'echarts/charts',
-        'echarts/components',
-        'vue-echarts',
-      ],
+      include: ['echarts/core', 'echarts/charts', 'echarts/components', 'vue-echarts'],
     },
     ssr: {
       noExternal: ['vue-echarts', 'echarts'],
@@ -82,7 +73,6 @@ export default defineNuxtConfig({
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8000/api/v1',
       wsBase: process.env.NUXT_PUBLIC_WS_BASE || 'ws://localhost:8000/ws',
-      enableMocks: process.env.ENABLE_MOCKS === 'true' || process.env.NODE_ENV === 'development',
     },
   },
 
@@ -111,13 +101,16 @@ export default defineNuxtConfig({
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
       meta: [
-        { name: 'description', content: 'AI-powered hydraulic diagnostics' },
+        { name: 'description', content: 'AI-powered hydraulic diagnostics platform' },
         { name: 'theme-color', content: '#2b3340' },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap' },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+        },
       ],
     },
   },
@@ -128,24 +121,10 @@ export default defineNuxtConfig({
       brotli: true,
     },
     routeRules: {
-      '/': { 
-        swr: 3600,
-      },
-      '/dashboard': { 
-        ssr: true,
-        swr: 600,
-      },
-      '/diagnosis/**': { 
-        ssr: false
-      },
-      '/api/**': { 
-        cors: true,
-        headers: {
-          'cache-control': 'max-age=300'
-        }
-      },
-      '/api-test': process.env.NODE_ENV === 'production' ? { redirect: '/' } : {},
-      '/demo': process.env.NODE_ENV === 'production' ? { redirect: '/' } : {},
+      '/': { swr: 3600 },
+      '/dashboard': { ssr: true, swr: 600 },
+      '/diagnosis/**': { ssr: false },
+      '/api/**': { cors: true, headers: { 'cache-control': 'max-age=300' } },
     },
   },
 
@@ -167,4 +146,4 @@ export default defineNuxtConfig({
     granularCachedData: true,
     purgeCachedData: true,
   },
-})
+});

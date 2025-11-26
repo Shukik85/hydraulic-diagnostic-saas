@@ -2,22 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --color-primary: #3b82f6;
+@layer base {
+  :root {
+    /* Light mode colors */
+    --color-primary-50: #f0fdfa;
+    --color-primary-100: #ccfbf1;
+    --color-primary-200: #99f6e4;
+    --color-primary-300: #5eead4;
+    --color-primary-400: #2dd4bf;
+    --color-primary-500: #14b8a6;
+    --color-primary-600: #0d9488;
+    --color-primary-700: #0f766e;
+    --color-primary-800: #115e59;
+    --color-primary-900: #134e4a;
+  }
+
+  .dark {
+    /* Dark mode colors (if needed) */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
+  }
 }
 
-.u-container {
-  @apply max-w-7xl mx-auto px-4;
-}
-
-.u-card {
-  @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm border;
-}
-
-.u-btn {
-  @apply inline-flex items-center justify-center font-medium transition-colors;
-}
-
-.u-btn-primary {
-  @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg;
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
 }

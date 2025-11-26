@@ -1,284 +1,243 @@
 /**
- * useWebSocket.ts — реактивный WebSocket composable
- * Поддержка real-time sensor data, anomaly alerts, system status updates
- * Типизировано по OpenAPI v3.1 спецификации
+ * WebSocket Composable
+ * Real-time communication with auto-reconnect
  */
-import { ref, onUnmounted, computed } from 'vue'
-import type {
-  WSMessage,
-  WSNewSensorReading,
-  WSNewAnomaly,
-  WSSystemStatusUpdate,
-  isValidWSMessage
-} from '../types/api'
 
-/**
- * WebSocket connection states
- */
-export enum WSConnectionState {
-  Disconnected = 'disconnected',
-  Connecting = 'connecting',
-  Connected = 'connected',
-  Reconnecting = 'reconnecting',
-  Error = 'error'
+import type { WebSocketMessage } from '~/types';
+
+interface WebSocketOptions {
+  autoConnect?: boolean;
+  reconnect?: boolean;
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  heartbeatInterval?: number;
 }
 
-/**
- * WebSocket composable options
- */
-export interface UseWebSocketOptions {
-  url?: string
-  autoReconnect?: boolean
-  reconnectDelay?: number
-  maxReconnectAttempts?: number
-  heartbeatInterval?: number
-  debug?: boolean
+interface WebSocketState {
+  isConnected: boolean;
+  isConnecting: boolean;
+  error: Error | null;
+  reconnectAttempts: number;
 }
 
-const DEFAULT_OPTIONS: Required<UseWebSocketOptions> = {
-  url: 'ws://localhost:8000/ws',
-  autoReconnect: true,
-  reconnectDelay: 3000,
-  maxReconnectAttempts: 10,
+type MessageHandler<T = unknown> = (data: T) => void;
+
+const DEFAULT_OPTIONS: Required<WebSocketOptions> = {
+  autoConnect: true,
+  reconnect: true,
+  reconnectInterval: 1000,
+  maxReconnectAttempts: 5,
   heartbeatInterval: 30000,
-  debug: false
-}
+};
 
-/**
- * WebSocket composable для real-time коммуникации
- */
-export function useWebSocket(options: UseWebSocketOptions = {}) {
-  const opts = { ...DEFAULT_OPTIONS, ...options }
-  
-  const ws = ref<WebSocket | null>(null)
-  const connectionState = ref<WSConnectionState>(WSConnectionState.Disconnected)
-  const isConnected = computed(() => connectionState.value === WSConnectionState.Connected)
-  const lastMessage = ref<WSMessage | null>(null)
-  const lastError = ref<Event | null>(null)
-  
-  let reconnectAttempts = 0
-  let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-  let heartbeatTimer: ReturnType<typeof setInterval> | null = null
-  
-  const messageHandlers = new Map<string, Set<(data: any) => void>>()
-  
-  const log = (...args: any[]) => {
-    if (opts.debug) console.log('[WebSocket]', ...args)
+export function useWebSocket(url: string, options: WebSocketOptions = {}) {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+
+  const state = ref<WebSocketState>({
+    isConnected: false,
+    isConnecting: false,
+    error: null,
+    reconnectAttempts: 0,
+  });
+
+  let ws: WebSocket | null = null;
+  let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  const messageHandlers = new Map<string, Set<MessageHandler>>();
+
+  /**
+   * Calculate reconnect delay with exponential backoff
+   */
+  function getReconnectDelay(): number {
+    const baseDelay = opts.reconnectInterval;
+    const attempt = state.value.reconnectAttempts;
+    const delay = baseDelay * Math.pow(2, attempt);
+    return Math.min(delay, 30000); // Max 30 seconds
   }
-  
-  const logError = (...args: any[]) => {
-    console.error('[WebSocket ERROR]', ...args)
-  }
-  
-  function connect() {
-    if (ws.value && ws.value.readyState === WebSocket.OPEN) {
-      log('Already connected')
-      return
-    }
-    
-    try {
-      log('Connecting to', opts.url)
-      connectionState.value = reconnectAttempts > 0 
-        ? WSConnectionState.Reconnecting 
-        : WSConnectionState.Connecting
-      
-      ws.value = new WebSocket(opts.url)
-      
-      ws.value.onopen = handleOpen
-      ws.value.onmessage = handleMessage
-      ws.value.onerror = handleError
-      ws.value.onclose = handleClose
-      
-    } catch (error) {
-      logError('Connection failed:', error)
-      connectionState.value = WSConnectionState.Error
-      scheduleReconnect()
-    }
-  }
-  
-  function disconnect() {
-    log('Disconnecting...')
-    
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer)
-      reconnectTimer = null
-    }
-    
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer)
-      heartbeatTimer = null
-    }
-    
-    if (ws.value) {
-      ws.value.close(1000, 'Client disconnect')
-      ws.value = null
-    }
-    
-    connectionState.value = WSConnectionState.Disconnected
-    reconnectAttempts = 0
-  }
-  
-  function scheduleReconnect() {
-    if (!opts.autoReconnect) return
-    
-    if (reconnectAttempts >= opts.maxReconnectAttempts) {
-      logError(`Max reconnect attempts reached`)
-      connectionState.value = WSConnectionState.Error
-      return
-    }
-    
-    reconnectAttempts++
-    log(`Reconnect attempt ${reconnectAttempts}/${opts.maxReconnectAttempts}`)
-    
-    reconnectTimer = setTimeout(() => connect(), opts.reconnectDelay)
-  }
-  
-  function handleOpen() {
-    log('Connected')
-    connectionState.value = WSConnectionState.Connected
-    reconnectAttempts = 0
-    lastError.value = null
-    startHeartbeat()
-  }
-  
-  function handleMessage(event: MessageEvent) {
-    try {
-      const message = JSON.parse(event.data) as WSMessage
-      
-      if (!isValidWSMessage(message)) {
-        logError('Invalid message format')
-        return
+
+  /**
+   * Start heartbeat to keep connection alive
+   */
+  function startHeartbeat(): void {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+    heartbeatInterval = setInterval(() => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        send({ type: 'ping', data: null, timestamp: new Date().toISOString() });
       }
-      
-      log('Received:', message.type)
-      lastMessage.value = message
-      
-      const handlers = messageHandlers.get(message.type)
-      if (handlers) {
-        handlers.forEach(h => {
-          try { h(message.data) } catch (e) { logError('Handler error:', e) }
-        })
-      }
-    } catch (error) {
-      logError('Parse error:', error)
+    }, opts.heartbeatInterval);
+  }
+
+  /**
+   * Stop heartbeat
+   */
+  function stopHeartbeat(): void {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
     }
   }
-  
-  function handleError(event: Event) {
-    logError('Error:', event)
-    lastError.value = event
-    connectionState.value = WSConnectionState.Error
-  }
-  
-  function handleClose(event: CloseEvent) {
-    log('Closed:', event.code)
-    
-    if (heartbeatTimer) {
-      clearInterval(heartbeatTimer)
-      heartbeatTimer = null
-    }
-    
-    connectionState.value = WSConnectionState.Disconnected
-    
-    if (event.code !== 1000 && opts.autoReconnect) {
-      scheduleReconnect()
-    }
-  }
-  
-  function startHeartbeat() {
-    if (heartbeatTimer) clearInterval(heartbeatTimer)
-    
-    heartbeatTimer = setInterval(() => {
-      if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+
+  /**
+   * Connect to WebSocket
+   */
+  function connect(): void {
+    if (state.value.isConnected || state.value.isConnecting) return;
+
+    state.value.isConnecting = true;
+    state.value.error = null;
+
+    try {
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        state.value.isConnected = true;
+        state.value.isConnecting = false;
+        state.value.reconnectAttempts = 0;
+        startHeartbeat();
+        console.log('[WebSocket] Connected to', url);
+      };
+
+      ws.onmessage = (event) => {
         try {
-          ws.value.send(JSON.stringify({ type: 'ping' }))
-        } catch (e) {
-          logError('Heartbeat failed:', e)
+          const message: WebSocketMessage = JSON.parse(event.data);
+          handleMessage(message);
+        } catch (error) {
+          console.error('[WebSocket] Failed to parse message:', error);
         }
-      }
-    }, opts.heartbeatInterval)
-  }
-  
-  function on<T extends WSMessage['type']>(
-    type: T,
-    handler: (data: Extract<WSMessage, { type: T }>['data']) => void
-  ): () => void {
-    if (!messageHandlers.has(type)) {
-      messageHandlers.set(type, new Set())
-    }
-    
-    const handlers = messageHandlers.get(type)!
-    handlers.add(handler)
-    
-    return () => handlers.delete(handler)
-  }
-  
-  function send(data: any): boolean {
-    if (!ws.value || ws.value.readyState !== WebSocket.OPEN) {
-      logError('Cannot send: not connected')
-      return false
-    }
-    
-    try {
-      const message = typeof data === 'string' ? data : JSON.stringify(data)
-      ws.value.send(message)
-      return true
+      };
+
+      ws.onerror = (event) => {
+        state.value.error = new Error('WebSocket error');
+        console.error('[WebSocket] Error:', event);
+      };
+
+      ws.onclose = () => {
+        state.value.isConnected = false;
+        state.value.isConnecting = false;
+        stopHeartbeat();
+        console.log('[WebSocket] Disconnected');
+
+        // Attempt reconnect if enabled
+        if (opts.reconnect && state.value.reconnectAttempts < opts.maxReconnectAttempts) {
+          const delay = getReconnectDelay();
+          console.log(`[WebSocket] Reconnecting in ${delay}ms...`);
+          
+          state.value.reconnectAttempts++;
+          reconnectTimeout = setTimeout(() => {
+            connect();
+          }, delay);
+        }
+      };
     } catch (error) {
-      logError('Send failed:', error)
-      return false
+      state.value.error = error instanceof Error ? error : new Error('Connection failed');
+      state.value.isConnecting = false;
     }
   }
-  
-  function onSensorReading(handler: (data: WSNewSensorReading['data']) => void) {
-    return on('sensor_reading', handler)
+
+  /**
+   * Disconnect from WebSocket
+   */
+  function disconnect(): void {
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
+    }
+
+    stopHeartbeat();
+
+    if (ws) {
+      ws.close();
+      ws = null;
+    }
+
+    state.value.isConnected = false;
+    state.value.isConnecting = false;
+    state.value.reconnectAttempts = 0;
   }
-  
-  function onAnomalyDetected(handler: (data: WSNewAnomaly['data']) => void) {
-    return on('anomaly_detected', handler)
+
+  /**
+   * Send message through WebSocket
+   */
+  function send<T = unknown>(message: WebSocketMessage<T>): void {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.warn('[WebSocket] Cannot send message: not connected');
+      return;
+    }
+
+    try {
+      ws.send(JSON.stringify(message));
+    } catch (error) {
+      console.error('[WebSocket] Failed to send message:', error);
+    }
   }
-  
-  function onSystemStatusUpdate(handler: (data: WSSystemStatusUpdate['data']) => void) {
-    return on('system_status_update', handler)
+
+  /**
+   * Handle incoming message
+   */
+  function handleMessage<T = unknown>(message: WebSocketMessage<T>): void {
+    const handlers = messageHandlers.get(message.type);
+    if (handlers) {
+      handlers.forEach((handler) => handler(message.data));
+    }
   }
-  
+
+  /**
+   * Subscribe to message type
+   */
+  function on<T = unknown>(type: string, handler: MessageHandler<T>): () => void {
+    if (!messageHandlers.has(type)) {
+      messageHandlers.set(type, new Set());
+    }
+
+    const handlers = messageHandlers.get(type)!;
+    handlers.add(handler as MessageHandler);
+
+    // Return unsubscribe function
+    return () => {
+      handlers.delete(handler as MessageHandler);
+      if (handlers.size === 0) {
+        messageHandlers.delete(type);
+      }
+    };
+  }
+
+  /**
+   * Subscribe to multiple message types
+   */
+  function onMany(subscriptions: Record<string, MessageHandler>): () => void {
+    const unsubscribers = Object.entries(subscriptions).map(([type, handler]) =>
+      on(type, handler)
+    );
+
+    // Return combined unsubscribe function
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }
+
+  // Auto-connect if enabled
+  if (opts.autoConnect && typeof window !== 'undefined') {
+    connect();
+  }
+
+  // Cleanup on unmount
   onUnmounted(() => {
-    log('Cleanup')
-    disconnect()
-  })
-  
+    disconnect();
+  });
+
   return {
-    connectionState,
-    isConnected,
-    lastMessage,
-    lastError,
+    // State
+    isConnected: computed(() => state.value.isConnected),
+    isConnecting: computed(() => state.value.isConnecting),
+    error: computed(() => state.value.error),
+    reconnectAttempts: computed(() => state.value.reconnectAttempts),
+
+    // Methods
     connect,
     disconnect,
     send,
     on,
-    onSensorReading,
-    onAnomalyDetected,
-    onSystemStatusUpdate
-  }
-}
-
-export function getConnectionStateColor(state: WSConnectionState): string {
-  const colors: Record<WSConnectionState, string> = {
-    [WSConnectionState.Disconnected]: 'text-gray-500 bg-gray-100',
-    [WSConnectionState.Connecting]: 'text-blue-500 bg-blue-100',
-    [WSConnectionState.Connected]: 'text-green-500 bg-green-100',
-    [WSConnectionState.Reconnecting]: 'text-yellow-500 bg-yellow-100',
-    [WSConnectionState.Error]: 'text-red-500 bg-red-100'
-  }
-  return colors[state] || 'text-gray-500 bg-gray-100'
-}
-
-export function getConnectionStateIcon(state: WSConnectionState): string {
-  const icons: Record<WSConnectionState, string> = {
-    [WSConnectionState.Disconnected]: 'heroicons:x-circle',
-    [WSConnectionState.Connecting]: 'heroicons:arrow-path',
-    [WSConnectionState.Connected]: 'heroicons:check-circle',
-    [WSConnectionState.Reconnecting]: 'heroicons:arrow-path',
-    [WSConnectionState.Error]: 'heroicons:exclamation-circle'
-  }
-  return icons[state] || 'heroicons:question-mark-circle'
+    onMany,
+  };
 }
