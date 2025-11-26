@@ -1,172 +1,160 @@
 /**
- * API client composable with retry logic and error handling
+ * API Composable
+ * Type-safe API client with retry logic and error handling
  */
 
-import type { ApiError, ApiResponse, PaginatedResponse, RequestConfig } from '~/types';
+import type { ApiResponse, ApiError, RequestConfig } from '~/types';
 
-export interface UseApiReturn {
-  get: <T>(url: string, config?: RequestConfig) => Promise<T>;
-  post: <T>(url: string, data?: unknown, config?: RequestConfig) => Promise<T>;
-  put: <T>(url: string, data?: unknown, config?: RequestConfig) => Promise<T>;
-  patch: <T>(url: string, data?: unknown, config?: RequestConfig) => Promise<T>;
-  delete: <T>(url: string, config?: RequestConfig) => Promise<T>;
+interface RetryConfig {
+  maxRetries: number;
+  initialDelay: number;
+  maxDelay: number;
+  factor: number;
 }
 
+const defaultRetryConfig: RetryConfig = {
+  maxRetries: 3,
+  initialDelay: 1000,
+  maxDelay: 10000,
+  factor: 2,
+};
+
 /**
- * Custom API error class
+ * Sleep utility for retry delays
  */
-export class ApiClientError extends Error {
-  constructor(
-    public statusCode: number,
-    public apiError: ApiError,
-    message: string
-  ) {
-    super(message);
-    this.name = 'ApiClientError';
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Calculate exponential backoff delay
+ */
+const getRetryDelay = (attempt: number, config: RetryConfig): number => {
+  const delay = config.initialDelay * Math.pow(config.factor, attempt);
+  return Math.min(delay, config.maxDelay);
+};
+
+/**
+ * Check if error is retriable
+ */
+const isRetriableError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    // Network errors
+    if (error.message.includes('fetch') || error.message.includes('network')) {
+      return true;
+    }
   }
-}
+  
+  // HTTP 5xx errors are retriable
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = (error as { status: number }).status;
+    return status >= 500 && status < 600;
+  }
+  
+  return false;
+};
 
-/**
- * API client composable
- */
-export const useApi = (): UseApiReturn => {
+export function useApi() {
   const config = useRuntimeConfig();
-  const { accessToken } = useAuth();
-
-  /**
-   * Create fetch options with auth header
-   */
-  const createOptions = (config?: RequestConfig): RequestInit => {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...config?.headers,
-    };
-
-    if (accessToken.value) {
-      headers.Authorization = `Bearer ${accessToken.value}`;
-    }
-
-    return {
-      headers,
-    };
-  };
-
-  /**
-   * Handle API errors
-   */
-  const handleError = async (response: Response): Promise<never> => {
-    let errorData: ApiError;
-    try {
-      errorData = await response.json();
-    } catch {
-      errorData = {
-        error: 'UnknownError',
-        message: 'An unknown error occurred',
-        statusCode: response.status,
-        timestamp: new Date().toISOString(),
-      };
-    }
-
-    throw new ApiClientError(response.status, errorData, errorData.message);
-  };
+  const baseURL = config.public.apiBase || 'http://localhost:8000';
 
   /**
    * Make API request with retry logic
    */
-  const request = async <T>(
-    url: string,
-    options: RequestInit,
-    config?: RequestConfig
-  ): Promise<T> => {
-    const fullUrl = `${config.public.apiBase}${url}`;
-    const maxRetries = config?.retry ?? 3;
-    const retryDelay = config?.retryDelay ?? 1000;
+  async function request<T>(
+    endpoint: string,
+    options: RequestConfig = {},
+    retryConfig: Partial<RetryConfig> = {}
+  ): Promise<ApiResponse<T>> {
+    const retry = { ...defaultRetryConfig, ...retryConfig };
+    let lastError: unknown;
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= retry.maxRetries; attempt++) {
       try {
-        const response = await fetch(fullUrl, options);
+        const response = await $fetch<ApiResponse<T>>(endpoint, {
+          baseURL,
+          method: options.method || 'GET',
+          headers: options.headers,
+          params: options.params,
+          body: options.body,
+          timeout: options.timeout || 30000,
+          retry: false, // We handle retry ourselves
+        });
 
-        if (!response.ok) {
-          // Don't retry on 4xx errors (client errors)
-          if (response.status >= 400 && response.status < 500) {
-            await handleError(response);
-          }
-
-          // Retry on 5xx errors (server errors)
-          if (attempt < maxRetries) {
-            await new Promise((resolve) => setTimeout(resolve, retryDelay * (attempt + 1)));
-            continue;
-          }
-
-          await handleError(response);
-        }
-
-        const data = await response.json();
-        return data as T;
+        return response;
       } catch (error) {
-        if (error instanceof ApiClientError) {
+        lastError = error;
+
+        // Don't retry if not retriable or last attempt
+        if (!isRetriableError(error) || attempt === retry.maxRetries) {
           throw error;
         }
 
-        if (attempt >= maxRetries) {
-          throw error;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, retryDelay * (attempt + 1)));
+        // Wait before retry with exponential backoff
+        const delay = getRetryDelay(attempt, retry);
+        console.warn(
+          `API request failed (attempt ${attempt + 1}/${retry.maxRetries + 1}), retrying in ${delay}ms...`
+        );
+        await sleep(delay);
       }
     }
 
-    throw new Error('Max retries reached');
-  };
+    // This should never be reached, but TypeScript needs it
+    throw lastError;
+  }
+
+  /**
+   * GET request
+   */
+  async function get<T>(
+    endpoint: string,
+    params?: Record<string, string | number | boolean>
+  ): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'GET', params });
+  }
+
+  /**
+   * POST request
+   */
+  async function post<T>(
+    endpoint: string,
+    body: unknown
+  ): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'POST', body });
+  }
+
+  /**
+   * PUT request
+   */
+  async function put<T>(
+    endpoint: string,
+    body: unknown
+  ): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'PUT', body });
+  }
+
+  /**
+   * PATCH request
+   */
+  async function patch<T>(
+    endpoint: string,
+    body: unknown
+  ): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'PATCH', body });
+  }
+
+  /**
+   * DELETE request
+   */
+  async function del<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'DELETE' });
+  }
 
   return {
-    get: async <T>(url: string, config?: RequestConfig): Promise<T> => {
-      const options = createOptions(config);
-      return request<T>(url, { ...options, method: 'GET' }, config);
-    },
-
-    post: async <T>(url: string, data?: unknown, config?: RequestConfig): Promise<T> => {
-      const options = createOptions(config);
-      return request<T>(
-        url,
-        {
-          ...options,
-          method: 'POST',
-          body: JSON.stringify(data),
-        },
-        config
-      );
-    },
-
-    put: async <T>(url: string, data?: unknown, config?: RequestConfig): Promise<T> => {
-      const options = createOptions(config);
-      return request<T>(
-        url,
-        {
-          ...options,
-          method: 'PUT',
-          body: JSON.stringify(data),
-        },
-        config
-      );
-    },
-
-    patch: async <T>(url: string, data?: unknown, config?: RequestConfig): Promise<T> => {
-      const options = createOptions(config);
-      return request<T>(
-        url,
-        {
-          ...options,
-          method: 'PATCH',
-          body: JSON.stringify(data),
-        },
-        config
-      );
-    },
-
-    delete: async <T>(url: string, config?: RequestConfig): Promise<T> => {
-      const options = createOptions(config);
-      return request<T>(url, { ...options, method: 'DELETE' }, config);
-    },
+    request,
+    get,
+    post,
+    put,
+    patch,
+    delete: del,
   };
-};
+}
