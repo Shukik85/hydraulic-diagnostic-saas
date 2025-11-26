@@ -1,4 +1,7 @@
-"""Training module."""
-from .trainer import GNNTrainer
+"""Training module exports."""
 
-__all__ = ["GNNTrainer"]
+from .lightning_module import HydraulicGNNModule
+
+__all__ = [
+    "HydraulicGNNModule",
+]
