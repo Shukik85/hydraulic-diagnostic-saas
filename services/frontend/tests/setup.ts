@@ -1,57 +1,70 @@
-/**
- * Vitest test setup
- */
-
+// Vitest global setup
 import { vi } from 'vitest';
 import { config } from '@vue/test-utils';
 
 // Mock Nuxt auto-imports
-global.defineNuxtConfig = vi.fn();
+global.defineNuxtComponent = vi.fn();
+global.definePageMeta = vi.fn();
+global.navigateTo = vi.fn();
 global.useRuntimeConfig = vi.fn(() => ({
   public: {
-    apiBase: 'http://localhost:8000/api/v1',
-    wsBase: 'ws://localhost:8000/ws',
+    apiBase: 'http://localhost:8000',
   },
 }));
 
-global.navigateTo = vi.fn();
+// Mock composables
+global.useRoute = vi.fn(() => ({
+  params: {},
+  query: {},
+  path: '/',
+}));
+
 global.useRouter = vi.fn(() => ({
   push: vi.fn(),
   replace: vi.fn(),
-  go: vi.fn(),
   back: vi.fn(),
 }));
 
-global.useRoute = vi.fn(() => ({
-  path: '/',
-  params: {},
-  query: {},
+global.useI18n = vi.fn(() => ({
+  t: (key: string) => key,
+  locale: { value: 'ru' },
 }));
 
-// Mock localStorage
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
+// Configure Vue Test Utils
+config.global.mocks = {
+  $t: (key: string) => key,
+};
 
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value.toString();
-    },
-    removeItem: (key: string) => {
-      delete store[key];
-    },
-    clear: () => {
-      store = {};
-    },
-  };
-})();
-
-Object.defineProperty(global, 'localStorage', {
-  value: localStorageMock,
+// Mock window.matchMedia
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
 });
 
-// Configure Vue Test Utils
-config.global.stubs = {
-  Icon: true,
-  NuxtLink: true,
+// Mock IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  takeRecords() {
+    return [];
+  }
+  unobserve() {}
+};
+
+// Mock ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  constructor() {}
+  disconnect() {}
+  observe() {}
+  unobserve() {}
 };

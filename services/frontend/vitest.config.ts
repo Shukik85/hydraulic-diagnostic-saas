@@ -1,30 +1,72 @@
-import { defineVitestConfig } from '@nuxt/test-utils/config';
+import { defineConfig } from 'vitest/config';
+import vue from '@vitejs/plugin-vue';
 import { fileURLToPath } from 'node:url';
 
-export default defineVitestConfig({
+export default defineConfig({
+  plugins: [vue()],
+  
   test: {
-    environment: 'happy-dom',
+    // Environment
+    environment: 'jsdom',
     globals: true,
+    
+    // Setup files
+    setupFiles: ['./tests/setup.ts'],
+    
+    // Coverage configuration
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
-      lines: 95,
-      statements: 95,
-      functions: 95,
-      branches: 90,
       exclude: [
         'node_modules/',
         '.nuxt/',
+        '.output/',
         'dist/',
-        '**/*.spec.ts',
-        '**/*.test.ts',
-        '**/types/**',
-        '**/*.config.{ts,js}',
+        'coverage/',
+        '**/*.config.*',
+        '**/*.d.ts',
+        '**/tests/**',
+        '**/__tests__/**',
+        '**/test/**',
       ],
+      thresholds: {
+        lines: 95,
+        statements: 95,
+        functions: 95,
+        branches: 90,
+      },
     },
-    include: ['**/__tests__/**/*.spec.ts', '**/tests/**/*.spec.ts'],
-    setupFiles: ['./tests/setup.ts'],
+    
+    // Test files
+    include: [
+      'components/**/*.{test,spec}.{js,ts}',
+      'composables/**/*.{test,spec}.{js,ts}',
+      'stores/**/*.{test,spec}.{js,ts}',
+      'utils/**/*.{test,spec}.{js,ts}',
+      'types/**/*.{test,spec}.{js,ts}',
+    ],
+    
+    // Exclude
+    exclude: [
+      'node_modules',
+      '.nuxt',
+      '.output',
+      'dist',
+      'cypress',
+    ],
+    
+    // Reporters
+    reporters: ['verbose'],
+    
+    // Mock settings
+    mockReset: true,
+    restoreMocks: true,
+    clearMocks: true,
+    
+    // Timeout
+    testTimeout: 10000,
   },
+  
   resolve: {
     alias: {
       '~': fileURLToPath(new URL('./', import.meta.url)),
