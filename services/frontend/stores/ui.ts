@@ -1,154 +1,286 @@
 /**
- * UI state store
+ * UI Store
+ * Application-wide UI state management
  */
 
 import { defineStore } from 'pinia';
-import type { ToastMessage, ModalState, Theme } from '~/types';
+import type { ToastMessage, ModalState, Theme, SidebarState } from '~/types';
 
-export const useUiStore = defineStore('ui', () => {
-  // State
-  const toasts = ref<ToastMessage[]>([]);
-  const modals = ref<Record<string, ModalState>>({});
-  const theme = ref<Theme>('system');
-  const sidebarOpen = ref(true);
+interface UIState {
+  toasts: ToastMessage[];
+  modals: Record<string, ModalState>;
+  theme: Theme;
+  sidebar: SidebarState;
+}
 
-  // Getters
-  const activeToasts = computed(() => toasts.value);
-  const activeModals = computed(() =>
-    Object.entries(modals.value)
-      .filter(([, modal]) => modal.isOpen)
-      .map(([name]) => name)
-  );
-  const hasActiveModal = computed(() => activeModals.value.length > 0);
+let toastIdCounter = 0;
 
-  // Toast Actions
-  const addToast = (toast: ToastMessage): void => {
-    toasts.value.push(toast);
-  };
-
-  const removeToast = (id: string): void => {
-    const index = toasts.value.findIndex((t) => t.id === id);
-    if (index !== -1) {
-      toasts.value.splice(index, 1);
-    }
-  };
-
-  const clearToasts = (): void => {
-    toasts.value = [];
-  };
-
-  // Modal Actions
-  const openModal = (name: string, options: Partial<ModalState> = {}): void => {
-    modals.value[name] = {
+export const useUIStore = defineStore('ui', {
+  state: (): UIState => ({
+    toasts: [],
+    modals: {},
+    theme: 'system',
+    sidebar: {
       isOpen: true,
-      ...options,
-    };
-  };
+      isPinned: true,
+      activeSection: undefined,
+    },
+  }),
 
-  const closeModal = (name: string): void => {
-    if (modals.value[name]) {
-      modals.value[name].isOpen = false;
-    }
-  };
+  getters: {
+    /**
+     * Get active toasts
+     */
+    activeToasts: (state): ToastMessage[] => {
+      return state.toasts;
+    },
 
-  const closeAllModals = (): void => {
-    Object.keys(modals.value).forEach((name) => {
-      modals.value[name].isOpen = false;
-    });
-  };
+    /**
+     * Check if modal is open
+     */
+    isModalOpen:
+      (state) =>
+      (name: string): boolean => {
+        return state.modals[name]?.isOpen || false;
+      },
 
-  // Theme Actions
-  const setTheme = (newTheme: Theme): void => {
-    theme.value = newTheme;
+    /**
+     * Get effective theme (resolve 'system' to actual theme)
+     */
+    effectiveTheme: (state): 'light' | 'dark' => {
+      if (state.theme === 'system') {
+        // Check system preference
+        if (typeof window !== 'undefined') {
+          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        return 'light';
+      }
+      return state.theme;
+    },
+  },
 
-    // Persist to localStorage
-    if (process.client) {
-      localStorage.setItem('theme', newTheme);
-      applyTheme(newTheme);
-    }
-  };
+  actions: {
+    /**
+     * Add toast notification
+     */
+    addToast(
+      message: string,
+      type: ToastMessage['type'] = 'info',
+      title?: string,
+      duration: number = 5000
+    ): string {
+      const id = `toast-${Date.now()}-${toastIdCounter++}`;
 
-  const toggleTheme = (): void => {
-    const newTheme = theme.value === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-  };
+      const toast: ToastMessage = {
+        id,
+        type,
+        title,
+        message,
+        duration,
+        dismissible: true,
+        createdAt: new Date(),
+      };
 
-  const applyTheme = (themeValue: Theme): void => {
-    if (!process.client) {
-      return;
-    }
+      this.toasts.push(toast);
 
-    const root = document.documentElement;
+      // Auto-remove after duration
+      if (duration > 0) {
+        setTimeout(() => {
+          this.removeToast(id);
+        }, duration);
+      }
 
-    if (themeValue === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      root.classList.toggle('dark', prefersDark);
-    } else {
-      root.classList.toggle('dark', themeValue === 'dark');
-    }
-  };
+      return id;
+    },
 
-  const restoreTheme = (): void => {
-    if (process.client) {
+    /**
+     * Remove toast by ID
+     */
+    removeToast(id: string): void {
+      const index = this.toasts.findIndex((t) => t.id === id);
+      if (index !== -1) {
+        this.toasts.splice(index, 1);
+      }
+    },
+
+    /**
+     * Clear all toasts
+     */
+    clearToasts(): void {
+      this.toasts = [];
+    },
+
+    /**
+     * Show success toast
+     */
+    showSuccess(message: string, title: string = 'Success'): string {
+      return this.addToast(message, 'success', title);
+    },
+
+    /**
+     * Show error toast
+     */
+    showError(message: string, title: string = 'Error'): string {
+      return this.addToast(message, 'error', title, 0); // Don't auto-dismiss errors
+    },
+
+    /**
+     * Show warning toast
+     */
+    showWarning(message: string, title: string = 'Warning'): string {
+      return this.addToast(message, 'warning', title);
+    },
+
+    /**
+     * Show info toast
+     */
+    showInfo(message: string, title: string = 'Info'): string {
+      return this.addToast(message, 'info', title);
+    },
+
+    /**
+     * Open modal
+     */
+    openModal(
+      name: string,
+      options: Partial<ModalState> = {}
+    ): void {
+      this.modals[name] = {
+        isOpen: true,
+        title: options.title,
+        content: options.content,
+        size: options.size || 'md',
+        closeOnBackdrop: options.closeOnBackdrop ?? true,
+        showCloseButton: options.showCloseButton ?? true,
+        onConfirm: options.onConfirm,
+        onCancel: options.onCancel,
+      };
+    },
+
+    /**
+     * Close modal
+     */
+    closeModal(name: string): void {
+      if (this.modals[name]) {
+        this.modals[name].isOpen = false;
+        // Clean up after animation
+        setTimeout(() => {
+          delete this.modals[name];
+        }, 300);
+      }
+    },
+
+    /**
+     * Close all modals
+     */
+    closeAllModals(): void {
+      Object.keys(this.modals).forEach((name) => {
+        this.closeModal(name);
+      });
+    },
+
+    /**
+     * Set theme
+     */
+    setTheme(theme: Theme): void {
+      this.theme = theme;
+      
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('theme', theme);
+        
+        // Apply theme to document
+        const effectiveTheme = theme === 'system'
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          : theme;
+        
+        document.documentElement.classList.toggle('dark', effectiveTheme === 'dark');
+      }
+    },
+
+    /**
+     * Toggle theme
+     */
+    toggleTheme(): void {
+      const current = this.effectiveTheme;
+      this.setTheme(current === 'dark' ? 'light' : 'dark');
+    },
+
+    /**
+     * Open sidebar
+     */
+    openSidebar(): void {
+      this.sidebar.isOpen = true;
+    },
+
+    /**
+     * Close sidebar
+     */
+    closeSidebar(): void {
+      this.sidebar.isOpen = false;
+    },
+
+    /**
+     * Toggle sidebar
+     */
+    toggleSidebar(): void {
+      this.sidebar.isOpen = !this.sidebar.isOpen;
+    },
+
+    /**
+     * Pin sidebar
+     */
+    pinSidebar(): void {
+      this.sidebar.isPinned = true;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sidebar_pinned', 'true');
+      }
+    },
+
+    /**
+     * Unpin sidebar
+     */
+    unpinSidebar(): void {
+      this.sidebar.isPinned = false;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sidebar_pinned', 'false');
+      }
+    },
+
+    /**
+     * Set active sidebar section
+     */
+    setActiveSidebarSection(section?: string): void {
+      this.sidebar.activeSection = section;
+    },
+
+    /**
+     * Initialize UI state from localStorage
+     */
+    init(): void {
+      if (typeof window === 'undefined') return;
+
+      // Load theme
       const savedTheme = localStorage.getItem('theme') as Theme | null;
       if (savedTheme) {
-        theme.value = savedTheme;
-        applyTheme(savedTheme);
+        this.setTheme(savedTheme);
       } else {
-        applyTheme('system');
+        this.setTheme('system');
       }
-    }
-  };
 
-  // Sidebar Actions
-  const toggleSidebar = (): void => {
-    sidebarOpen.value = !sidebarOpen.value;
-
-    // Persist to localStorage
-    if (process.client) {
-      localStorage.setItem('sidebarOpen', JSON.stringify(sidebarOpen.value));
-    }
-  };
-
-  const restoreSidebar = (): void => {
-    if (process.client) {
-      const saved = localStorage.getItem('sidebarOpen');
-      if (saved !== null) {
-        sidebarOpen.value = JSON.parse(saved);
+      // Load sidebar state
+      const sidebarPinned = localStorage.getItem('sidebar_pinned');
+      if (sidebarPinned !== null) {
+        this.sidebar.isPinned = sidebarPinned === 'true';
       }
-    }
-  };
 
-  return {
-    // State
-    toasts,
-    modals,
-    theme,
-    sidebarOpen,
-
-    // Getters
-    activeToasts,
-    activeModals,
-    hasActiveModal,
-
-    // Toast Actions
-    addToast,
-    removeToast,
-    clearToasts,
-
-    // Modal Actions
-    openModal,
-    closeModal,
-    closeAllModals,
-
-    // Theme Actions
-    setTheme,
-    toggleTheme,
-    applyTheme,
-    restoreTheme,
-
-    // Sidebar Actions
-    toggleSidebar,
-    restoreSidebar,
-  };
+      // Listen for system theme changes
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.addEventListener('change', (e) => {
+        if (this.theme === 'system') {
+          document.documentElement.classList.toggle('dark', e.matches);
+        }
+      });
+    },
+  },
 });
