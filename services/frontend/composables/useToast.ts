@@ -1,75 +1,115 @@
 /**
- * Toast notification composable
+ * Toast Composable
+ * Toast notifications with auto-dismiss
  */
 
 import type { ToastMessage, ToastType } from '~/types';
 
-export interface UseToastReturn {
-  success: (message: string, title?: string, duration?: number) => void;
-  error: (message: string, title?: string, duration?: number) => void;
-  warning: (message: string, title?: string, duration?: number) => void;
-  info: (message: string, title?: string, duration?: number) => void;
-  dismiss: (id: string) => void;
-  dismissAll: () => void;
+const toasts = ref<ToastMessage[]>([]);
+let idCounter = 0;
+
+const DEFAULT_DURATION = 5000;
+
+/**
+ * Generate unique toast ID
+ */
+function generateId(): string {
+  return `toast-${Date.now()}-${idCounter++}`;
 }
 
 /**
- * Toast notification composable
+ * Remove toast after duration
  */
-export const useToast = (): UseToastReturn => {
-  const uiStore = useUiStore();
+function scheduleRemoval(id: string, duration: number): void {
+  setTimeout(() => {
+    remove(id);
+  }, duration);
+}
 
+export function useToast() {
   /**
-   * Show toast with specific type
+   * Add toast notification
    */
-  const showToast = (
-    type: ToastType,
+  function add(
     message: string,
+    type: ToastType = 'info',
     title?: string,
-    duration = 5000
-  ): void => {
+    duration: number = DEFAULT_DURATION
+  ): string {
+    const id = generateId();
+
     const toast: ToastMessage = {
-      id: `toast-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id,
       type,
       title,
       message,
       duration,
       dismissible: true,
+      createdAt: new Date(),
     };
 
-    uiStore.addToast(toast);
+    toasts.value.push(toast);
 
-    // Auto-dismiss after duration
     if (duration > 0) {
-      setTimeout(() => {
-        uiStore.removeToast(toast.id);
-      }, duration);
+      scheduleRemoval(id, duration);
     }
-  };
+
+    return id;
+  }
+
+  /**
+   * Remove toast by ID
+   */
+  function remove(id: string): void {
+    const index = toasts.value.findIndex((t) => t.id === id);
+    if (index !== -1) {
+      toasts.value.splice(index, 1);
+    }
+  }
+
+  /**
+   * Clear all toasts
+   */
+  function clear(): void {
+    toasts.value = [];
+  }
+
+  /**
+   * Success toast
+   */
+  function success(message: string, title: string = 'Success'): string {
+    return add(message, 'success', title);
+  }
+
+  /**
+   * Error toast
+   */
+  function error(message: string, title: string = 'Error'): string {
+    return add(message, 'error', title, 0); // Don't auto-dismiss errors
+  }
+
+  /**
+   * Warning toast
+   */
+  function warning(message: string, title: string = 'Warning'): string {
+    return add(message, 'warning', title);
+  }
+
+  /**
+   * Info toast
+   */
+  function info(message: string, title: string = 'Info'): string {
+    return add(message, 'info', title);
+  }
 
   return {
-    success: (message: string, title?: string, duration?: number): void => {
-      showToast('success', message, title, duration);
-    },
-
-    error: (message: string, title?: string, duration?: number): void => {
-      showToast('error', message, title, duration ?? 0); // Errors don't auto-dismiss
-    },
-
-    warning: (message: string, title?: string, duration?: number): void => {
-      showToast('warning', message, title, duration);
-    },
-
-    info: (message: string, title?: string, duration?: number): void => {
-      showToast('info', message, title, duration);
-    },
-
-    dismiss: (id: string): void => {
-      uiStore.removeToast(id);
-    },
-
-    dismissAll: (): void => {
-      uiStore.clearToasts();
-    },
+    toasts: readonly(toasts),
+    add,
+    remove,
+    clear,
+    success,
+    error,
+    warning,
+    info,
   };
-};
+}
