@@ -44,6 +44,63 @@
     "welcome": "Welcome",
     "overview": "Overview"
   },
+  "wizard": {
+    "pageTitle": "Metadata Wizard",
+    "pageDescription": "Create complete hydraulic system metadata in 5 steps",
+    "progress": "Progress",
+    "level": "Level",
+    "previous": "Previous",
+    "next": "Next",
+    "finish": "Finish",
+    "completeStep": "Complete current step",
+    "completed": "Wizard completed successfully!",
+    "info": {
+      "step1": "Steps 1-2",
+      "step1Desc": "Upload schema and place sensors",
+      "step2": "Steps 3-4",
+      "step2Desc": "Define values and operating modes",
+      "step3": "Step 5",
+      "step3Desc": "Assess AI readiness"
+    },
+    "level1": {
+      "title": "P&ID Schema",
+      "description": "Upload hydraulic system schema (P&ID diagram)",
+      "selectFormat": "Select schema format",
+      "uploadSchema": "Upload schema file"
+    },
+    "level2": {
+      "title": "Sensor Placement",
+      "description": "Add sensors and specify their types",
+      "sensors": "Sensors",
+      "addSensor": "Add Sensor",
+      "sensorName": "Sensor name"
+    },
+    "level3": {
+      "title": "Nominal Values",
+      "description": "Define ranges and nominal values for each sensor",
+      "min": "Min",
+      "nominal": "Nominal",
+      "max": "Max"
+    },
+    "level4": {
+      "title": "Operating Modes",
+      "description": "Specify different system operating modes",
+      "modes": "Modes",
+      "addMode": "Add Mode",
+      "addModePrompt": "Enter operating mode name"
+    },
+    "level5": {
+      "title": "AI Readiness Assessment",
+      "description": "Check system readiness for intelligent analysis",
+      "excellent": "Excellent! System fully ready",
+      "good": "Good! Ready for analysis",
+      "needsWork": "Needs additional configuration",
+      "schemaUploaded": "Schema uploaded",
+      "sensorsConfigured": "Sensors configured",
+      "nominalValuesDefined": "Nominal values defined",
+      "operatingModes": "Operating modes"
+    }
+  },
   "diagnosis": {
     "title": "System Diagnosis",
     "subtitle": "Real-time monitoring and AI analysis",
