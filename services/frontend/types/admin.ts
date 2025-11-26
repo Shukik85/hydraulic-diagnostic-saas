@@ -1,11 +1,10 @@
 /**
- * Admin dashboard types
+ * Admin Types
+ * Platform administration and metrics
  */
 
-import type { AnomalySeverity } from './models';
-
 /**
- * Platform metrics for admin dashboard
+ * Platform-wide metrics
  */
 export interface PlatformMetrics {
   mrr: number;
@@ -25,34 +24,24 @@ export interface SystemHealth {
   apiLatencyP90: number;
   dbLatencyP90: number;
   mlLatencyP90: number;
-  status: HealthStatus;
+  errorRate: number;
+  requestsPerSecond: number;
+  status: 'healthy' | 'degraded' | 'critical';
 }
 
 /**
- * Health status
- */
-export type HealthStatus = 'healthy' | 'degraded' | 'critical';
-
-/**
- * Revenue data point
- */
-export interface RevenuePoint {
-  date: string;
-  value: number;
-}
-
-/**
- * Alert
+ * Platform alert
  */
 export interface Alert {
   id: string;
-  severity: AnomalySeverity;
+  severity: 'critical' | 'warning' | 'info';
   message: string;
-  timestamp: Date;
   source: string;
-  resolved: boolean;
+  timestamp: Date;
+  resolved?: boolean;
   resolvedAt?: Date;
   resolvedBy?: string;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -61,17 +50,27 @@ export interface Alert {
 export interface TenantUsage {
   tenantId: string;
   tenantName: string;
+  plan: 'starter' | 'professional' | 'enterprise';
   sensors: number;
   apiCalls: number;
-  storage: number;
+  storage: number; // bytes
   users: number;
-  plan: 'starter' | 'professional' | 'enterprise';
+  lastActivityAt: Date;
 }
 
 /**
- * Tier distribution
+ * Revenue data point
  */
-export interface TierDistribution {
+export interface RevenuePoint {
+  date: string; // ISO date string
+  value: number;
+  tenants: number;
+}
+
+/**
+ * Plan distribution
+ */
+export interface PlanDistribution {
   starter: number;
   professional: number;
   enterprise: number;
@@ -80,15 +79,15 @@ export interface TierDistribution {
 /**
  * Audit log entry
  */
-export interface AuditLogEntry {
+export interface AuditLog {
   id: string;
   userId: string;
   userName: string;
   action: string;
   resource: string;
   resourceId?: string;
+  changes?: Record<string, unknown>;
+  ipAddress: string;
+  userAgent: string;
   timestamp: Date;
-  ipAddress?: string;
-  userAgent?: string;
-  metadata?: Record<string, unknown>;
 }

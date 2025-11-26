@@ -1,116 +1,75 @@
 /**
- * API request/response types
+ * API Types
+ * Generic types for API requests and responses
  */
 
 /**
  * Generic API response wrapper
  */
 export interface ApiResponse<T> {
+  success: boolean;
   data: T;
-  meta?: ApiMeta;
-}
-
-/**
- * API metadata
- */
-export interface ApiMeta {
+  message?: string;
   timestamp: string;
-  requestId?: string;
-}
-
-/**
- * Paginated API response
- */
-export interface PaginatedResponse<T> {
-  data: T[];
-  pagination: Pagination;
-}
-
-/**
- * Pagination metadata
- */
-export interface Pagination {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
 }
 
 /**
  * API error response
  */
 export interface ApiError {
-  error: string;
-  message: string;
-  statusCode: number;
+  success: false;
+  error: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+    stack?: string;
+  };
   timestamp: string;
-  path?: string;
-  details?: Record<string, unknown>;
 }
 
 /**
- * Request configuration
+ * Paginated response
+ */
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+/**
+ * API request configuration
  */
 export interface RequestConfig {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   headers?: Record<string, string>;
   params?: Record<string, string | number | boolean>;
+  body?: unknown;
   timeout?: number;
   retry?: number;
-  retryDelay?: number;
 }
 
 /**
- * Authentication request
+ * WebSocket message
  */
-export interface LoginRequest {
-  email: string;
-  password: string;
+export interface WebSocketMessage<T = unknown> {
+  type: string;
+  data: T;
+  timestamp: string;
 }
 
 /**
- * Authentication response
+ * File upload response
  */
-export interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: string;
+export interface UploadResponse {
+  url: string;
+  filename: string;
+  size: number;
+  mimeType: string;
+  uploadedAt: string;
 }
-
-/**
- * Refresh token request
- */
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
-/**
- * User profile response
- */
-export interface UserProfileResponse {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  organization?: Organization;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Organization in API response
- */
-export interface Organization {
-  id: string;
-  name: string;
-  plan: 'starter' | 'professional' | 'enterprise';
-  createdAt: string;
-}
-
-/**
- * User role enum
- */
-export type UserRole = 'admin' | 'engineer' | 'viewer';

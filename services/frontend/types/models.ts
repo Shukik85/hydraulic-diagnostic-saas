@@ -1,8 +1,12 @@
 /**
- * Domain models
+ * Domain Models
+ * Core business entities
  */
 
-import type { UserRole } from './api';
+/**
+ * User roles
+ */
+export type UserRole = 'admin' | 'manager' | 'operator' | 'viewer';
 
 /**
  * User model
@@ -13,67 +17,70 @@ export interface User {
   firstName: string;
   lastName: string;
   role: UserRole;
-  organizationId?: string;
+  organizationId: string;
+  avatar?: string;
+  isActive: boolean;
+  lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
 /**
- * Hydraulic system model
+ * Organization/Tenant model
+ */
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  plan: 'starter' | 'professional' | 'enterprise';
+  logo?: string;
+  settings: OrganizationSettings;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface OrganizationSettings {
+  maxSensors: number;
+  maxUsers: number;
+  features: string[];
+  customDomain?: string;
+}
+
+/**
+ * Hydraulic system
  */
 export interface HydraulicSystem {
   id: string;
+  organizationId: string;
   name: string;
   description?: string;
-  organizationId: string;
-  metadata?: SystemMetadata;
-  status: SystemStatus;
+  location?: string;
+  status: 'active' | 'inactive' | 'maintenance';
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
 
 /**
- * System metadata
+ * Sensor types
  */
-export interface SystemMetadata {
-  manufacturer?: string;
-  model?: string;
-  serialNumber?: string;
-  installationDate?: Date;
-  location?: string;
-  notes?: string;
-}
-
-/**
- * System status
- */
-export type SystemStatus = 'active' | 'maintenance' | 'inactive' | 'error';
+export type SensorType = 'pressure' | 'temperature' | 'flow' | 'vibration' | 'position';
 
 /**
  * Sensor model
  */
 export interface Sensor {
   id: string;
-  name: string;
   systemId: string;
+  name: string;
   type: SensorType;
   unit: string;
-  status: SensorStatus;
+  status: 'online' | 'offline' | 'error' | 'calibrating';
   lastReading?: SensorReading;
-  metadata?: SensorMetadata;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
-
-/**
- * Sensor type
- */
-export type SensorType = 'pressure' | 'temperature' | 'flow' | 'vibration' | 'position';
-
-/**
- * Sensor status
- */
-export type SensorStatus = 'online' | 'offline' | 'error' | 'calibrating';
 
 /**
  * Sensor reading
@@ -85,15 +92,9 @@ export interface SensorReading {
 }
 
 /**
- * Sensor metadata
+ * Anomaly severity
  */
-export interface SensorMetadata {
-  minValue?: number;
-  maxValue?: number;
-  threshold?: number;
-  calibrationDate?: Date;
-  location?: string;
-}
+export type AnomalySeverity = 'low' | 'medium' | 'high' | 'critical';
 
 /**
  * Anomaly model
@@ -103,7 +104,7 @@ export interface Anomaly {
   sensorId: string;
   systemId: string;
   severity: AnomalySeverity;
-  type: AnomalyType;
+  type: string;
   description: string;
   detectedAt: Date;
   acknowledgedAt?: Date;
@@ -111,34 +112,7 @@ export interface Anomaly {
   resolvedAt?: Date;
   resolvedBy?: string;
   confidence: number;
-  metadata?: AnomalyMetadata;
-}
-
-/**
- * Anomaly severity
- */
-export type AnomalySeverity = 'critical' | 'high' | 'medium' | 'low';
-
-/**
- * Anomaly type
- */
-export type AnomalyType =
-  | 'pressure_spike'
-  | 'temperature_high'
-  | 'flow_anomaly'
-  | 'vibration_excessive'
-  | 'leak_detected'
-  | 'performance_degradation';
-
-/**
- * Anomaly metadata
- */
-export interface AnomalyMetadata {
-  expectedValue?: number;
-  actualValue?: number;
-  deviation?: number;
-  impact?: string;
-  recommendedAction?: string;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -148,34 +122,10 @@ export interface MLModel {
   id: string;
   name: string;
   version: string;
-  type: MLModelType;
-  status: MLModelStatus;
-  accuracy?: number;
-  precision?: number;
-  recall?: number;
-  f1Score?: number;
+  type: 'gnn' | 'lstm' | 'transformer';
+  accuracy: number;
+  status: 'training' | 'deployed' | 'deprecated';
   trainedAt?: Date;
   deployedAt?: Date;
-  metadata?: MLModelMetadata;
-}
-
-/**
- * ML Model type
- */
-export type MLModelType = 'gnn' | 'lstm' | 'transformer' | 'ensemble';
-
-/**
- * ML Model status
- */
-export type MLModelStatus = 'training' | 'deployed' | 'archived' | 'failed';
-
-/**
- * ML Model metadata
- */
-export interface MLModelMetadata {
-  framework?: string;
-  hyperparameters?: Record<string, unknown>;
-  datasetSize?: number;
-  trainingDuration?: number;
-  notes?: string;
+  metrics?: Record<string, number>;
 }

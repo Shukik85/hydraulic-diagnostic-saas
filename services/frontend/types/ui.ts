@@ -1,6 +1,12 @@
 /**
- * UI state types
+ * UI State Types
+ * Frontend state management
  */
+
+/**
+ * Toast notification types
+ */
+export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 /**
  * Toast message
@@ -12,12 +18,8 @@ export interface ToastMessage {
   message: string;
   duration?: number;
   dismissible?: boolean;
+  createdAt: Date;
 }
-
-/**
- * Toast type
- */
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 /**
  * Modal state
@@ -25,9 +27,10 @@ export type ToastType = 'success' | 'error' | 'warning' | 'info';
 export interface ModalState {
   isOpen: boolean;
   title?: string;
-  content?: string;
-  component?: string;
-  props?: Record<string, unknown>;
+  content?: unknown;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  closeOnBackdrop?: boolean;
+  showCloseButton?: boolean;
   onConfirm?: () => void | Promise<void>;
   onCancel?: () => void;
 }
@@ -42,9 +45,48 @@ export interface PageState<T = unknown> {
 }
 
 /**
+ * Table state
+ */
+export interface TableState<T = unknown> {
+  data: T[];
+  loading: boolean;
+  error: Error | null;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+  };
+  sorting?: {
+    column: string;
+    direction: 'asc' | 'desc';
+  };
+  filters?: Record<string, unknown>;
+}
+
+/**
+ * Form state
+ */
+export interface FormState<T = Record<string, unknown>> {
+  values: T;
+  errors: Partial<Record<keyof T, string>>;
+  touched: Partial<Record<keyof T, boolean>>;
+  isSubmitting: boolean;
+  isValid: boolean;
+}
+
+/**
  * Theme
  */
 export type Theme = 'light' | 'dark' | 'system';
+
+/**
+ * Sidebar state
+ */
+export interface SidebarState {
+  isOpen: boolean;
+  isPinned: boolean;
+  activeSection?: string;
+}
 
 /**
  * Breadcrumb item
@@ -52,37 +94,5 @@ export type Theme = 'light' | 'dark' | 'system';
 export interface BreadcrumbItem {
   label: string;
   to?: string;
-  active?: boolean;
+  icon?: string;
 }
-
-/**
- * Table column
- */
-export interface TableColumn<T = unknown> {
-  key: keyof T | string;
-  label: string;
-  sortable?: boolean;
-  filterable?: boolean;
-  width?: string;
-  align?: 'left' | 'center' | 'right';
-  formatter?: (value: unknown, row: T) => string;
-}
-
-/**
- * Sort direction
- */
-export type SortDirection = 'asc' | 'desc';
-
-/**
- * Filter
- */
-export interface Filter {
-  field: string;
-  operator: FilterOperator;
-  value: unknown;
-}
-
-/**
- * Filter operator
- */
-export type FilterOperator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in';
