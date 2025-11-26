@@ -29,19 +29,37 @@
     "sensors": "Датчики",
     "anomalies": "Аномалии",
     "reports": "Отчеты",
-    "settings": "Настройки"
+    "settings": "Настройки",
+    "tenants": "Арендаторы",
+    "users": "Пользователи",
+    "metrics": "Метрики"
   },
   "dashboard": {
     "title": "Панель управления",
+    "subtitle": "Обзор платформы и ключевые метрики",
     "welcome": "Добро пожаловать",
-    "overview": "Обзор",
-    "metrics": "Метрики"
+    "overview": "Обзор"
+  },
+  "admin": {
+    "revenueChart": "График выручки",
+    "systemHealth": "Здоровье системы",
+    "topTenants": "Топ арендаторов",
+    "criticalAlerts": "Критические алерты",
+    "noAlerts": "Нет активных алертов",
+    "tenantName": "Название",
+    "plan": "План",
+    "sensors": "Датчики",
+    "apiCalls": "API вызовы",
+    "storage": "Хранилище"
   },
   "kpi": {
     "mrr": "Ежемесячный доход",
     "tenants": "Арендаторы",
     "users": "Пользователи",
-    "uptime": "Время работы"
+    "uptime": "Время работы",
+    "vsLastMonth": "по сравнению с прошлым месяцем",
+    "last30Days": "за 30 дней",
+    "last7Days": "за 7 дней"
   },
   "sensors": {
     "pressure": "Давление",
@@ -55,7 +73,10 @@
     "offline": "Офлайн",
     "error": "Ошибка",
     "active": "Активно",
-    "inactive": "Неактивно"
+    "inactive": "Неактивно",
+    "healthy": "Здорова",
+    "degraded": "Деградирована",
+    "critical": "Критическое состояние"
   },
   "severity": {
     "critical": "Критический",

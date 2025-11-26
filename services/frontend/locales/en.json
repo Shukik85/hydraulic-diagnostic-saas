@@ -29,19 +29,37 @@
     "sensors": "Sensors",
     "anomalies": "Anomalies",
     "reports": "Reports",
-    "settings": "Settings"
+    "settings": "Settings",
+    "tenants": "Tenants",
+    "users": "Users",
+    "metrics": "Metrics"
   },
   "dashboard": {
     "title": "Dashboard",
+    "subtitle": "Platform overview and key metrics",
     "welcome": "Welcome",
-    "overview": "Overview",
-    "metrics": "Metrics"
+    "overview": "Overview"
+  },
+  "admin": {
+    "revenueChart": "Revenue Chart",
+    "systemHealth": "System Health",
+    "topTenants": "Top Tenants",
+    "criticalAlerts": "Critical Alerts",
+    "noAlerts": "No active alerts",
+    "tenantName": "Name",
+    "plan": "Plan",
+    "sensors": "Sensors",
+    "apiCalls": "API Calls",
+    "storage": "Storage"
   },
   "kpi": {
     "mrr": "Monthly Recurring Revenue",
     "tenants": "Tenants",
     "users": "Users",
-    "uptime": "Uptime"
+    "uptime": "Uptime",
+    "vsLastMonth": "vs last month",
+    "last30Days": "last 30 days",
+    "last7Days": "last 7 days"
   },
   "sensors": {
     "pressure": "Pressure",
@@ -55,7 +73,10 @@
     "offline": "Offline",
     "error": "Error",
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "critical": "Critical"
   },
   "severity": {
     "critical": "Critical",
