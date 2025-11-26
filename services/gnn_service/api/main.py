@@ -6,6 +6,7 @@ Production-ready inference API:
 - CORS
 - Logging
 - Health checks
+- Model versioning
 
 Python 3.14 Features:
     - Deferred annotations
@@ -17,13 +18,15 @@ from __future__ import annotations
 import logging
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
+from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
-from src.inference import InferenceEngine, InferenceConfig
+from src.inference import InferenceEngine, InferenceConfig, ModelManager
 from src.data import FeatureConfig
 from src.schemas import (
     PredictionRequest,
@@ -31,7 +34,9 @@ from src.schemas import (
     BatchPredictionRequest,
     BatchPredictionResponse,
     GraphTopology,
-    HealthCheckResponse
+    HealthCheckResponse,
+    ModelInfo,
+    ModelVersion,
 )
 
 # Configure logging
@@ -48,15 +53,19 @@ logger = logging.getLogger(__name__)
 # Global inference engine
 engine: InferenceEngine | None = None
 topology: GraphTopology | None = None  # Load from config/database
+model_manager: ModelManager | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
-    global engine, topology
+    global engine, topology, model_manager
     
     logger.info("Initializing GNN Inference Service...")
+    
+    # Initialize model manager
+    model_manager = ModelManager()
     
     # Initialize inference engine
     inference_config = InferenceConfig(
@@ -174,6 +183,118 @@ async def get_stats():
         raise HTTPException(status_code=503, detail="Service not ready")
     
     return engine.get_stats()
+
+
+# Model versioning endpoints
+@app.get("/models/versions", response_model=list[ModelVersion])
+async def list_model_versions():
+    """List all available model versions.
+    
+    Returns:
+        versions: List of model versions
+    
+    Examples:
+        GET /models/versions
+        
+        Response:
+        [
+            {
+                "version": "2.0.0",
+                "path": "models/v2.0.0.ckpt",
+                "size_mb": 45.3,
+                "num_parameters": 2500000,
+                "architecture": "GATv2-ARMA-LSTM",
+                "is_current": true
+            },
+            ...
+        ]
+    """
+    global model_manager, engine
+    
+    if model_manager is None:
+        raise HTTPException(status_code=503, detail="Service not ready")
+    
+    # Scan models directory
+    models_dir = Path("models/checkpoints")
+    if not models_dir.exists():
+        return []
+    
+    versions = []
+    current_path = engine.config.model_path if engine else None
+    
+    for ckpt_path in models_dir.glob("*.ckpt"):
+        # Extract version from filename
+        version = ckpt_path.stem
+        
+        # Get file size
+        size_mb = ckpt_path.stat().st_size / (1024 * 1024)
+        
+        # Get model info if loaded
+        info = model_manager.get_model_info(str(ckpt_path))
+        num_params = info["num_parameters"] if info else 0
+        
+        versions.append(
+            ModelVersion(
+                version=version,
+                path=str(ckpt_path),
+                size_mb=size_mb,
+                num_parameters=num_params,
+                architecture="GATv2-ARMA-LSTM",
+                is_current=(str(ckpt_path) == current_path),
+                created_at=datetime.fromtimestamp(ckpt_path.stat().st_mtime)
+            )
+        )
+    
+    return sorted(versions, key=lambda v: v.created_at, reverse=True)
+
+
+@app.get("/models/current", response_model=ModelInfo | None)
+async def get_current_model():
+    """Get currently active model info.
+    
+    Returns:
+        info: Current model information
+    
+    Examples:
+        GET /models/current
+        
+        Response:
+        {
+            "path": "models/checkpoints/best.ckpt",
+            "version": "2.0.0",
+            "device": "cuda:0",
+            "num_parameters": 2500000,
+            "size_mb": 45.3,
+            "loaded": true,
+            "loaded_at": "2025-11-26T20:00:00Z",
+            "compiled": true
+        }
+    """
+    global model_manager, engine
+    
+    if engine is None or model_manager is None:
+        return None
+    
+    model_path = engine.config.model_path
+    info = model_manager.get_model_info(model_path)
+    
+    if info is None:
+        return None
+    
+    # Get file size
+    path_obj = Path(model_path)
+    size_mb = path_obj.stat().st_size / (1024 * 1024) if path_obj.exists() else 0
+    
+    return ModelInfo(
+        path=model_path,
+        version=path_obj.stem,
+        device=info["device"],
+        num_parameters=info["num_parameters"],
+        size_mb=size_mb,
+        loaded=True,
+        loaded_at=datetime.now(),  # TODO: Track actual load time
+        compiled=info.get("compiled", False)
+    )
 
 
 # Single prediction endpoint

@@ -1,82 +1,69 @@
-"""Pydantic v2 schemas для GNN сервиса.
+"""Schema exports."""
 
-Экспорт всех schemas для удобного импорта:
-
-    from src.schemas import (
-        GraphTopology,
-        ComponentSpec,
-        EdgeSpec,
-        InferenceRequest,
-        InferenceResponse,
-        ComponentHealth,
-        Anomaly
-    )
-
-Python 3.14 Features:
-    - Deferred annotations (PEP 649)
-    - All type hints evaluated lazily
-"""
-
-from __future__ import annotations
-
-# Graph schemas
-from src.schemas.graph import (
+from .graph import (
     ComponentType,
     EdgeType,
-    EdgeSpec,
     ComponentSpec,
+    EdgeSpec,
     GraphTopology,
-)
-
-# Metadata schemas
-from src.schemas.metadata import (
-    SensorType,
-    SensorConfig,
     EquipmentMetadata,
-    SystemConfig,
 )
-
-# Request schemas
-from src.schemas.requests import (
+from .requests import (
     TimeWindow,
+    PredictionRequest,
+    BatchPredictionRequest,
     InferenceRequest,
     BatchInferenceRequest,
     TrainingRequest,
 )
-
-# Response schemas
-from src.schemas.responses import (
+from .responses import (
     ComponentStatus,
     AnomalyType,
+    HealthCheckResponse,
+    HealthPrediction,
+    DegradationPrediction,
+    AnomalyPrediction,
+    PredictionResponse,
+    BatchPredictionResponse,
     ComponentHealth,
     Anomaly,
     InferenceResponse,
     TrainingResponse,
 )
+from .models import (
+    ModelInfo,
+    ModelVersion,
+)
 
 __all__ = [
-    # Enums
+    # Graph schemas
     "ComponentType",
     "EdgeType",
-    "SensorType",
-    "ComponentStatus",
-    "AnomalyType",
-    # Graph
-    "EdgeSpec",
     "ComponentSpec",
+    "EdgeSpec",
     "GraphTopology",
-    # Metadata
-    "SensorConfig",
     "EquipmentMetadata",
-    "SystemConfig",
-    # Requests
+    # Request schemas
     "TimeWindow",
+    "PredictionRequest",
+    "BatchPredictionRequest",
     "InferenceRequest",
     "BatchInferenceRequest",
     "TrainingRequest",
-    # Responses
+    # Response schemas
+    "ComponentStatus",
+    "AnomalyType",
+    "HealthCheckResponse",
+    "HealthPrediction",
+    "DegradationPrediction",
+    "AnomalyPrediction",
+    "PredictionResponse",
+    "BatchPredictionResponse",
     "ComponentHealth",
     "Anomaly",
     "InferenceResponse",
     "TrainingResponse",
+    # Model schemas
+    "ModelInfo",
+    "ModelVersion",
 ]
