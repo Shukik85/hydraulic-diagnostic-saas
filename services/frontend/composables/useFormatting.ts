@@ -1,137 +1,202 @@
 /**
- * Formatting utility composable
+ * Formatting Composable
+ * Domain-specific formatters for hydraulic diagnostics
  */
 
-export interface UseFormattingReturn {
-  formatCurrency: (value: number, currency?: string, locale?: string) => string;
-  formatDate: (date: Date | string, format?: string, locale?: string) => string;
-  formatDuration: (milliseconds: number) => string;
-  formatBytes: (bytes: number, decimals?: number) => string;
-  formatPercent: (value: number, decimals?: number) => string;
-  formatNumber: (value: number, decimals?: number, locale?: string) => string;
-  truncate: (text: string, length: number, suffix?: string) => string;
+import type { SensorType, AnomalySeverity } from '~/types';
+
+/**
+ * Format pressure value
+ */
+export function formatPressure(value: number, unit: string = 'bar'): string {
+  return `${value.toFixed(1)} ${unit}`;
 }
 
 /**
- * Formatting utility composable
+ * Format temperature value
  */
-export const useFormatting = (): UseFormattingReturn => {
-  const { locale } = useI18n();
+export function formatTemperature(value: number, unit: string = '°C'): string {
+  return `${value.toFixed(1)}${unit}`;
+}
 
-  /**
-   * Format currency value
-   */
-  const formatCurrency = (
-    value: number,
-    currency = 'USD',
-    localeStr = locale.value
-  ): string => {
-    return new Intl.NumberFormat(localeStr, {
-      style: 'currency',
-      currency,
-    }).format(value);
-  };
+/**
+ * Format flow rate
+ */
+export function formatFlow(value: number, unit: string = 'L/min'): string {
+  return `${value.toFixed(1)} ${unit}`;
+}
 
-  /**
-   * Format date
-   */
-  const formatDate = (
-    date: Date | string,
-    format = 'short',
-    localeStr = locale.value
-  ): string => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+/**
+ * Format vibration
+ */
+export function formatVibration(value: number, unit: string = 'mm/s'): string {
+  return `${value.toFixed(2)} ${unit}`;
+}
 
-    const formats: Record<string, Intl.DateTimeFormatOptions> = {
-      short: { year: 'numeric', month: 'short', day: 'numeric' },
-      long: {
+/**
+ * Format sensor value based on type
+ */
+export function formatSensorValue(value: number, type: SensorType, unit?: string): string {
+  switch (type) {
+    case 'pressure':
+      return formatPressure(value, unit);
+    case 'temperature':
+      return formatTemperature(value, unit);
+    case 'flow':
+      return formatFlow(value, unit);
+    case 'vibration':
+      return formatVibration(value, unit);
+    case 'position':
+      return `${value.toFixed(1)} ${unit || 'mm'}`;
+    default:
+      return value.toString();
+  }
+}
+
+/**
+ * Format currency
+ */
+export function formatCurrency(
+  value: number,
+  currency: string = 'USD',
+  locale: string = 'en-US'
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+  }).format(value);
+}
+
+/**
+ * Format date
+ */
+export function formatDate(date: Date | string, format: string = 'short'): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+
+  switch (format) {
+    case 'short':
+      return d.toLocaleDateString();
+    case 'long':
+      return d.toLocaleDateString(undefined, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      },
-      time: { hour: '2-digit', minute: '2-digit', second: '2-digit' },
-      date: { year: 'numeric', month: '2-digit', day: '2-digit' },
-    };
+      });
+    case 'time':
+      return d.toLocaleTimeString();
+    case 'datetime':
+      return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+    case 'iso':
+      return d.toISOString();
+    default:
+      return d.toLocaleDateString();
+  }
+}
 
-    return new Intl.DateTimeFormat(localeStr, formats[format] || formats.short).format(dateObj);
+/**
+ * Format duration in milliseconds
+ */
+export function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ${hours % 24}h`;
+  if (hours > 0) return `${hours}h ${minutes % 60}m`;
+  if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+  return `${seconds}s`;
+}
+
+/**
+ * Format bytes
+ */
+export function formatBytes(bytes: number, decimals: number = 2): string {
+  if (bytes === 0) return '0 Bytes';
+
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
+}
+
+/**
+ * Format percentage
+ */
+export function formatPercent(value: number, decimals: number = 1): string {
+  return `${value.toFixed(decimals)}%`;
+}
+
+/**
+ * Format anomaly severity for display
+ */
+export function formatSeverity(severity: AnomalySeverity): string {
+  const severityMap: Record<AnomalySeverity, string> = {
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    critical: 'Critical',
   };
+  return severityMap[severity];
+}
 
-  /**
-   * Format duration (milliseconds to human-readable)
-   */
-  const formatDuration = (milliseconds: number): string => {
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) {
-      return `${days}d ${hours % 24}h`;
-    }
-    if (hours > 0) {
-      return `${hours}h ${minutes % 60}m`;
-    }
-    if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    }
-    return `${seconds}s`;
+/**
+ * Format sensor status
+ */
+export function formatSensorStatus(
+  status: 'online' | 'offline' | 'error' | 'calibrating'
+): string {
+  const statusMap = {
+    online: 'Online',
+    offline: 'Offline',
+    error: 'Error',
+    calibrating: 'Calibrating',
   };
+  return statusMap[status];
+}
 
-  /**
-   * Format bytes to human-readable size
-   */
-  const formatBytes = (bytes: number, decimals = 2): string => {
-    if (bytes === 0) {
-      return '0 Bytes';
-    }
+/**
+ * Truncate string with ellipsis
+ */
+export function truncate(str: string, maxLength: number): string {
+  if (str.length <= maxLength) return str;
+  return `${str.substring(0, maxLength - 3)}...`;
+}
 
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+/**
+ * Format relative time (e.g., "2 hours ago")
+ */
+export function formatRelativeTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
 
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
-  };
+  if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
+  return 'just now';
+}
 
-  /**
-   * Format percentage
-   */
-  const formatPercent = (value: number, decimals = 2): string => {
-    return `${(value * 100).toFixed(decimals)}%`;
-  };
-
-  /**
-   * Format number with locale
-   */
-  const formatNumber = (
-    value: number,
-    decimals = 0,
-    localeStr = locale.value
-  ): string => {
-    return new Intl.NumberFormat(localeStr, {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }).format(value);
-  };
-
-  /**
-   * Truncate text
-   */
-  const truncate = (text: string, length: number, suffix = '...'): string => {
-    if (text.length <= length) {
-      return text;
-    }
-    return text.substring(0, length - suffix.length) + suffix;
-  };
-
+export function useFormatting() {
   return {
+    formatPressure,
+    formatTemperature,
+    formatFlow,
+    formatVibration,
+    formatSensorValue,
     formatCurrency,
     formatDate,
     formatDuration,
     formatBytes,
     formatPercent,
-    formatNumber,
+    formatSeverity,
+    formatSensorStatus,
     truncate,
+    formatRelativeTime,
   };
-};
+}
