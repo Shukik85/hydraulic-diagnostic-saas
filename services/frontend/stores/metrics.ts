@@ -1,143 +1,240 @@
 /**
- * Platform metrics store with real-time WebSocket updates
+ * Metrics Store
+ * Platform metrics and analytics state management
  */
 
 import { defineStore } from 'pinia';
-import type { PlatformMetrics, RevenuePoint, TierDistribution } from '~/types';
+import type { PlatformMetrics, SystemHealth, RevenuePoint } from '~/types';
 
-export const useMetricsStore = defineStore('metrics', () => {
-  // State
-  const metrics = ref<PlatformMetrics | null>(null);
-  const revenueHistory = ref<RevenuePoint[]>([]);
-  const tierDistribution = ref<TierDistribution | null>(null);
-  const lastUpdate = ref<Date | null>(null);
-  const isLoading = ref(false);
-  const error = ref<string | null>(null);
-  const isSubscribed = ref(false);
+interface MetricPoint {
+  timestamp: Date;
+  value: number;
+}
 
-  // WebSocket connection
-  let wsConnection: ReturnType<typeof useWebSocket> | null = null;
-
-  // Getters
-  const mrrTrend = computed(() => {
-    if (!metrics.value) {
-      return 0;
-    }
-    return metrics.value.mrrGrowthPct;
-  });
-
-  const tenantGrowth = computed(() => {
-    if (!metrics.value) {
-      return 0;
-    }
-    return metrics.value.newTenants30d;
-  });
-
-  const healthStatus = computed(() => {
-    if (!metrics.value) {
-      return 'unknown';
-    }
-    return metrics.value.systemHealth.status;
-  });
-
-  const isHealthy = computed(() => healthStatus.value === 'healthy');
-
-  // Actions
-  const fetchMetrics = async (): Promise<void> => {
-    isLoading.value = true;
-    error.value = null;
-
-    try {
-      const api = useApi();
-      const data = await api.get<PlatformMetrics>('/admin/metrics');
-      metrics.value = data;
-      lastUpdate.value = new Date();
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to fetch metrics';
-      throw err;
-    } finally {
-      isLoading.value = false;
-    }
+interface MetricsState {
+  current: PlatformMetrics | null;
+  history: {
+    revenue: RevenuePoint[];
+    tenants: MetricPoint[];
+    users: MetricPoint[];
   };
+  isLoading: boolean;
+  error: Error | null;
+  lastUpdate: Date | null;
+  isSubscribed: boolean;
+}
 
-  const fetchRevenueHistory = async (days = 30): Promise<void> => {
-    try {
-      const api = useApi();
-      const data = await api.get<RevenuePoint[]>(`/admin/metrics/revenue?days=${days}`);
-      revenueHistory.value = data;
-    } catch (err) {
-      console.error('Failed to fetch revenue history:', err);
-    }
-  };
+export const useMetricsStore = defineStore('metrics', {
+  state: (): MetricsState => ({
+    current: null,
+    history: {
+      revenue: [],
+      tenants: [],
+      users: [],
+    },
+    isLoading: false,
+    error: null,
+    lastUpdate: null,
+    isSubscribed: false,
+  }),
 
-  const fetchTierDistribution = async (): Promise<void> => {
-    try {
-      const api = useApi();
-      const data = await api.get<TierDistribution>('/admin/metrics/tiers');
-      tierDistribution.value = data;
-    } catch (err) {
-      console.error('Failed to fetch tier distribution:', err);
-    }
-  };
+  getters: {
+    /**
+     * MRR trend (positive/negative percentage)
+     */
+    mrrTrend: (state): number => {
+      return state.current?.mrrGrowthPct || 0;
+    },
 
-  const subscribeToMetrics = (): void => {
-    if (isSubscribed.value || wsConnection) {
-      return;
-    }
+    /**
+     * Tenant growth
+     */
+    tenantGrowth: (state): number => {
+      if (!state.current) return 0;
+      const total = state.current.totalTenants;
+      const new30d = state.current.newTenants30d;
+      if (total === 0) return 0;
+      return (new30d / total) * 100;
+    },
 
-    wsConnection = useWebSocket('/admin/metrics', {
-      autoConnect: true,
-      reconnect: true,
-    });
+    /**
+     * User growth
+     */
+    userGrowth: (state): number => {
+      if (!state.current) return 0;
+      const total = state.current.totalUsers;
+      const new7d = state.current.newUsers7d;
+      if (total === 0) return 0;
+      return (new7d / total) * 100;
+    },
 
-    // Listen for metrics updates
-    watch(
-      () => wsConnection?.data.value,
-      (newData) => {
-        if (newData && typeof newData === 'object' && 'mrr' in newData) {
-          metrics.value = newData as PlatformMetrics;
-          lastUpdate.value = new Date();
-        }
+    /**
+     * System health status
+     */
+    healthStatus: (state): 'healthy' | 'degraded' | 'critical' | 'unknown' => {
+      if (!state.current?.systemHealth) return 'unknown';
+      return state.current.systemHealth.status;
+    },
+
+    /**
+     * Check if metrics are fresh (< 1 minute old)
+     */
+    isFresh: (state): boolean => {
+      if (!state.lastUpdate) return false;
+      const age = Date.now() - state.lastUpdate.getTime();
+      return age < 60000; // 1 minute
+    },
+
+    /**
+     * Get revenue trend data for chart
+     */
+    revenueChartData: (state) => {
+      return state.history.revenue.map((point) => ({
+        x: point.date,
+        y: point.value,
+      }));
+    },
+
+    /**
+     * Get latest revenue value
+     */
+    latestRevenue: (state): number => {
+      if (state.history.revenue.length === 0) return 0;
+      return state.history.revenue[state.history.revenue.length - 1].value;
+    },
+  },
+
+  actions: {
+    /**
+     * Fetch current metrics from API
+     */
+    async fetchMetrics(): Promise<void> {
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const api = useApi();
+        const response = await api.get<PlatformMetrics>('/api/v1/admin/metrics');
+        
+        this.current = response.data;
+        this.lastUpdate = new Date();
+      } catch (error) {
+        this.error = error instanceof Error ? error : new Error('Failed to fetch metrics');
+        throw error;
+      } finally {
+        this.isLoading = false;
       }
-    );
+    },
 
-    isSubscribed.value = true;
-  };
+    /**
+     * Fetch historical revenue data
+     */
+    async fetchRevenueHistory(days: number = 30): Promise<void> {
+      try {
+        const api = useApi();
+        const response = await api.get<RevenuePoint[]>('/api/v1/admin/metrics/revenue', {
+          days,
+        });
+        
+        this.history.revenue = response.data;
+      } catch (error) {
+        console.error('Failed to fetch revenue history:', error);
+      }
+    },
 
-  const unsubscribeFromMetrics = (): void => {
-    if (wsConnection) {
-      wsConnection.disconnect();
-      wsConnection = null;
-    }
-    isSubscribed.value = false;
-  };
+    /**
+     * Update metrics (from WebSocket)
+     */
+    updateMetrics(metrics: PlatformMetrics): void {
+      this.current = metrics;
+      this.lastUpdate = new Date();
+    },
 
-  const refresh = async (): Promise<void> => {
-    await Promise.all([fetchMetrics(), fetchRevenueHistory(), fetchTierDistribution()]);
-  };
+    /**
+     * Update system health (from WebSocket)
+     */
+    updateSystemHealth(health: SystemHealth): void {
+      if (this.current) {
+        this.current = {
+          ...this.current,
+          systemHealth: health,
+        };
+        this.lastUpdate = new Date();
+      }
+    },
 
-  return {
-    // State
-    metrics,
-    revenueHistory,
-    tierDistribution,
-    lastUpdate,
-    isLoading,
-    error,
-    isSubscribed,
+    /**
+     * Add revenue data point to history
+     */
+    addRevenuePoint(point: RevenuePoint): void {
+      this.history.revenue.push(point);
+      
+      // Keep only last 90 days
+      if (this.history.revenue.length > 90) {
+        this.history.revenue.shift();
+      }
+    },
 
-    // Getters
-    mrrTrend,
-    tenantGrowth,
-    healthStatus,
-    isHealthy,
+    /**
+     * Subscribe to real-time metrics updates
+     */
+    subscribe(): void {
+      if (this.isSubscribed) return;
 
-    // Actions
-    fetchMetrics,
-    fetchRevenueHistory,
-    fetchTierDistribution,
-    subscribeToMetrics,
-    unsubscribeFromMetrics,
-    refresh,
-  };
+      const config = useRuntimeConfig();
+      const wsBaseUrl = config.public.wsBase || 'ws://localhost:8000';
+      
+      const ws = useWebSocket(`${wsBaseUrl}/ws/admin/metrics`, {
+        autoConnect: true,
+        reconnect: true,
+      });
+
+      // Subscribe to metrics updates
+      ws.on<PlatformMetrics>('metrics', (data) => {
+        this.updateMetrics(data);
+      });
+
+      // Subscribe to system health updates
+      ws.on<SystemHealth>('system_health', (data) => {
+        this.updateSystemHealth(data);
+      });
+
+      // Subscribe to revenue updates
+      ws.on<RevenuePoint>('revenue', (data) => {
+        this.addRevenuePoint(data);
+      });
+
+      this.isSubscribed = true;
+    },
+
+    /**
+     * Unsubscribe from real-time updates
+     */
+    unsubscribe(): void {
+      // WebSocket cleanup handled by composable
+      this.isSubscribed = false;
+    },
+
+    /**
+     * Refresh metrics (force fetch)
+     */
+    async refresh(): Promise<void> {
+      await this.fetchMetrics();
+      await this.fetchRevenueHistory();
+    },
+
+    /**
+     * Clear metrics data
+     */
+    clear(): void {
+      this.current = null;
+      this.history = {
+        revenue: [],
+        tenants: [],
+        users: [],
+      };
+      this.lastUpdate = null;
+      this.error = null;
+    },
+  },
 });
