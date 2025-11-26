@@ -4,7 +4,7 @@ import type { PlatformMetrics, RevenuePoint, TenantUsage, Alert } from '~/types'
 
 definePageMeta({
   layout: 'admin',
-  middleware: 'auth',
+  middleware: 'admin',
 });
 
 useSeoMeta({
