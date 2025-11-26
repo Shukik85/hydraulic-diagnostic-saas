@@ -11,7 +11,11 @@
     "search": "Search",
     "filter": "Filter",
     "reset": "Reset",
-    "submit": "Submit"
+    "submit": "Submit",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "send": "Send"
   },
   "auth": {
     "login": "Login",
@@ -40,6 +44,44 @@
     "welcome": "Welcome",
     "overview": "Overview"
   },
+  "diagnosis": {
+    "title": "System Diagnosis",
+    "subtitle": "Real-time monitoring and AI analysis",
+    "description": "Hydraulic systems diagnostics",
+    "anomalyDetails": "Anomaly Details",
+    "recommendedAction": "Recommended Actions",
+    "chat": {
+      "title": "AI Assistant",
+      "subtitle": "Ask about the system",
+      "welcome": "Hello! I'm an AI assistant for hydraulic system diagnostics. How can I help?",
+      "placeholder": "Ask a question...",
+      "inputLabel": "Message input",
+      "error": "Error getting response"
+    },
+    "sensors": {
+      "title": "Sensors",
+      "count": "sensors",
+      "noData": "No data",
+      "threshold": "Threshold"
+    },
+    "anomalies": {
+      "title": "Anomaly Timeline",
+      "noAnomalies": "No anomalies detected",
+      "confidence": "Confidence",
+      "unacknowledged": "Unacknowledged",
+      "resolved": "Resolved"
+    },
+    "topology": {
+      "title": "System Topology",
+      "normal": "Normal",
+      "anomaly": "Anomaly",
+      "info": "Click on component for details",
+      "pump": "Pump",
+      "valve": "Valve",
+      "sensor": "Sensor",
+      "tank": "Tank"
+    }
+  },
   "admin": {
     "revenueChart": "Revenue Chart",
     "systemHealth": "System Health",
@@ -61,6 +103,14 @@
     "last30Days": "last 30 days",
     "last7Days": "last 7 days"
   },
+  "anomalyType": {
+    "pressure_spike": "Pressure Spike",
+    "temperature_high": "High Temperature",
+    "flow_anomaly": "Flow Anomaly",
+    "vibration_excessive": "Excessive Vibration",
+    "leak_detected": "Leak Detected",
+    "performance_degradation": "Performance Degradation"
+  },
   "sensors": {
     "pressure": "Pressure",
     "temperature": "Temperature",
@@ -79,6 +129,7 @@
     "critical": "Critical"
   },
   "severity": {
+    "all": "All",
     "critical": "Critical",
     "high": "High",
     "medium": "Medium",
