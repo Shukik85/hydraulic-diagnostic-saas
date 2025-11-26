@@ -1,163 +1,243 @@
 /**
- * WebSocket composable for real-time updates
+ * WebSocket Composable
+ * Real-time communication with auto-reconnect
  */
 
-export interface UseWebSocketOptions {
+import type { WebSocketMessage } from '~/types';
+
+interface WebSocketOptions {
   autoConnect?: boolean;
   reconnect?: boolean;
-  reconnectAttempts?: number;
-  reconnectDelay?: number;
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  heartbeatInterval?: number;
 }
 
-export interface UseWebSocketReturn {
-  isConnected: Ref<boolean>;
-  data: Ref<unknown>;
-  connect: () => void;
-  disconnect: () => void;
-  send: (data: unknown) => void;
-  subscribe: (channel: string) => void;
-  unsubscribe: (channel: string) => void;
+interface WebSocketState {
+  isConnected: boolean;
+  isConnecting: boolean;
+  error: Error | null;
+  reconnectAttempts: number;
 }
 
-/**
- * WebSocket composable
- */
-export const useWebSocket = (
-  url: string,
-  options: UseWebSocketOptions = {}
-): UseWebSocketReturn => {
-  const config = useRuntimeConfig();
-  const { accessToken } = useAuth();
+type MessageHandler<T = unknown> = (data: T) => void;
 
-  const {
-    autoConnect = true,
-    reconnect = true,
-    reconnectAttempts = 5,
-    reconnectDelay = 1000,
-  } = options;
+const DEFAULT_OPTIONS: Required<WebSocketOptions> = {
+  autoConnect: true,
+  reconnect: true,
+  reconnectInterval: 1000,
+  maxReconnectAttempts: 5,
+  heartbeatInterval: 30000,
+};
 
-  const ws = ref<WebSocket | null>(null);
-  const isConnected = ref(false);
-  const data = ref<unknown>(null);
-  const reconnectCount = ref(0);
+export function useWebSocket(url: string, options: WebSocketOptions = {}) {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+
+  const state = ref<WebSocketState>({
+    isConnected: false,
+    isConnecting: false,
+    error: null,
+    reconnectAttempts: 0,
+  });
+
+  let ws: WebSocket | null = null;
+  let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+  let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  const messageHandlers = new Map<string, Set<MessageHandler>>();
 
   /**
-   * Build WebSocket URL with auth token
+   * Calculate reconnect delay with exponential backoff
    */
-  const buildUrl = (): string => {
-    const wsUrl = `${config.public.wsBase}${url}`;
-    if (accessToken.value) {
-      return `${wsUrl}?token=${accessToken.value}`;
+  function getReconnectDelay(): number {
+    const baseDelay = opts.reconnectInterval;
+    const attempt = state.value.reconnectAttempts;
+    const delay = baseDelay * Math.pow(2, attempt);
+    return Math.min(delay, 30000); // Max 30 seconds
+  }
+
+  /**
+   * Start heartbeat to keep connection alive
+   */
+  function startHeartbeat(): void {
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+    heartbeatInterval = setInterval(() => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        send({ type: 'ping', data: null, timestamp: new Date().toISOString() });
+      }
+    }, opts.heartbeatInterval);
+  }
+
+  /**
+   * Stop heartbeat
+   */
+  function stopHeartbeat(): void {
+    if (heartbeatInterval) {
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = null;
     }
-    return wsUrl;
-  };
+  }
 
   /**
    * Connect to WebSocket
    */
-  const connect = (): void => {
-    if (ws.value) {
-      return;
+  function connect(): void {
+    if (state.value.isConnected || state.value.isConnecting) return;
+
+    state.value.isConnecting = true;
+    state.value.error = null;
+
+    try {
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        state.value.isConnected = true;
+        state.value.isConnecting = false;
+        state.value.reconnectAttempts = 0;
+        startHeartbeat();
+        console.log('[WebSocket] Connected to', url);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const message: WebSocketMessage = JSON.parse(event.data);
+          handleMessage(message);
+        } catch (error) {
+          console.error('[WebSocket] Failed to parse message:', error);
+        }
+      };
+
+      ws.onerror = (event) => {
+        state.value.error = new Error('WebSocket error');
+        console.error('[WebSocket] Error:', event);
+      };
+
+      ws.onclose = () => {
+        state.value.isConnected = false;
+        state.value.isConnecting = false;
+        stopHeartbeat();
+        console.log('[WebSocket] Disconnected');
+
+        // Attempt reconnect if enabled
+        if (opts.reconnect && state.value.reconnectAttempts < opts.maxReconnectAttempts) {
+          const delay = getReconnectDelay();
+          console.log(`[WebSocket] Reconnecting in ${delay}ms...`);
+          
+          state.value.reconnectAttempts++;
+          reconnectTimeout = setTimeout(() => {
+            connect();
+          }, delay);
+        }
+      };
+    } catch (error) {
+      state.value.error = error instanceof Error ? error : new Error('Connection failed');
+      state.value.isConnecting = false;
     }
-
-    const socket = new WebSocket(buildUrl());
-
-    socket.onopen = () => {
-      isConnected.value = true;
-      reconnectCount.value = 0;
-      console.log('[WebSocket] Connected:', url);
-    };
-
-    socket.onmessage = (event: MessageEvent) => {
-      try {
-        data.value = JSON.parse(event.data);
-      } catch {
-        data.value = event.data;
-      }
-    };
-
-    socket.onerror = (error: Event) => {
-      console.error('[WebSocket] Error:', error);
-    };
-
-    socket.onclose = () => {
-      isConnected.value = false;
-      ws.value = null;
-      console.log('[WebSocket] Disconnected:', url);
-
-      // Auto-reconnect
-      if (reconnect && reconnectCount.value < reconnectAttempts) {
-        reconnectCount.value++;
-        const delay = reconnectDelay * reconnectCount.value;
-        console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${reconnectCount.value})`);
-        setTimeout(connect, delay);
-      }
-    };
-
-    ws.value = socket;
-  };
+  }
 
   /**
    * Disconnect from WebSocket
    */
-  const disconnect = (): void => {
-    if (ws.value) {
-      ws.value.close();
-      ws.value = null;
-      isConnected.value = false;
+  function disconnect(): void {
+    if (reconnectTimeout) {
+      clearTimeout(reconnectTimeout);
+      reconnectTimeout = null;
     }
-  };
 
-  /**
-   * Send data through WebSocket
-   */
-  const send = (payload: unknown): void => {
-    if (ws.value && isConnected.value) {
-      ws.value.send(JSON.stringify(payload));
-    } else {
-      console.warn('[WebSocket] Cannot send data: not connected');
+    stopHeartbeat();
+
+    if (ws) {
+      ws.close();
+      ws = null;
     }
-  };
 
-  /**
-   * Subscribe to channel
-   */
-  const subscribe = (channel: string): void => {
-    send({
-      type: 'subscribe',
-      channel,
-    });
-  };
-
-  /**
-   * Unsubscribe from channel
-   */
-  const unsubscribe = (channel: string): void => {
-    send({
-      type: 'unsubscribe',
-      channel,
-    });
-  };
-
-  // Auto-connect on mount
-  if (autoConnect) {
-    onMounted(() => {
-      connect();
-    });
+    state.value.isConnected = false;
+    state.value.isConnecting = false;
+    state.value.reconnectAttempts = 0;
   }
 
-  // Disconnect on unmount
+  /**
+   * Send message through WebSocket
+   */
+  function send<T = unknown>(message: WebSocketMessage<T>): void {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+      console.warn('[WebSocket] Cannot send message: not connected');
+      return;
+    }
+
+    try {
+      ws.send(JSON.stringify(message));
+    } catch (error) {
+      console.error('[WebSocket] Failed to send message:', error);
+    }
+  }
+
+  /**
+   * Handle incoming message
+   */
+  function handleMessage<T = unknown>(message: WebSocketMessage<T>): void {
+    const handlers = messageHandlers.get(message.type);
+    if (handlers) {
+      handlers.forEach((handler) => handler(message.data));
+    }
+  }
+
+  /**
+   * Subscribe to message type
+   */
+  function on<T = unknown>(type: string, handler: MessageHandler<T>): () => void {
+    if (!messageHandlers.has(type)) {
+      messageHandlers.set(type, new Set());
+    }
+
+    const handlers = messageHandlers.get(type)!;
+    handlers.add(handler as MessageHandler);
+
+    // Return unsubscribe function
+    return () => {
+      handlers.delete(handler as MessageHandler);
+      if (handlers.size === 0) {
+        messageHandlers.delete(type);
+      }
+    };
+  }
+
+  /**
+   * Subscribe to multiple message types
+   */
+  function onMany(subscriptions: Record<string, MessageHandler>): () => void {
+    const unsubscribers = Object.entries(subscriptions).map(([type, handler]) =>
+      on(type, handler)
+    );
+
+    // Return combined unsubscribe function
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+    };
+  }
+
+  // Auto-connect if enabled
+  if (opts.autoConnect && typeof window !== 'undefined') {
+    connect();
+  }
+
+  // Cleanup on unmount
   onUnmounted(() => {
     disconnect();
   });
 
   return {
-    isConnected,
-    data,
+    // State
+    isConnected: computed(() => state.value.isConnected),
+    isConnecting: computed(() => state.value.isConnecting),
+    error: computed(() => state.value.error),
+    reconnectAttempts: computed(() => state.value.reconnectAttempts),
+
+    // Methods
     connect,
     disconnect,
     send,
-    subscribe,
-    unsubscribe,
+    on,
+    onMany,
   };
-};
+}
