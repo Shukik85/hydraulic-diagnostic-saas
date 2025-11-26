@@ -39,6 +39,237 @@ class AnomalyType(str, Enum):
     VALVE_STICTION = "valve_stiction"  # Залипание клапана
 
 
+# ==================== API Response Schemas ====================
+
+class HealthCheckResponse(BaseModel):
+    """Health check response.
+    
+    Attributes:
+        status: Service status
+        version: Service version
+        model_loaded: Model loaded flag
+    
+    Examples:
+        >>> response = HealthCheckResponse(
+        ...     status="healthy",
+        ...     version="2.0.0",
+        ...     model_loaded=True
+        ... )
+    """
+    
+    status: Literal["healthy", "unhealthy"] = Field(
+        ...,
+        description="Service health status"
+    )
+    version: str = Field(
+        ...,
+        description="Service version"
+    )
+    model_loaded: bool = Field(
+        ...,
+        description="Model loaded flag"
+    )
+
+
+class HealthPrediction(BaseModel):
+    """Health prediction result.
+    
+    Attributes:
+        score: Health score [0, 1]
+        status: Categorical status
+    
+    Examples:
+        >>> health = HealthPrediction(score=0.87)
+        >>> print(health.status)  # 'healthy'
+    """
+    
+    score: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
+        ...,
+        description="Health score: 1.0 = excellent, 0.0 = critical"
+    )
+    
+    @computed_field
+    @property
+    def status(self) -> str:
+        """Categorical status based on score."""
+        if self.score >= 0.7:
+            return "healthy"
+        elif self.score >= 0.5:
+            return "warning"
+        else:
+            return "critical"
+
+
+class DegradationPrediction(BaseModel):
+    """Degradation prediction result.
+    
+    Attributes:
+        rate: Degradation rate [0, 1]
+        time_to_failure_hours: Estimated time to failure (hours)
+    
+    Examples:
+        >>> degradation = DegradationPrediction(rate=0.12)
+        >>> print(degradation.time_to_failure_hours)
+    """
+    
+    rate: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
+        ...,
+        description="Degradation rate: 0.0 = stable, 1.0 = rapid degradation"
+    )
+    
+    @computed_field
+    @property
+    def time_to_failure_hours(self) -> float | None:
+        """Estimated time to failure (hours)."""
+        if self.rate > 0.01:  # Significant degradation
+            # Simple linear estimate: TTF = (1 - current_health) / degradation_rate
+            # Assuming current health ~= 1 - rate for simplicity
+            return ((1.0 - self.rate) / self.rate) * 100  # Scale factor
+        return None  # Stable, no immediate concern
+
+
+class AnomalyPrediction(BaseModel):
+    """Anomaly prediction result.
+    
+    Attributes:
+        predictions: Dict of anomaly_type -> probability
+        detected_anomalies: List of detected anomaly types (prob > 0.5)
+    
+    Examples:
+        >>> anomaly = AnomalyPrediction(
+        ...     predictions={
+        ...         "pressure_drop": 0.05,
+        ...         "overheating": 0.03,
+        ...         "cavitation": 0.02,
+        ...         "leakage": 0.01,
+        ...         "vibration_anomaly": 0.01,
+        ...         "flow_restriction": 0.01,
+        ...         "contamination": 0.01,
+        ...         "seal_degradation": 0.01,
+        ...         "valve_stiction": 0.01
+        ...     }
+        ... )
+        >>> print(anomaly.detected_anomalies)  # []
+    """
+    
+    predictions: Dict[str, float] = Field(
+        ...,
+        description="Anomaly type -> probability mapping"
+    )
+    
+    @computed_field
+    @property
+    def detected_anomalies(self) -> list[str]:
+        """List of detected anomaly types (prob > 0.5)."""
+        return [
+            anomaly_type
+            for anomaly_type, prob in self.predictions.items()
+            if prob > 0.5
+        ]
+
+
+class PredictionResponse(BaseModel):
+    """Single equipment prediction response.
+    
+    Attributes:
+        equipment_id: Equipment ID
+        health: Health prediction
+        degradation: Degradation prediction
+        anomaly: Anomaly prediction
+        inference_time_ms: Inference time (milliseconds)
+    
+    Examples:
+        >>> response = PredictionResponse(
+        ...     equipment_id="exc_001",
+        ...     health=HealthPrediction(score=0.87),
+        ...     degradation=DegradationPrediction(rate=0.12),
+        ...     anomaly=AnomalyPrediction(predictions={...}),
+        ...     inference_time_ms=45.3
+        ... )
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "equipment_id": "exc_001",
+                "health": {"score": 0.87, "status": "healthy"},
+                "degradation": {"rate": 0.12, "time_to_failure_hours": 733.3},
+                "anomaly": {
+                    "predictions": {
+                        "pressure_drop": 0.05,
+                        "overheating": 0.03,
+                        "cavitation": 0.02,
+                        "leakage": 0.01,
+                        "vibration_anomaly": 0.01,
+                        "flow_restriction": 0.01,
+                        "contamination": 0.01,
+                        "seal_degradation": 0.01,
+                        "valve_stiction": 0.01
+                    },
+                    "detected_anomalies": []
+                },
+                "inference_time_ms": 45.3
+            }
+        }
+    )
+    
+    equipment_id: str = Field(
+        ...,
+        description="Equipment ID"
+    )
+    health: HealthPrediction = Field(
+        ...,
+        description="Health prediction"
+    )
+    degradation: DegradationPrediction = Field(
+        ...,
+        description="Degradation prediction"
+    )
+    anomaly: AnomalyPrediction = Field(
+        ...,
+        description="Anomaly predictions"
+    )
+    inference_time_ms: float = Field(
+        ...,
+        ge=0,
+        description="Inference time (milliseconds)"
+    )
+
+
+class BatchPredictionResponse(BaseModel):
+    """Batch prediction response.
+    
+    Attributes:
+        predictions: List of predictions
+        total_count: Total number of predictions
+        total_time_ms: Total inference time (milliseconds)
+    
+    Examples:
+        >>> response = BatchPredictionResponse(
+        ...     predictions=[pred1, pred2, pred3],
+        ...     total_count=3,
+        ...     total_time_ms=123.4
+        ... )
+    """
+    
+    predictions: list[PredictionResponse] = Field(
+        ...,
+        description="List of predictions"
+    )
+    total_count: int = Field(
+        ...,
+        ge=0,
+        description="Total number of predictions"
+    )
+    total_time_ms: float = Field(
+        ...,
+        ge=0,
+        description="Total inference time (milliseconds)"
+    )
+
+
+# ==================== Legacy Schemas (keep for backward compatibility) ====================
+
 class ComponentHealth(BaseModel):
     """Оценка здоровья отдельного компонента.
     
