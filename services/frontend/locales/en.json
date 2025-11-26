@@ -1,0 +1,66 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "submit": "Submit"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "signUp": "Sign up",
+    "signIn": "Sign in to your account",
+    "welcomeBack": "Welcome back!"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "systems": "Systems",
+    "sensors": "Sensors",
+    "anomalies": "Anomalies",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome",
+    "overview": "Overview",
+    "metrics": "Metrics"
+  },
+  "kpi": {
+    "mrr": "Monthly Recurring Revenue",
+    "tenants": "Tenants",
+    "users": "Users",
+    "uptime": "Uptime"
+  },
+  "sensors": {
+    "pressure": "Pressure",
+    "temperature": "Temperature",
+    "flow": "Flow",
+    "vibration": "Vibration",
+    "position": "Position"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "error": "Error",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  }
+}

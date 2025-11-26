@@ -1,0 +1,66 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "success": "Успешно",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "delete": "Удалить",
+    "edit": "Редактировать",
+    "create": "Создать",
+    "search": "Поиск",
+    "filter": "Фильтр",
+    "reset": "Сбросить",
+    "submit": "Отправить"
+  },
+  "auth": {
+    "login": "Войти",
+    "logout": "Выйти",
+    "email": "Email",
+    "password": "Пароль",
+    "forgotPassword": "Забыли пароль?",
+    "signUp": "Регистрация",
+    "signIn": "Войти в аккаунт",
+    "welcomeBack": "Добро пожаловать!"
+  },
+  "nav": {
+    "dashboard": "Панель",
+    "systems": "Системы",
+    "sensors": "Датчики",
+    "anomalies": "Аномалии",
+    "reports": "Отчеты",
+    "settings": "Настройки"
+  },
+  "dashboard": {
+    "title": "Панель управления",
+    "welcome": "Добро пожаловать",
+    "overview": "Обзор",
+    "metrics": "Метрики"
+  },
+  "kpi": {
+    "mrr": "Ежемесячный доход",
+    "tenants": "Арендаторы",
+    "users": "Пользователи",
+    "uptime": "Время работы"
+  },
+  "sensors": {
+    "pressure": "Давление",
+    "temperature": "Температура",
+    "flow": "Поток",
+    "vibration": "Вибрация",
+    "position": "Положение"
+  },
+  "status": {
+    "online": "Онлайн",
+    "offline": "Офлайн",
+    "error": "Ошибка",
+    "active": "Активно",
+    "inactive": "Неактивно"
+  },
+  "severity": {
+    "critical": "Критический",
+    "high": "Высокий",
+    "medium": "Средний",
+    "low": "Низкий"
+  }
+}
