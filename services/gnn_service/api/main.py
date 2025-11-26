@@ -7,6 +7,7 @@ Production-ready inference API:
 - Logging
 - Health checks
 - Model versioning
+- Request ID tracking
 
 Python 3.14 Features:
     - Deferred annotations
@@ -26,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 
+from api.middleware import RequestIDMiddleware
 from src.inference import InferenceEngine, InferenceConfig, ModelManager
 from src.data import FeatureConfig
 from src.schemas import (
@@ -42,7 +44,7 @@ from src.schemas import (
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - [%(request_id)s] - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(sys.stdout)
     ]
@@ -62,7 +64,7 @@ async def lifespan(app: FastAPI):
     # Startup
     global engine, topology, model_manager
     
-    logger.info("Initializing GNN Inference Service...")
+    logger.info("Initializing GNN Inference Service...", extra={"request_id": "startup"})
     
     # Initialize model manager
     model_manager = ModelManager()
@@ -90,12 +92,12 @@ async def lifespan(app: FastAPI):
     # TODO: Load topology from database/config
     # topology = load_topology(...)
     
-    logger.info("GNN Inference Service started successfully")
+    logger.info("GNN Inference Service started successfully", extra={"request_id": "startup"})
     
     yield
     
     # Shutdown
-    logger.info("Shutting down GNN Inference Service...")
+    logger.info("Shutting down GNN Inference Service...", extra={"request_id": "shutdown"})
     # Cleanup if needed
 
 
@@ -107,13 +109,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Add CORS middleware
+# Add middlewares (order matters!)
+app.add_middleware(RequestIDMiddleware)  # Request ID tracking
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # TODO: Configure properly for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Request-ID"],  # Expose request ID to clients
 )
 
 
@@ -121,23 +126,34 @@ app.add_middleware(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Global exception handler."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    request_id = getattr(request.state, "request_id", "unknown")
+    
+    logger.error(
+        f"[{request_id}] Unhandled exception: {exc}",
+        exc_info=True,
+        extra={"request_id": request_id}
+    )
+    
     return JSONResponse(
         status_code=500,
         content={
             "error": "Internal server error",
-            "detail": str(exc) if app.debug else "An error occurred"
+            "detail": str(exc) if app.debug else "An error occurred",
+            "request_id": request_id
         }
     )
 
 
 # Health check endpoint
 @app.get("/health", response_model=HealthCheckResponse)
-async def health_check():
+async def health_check(request: Request):
     """Health check endpoint.
     
     Returns:
         status: Service health status
+    
+    Headers:
+        X-Request-ID: Request correlation ID
     
     Examples:
         GET /health
@@ -148,8 +164,14 @@ async def health_check():
             "version": "2.0.0",
             "model_loaded": true
         }
+        
+        Headers:
+        X-Request-ID: abc-123-def-456
     """
     global engine
+    
+    request_id = getattr(request.state, "request_id", "unknown")
+    logger.debug(f"[{request_id}] Health check", extra={"request_id": request_id})
     
     return HealthCheckResponse(
         status="healthy" if engine is not None else "unhealthy",
@@ -160,7 +182,7 @@ async def health_check():
 
 # Stats endpoint
 @app.get("/stats")
-async def get_stats():
+async def get_stats(request: Request):
     """Get service statistics.
     
     Returns:
@@ -179,15 +201,22 @@ async def get_stats():
     """
     global engine
     
+    request_id = getattr(request.state, "request_id", "unknown")
+    
     if engine is None:
         raise HTTPException(status_code=503, detail="Service not ready")
     
-    return engine.get_stats()
+    logger.debug(f"[{request_id}] Getting stats", extra={"request_id": request_id})
+    
+    stats = engine.get_stats()
+    stats["request_id"] = request_id
+    
+    return stats
 
 
 # Model versioning endpoints
 @app.get("/models/versions", response_model=list[ModelVersion])
-async def list_model_versions():
+async def list_model_versions(request: Request):
     """List all available model versions.
     
     Returns:
@@ -211,8 +240,12 @@ async def list_model_versions():
     """
     global model_manager, engine
     
+    request_id = getattr(request.state, "request_id", "unknown")
+    
     if model_manager is None:
         raise HTTPException(status_code=503, detail="Service not ready")
+    
+    logger.debug(f"[{request_id}] Listing model versions", extra={"request_id": request_id})
     
     # Scan models directory
     models_dir = Path("models/checkpoints")
@@ -249,7 +282,7 @@ async def list_model_versions():
 
 
 @app.get("/models/current", response_model=ModelInfo | None)
-async def get_current_model():
+async def get_current_model(request: Request):
     """Get currently active model info.
     
     Returns:
@@ -272,8 +305,12 @@ async def get_current_model():
     """
     global model_manager, engine
     
+    request_id = getattr(request.state, "request_id", "unknown")
+    
     if engine is None or model_manager is None:
         return None
+    
+    logger.debug(f"[{request_id}] Getting current model", extra={"request_id": request_id})
     
     model_path = engine.config.model_path
     info = model_manager.get_model_info(model_path)
@@ -299,17 +336,19 @@ async def get_current_model():
 
 # Single prediction endpoint
 @app.post("/predict", response_model=PredictionResponse)
-async def predict(request: PredictionRequest):
+async def predict(request_data: PredictionRequest, request: Request):
     """Single equipment prediction.
     
     Args:
-        request: Prediction request
+        request_data: Prediction request
+        request: FastAPI request (for request ID)
     
     Returns:
         response: Prediction response
     
     Examples:
         POST /predict
+        X-Request-ID: my-correlation-id
         
         Request:
         {
@@ -322,17 +361,16 @@ async def predict(request: PredictionRequest):
             "equipment_id": "exc_001",
             "health": {"score": 0.85},
             "degradation": {"rate": 0.12},
-            "anomaly": {
-                "predictions": {
-                    "pressure_drop": 0.05,
-                    "overheating": 0.03,
-                    ...
-                }
-            },
+            "anomaly": {...},
             "inference_time_ms": 45.3
         }
+        
+        Headers:
+        X-Request-ID: my-correlation-id
     """
     global engine, topology
+    
+    request_id = getattr(request.state, "request_id", "unknown")
     
     if engine is None:
         raise HTTPException(status_code=503, detail="Service not ready")
@@ -341,14 +379,34 @@ async def predict(request: PredictionRequest):
         raise HTTPException(status_code=500, detail="Topology not configured")
     
     try:
+        logger.info(
+            f"[{request_id}] Prediction request for {request_data.equipment_id}",
+            extra={"request_id": request_id, "equipment_id": request_data.equipment_id}
+        )
+        
         response = await engine.predict(
-            request=request,
+            request=request_data,
             topology=topology
         )
+        
+        logger.info(
+            f"[{request_id}] Prediction complete for {request_data.equipment_id} - "
+            f"health={response.health.score:.2f}",
+            extra={
+                "request_id": request_id,
+                "equipment_id": request_data.equipment_id,
+                "health_score": response.health.score
+            }
+        )
+        
         return response
     
     except Exception as e:
-        logger.error(f"Prediction failed: {e}", exc_info=True)
+        logger.error(
+            f"[{request_id}] Prediction failed: {e}",
+            exc_info=True,
+            extra={"request_id": request_id, "equipment_id": request_data.equipment_id}
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Prediction failed: {str(e)}"
@@ -357,11 +415,12 @@ async def predict(request: PredictionRequest):
 
 # Batch prediction endpoint
 @app.post("/predict/batch", response_model=BatchPredictionResponse)
-async def predict_batch(request: BatchPredictionRequest):
+async def predict_batch(request_data: BatchPredictionRequest, request: Request):
     """Batch equipment predictions.
     
     Args:
-        request: Batch prediction request
+        request_data: Batch prediction request
+        request: FastAPI request (for request ID)
     
     Returns:
         response: Batch prediction response
@@ -380,16 +439,14 @@ async def predict_batch(request: BatchPredictionRequest):
         
         Response:
         {
-            "predictions": [
-                {"equipment_id": "exc_001", "health": {...}, ...},
-                {"equipment_id": "exc_002", "health": {...}, ...},
-                ...
-            ],
+            "predictions": [...],
             "total_count": 10,
             "total_time_ms": 234.5
         }
     """
     global engine, topology
+    
+    request_id = getattr(request.state, "request_id", "unknown")
     
     if engine is None:
         raise HTTPException(status_code=503, detail="Service not ready")
@@ -399,14 +456,29 @@ async def predict_batch(request: BatchPredictionRequest):
     
     try:
         import time
+        
+        logger.info(
+            f"[{request_id}] Batch prediction request for {len(request_data.requests)} equipment",
+            extra={"request_id": request_id, "batch_size": len(request_data.requests)}
+        )
+        
         start_time = time.time()
         
         predictions = await engine.predict_batch(
-            requests=request.requests,
+            requests=request_data.requests,
             topology=topology
         )
         
         total_time = (time.time() - start_time) * 1000
+        
+        logger.info(
+            f"[{request_id}] Batch prediction complete - {len(predictions)} results in {total_time:.2f}ms",
+            extra={
+                "request_id": request_id,
+                "batch_size": len(predictions),
+                "total_time_ms": total_time
+            }
+        )
         
         return BatchPredictionResponse(
             predictions=predictions,
@@ -415,7 +487,11 @@ async def predict_batch(request: BatchPredictionRequest):
         )
     
     except Exception as e:
-        logger.error(f"Batch prediction failed: {e}", exc_info=True)
+        logger.error(
+            f"[{request_id}] Batch prediction failed: {e}",
+            exc_info=True,
+            extra={"request_id": request_id}
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Batch prediction failed: {str(e)}"
