@@ -1,6 +1,6 @@
-"""API response schemas.
+"""Response schemas for GNN service.
 
-Pydantic модели для исходящих API responses.
+Pydantic v2 schemas for API responses.
 
 Python 3.14 Features:
     - Deferred annotations
@@ -9,310 +9,302 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import Dict, List, Literal, Annotated
 from datetime import datetime
-from enum import Enum
+from typing import Dict, List
 
 from pydantic import BaseModel, Field, ConfigDict
 
 
-# ==================== ENUMS ====================
-
-class ComponentStatus(str, Enum):
-    """Статус компонента."""
-    HEALTHY = "healthy"
-    DEGRADED = "degraded"
-    FAILED = "failed"
-    UNKNOWN = "unknown"
-
-
-class AnomalyType(str, Enum):
-    """Тип аномалии."""
-    PRESSURE_DROP = "pressure_drop"
-    OVERHEATING = "overheating"
-    CAVITATION = "cavitation"
-    LEAKAGE = "leakage"
-    VIBRATION_ANOMALY = "vibration_anomaly"
-    FLOW_RESTRICTION = "flow_restriction"
-    CONTAMINATION = "contamination"
-    SEAL_DEGRADATION = "seal_degradation"
-    VALVE_STICTION = "valve_stiction"
-
-
-# ==================== HEALTH CHECKS ====================
-
-class HealthCheckResponse(BaseModel):
-    """Basic health check response.
+class ComponentPrediction(BaseModel):
+    """Component-level (per-node) predictions.
     
     Attributes:
-        status: Service status
-        version: Service version
-        model_loaded: Whether model is loaded
+        component_id: Unique component identifier
+        component_type: Type of component (pump, valve, cylinder, etc.)
+        health: Health score [0, 1] (1=perfect, 0=critical)
+        anomalies: Anomaly probabilities for each type
+    
+    Examples:
+        >>> comp = ComponentPrediction(
+        ...     component_id="pump_01",
+        ...     component_type="hydraulic_pump",
+        ...     health=0.85,
+        ...     anomalies={
+        ...         "cavitation": 0.12,
+        ...         "leakage": 0.05,
+        ...         "overheating": 0.08
+        ...     }
+        ... )
     """
     
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "status": "healthy",
-                "version": "2.0.0",
-                "model_loaded": True
-            }
-        }
+    model_config = ConfigDict(frozen=False)
+    
+    component_id: str = Field(
+        ...,
+        description="Unique component identifier",
+        examples=["pump_01", "valve_23", "cylinder_07"]
     )
     
-    status: Literal["healthy", "unhealthy"] = Field(..., description="Health status")
-    version: str = Field(..., description="Service version")
-    model_loaded: bool = Field(..., description="Model loaded status")
-
-
-class ComponentHealth(BaseModel):
-    """Component health status."""
+    component_type: str = Field(
+        ...,
+        description="Type of hydraulic component",
+        examples=["pump", "valve", "cylinder", "filter", "motor"]
+    )
     
-    name: str = Field(..., description="Component name")
-    status: ComponentStatus = Field(..., description="Health status")
-    message: str | None = Field(default=None, description="Status message")
-    last_check: datetime = Field(
-        default_factory=datetime.now,
-        description="Last health check timestamp"
+    health: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Component health score (1.0=perfect, 0.0=critical)"
+    )
+    
+    anomalies: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Anomaly probabilities per type"
     )
 
 
-class DetailedHealthResponse(BaseModel):
-    """Detailed health check response.
+class GraphPrediction(BaseModel):
+    """Graph-level (entire equipment) predictions.
     
     Attributes:
-        status: Overall health status
-        version: Service version
-        uptime_seconds: Service uptime
-        components: Component health statuses
-        system_metrics: System resource usage
-        model_info: Model information
+        health: Overall system health [0, 1]
+        degradation: Degradation rate [0, 1]
+        rul_hours: Remaining useful life in hours
+        anomalies: System-level anomaly probabilities
+    
+    Examples:
+        >>> graph = GraphPrediction(
+        ...     health=0.78,
+        ...     degradation=0.22,
+        ...     rul_hours=450.5,
+        ...     anomalies={"pressure_drop": 0.15, "contamination": 0.08}
+        ... )
     """
     
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "status": "healthy",
-                "version": "2.0.0",
-                "uptime_seconds": 3600.0,
-                "components": {
-                    "inference_engine": {
-                        "name": "inference_engine",
-                        "status": "healthy",
-                        "message": "Ready"
-                    },
-                    "model_manager": {
-                        "name": "model_manager",
-                        "status": "healthy",
-                        "message": "Model loaded"
-                    }
-                },
-                "system_metrics": {
-                    "cpu_percent": 25.3,
-                    "memory_percent": 45.7,
-                    "disk_percent": 35.2
-                },
-                "model_info": {
-                    "loaded": True,
-                    "device": "cuda:0",
-                    "parameters": 2500000
-                }
-            }
-        }
+    model_config = ConfigDict(frozen=False)
+    
+    health: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Overall system health score (1.0=perfect, 0.0=critical)"
     )
     
-    status: Literal["healthy", "degraded", "unhealthy"] = Field(
+    degradation: float = Field(
         ...,
-        description="Overall health status"
-    )
-    version: str = Field(..., description="Service version")
-    uptime_seconds: float = Field(..., ge=0, description="Service uptime")
-    components: Dict[str, ComponentHealth] = Field(
-        ...,
-        description="Component health statuses"
-    )
-    system_metrics: Dict[str, float] = Field(
-        ...,
-        description="System resource metrics"
-    )
-    model_info: Dict[str, bool | str | int] = Field(
-        ...,
-        description="Model information"
-    )
-
-
-# ==================== PREDICTIONS ====================
-
-class HealthPrediction(BaseModel):
-    """Прогноз здоровья оборудования."""
-    
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "score": 0.87,
-                "status": "healthy"
-            }
-        }
+        ge=0.0,
+        le=1.0,
+        description="System degradation rate (0.0=stable, 1.0=rapid degradation)"
     )
     
-    score: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
+    rul_hours: float = Field(
         ...,
-        description="Health score (0-1, higher=better)"
-    )
-    status: Literal["healthy", "warning", "critical"] = Field(
-        default="healthy",
-        description="Health status category"
-    )
-
-
-class DegradationPrediction(BaseModel):
-    """Прогноз деградации."""
-    
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "rate": 0.12,
-                "time_to_failure_hours": 733.3
-            }
-        }
+        ge=0.0,
+        description="Remaining useful life in hours until predicted failure"
     )
     
-    rate: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
-        ...,
-        description="Degradation rate (0-1, higher=faster degradation)"
-    )
-    time_to_failure_hours: float | None = Field(
-        default=None,
-        ge=0,
-        description="Estimated time to failure (hours)"
-    )
-
-
-class Anomaly(BaseModel):
-    """Обнаруженная аномалия."""
-    
-    anomaly_type: AnomalyType = Field(..., description="Anomaly type")
-    confidence: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
-        ...,
-        description="Detection confidence"
-    )
-    severity: Literal["low", "medium", "high"] = Field(
-        default="medium",
-        description="Anomaly severity"
-    )
-
-
-class AnomalyPrediction(BaseModel):
-    """Прогноз аномалий."""
-    
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "predictions": {
-                    "pressure_drop": 0.05,
-                    "overheating": 0.03,
-                    "cavitation": 0.02,
-                    "leakage": 0.01,
-                    "vibration_anomaly": 0.01,
-                    "flow_restriction": 0.01,
-                    "contamination": 0.01,
-                    "seal_degradation": 0.01,
-                    "valve_stiction": 0.01
-                },
-                "detected_anomalies": []
-            }
-        }
-    )
-    
-    predictions: Dict[str, float] = Field(
-        ...,
-        description="Anomaly probabilities (9 types)"
-    )
-    detected_anomalies: List[Anomaly] = Field(
-        default_factory=list,
-        description="Detected anomalies (threshold exceeded)"
+    anomalies: Dict[str, float] = Field(
+        default_factory=dict,
+        description="System-level anomaly probabilities per type"
     )
 
 
 class PredictionResponse(BaseModel):
-    """Ответ на прогноз для одной единицы оборудования."""
+    """Multi-level prediction response.
     
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "equipment_id": "exc_001",
-                "health": {"score": 0.87, "status": "healthy"},
-                "degradation": {"rate": 0.12, "time_to_failure_hours": 733.3},
-                "anomaly": {
-                    "predictions": {
-                        "pressure_drop": 0.05,
-                        "overheating": 0.03
-                    },
-                    "detected_anomalies": []
-                },
-                "inference_time_ms": 45.3
-            }
-        }
-    )
+    Nested structure with component-level and graph-level predictions.
     
-    equipment_id: str = Field(..., description="Equipment ID")
-    health: HealthPrediction = Field(..., description="Health prediction")
-    degradation: DegradationPrediction = Field(..., description="Degradation prediction")
-    anomaly: AnomalyPrediction = Field(..., description="Anomaly predictions")
-    inference_time_ms: float = Field(..., ge=0, description="Inference time (ms)")
-
-
-class BatchPredictionResponse(BaseModel):
-    """Ответ на batch прогноз."""
+    Attributes:
+        request_id: Unique request identifier
+        equipment_id: Equipment identifier
+        timestamp: Prediction timestamp
+        component: Component-level predictions
+        graph: Graph-level predictions
+        model_version: Model version used
+        inference_time_ms: Inference latency
     
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "predictions": [],
-                "total_count": 10,
-                "total_time_ms": 234.5
-            }
-        }
-    )
+    Examples:
+        >>> response = PredictionResponse(
+        ...     request_id="req_123",
+        ...     equipment_id="excavator_42",
+        ...     timestamp=datetime.now(),
+        ...     component=[
+        ...         ComponentPrediction(
+        ...             component_id="pump_01",
+        ...             component_type="pump",
+        ...             health=0.85,
+        ...             anomalies={"cavitation": 0.12}
+        ...         )
+        ...     ],
+        ...     graph=GraphPrediction(
+        ...         health=0.78,
+        ...         degradation=0.22,
+        ...         rul_hours=450.5,
+        ...         anomalies={"pressure_drop": 0.15}
+        ...     ),
+        ...     model_version="v2.0.0",
+        ...     inference_time_ms=120.5
+        ... )
+    """
     
-    predictions: List[PredictionResponse] = Field(
+    model_config = ConfigDict(frozen=False)
+    
+    request_id: str = Field(
         ...,
-        description="List of predictions"
+        description="Unique request identifier"
     )
-    total_count: int = Field(..., ge=0, description="Total predictions")
-    total_time_ms: float = Field(..., ge=0, description="Total time (ms)")
-
-
-# ==================== LEGACY RESPONSES ====================
-
-class InferenceResponse(BaseModel):
-    """Ответ на inference запрос."""
     
-    model_config = ConfigDict(strict=True)
+    equipment_id: str = Field(
+        ...,
+        description="Equipment identifier"
+    )
     
-    equipment_id: str = Field(..., description="Equipment ID")
-    health_score: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
-        ...,
-        description="Health score"
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Prediction timestamp (UTC)"
     )
-    degradation_rate: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
-        ...,
-        description="Degradation rate"
-    )
-    anomalies: List[str] = Field(
+    
+    component: List[ComponentPrediction] = Field(
         default_factory=list,
-        description="Detected anomalies"
+        description="Component-level predictions (per-node)"
     )
-    inference_time_ms: float = Field(..., ge=0, description="Inference time")
+    
+    graph: GraphPrediction = Field(
+        ...,
+        description="Graph-level predictions (entire equipment)"
+    )
+    
+    model_version: str = Field(
+        ...,
+        description="Model version used for inference",
+        examples=["v2.0.0", "v2.1.0"]
+    )
+    
+    inference_time_ms: float = Field(
+        ...,
+        ge=0.0,
+        description="Inference latency in milliseconds"
+    )
+    
+    # Optional metadata
+    confidence: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Overall prediction confidence"
+    )
+    
+    warnings: List[str] = Field(
+        default_factory=list,
+        description="Any warnings or notes about the prediction"
+    )
 
 
-class TrainingResponse(BaseModel):
-    """Ответ на training запрос."""
+class ModelInfo(BaseModel):
+    """Model information and metadata.
     
-    model_config = ConfigDict(strict=True)
+    Attributes:
+        version: Model version
+        architecture: Model architecture name
+        num_parameters: Total trainable parameters
+        input_features: Expected input feature dimension
+        output_structure: Output structure description
+        training_date: When model was trained
+        metrics: Model performance metrics
+    """
     
-    model_path: str = Field(..., description="Path to trained model")
-    final_train_loss: float = Field(..., description="Final training loss")
-    final_val_loss: float = Field(..., description="Final validation loss")
-    epochs_completed: int = Field(..., ge=0, description="Epochs completed")
-    training_time_seconds: float = Field(..., ge=0, description="Training time")
+    model_config = ConfigDict(frozen=False)
+    
+    version: str = Field(
+        ...,
+        description="Model version (semantic versioning)",
+        examples=["v2.0.0"]
+    )
+    
+    architecture: str = Field(
+        ...,
+        description="Model architecture name",
+        examples=["UniversalTemporalGNN"]
+    )
+    
+    num_parameters: int = Field(
+        ...,
+        ge=0,
+        description="Total trainable parameters"
+    )
+    
+    input_features: int = Field(
+        ...,
+        ge=1,
+        description="Expected input node feature dimension"
+    )
+    
+    output_structure: str = Field(
+        ...,
+        description="Output structure description",
+        examples=["multi-level: component + graph"]
+    )
+    
+    training_date: datetime | None = Field(
+        default=None,
+        description="Model training completion date"
+    )
+    
+    metrics: Dict[str, float] = Field(
+        default_factory=dict,
+        description="Model performance metrics"
+    )
+
+
+class HealthResponse(BaseModel):
+    """Service health check response.
+    
+    Attributes:
+        status: Service status (healthy/degraded/unhealthy)
+        timestamp: Health check timestamp
+        model_loaded: Whether model is loaded
+        gpu_available: Whether GPU is available
+        memory_usage_mb: Memory usage in MB
+        uptime_seconds: Service uptime
+    """
+    
+    model_config = ConfigDict(frozen=False)
+    
+    status: str = Field(
+        ...,
+        description="Service status",
+        examples=["healthy", "degraded", "unhealthy"]
+    )
+    
+    timestamp: datetime = Field(
+        default_factory=datetime.utcnow,
+        description="Health check timestamp (UTC)"
+    )
+    
+    model_loaded: bool = Field(
+        ...,
+        description="Whether model is loaded and ready"
+    )
+    
+    gpu_available: bool = Field(
+        ...,
+        description="Whether GPU is available for inference"
+    )
+    
+    memory_usage_mb: float = Field(
+        ...,
+        ge=0.0,
+        description="Current memory usage in MB"
+    )
+    
+    uptime_seconds: float = Field(
+        ...,
+        ge=0.0,
+        description="Service uptime in seconds"
+    )
+    
+    details: Dict[str, any] = Field(
+        default_factory=dict,
+        description="Additional health check details"
+    )

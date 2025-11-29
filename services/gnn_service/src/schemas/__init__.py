@@ -1,69 +1,19 @@
 """Schema exports."""
 
-from .graph import (
-    ComponentType,
-    EdgeType,
-    ComponentSpec,
-    EdgeSpec,
-    GraphTopology,
-    EquipmentMetadata,
-)
-from .requests import (
-    TimeWindow,
-    PredictionRequest,
-    BatchPredictionRequest,
-    InferenceRequest,
-    BatchInferenceRequest,
-    TrainingRequest,
-)
+from .requests import InferenceRequest
 from .responses import (
-    ComponentStatus,
-    AnomalyType,
-    HealthCheckResponse,
-    HealthPrediction,
-    DegradationPrediction,
-    AnomalyPrediction,
     PredictionResponse,
-    BatchPredictionResponse,
-    ComponentHealth,
-    Anomaly,
-    InferenceResponse,
-    TrainingResponse,
-)
-from .models import (
+    ComponentPrediction,
+    GraphPrediction,
     ModelInfo,
-    ModelVersion,
+    HealthResponse,
 )
 
 __all__ = [
-    # Graph schemas
-    "ComponentType",
-    "EdgeType",
-    "ComponentSpec",
-    "EdgeSpec",
-    "GraphTopology",
-    "EquipmentMetadata",
-    # Request schemas
-    "TimeWindow",
-    "PredictionRequest",
-    "BatchPredictionRequest",
     "InferenceRequest",
-    "BatchInferenceRequest",
-    "TrainingRequest",
-    # Response schemas
-    "ComponentStatus",
-    "AnomalyType",
-    "HealthCheckResponse",
-    "HealthPrediction",
-    "DegradationPrediction",
-    "AnomalyPrediction",
     "PredictionResponse",
-    "BatchPredictionResponse",
-    "ComponentHealth",
-    "Anomaly",
-    "InferenceResponse",
-    "TrainingResponse",
-    # Model schemas
+    "ComponentPrediction",
+    "GraphPrediction",
     "ModelInfo",
-    "ModelVersion",
+    "HealthResponse",
 ]
