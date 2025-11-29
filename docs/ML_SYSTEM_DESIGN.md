@@ -1,6 +1,6 @@
 # Hydraulic Diagnostics GNN - ML System Design
 
-**Version:** 2.0  
+**Version:** 2.1  
 **Last Updated:** 2025-11-29  
 **Status:** Production-Ready Architecture  
 
@@ -146,7 +146,7 @@ rul_hours: Tensor[B, 1]  # ∈ [0, ∞)
 
 # 4. Anomaly Detection (Multi-Label Classification)
 anomaly_flags: Tensor[B, 9]  # ∈ {0, 1}^9
-  # 9 anomaly types (see below)
+  # 9 anomaly types (see Section 2.4)
   # Loss: FocalLoss (handles class imbalance)
   # Metric: F1, Precision, Recall, AUC-ROC per class
 ```
@@ -199,6 +199,205 @@ edge_leakage: Tensor[E, 1]  # ∈ [0, 1]
 edge_blockage: Tensor[E, 1]  # ∈ [0, 1]
   # Flow restriction indicator
 ```
+
+### 2.4 Hydraulic Domain Knowledge
+
+#### Fault Symptom Mapping
+
+Mapping physical faults to observable sensor patterns. This knowledge guides feature engineering and weak label generation.
+
+| Fault Type | Key Observable Symptoms | Relevant Sensors | Feature Priority |
+|------------|-------------------------|------------------|------------------|
+| **Cavitation** (pumps/cylinders) | - "Gravelly" / burbling noise<br>- Increased vibration<br>- Pressure pulsations<br>- Flow rate drop (5-10%+) | Acoustic<br>Vibration<br>Pressure<br>Flow | High |
+| **Leakage** (external/internal) | - Pressure drop during holding<br>- Actuator drift/creep<br>- Reduced efficiency<br>- Oil film/puddles | Pressure<br>Position<br>Flow<br>Visual | High |
+| **Contamination** (fluid) | - Particle count increase (ISO 4406)<br>- Viscosity change<br>- Oil darkening<br>- Accelerated component wear | Oil analysis<br>Filter ΔP<br>Temperature<br>Wear debris | Critical |
+| **Overheating** / Thermal stress | - Oil/component temp above baseline<br>- Motor current increase<br>- Viscosity loss<br>- Seal degradation acceleration | Temperature<br>Current<br>Oil condition | High |
+| **Flow restriction** / Blockage | - Pressure drop increase across section<br>- Flow rate decrease<br>- Actuator slowdown<br>- Filter differential pressure rise | Pressure (ΔP)<br>Flow<br>Position<br>Filter sensor | Medium |
+| **Valve stiction** | - Non-smooth / jerky flow<br>- Switching delay<br>- Pressure spikes on transitions<br>- Unstable positioning | Pressure<br>Flow<br>Position<br>Current | Medium |
+| **Bearing / mechanical wear** | - Vibration increase (specific frequencies)<br>- Noise increase<br>- Temperature rise<br>- Pump/motor efficiency drop | Vibration<br>Acoustic<br>Temperature<br>Current | High |
+
+**References:**
+- Cavitation: [gesrepair.com](https://gesrepair.com/signs-of-cavitation-in-hydraulic-systems/), [machinerylubrication.com](https://www.machinerylubrication.com/Read/531/hydraulic-root-causes)
+- Leakage: [supremeintegratedtechnology.com](https://supremeintegratedtechnology.com/blog/hydraulic-system)
+- Contamination: [reliamag.com](https://reliamag.com/cartoons/hydraulic-maintenance-inspection-checklist/)
+- Maintenance practices: [hidroman.com.tr](https://www.hidroman.com.tr/icerik/predictive-maintenance-for-hydraulic-systems?dil=en), [waites.net](https://waites.net/a-guide-to-predictive-maintenance)
+
+#### Feature Engineering Guidelines
+
+**Vibration Decomposition:**
+```python
+# Decompose into frequency bands for bearing diagnostics
+vibration_features = [
+    'bearing_band_energy',      # Specific bearing frequencies
+    'harmonics_1x_2x_3x',       # Shaft speed harmonics
+    'high_frequency_noise',     # Cavitation/turbulence
+    'rms_overall',              # Overall vibration level
+    'peak_to_peak',             # Impact events
+]
+```
+
+**Pressure/Flow Dynamics:**
+```python
+# Delta features between connected nodes
+edge_features_dynamic = [
+    'pressure_differential',    # ΔP across connection
+    'flow_rate',                # Actual flow
+    'pressure_pulsation',       # Oscillation amplitude
+    'flow_restriction_index',   # Expected vs actual ΔP
+]
+```
+
+**Temperature Gradients:**
+```python
+# Thermal features
+temperature_features = [
+    'temperature_rise',         # Δ from baseline
+    'temperature_gradient',     # Spatial Δ between nodes
+    'thermal_time_constant',    # Rate of temp change
+]
+```
+
+**Oil Condition Indicators:**
+```python
+# Fluid health features
+oil_features = [
+    'particle_count_iso4406',   # Contamination level
+    'viscosity_deviation',      # From nominal
+    'acid_number_trend',        # Degradation indicator
+    'water_content',            # Moisture contamination
+]
+```
+
+#### Weak Label Generation
+
+Use domain rules to create weak labels when expert annotations are limited:
+
+**Example: Cavitation Detection Rule**
+```python
+def detect_cavitation_symptoms(
+    acoustic_rms: float,
+    vibration_rms: float,
+    pressure_std: float,
+    flow_drop_pct: float,
+    thresholds: dict
+) -> float:
+    """Weak label for cavitation based on domain rules.
+    
+    Returns:
+        Cavitation probability [0, 1]
+    """
+    score = 0.0
+    
+    # Acoustic signature (gravelly noise)
+    if acoustic_rms > thresholds['acoustic_high']:
+        score += 0.3
+    
+    # Vibration increase
+    if vibration_rms > thresholds['vibration_high']:
+        score += 0.3
+    
+    # Pressure pulsations
+    if pressure_std > thresholds['pressure_pulsation']:
+        score += 0.2
+    
+    # Flow rate drop
+    if flow_drop_pct > 5.0:  # >5% drop
+        score += 0.2
+    
+    return min(score, 1.0)
+```
+
+**Example: Leakage Detection Rule**
+```python
+def detect_leakage_symptoms(
+    pressure_hold_drop: float,
+    actuator_drift_rate: float,
+    efficiency_drop_pct: float,
+    thresholds: dict
+) -> float:
+    """Weak label for leakage.
+    
+    Returns:
+        Leakage probability [0, 1]
+    """
+    score = 0.0
+    
+    # Pressure drop during holding
+    if pressure_hold_drop > thresholds['pressure_drop_per_min']:
+        score += 0.4
+    
+    # Actuator drift/creep
+    if actuator_drift_rate > thresholds['drift_rate']:
+        score += 0.4
+    
+    # Efficiency loss
+    if efficiency_drop_pct > 10.0:  # >10% drop
+        score += 0.2
+    
+    return min(score, 1.0)
+```
+
+#### Integration Strategy
+
+**Hybrid GNN + Rule-Based Approach:**
+
+1. **GNN Primary Prediction:**
+   - Learn end-to-end from data
+   - Capture complex patterns
+   - Multi-level outputs
+
+2. **Rule-Based Auxiliary:**
+   - Domain-grounded interpretability
+   - Weak label generation for training
+   - Confidence boosting for high-priority faults
+
+3. **Ensemble Strategy:**
+```python
+def ensemble_prediction(
+    gnn_output: dict,
+    rule_scores: dict,
+    ensemble_weight: float = 0.7
+) -> dict:
+    """Combine GNN and rule-based predictions.
+    
+    Args:
+        gnn_output: Neural network predictions
+        rule_scores: Domain rule scores
+        ensemble_weight: Weight for GNN (0.7 = 70% GNN, 30% rules)
+    
+    Returns:
+        Combined predictions with confidence
+    """
+    combined = {}
+    
+    for anomaly_type in gnn_output['anomalies']:
+        gnn_score = gnn_output['anomalies'][anomaly_type]
+        rule_score = rule_scores.get(anomaly_type, 0.0)
+        
+        # Weighted combination
+        combined_score = (
+            ensemble_weight * gnn_score +
+            (1 - ensemble_weight) * rule_score
+        )
+        
+        # Confidence: agreement between GNN and rules
+        confidence = 1.0 - abs(gnn_score - rule_score)
+        
+        combined[anomaly_type] = {
+            'score': combined_score,
+            'confidence': confidence,
+            'gnn_contribution': gnn_score,
+            'rule_contribution': rule_score
+        }
+    
+    return combined
+```
+
+**Benefits:**
+- Improved interpretability (can explain *why* system flagged anomaly)
+- Bootstrapping with weak labels when data is limited
+- Safety layer: rules can override GNN for critical faults
+- Confidence estimation: high when GNN and rules agree
 
 ---
 
@@ -668,6 +867,32 @@ Availability:
    - https://ijarsct.co.in/Paper19379.pdf
    - Leakage and wear detection
 
+### Hydraulic Domain Knowledge
+
+8. **Predictive Maintenance for Hydraulic Systems**
+   - https://www.hidroman.com.tr/icerik/predictive-maintenance-for-hydraulic-systems?dil=en
+   - Pressure, flow, temperature monitoring
+
+9. **Cavitation Diagnosis**
+   - https://gesrepair.com/signs-of-cavitation-in-hydraulic-systems/
+   - https://www.machinerylubrication.com/Read/531/hydraulic-root-causes
+   - Acoustic signatures and symptoms
+
+10. **Hydraulic System Maintenance**
+    - https://waites.net/a-guide-to-predictive-maintenance
+    - https://reliamag.com/cartoons/hydraulic-maintenance-inspection-checklist/
+    - Temperature, oil condition, contamination
+
+11. **Condition Monitoring Algorithms**
+    - https://www.neuralconcept.com/post/predictive-maintenance-algorithms-for-better-efficiency
+    - https://treon.fi/2025/09/01/condition-monitoring-predictive-maintenance-a-guide/
+    - Vibration analysis, current monitoring
+
+12. **Hydraulic Failure Modes**
+    - https://supremeintegratedtechnology.com/blog/hydraulic-system
+    - https://www.saiyihydraulic.com/what-are-the-symptoms-of-a-hydraulic-valve-failure/
+    - Leakage, valve stiction, wear patterns
+
 ### Frameworks & Tools
 
 - **PyTorch 2.8** - https://pytorch.org/
@@ -677,6 +902,6 @@ Availability:
 
 ---
 
-**Document Version:** 2.0  
+**Document Version:** 2.1  
 **Last Updated:** 2025-11-29  
 **Next Review:** 2025-12-15
