@@ -1,8 +1,9 @@
 """PyTorch Lightning module for hydraulic GNN training.
 
 LightningModule wrapper for UniversalTemporalGNN with:
-- Multi-task learning (health, degradation, anomaly)
-- Advanced loss functions (Focal, Wing)
+- Multi-level predictions (component + graph)
+- Multi-task learning (health, degradation, anomaly, RUL)
+- Advanced loss functions (Focal, Wing, Quantile)
 - Uncertainty weighting
 - Automatic optimization
 - Metric tracking
@@ -23,7 +24,7 @@ from torch.optim import Adam, AdamW
 from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingLR
 
 from src.models import UniversalTemporalGNN
-from .losses import FocalLoss, WingLoss, MultiTaskLoss
+from .losses import FocalLoss, WingLoss, QuantileRULLoss, UncertaintyWeighting
 
 
 class HydraulicGNNModule(pl.LightningModule):
@@ -31,8 +32,9 @@ class HydraulicGNNModule(pl.LightningModule):
     
     Wraps UniversalTemporalGNN with Lightning training infrastructure:
     - Automatic optimization
-    - Multi-task loss computation
-    - Advanced losses (Focal, Wing)
+    - Multi-level loss computation (component + graph)
+    - Multi-task learning (health, degradation, anomaly, RUL)
+    - Advanced losses (Focal, Wing, Quantile)
     - Metric tracking
     - Learning rate scheduling
     
@@ -70,6 +72,7 @@ class HydraulicGNNModule(pl.LightningModule):
         loss_weights: Dict[str, float] | None = None,
         use_focal_loss: bool = True,
         use_wing_loss: bool = True,
+        use_quantile_rul: bool = True,
         **kwargs
     ):
         """Initialize Lightning module.
@@ -88,6 +91,7 @@ class HydraulicGNNModule(pl.LightningModule):
             loss_weights: Task loss weights (if fixed)
             use_focal_loss: Use FocalLoss for anomaly
             use_wing_loss: Use WingLoss for regression
+            use_quantile_rul: Use QuantileRULLoss for RUL
             **kwargs: Additional model arguments
         """
         super().__init__()
@@ -113,18 +117,29 @@ class HydraulicGNNModule(pl.LightningModule):
         self.scheduler_type = scheduler_type
         self.loss_weighting = loss_weighting
         
-        # Loss functions
-        health_loss = WingLoss() if use_wing_loss else nn.MSELoss()
-        degradation_loss = WingLoss() if use_wing_loss else nn.MSELoss()
-        anomaly_loss = FocalLoss(gamma=2.0) if use_focal_loss else nn.BCEWithLogitsLoss()
+        # === Graph-Level Loss Functions ===
+        self.graph_health_loss = WingLoss() if use_wing_loss else nn.MSELoss()
+        self.graph_degradation_loss = WingLoss() if use_wing_loss else nn.MSELoss()
+        self.graph_anomaly_loss = FocalLoss(gamma=2.0) if use_focal_loss else nn.BCEWithLogitsLoss()
+        self.graph_rul_loss = QuantileRULLoss() if use_quantile_rul else nn.MSELoss()
         
-        self.multi_task_loss = MultiTaskLoss(
-            health_loss=health_loss,
-            degradation_loss=degradation_loss,
-            anomaly_loss=anomaly_loss,
-            weighting=loss_weighting,
-            loss_weights=loss_weights
-        )
+        # === Component-Level Loss Functions ===
+        self.component_health_loss = WingLoss() if use_wing_loss else nn.MSELoss()
+        self.component_anomaly_loss = FocalLoss(gamma=2.0) if use_focal_loss else nn.BCEWithLogitsLoss()
+        
+        # === Multi-Task Weighting ===
+        if loss_weighting == "fixed":
+            self.loss_weights = loss_weights or {
+                "graph_health": 1.0,
+                "graph_degradation": 1.0,
+                "graph_anomaly": 1.0,
+                "graph_rul": 1.0,
+                "component_health": 0.5,
+                "component_anomaly": 0.5,
+            }
+        elif loss_weighting == "uncertainty":
+            # 6 tasks: 4 graph + 2 component
+            self.uncertainty_weighter = UncertaintyWeighting(num_tasks=6)
     
     def forward(
         self,
@@ -132,8 +147,8 @@ class HydraulicGNNModule(pl.LightningModule):
         edge_index: torch.Tensor,
         edge_attr: torch.Tensor,
         batch: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Forward pass.
+    ) -> Dict[str, Dict[str, torch.Tensor]]:
+        """Forward pass with multi-level predictions.
         
         Args:
             x: Node features [N, F]
@@ -142,11 +157,95 @@ class HydraulicGNNModule(pl.LightningModule):
             batch: Batch assignment [N]
         
         Returns:
-            health: Health predictions [B, 1]
-            degradation: Degradation predictions [B, 1]
-            anomaly: Anomaly logits [B, 9]
+            Nested dict:
+            {
+                'component': {'health': [N, 1], 'anomaly': [N, 9]},
+                'graph': {'health': [B, 1], 'degradation': [B, 1], 
+                          'anomaly': [B, 9], 'rul': [B, 1]}
+            }
         """
         return self.model(x, edge_index, edge_attr, batch)
+    
+    def compute_loss(
+        self,
+        outputs: Dict[str, Dict[str, torch.Tensor]],
+        batch: Any
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+        """Compute multi-level multi-task loss.
+        
+        Args:
+            outputs: Model outputs (nested dict)
+            batch: Batch data with targets
+        
+        Returns:
+            total_loss: Combined loss
+            loss_dict: Individual losses
+        """
+        # === Graph-Level Losses ===
+        graph_health_loss = self.graph_health_loss(
+            outputs['graph']['health'],
+            batch.y_graph_health
+        )
+        
+        graph_degradation_loss = self.graph_degradation_loss(
+            outputs['graph']['degradation'],
+            batch.y_graph_degradation
+        )
+        
+        graph_anomaly_loss = self.graph_anomaly_loss(
+            outputs['graph']['anomaly'],
+            batch.y_graph_anomaly
+        )
+        
+        graph_rul_loss = self.graph_rul_loss(
+            outputs['graph']['rul'],
+            batch.y_graph_rul
+        )
+        
+        # === Component-Level Losses ===
+        component_health_loss = self.component_health_loss(
+            outputs['component']['health'],
+            batch.y_component_health
+        )
+        
+        component_anomaly_loss = self.component_anomaly_loss(
+            outputs['component']['anomaly'],
+            batch.y_component_anomaly
+        )
+        
+        # === Combine Losses ===
+        if self.loss_weighting == "fixed":
+            total_loss = (
+                self.loss_weights["graph_health"] * graph_health_loss +
+                self.loss_weights["graph_degradation"] * graph_degradation_loss +
+                self.loss_weights["graph_anomaly"] * graph_anomaly_loss +
+                self.loss_weights["graph_rul"] * graph_rul_loss +
+                self.loss_weights["component_health"] * component_health_loss +
+                self.loss_weights["component_anomaly"] * component_anomaly_loss
+            )
+        elif self.loss_weighting == "uncertainty":
+            losses = {
+                "graph_health": graph_health_loss,
+                "graph_degradation": graph_degradation_loss,
+                "graph_anomaly": graph_anomaly_loss,
+                "graph_rul": graph_rul_loss,
+                "component_health": component_health_loss,
+                "component_anomaly": component_anomaly_loss,
+            }
+            total_loss = self.uncertainty_weighter(losses)
+        
+        # Loss dict for logging
+        loss_dict = {
+            "graph_health": graph_health_loss,
+            "graph_degradation": graph_degradation_loss,
+            "graph_anomaly": graph_anomaly_loss,
+            "graph_rul": graph_rul_loss,
+            "component_health": component_health_loss,
+            "component_anomaly": component_anomaly_loss,
+            "total": total_loss,
+        }
+        
+        return total_loss, loss_dict
     
     def training_step(
         self,
@@ -163,35 +262,34 @@ class HydraulicGNNModule(pl.LightningModule):
             loss: Total loss
         """
         # Forward pass
-        health_pred, degradation_pred, anomaly_logits = self(
+        outputs = self(
             x=batch.x,
             edge_index=batch.edge_index,
             edge_attr=batch.edge_attr,
             batch=batch.batch
         )
         
-        # Compute multi-task loss
-        total_loss, loss_dict = self.multi_task_loss(
-            health_pred=health_pred,
-            degradation_pred=degradation_pred,
-            anomaly_logits=anomaly_logits,
-            health_true=batch.y_health,
-            degradation_true=batch.y_degradation,
-            anomaly_true=batch.y_anomaly
-        )
+        # Compute loss
+        total_loss, loss_dict = self.compute_loss(outputs, batch)
         
         # Log metrics
-        self.log("train/health_loss", loss_dict["health"], prog_bar=False)
-        self.log("train/degradation_loss", loss_dict["degradation"], prog_bar=False)
-        self.log("train/anomaly_loss", loss_dict["anomaly"], prog_bar=False)
+        self.log("train/graph_health_loss", loss_dict["graph_health"], prog_bar=False)
+        self.log("train/graph_degradation_loss", loss_dict["graph_degradation"], prog_bar=False)
+        self.log("train/graph_anomaly_loss", loss_dict["graph_anomaly"], prog_bar=False)
+        self.log("train/graph_rul_loss", loss_dict["graph_rul"], prog_bar=False)
+        self.log("train/component_health_loss", loss_dict["component_health"], prog_bar=False)
+        self.log("train/component_anomaly_loss", loss_dict["component_anomaly"], prog_bar=False)
         self.log("train/total_loss", total_loss, prog_bar=True)
         
         # Log uncertainty weights if using uncertainty weighting
         if self.loss_weighting == "uncertainty":
-            log_vars = self.multi_task_loss.uncertainty_weighter.log_vars
-            self.log("train/weight_health", torch.exp(-log_vars[0]))
-            self.log("train/weight_degradation", torch.exp(-log_vars[1]))
-            self.log("train/weight_anomaly", torch.exp(-log_vars[2]))
+            log_vars = self.uncertainty_weighter.log_vars
+            self.log("train/weight_graph_health", torch.exp(-log_vars[0]))
+            self.log("train/weight_graph_degradation", torch.exp(-log_vars[1]))
+            self.log("train/weight_graph_anomaly", torch.exp(-log_vars[2]))
+            self.log("train/weight_graph_rul", torch.exp(-log_vars[3]))
+            self.log("train/weight_component_health", torch.exp(-log_vars[4]))
+            self.log("train/weight_component_anomaly", torch.exp(-log_vars[5]))
         
         return total_loss
     
@@ -210,27 +308,23 @@ class HydraulicGNNModule(pl.LightningModule):
             loss: Total loss
         """
         # Forward pass
-        health_pred, degradation_pred, anomaly_logits = self(
+        outputs = self(
             x=batch.x,
             edge_index=batch.edge_index,
             edge_attr=batch.edge_attr,
             batch=batch.batch
         )
         
-        # Compute multi-task loss
-        total_loss, loss_dict = self.multi_task_loss(
-            health_pred=health_pred,
-            degradation_pred=degradation_pred,
-            anomaly_logits=anomaly_logits,
-            health_true=batch.y_health,
-            degradation_true=batch.y_degradation,
-            anomaly_true=batch.y_anomaly
-        )
+        # Compute loss
+        total_loss, loss_dict = self.compute_loss(outputs, batch)
         
         # Log metrics
-        self.log("val/health_loss", loss_dict["health"], prog_bar=False)
-        self.log("val/degradation_loss", loss_dict["degradation"], prog_bar=False)
-        self.log("val/anomaly_loss", loss_dict["anomaly"], prog_bar=False)
+        self.log("val/graph_health_loss", loss_dict["graph_health"], prog_bar=False)
+        self.log("val/graph_degradation_loss", loss_dict["graph_degradation"], prog_bar=False)
+        self.log("val/graph_anomaly_loss", loss_dict["graph_anomaly"], prog_bar=False)
+        self.log("val/graph_rul_loss", loss_dict["graph_rul"], prog_bar=False)
+        self.log("val/component_health_loss", loss_dict["component_health"], prog_bar=False)
+        self.log("val/component_anomaly_loss", loss_dict["component_anomaly"], prog_bar=False)
         self.log("val/total_loss", total_loss, prog_bar=True)
         
         return total_loss
@@ -250,27 +344,23 @@ class HydraulicGNNModule(pl.LightningModule):
             loss: Total loss
         """
         # Forward pass
-        health_pred, degradation_pred, anomaly_logits = self(
+        outputs = self(
             x=batch.x,
             edge_index=batch.edge_index,
             edge_attr=batch.edge_attr,
             batch=batch.batch
         )
         
-        # Compute multi-task loss
-        total_loss, loss_dict = self.multi_task_loss(
-            health_pred=health_pred,
-            degradation_pred=degradation_pred,
-            anomaly_logits=anomaly_logits,
-            health_true=batch.y_health,
-            degradation_true=batch.y_degradation,
-            anomaly_true=batch.y_anomaly
-        )
+        # Compute loss
+        total_loss, loss_dict = self.compute_loss(outputs, batch)
         
         # Log metrics
-        self.log("test/health_loss", loss_dict["health"])
-        self.log("test/degradation_loss", loss_dict["degradation"])
-        self.log("test/anomaly_loss", loss_dict["anomaly"])
+        self.log("test/graph_health_loss", loss_dict["graph_health"])
+        self.log("test/graph_degradation_loss", loss_dict["graph_degradation"])
+        self.log("test/graph_anomaly_loss", loss_dict["graph_anomaly"])
+        self.log("test/graph_rul_loss", loss_dict["graph_rul"])
+        self.log("test/component_health_loss", loss_dict["component_health"])
+        self.log("test/component_anomaly_loss", loss_dict["component_anomaly"])
         self.log("test/total_loss", total_loss)
         
         return total_loss
