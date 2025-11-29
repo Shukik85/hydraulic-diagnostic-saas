@@ -3,6 +3,7 @@
 Tests for:
 - FocalLoss
 - WingLoss
+- QuantileRULLoss
 - UncertaintyWeighting
 - MultiTaskLoss
 """
@@ -14,6 +15,7 @@ import torch.nn as nn
 from src.training.losses import (
     FocalLoss,
     WingLoss,
+    QuantileRULLoss,
     UncertaintyWeighting,
     MultiTaskLoss,
 )
@@ -131,6 +133,79 @@ class TestWingLoss:
         assert loss_mean.shape == torch.Size([])
         assert loss_sum.shape == torch.Size([])
         assert loss_none.shape == torch.Size([8, 1])
+
+
+class TestQuantileRULLoss:
+    """Tests for QuantileRULLoss."""
+    
+    def test_quantile_rul_loss_basic(self):
+        """Test basic quantile RUL loss computation."""
+        loss_fn = QuantileRULLoss(quantiles=[0.1, 0.5, 0.9])
+        
+        pred = torch.randn(32, 1).abs() * 100  # Positive RUL
+        target = torch.randn(32, 1).abs() * 100
+        
+        loss = loss_fn(pred, target)
+        
+        assert isinstance(loss, torch.Tensor)
+        assert loss.shape == torch.Size([])
+        assert loss.item() >= 0
+    
+    def test_quantile_rul_asymmetric_penalty(self):
+        """Test asymmetric penalties (underestimation > overestimation)."""
+        loss_fn = QuantileRULLoss(quantiles=[0.9])  # Heavy penalty for underestimation
+        
+        # Underestimation: predict 50, true 100 (predict too early)
+        pred_under = torch.tensor([[50.0]])
+        target_under = torch.tensor([[100.0]])
+        loss_under = loss_fn(pred_under, target_under)
+        
+        # Overestimation: predict 100, true 50 (predict too late)
+        pred_over = torch.tensor([[100.0]])
+        target_over = torch.tensor([[50.0]])
+        loss_over = loss_fn(pred_over, target_over)
+        
+        # Underestimation should be penalized more
+        # With q=0.9: under penalty = 0.9 * 50 = 45
+        #              over penalty = 0.1 * 50 = 5
+        assert loss_under > loss_over
+        assert loss_under / loss_over > 5.0  # ~9x penalty
+    
+    def test_quantile_rul_log_normalization(self):
+        """Test with log-normalized targets."""
+        loss_fn = QuantileRULLoss()
+        
+        pred = torch.randn(16, 1).abs() * 100
+        target = torch.randn(16, 1).abs() * 100
+        
+        # Log-normalize
+        pred_log = torch.log1p(pred)
+        target_log = torch.log1p(target)
+        
+        loss = loss_fn(pred_log, target_log)
+        
+        assert isinstance(loss, torch.Tensor)
+        assert loss.item() >= 0
+    
+    def test_quantile_rul_multiple_quantiles(self):
+        """Test with multiple quantiles."""
+        loss_fn = QuantileRULLoss(quantiles=[0.1, 0.5, 0.9])
+        
+        pred = torch.randn(8, 1).abs() * 50
+        target = torch.randn(8, 1).abs() * 50
+        
+        loss = loss_fn(pred, target)
+        
+        assert isinstance(loss, torch.Tensor)
+        assert loss.item() >= 0
+    
+    def test_quantile_rul_invalid_quantile(self):
+        """Test that invalid quantiles raise error."""
+        with pytest.raises(ValueError):
+            QuantileRULLoss(quantiles=[0.0, 0.5, 1.0])  # 0 and 1 invalid
+        
+        with pytest.raises(ValueError):
+            QuantileRULLoss(quantiles=[-0.1, 0.5])  # Negative invalid
 
 
 class TestUncertaintyWeighting:

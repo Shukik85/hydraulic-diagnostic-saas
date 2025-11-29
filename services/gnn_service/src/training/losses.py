@@ -4,6 +4,7 @@ Custom losses:
 - FocalLoss - Handles class imbalance in anomaly detection
 - WingLoss - Robust regression for health/degradation
 - UncertaintyWeighting - Dynamic multi-task weighting
+- QuantileRULLoss - Asymmetric RUL prediction
 - MultiTaskLoss - Combined loss wrapper
 
 Python 3.14 Features:
@@ -154,6 +155,109 @@ class WingLoss(nn.Module):
             self.omega * torch.log(1 + delta / self.epsilon),
             delta - self.C
         )
+        
+        # Reduction
+        if self.reduction == "mean":
+            return loss.mean()
+        elif self.reduction == "sum":
+            return loss.sum()
+        else:
+            return loss
+
+
+class QuantileRULLoss(nn.Module):
+    """Quantile loss for RUL (Remaining Useful Life) prediction.
+    
+    Asymmetric loss that penalizes underestimation (predicting too early failure)
+    more heavily than overestimation (predicting too late failure).
+    
+    This is critical for maintenance planning where:
+    - Underestimating RUL → unexpected failure (costly, dangerous)
+    - Overestimating RUL → early maintenance (less costly, safer)
+    
+    Args:
+        quantiles: List of quantiles to optimize (default: [0.1, 0.5, 0.9])
+        reduction: Loss reduction strategy
+    
+    References:
+        - Quantile Regression for RUL: https://openreview.net/forum?id=tzFjcVqmxw
+        - Multi-Task ST-GNN: https://arxiv.org/pdf/2401.15964.pdf
+    
+    Examples:
+        >>> loss_fn = QuantileRULLoss(quantiles=[0.1, 0.5, 0.9])
+        >>> pred = torch.randn(32, 1).abs() * 100  # Predicted hours
+        >>> target = torch.randn(32, 1).abs() * 100  # True hours
+        >>> loss = loss_fn(pred, target)
+        
+        # With log-normalization (recommended)
+        >>> pred_log = torch.log1p(pred)
+        >>> target_log = torch.log1p(target)
+        >>> loss = loss_fn(pred_log, target_log)
+    """
+    
+    def __init__(
+        self,
+        quantiles: list[float] = [0.1, 0.5, 0.9],
+        reduction: Literal["mean", "sum", "none"] = "mean"
+    ):
+        super().__init__()
+        
+        # Validate quantiles
+        for q in quantiles:
+            if not 0 < q < 1:
+                raise ValueError(f"Quantile must be in (0, 1), got {q}")
+        
+        self.quantiles = quantiles
+        self.reduction = reduction
+    
+    def forward(
+        self,
+        pred: torch.Tensor,
+        target: torch.Tensor
+    ) -> torch.Tensor:
+        """Compute quantile loss.
+        
+        Args:
+            pred: Predicted RUL [B, 1] (can be log-normalized)
+            target: True RUL [B, 1] (can be log-normalized)
+        
+        Returns:
+            loss: Quantile loss scalar or [B, 1]
+        
+        Formula:
+            For each quantile q:
+                L_q = max(q * (target - pred), (q - 1) * (target - pred))
+            
+            Total loss = mean over all quantiles
+        
+        Effect:
+            - If pred < target (underestimation):
+                penalty = q * error
+            - If pred > target (overestimation):
+                penalty = (1 - q) * error
+            
+            With q = 0.9:
+                underestimation penalty = 0.9 * error
+                overestimation penalty = 0.1 * error
+                → Underestimation penalized 9x more!
+        """
+        losses = []
+        
+        for q in self.quantiles:
+            # Error: positive if underestimated, negative if overestimated
+            error = target - pred
+            
+            # Quantile loss (asymmetric)
+            quantile_loss = torch.max(
+                q * error,
+                (q - 1) * error
+            )
+            
+            losses.append(quantile_loss)
+        
+        # Stack and average over quantiles
+        stacked_losses = torch.stack(losses, dim=0)  # [num_quantiles, B, 1]
+        loss = stacked_losses.mean(dim=0)  # [B, 1]
         
         # Reduction
         if self.reduction == "mean":
