@@ -83,7 +83,7 @@ export default defineNuxtConfig({
     ],
     defaultLocale: 'ru',
     strategy: 'no_prefix',
-    langDir: 'locales/',
+    langDir: 'i18n/locales',
     lazy: true,
     detectBrowserLanguage: {
       useCookie: true,
@@ -137,13 +137,17 @@ export default defineNuxtConfig({
     host: 'localhost',
   },
 
+  // Правильная настройка auto-imports
   imports: {
-    dirs: ['composables/**', 'utils/**', 'types/**', 'stores/**'],
+    dirs: [
+      'composables',
+      'utils',
+      'stores',
+    ],
   },
 
   experimental: {
     typescriptBundlerResolution: true,
     granularCachedData: true,
-    purgeCachedData: true,
   },
 });
