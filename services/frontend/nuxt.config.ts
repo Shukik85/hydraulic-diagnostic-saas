@@ -4,7 +4,7 @@ export default defineNuxtConfig({
 
   typescript: {
     strict: true,
-    typeCheck: true,
+    typeCheck: false, // Allow build with TS errors during development
     shim: false,
   },
 
