@@ -1,27 +1,159 @@
+# Docker Compose for GNN Service
+# Python 3.14.0 + PyTorch 2.8.0 + CUDA 12.8
+
 version: '3.8'
+
 services:
-  gnn_service:
-    build: .
+  # ==================== Development Service ====================
+  gnn-service-dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: gnn-service-dev
+    ports:
+      - "8002:8002"  # FastAPI
+      - "6006:6006"  # TensorBoard
+    volumes:
+      # Hot reload - mount source code
+      - ./src:/app/src:rw
+      - ./api:/app/api:rw
+      - ./tests:/app/tests:rw
+      # Data directories
+      - ./data:/app/data:rw
+      - ./models:/app/models:rw
+      - ./logs:/app/logs:rw
+      - ./checkpoints:/app/checkpoints:rw
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - MODEL_PATH=/app/models/best.ckpt
+      - METADATA_PATH=/app/data/equipment_metadata.json
+      - DATABASE_URL=postgresql://postgres:postgres@timescaledb:5432/hydraulic_db
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==================== Production Service ====================
+  gnn-service-prod:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gnn-service-prod
     ports:
       - "8002:8002"
     volumes:
+      # Read-only data mounts for production
       - ./data:/app/data:ro
       - ./models:/app/models:ro
-      - ./logs:/app/logs
+      # Write access only for logs and checkpoints
+      - ./logs:/app/logs:rw
+      - ./checkpoints:/app/checkpoints:rw
     environment:
-      - MODEL_PATH=/app/models/universal_dynamic_best.ckpt
-      - METADATA_PATH=/app/data/equipment_metadata_full.json
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - MODEL_PATH=/app/models/production/best.ckpt
+      - METADATA_PATH=/app/data/equipment_metadata.json
+      - DATABASE_URL=postgresql://postgres:postgres@timescaledb:5432/hydraulic_db
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
     depends_on:
-      - timescaledb
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          cpus: '4'
+          memory: 16G
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==================== TimescaleDB ====================
   timescaledb:
-    image: timescale/timescaledb:latest-pg14
+    image: timescale/timescaledb:latest-pg16
+    container_name: timescaledb
     environment:
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=hydraulic_db
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== Redis ====================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== TensorBoard (Dev only) ====================
+  tensorboard:
+    profiles: ["dev"]
+    image: tensorflow/tensorflow:latest
+    container_name: tensorboard
+    command: tensorboard --logdir=/logs --host=0.0.0.0 --port=6006
+    ports:
+      - "6007:6006"  # Use 6007 to avoid conflict with gnn-service-dev
+    volumes:
+      - ./logs:/logs:ro
+    restart: unless-stopped
+
 volumes:
   pgdata:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  default:
+    name: gnn-network
+    driver: bridge
