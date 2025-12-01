@@ -14,42 +14,43 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     '@nuxt/icon',
     '@vueuse/nuxt',
-    'nuxt-security',
+    // 'nuxt-security', // Temporarily disabled - setHeader error on 404 pages
   ],
 
-  security: {
-    headers: {
-      crossOriginResourcePolicy: 'same-origin',
-      referrerPolicy: 'strict-origin-when-cross-origin',
-      xContentTypeOptions: 'nosniff',
-      xFrameOptions: 'SAMEORIGIN',
-      strictTransportSecurity: 'max-age=31536000; includeSubDomains; preload',
-      xssProtection: '1; mode=block',
-    },
-    csp: {
-      enabled: true,
-      hashAlgorithm: 'sha256',
-      policies: {
-        'default-src': ["'self'"],
-        'script-src': ["'self'", 'https://cdn.jsdelivr.net'],
-        'style-src': ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
-        'img-src': ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
-        'font-src': ["'self'", 'https://fonts.gstatic.com'],
-        'connect-src': [
-          "'self'",
-          'http://localhost:8000',
-          'ws://localhost:8000',
-          'https://api.hydraulic-diagnostics.com',
-          'wss://api.hydraulic-diagnostics.com',
-        ],
-        'frame-ancestors': ["'self'"],
-      },
-    },
-    rateLimiter: {
-      tokensPerInterval: 100,
-      interval: 'minute',
-    },
-  },
+  // Security configuration disabled temporarily
+  // security: {
+  //   headers: {
+  //     crossOriginResourcePolicy: 'same-origin',
+  //     referrerPolicy: 'strict-origin-when-cross-origin',
+  //     xContentTypeOptions: 'nosniff',
+  //     xFrameOptions: 'SAMEORIGIN',
+  //     strictTransportSecurity: 'max-age=31536000; includeSubDomains; preload',
+  //     xssProtection: '1; mode=block',
+  //   },
+  //   csp: {
+  //     enabled: true,
+  //     hashAlgorithm: 'sha256',
+  //     policies: {
+  //       'default-src': ["'self'"],
+  //       'script-src': ["'self'", 'https://cdn.jsdelivr.net'],
+  //       'style-src': ["'self'", 'https://fonts.googleapis.com', "'unsafe-inline'"],
+  //       'img-src': ["'self'", 'data:', 'https://cdn.jsdelivr.net'],
+  //       'font-src': ["'self'", 'https://fonts.gstatic.com'],
+  //       'connect-src': [
+  //         "'self'",
+  //         'http://localhost:8000',
+  //         'ws://localhost:8000',
+  //         'https://api.hydraulic-diagnostics.com',
+  //         'wss://api.hydraulic-diagnostics.com',
+  //       ],
+  //       'frame-ancestors': ["'self'"],
+  //     },
+  //   },
+  //   rateLimiter: {
+  //     tokensPerInterval: 100,
+  //     interval: 'minute',
+  //   },
+  // },
 
   css: ['~/assets/css/main.css'],
 
@@ -115,7 +116,7 @@ export default defineNuxtConfig({
     },
     routeRules: {
       '/': { swr: 3600 },
-      '/dashboard': { ssr: true, swr: 600 },
+      '/admin/dashboard': { ssr: true, swr: 600 }, // Fixed: /dashboard -> /admin/dashboard
       '/diagnosis/**': { ssr: false },
       '/api/**': { cors: true, headers: { 'cache-control': 'max-age=300' } },
     },
