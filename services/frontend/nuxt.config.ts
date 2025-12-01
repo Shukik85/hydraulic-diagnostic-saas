@@ -53,13 +53,6 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  postcss: {
-    plugins: {
-      tailwindcss: {},
-      autoprefixer: {},
-    },
-  },
-
   vite: {
     optimizeDeps: {
       include: ['echarts/core', 'echarts/charts', 'echarts/components', 'vue-echarts'],
@@ -83,7 +76,7 @@ export default defineNuxtConfig({
     ],
     defaultLocale: 'ru',
     strategy: 'no_prefix',
-    langDir: 'i18n/locales',
+    langDir: 'locales',
     lazy: true,
     detectBrowserLanguage: {
       useCookie: true,
@@ -137,13 +130,9 @@ export default defineNuxtConfig({
     host: 'localhost',
   },
 
-  // Правильная настройка auto-imports
+  // Auto-imports configuration
   imports: {
-    dirs: [
-      'composables',
-      'utils',
-      'stores',
-    ],
+    dirs: ['composables', 'utils', 'stores', 'types'],
   },
 
   experimental: {
