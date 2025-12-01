@@ -20,7 +20,7 @@
     "@nuxt/icon": "^2.1.0",
     "@nuxt/image": "^2.0.0",
     "@pinia/nuxt": "^0.11.3",
-    "@vueuse/core": "^14.0.0",
+    "@vueuse/core": "^14.1.0",
     "@vueuse/nuxt": "^14.0.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
