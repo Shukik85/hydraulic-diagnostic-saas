@@ -15,7 +15,6 @@
     "isolatedModules": true,
     "moduleResolution": "bundler",
     "types": [
-      "@nuxt/types",
       "@types/node",
       "vitest/globals"
     ]
