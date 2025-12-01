@@ -43,7 +43,7 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
-        project: './tsconfig.json',
+        project: './.nuxt/tsconfig.json', // Nuxt 4 auto-generated
       },
     },
     rules: {
