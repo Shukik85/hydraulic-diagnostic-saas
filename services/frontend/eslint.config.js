@@ -21,8 +21,11 @@ export default [
       'coverage',
       'cypress/videos',
       'cypress/screenshots',
-      '*.config.js',
-      '*.config.ts',
+      // Specific config files that don't need linting
+      'tailwind.config.ts',
+      'vitest.config.ts',
+      'cypress.config.ts',
+      'prettier.config.js',
     ],
   },
 
@@ -47,10 +50,13 @@ export default [
       // TypeScript strict rules
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/explicit-function-return-type': ['warn', {
-        allowExpressions: true,
-        allowTypedFunctionExpressions: true,
-      }],
+      '@typescript-eslint/explicit-function-return-type': [
+        'warn',
+        {
+          allowExpressions: true,
+          allowTypedFunctionExpressions: true,
+        },
+      ],
       '@typescript-eslint/no-non-null-assertion': 'warn',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/no-floating-promises': 'error',
@@ -77,7 +83,7 @@ export default [
     },
     rules: {
       ...vue.configs['vue3-recommended'].rules,
-      
+
       // Vue 3 specific
       'vue/multi-word-component-names': 'off',
       'vue/no-v-html': 'warn',
@@ -85,15 +91,18 @@ export default [
       'vue/require-prop-types': 'error',
       'vue/component-name-in-template-casing': ['error', 'PascalCase'],
       'vue/block-lang': ['error', { script: { lang: 'ts' } }],
-      'vue/define-macros-order': ['error', {
-        order: ['defineOptions', 'defineProps', 'defineEmits', 'defineSlots'],
-      }],
-      
+      'vue/define-macros-order': [
+        'error',
+        {
+          order: ['defineOptions', 'defineProps', 'defineEmits', 'defineSlots'],
+        },
+      ],
+
       // Accessibility
       'vue/html-button-has-type': 'error',
       'vue/no-static-inline-styles': 'warn',
       'vue/prefer-true-attribute-shorthand': 'error',
-      
+
       // Performance
       'vue/no-setup-props-destructure': 'error',
       'vue/no-ref-object-destructure': 'error',
@@ -106,18 +115,14 @@ export default [
       import: importPlugin,
     },
     rules: {
-      'import/order': ['error', {
-        groups: [
-          'builtin',
-          'external',
-          'internal',
-          ['parent', 'sibling'],
-          'index',
-          'type',
-        ],
-        'newlines-between': 'always',
-        alphabetize: { order: 'asc', caseInsensitive: true },
-      }],
+      'import/order': [
+        'error',
+        {
+          groups: ['builtin', 'external', 'internal', ['parent', 'sibling'], 'index', 'type'],
+          'newlines-between': 'always',
+          alphabetize: { order: 'asc', caseInsensitive: true },
+        },
+      ],
       'import/no-duplicates': 'error',
       'import/no-unresolved': 'off', // Handled by TypeScript
       'import/named': 'off', // Handled by TypeScript
