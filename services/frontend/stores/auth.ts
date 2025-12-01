@@ -123,7 +123,7 @@ export const useAuthStore = defineStore('auth', {
     setTokens(tokens: AuthTokens): void {
       this.tokens = tokens;
       // Persist to localStorage
-      if (typeof window !== 'undefined') {
+      if (import.meta.client) {
         localStorage.setItem('auth_tokens', JSON.stringify(tokens));
       }
     },
@@ -136,7 +136,7 @@ export const useAuthStore = defineStore('auth', {
       this.tokens = null;
       this.error = null;
       // Clear from localStorage
-      if (typeof window !== 'undefined') {
+      if (import.meta.client) {
         localStorage.removeItem('auth_tokens');
       }
     },
@@ -240,7 +240,7 @@ export const useAuthStore = defineStore('auth', {
      * Initialize auth from localStorage
      */
     async init(): Promise<void> {
-      if (typeof window === 'undefined') return;
+      if (!import.meta.client) return;
 
       const stored = localStorage.getItem('auth_tokens');
       if (!stored) return;
@@ -260,6 +260,14 @@ export const useAuthStore = defineStore('auth', {
         console.error('Failed to initialize auth:', error);
         this.clearAuth();
       }
+    },
+
+    /**
+     * Restore session from localStorage (alias for init)
+     * Called from app.vue on mount
+     */
+    async restoreSession(): Promise<void> {
+      await this.init();
     },
   },
 });

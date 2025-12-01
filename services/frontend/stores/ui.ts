@@ -37,6 +37,10 @@ export const useUiStore = defineStore('ui', {
   actions: {
     toggleSidebar() {
       this.isSidebarOpen = !this.isSidebarOpen;
+      // Persist to localStorage
+      if (import.meta.client) {
+        localStorage.setItem('sidebar_open', JSON.stringify(this.isSidebarOpen));
+      }
     },
 
     toggleMobileSidebar() {
@@ -94,15 +98,15 @@ export const useUiStore = defineStore('ui', {
       this.theme = theme;
       
       // Apply theme to document
-      if (theme === 'auto') {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        document.documentElement.setAttribute('data-color-scheme', prefersDark ? 'dark' : 'light');
-      } else {
-        document.documentElement.setAttribute('data-color-scheme', theme);
-      }
-      
-      // Save to localStorage
       if (import.meta.client) {
+        if (theme === 'auto') {
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-color-scheme', prefersDark ? 'dark' : 'light');
+        } else {
+          document.documentElement.setAttribute('data-color-scheme', theme);
+        }
+        
+        // Save to localStorage
         localStorage.setItem('theme', theme);
       }
     },
@@ -115,6 +119,31 @@ export const useUiStore = defineStore('ui', {
         } else {
           // Default to auto
           this.setTheme('auto');
+        }
+      }
+    },
+
+    /**
+     * Restore theme from localStorage (alias for initTheme)
+     * Called from app.vue on mount
+     */
+    restoreTheme() {
+      this.initTheme();
+    },
+
+    /**
+     * Restore sidebar state from localStorage
+     * Called from app.vue on mount
+     */
+    restoreSidebar() {
+      if (import.meta.client) {
+        const saved = localStorage.getItem('sidebar_open');
+        if (saved !== null) {
+          try {
+            this.isSidebarOpen = JSON.parse(saved);
+          } catch (error) {
+            console.error('Failed to parse sidebar state:', error);
+          }
         }
       }
     },
