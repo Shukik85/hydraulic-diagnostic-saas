@@ -1,0 +1,15 @@
+{
+  "common": {
+    "loading": "Загрузка...",
+    "error": "Ошибка",
+    "success": "Успешно"
+  },
+  "auth": {
+    "login": "Войти",
+    "logout": "Выйти"
+  },
+  "nav": {
+    "dashboard": "Панель",
+    "systems": "Системы"
+  }
+}
