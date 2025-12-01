@@ -14,24 +14,19 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "moduleResolution": "bundler",
-    "types": [
-      "@types/node",
-      "vitest/globals"
-    ],
+    "types": ["@types/node", "vitest/globals"],
     "paths": {
+      "~/*": ["./*"],
+      "@/*": ["./*"],
+      "#app": ["./.nuxt/app"],
+      "#app/*": ["./.nuxt/app/*"],
+      "#build": ["./.nuxt"],
+      "#build/*": ["./.nuxt/*"],
+      "#components": ["./.nuxt/components"],
+      "#components/*": ["./.nuxt/components/*"],
       "#imports": ["./.nuxt/imports.d.ts"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.vue",
-    ".nuxt/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    ".nuxt",
-    "dist",
-    ".output"
-  ]
+  "include": ["**/*.ts", "**/*.tsx", "**/*.vue", ".nuxt/**/*"],
+  "exclude": ["node_modules", ".nuxt", "dist", ".output"]
 }
