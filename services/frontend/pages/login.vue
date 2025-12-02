@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+
 import { loginSchema } from '~/utils/validation';
 
 definePageMeta({
@@ -48,10 +49,8 @@ const handleSubmit = async (): Promise<void> => {
   isLoading.value = true;
 
   try {
-    await authStore.login({
-      email: email.value,
-      password: password.value,
-    });
+    // auth.login принимает два отдельных параметра: email и password
+    await authStore.login(email.value, password.value);
 
     toast.success('Login successful', 'Welcome back!');
     await navigateTo('/dashboard');
