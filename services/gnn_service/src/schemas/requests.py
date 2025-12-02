@@ -9,7 +9,7 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import List, Dict, Any, Annotated, Literal
+from typing import List, Dict, Any, Annotated, Literal, Optional
 from datetime import datetime
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
@@ -83,7 +83,270 @@ class TimeWindow(BaseModel):
         return self.duration_seconds / 3600.0
 
 
-# ==================== API Request Schemas ====================
+# ============================================================================
+# Level 1 API: Minimal Inference Request (Progressive Enhancement)
+# ============================================================================
+
+class ComponentSensorReading(BaseModel):
+    """Minimal sensor readings per component.
+    
+    Only essential sensor data required. Dynamic edge features are
+    auto-computed from these readings.
+    
+    Attributes:
+        pressure_bar: Pressure in bar (required)
+        temperature_c: Temperature in °C (required)
+        vibration_g: Vibration in g (optional)
+        flow_rate_lpm: Flow rate in L/min (optional, if flow meter available)
+        rpm: RPM for pumps/motors (optional)
+    
+    Examples:
+        >>> reading = ComponentSensorReading(
+        ...     pressure_bar=150.2,
+        ...     temperature_c=65.3,
+        ...     vibration_g=0.8
+        ... )
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "pressure_bar": 150.2,
+                "temperature_c": 65.3,
+                "vibration_g": 0.8,
+                "rpm": 1450
+            }
+        }
+    )
+    
+    pressure_bar: float = Field(
+        ...,
+        ge=0,
+        le=1000,
+        description="Pressure in bar"
+    )
+    
+    temperature_c: float = Field(
+        ...,
+        ge=-20,
+        le=150,
+        description="Temperature in °C"
+    )
+    
+    vibration_g: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=50,
+        description="Vibration level in g (optional)"
+    )
+    
+    flow_rate_lpm: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=1000,
+        description="Flow rate in L/min (optional, from flow meter if available)"
+    )
+    
+    rpm: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=10000,
+        description="RPM for pumps/motors (optional)"
+    )
+
+
+class EdgeOverride(BaseModel):
+    """Optional edge feature overrides for advanced users.
+    
+    Allows expert users to provide measured values instead of auto-computed.
+    Only provided fields override auto-computation.
+    
+    Attributes:
+        flow_rate_lpm: Override flow rate (from flow meter)
+        pressure_drop_bar: Override pressure drop
+        temperature_delta_c: Override temperature delta
+        vibration_level_g: Override vibration level
+    
+    Examples:
+        >>> override = EdgeOverride(
+        ...     flow_rate_lpm=118.2  # From flow meter
+        ... )
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "flow_rate_lpm": 118.2
+            }
+        }
+    )
+    
+    flow_rate_lpm: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Override flow rate with measured value"
+    )
+    
+    pressure_drop_bar: Optional[float] = Field(
+        default=None,
+        description="Override pressure drop"
+    )
+    
+    temperature_delta_c: Optional[float] = Field(
+        default=None,
+        description="Override temperature delta"
+    )
+    
+    vibration_level_g: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Override vibration level"
+    )
+
+
+class MinimalInferenceRequest(BaseModel):
+    """Level 1 API: Minimal inference request.
+    
+    Simplest possible inference API. Only requires:
+    1. Equipment ID
+    2. Timestamp
+    3. Sensor readings per component
+    4. Topology ID (pre-configured)
+    
+    All dynamic edge features are auto-computed from sensor readings.
+    
+    Attributes:
+        equipment_id: Unique equipment identifier
+        timestamp: Timestamp of sensor readings
+        sensor_readings: Dict of {component_id: ComponentSensorReading}
+        topology_id: Pre-configured topology identifier
+    
+    Examples:
+        >>> request = MinimalInferenceRequest(
+        ...     equipment_id="pump_system_01",
+        ...     timestamp=datetime.now(),
+        ...     sensor_readings={
+        ...         "pump_1": ComponentSensorReading(
+        ...             pressure_bar=150.2,
+        ...             temperature_c=65.3,
+        ...             vibration_g=0.8
+        ...         ),
+        ...         "valve_1": ComponentSensorReading(
+        ...             pressure_bar=148.1,
+        ...             temperature_c=64.8
+        ...         )
+        ...     },
+        ...     topology_id="standard_pump_system"
+        ... )
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "equipment_id": "pump_system_01",
+                "timestamp": "2025-12-03T00:00:00Z",
+                "sensor_readings": {
+                    "pump_1": {
+                        "pressure_bar": 150.2,
+                        "temperature_c": 65.3,
+                        "vibration_g": 0.8,
+                        "rpm": 1450
+                    },
+                    "valve_1": {
+                        "pressure_bar": 148.1,
+                        "temperature_c": 64.8
+                    },
+                    "filter_1": {
+                        "pressure_bar": 145.0,
+                        "temperature_c": 66.0
+                    }
+                },
+                "topology_id": "standard_pump_system"
+            }
+        }
+    )
+    
+    equipment_id: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="Unique equipment identifier"
+    )
+    
+    timestamp: datetime = Field(
+        ...,
+        description="Timestamp of sensor readings (ISO 8601)"
+    )
+    
+    sensor_readings: Dict[str, ComponentSensorReading] = Field(
+        ...,
+        min_length=1,
+        description="Sensor readings per component {component_id: reading}"
+    )
+    
+    topology_id: str = Field(
+        default="default",
+        description="Pre-configured topology identifier"
+    )
+
+
+class AdvancedInferenceRequest(MinimalInferenceRequest):
+    """Level 3 API: Advanced inference request with overrides.
+    
+    Extends MinimalInferenceRequest with optional overrides for expert users.
+    Allows providing measured values (e.g., from flow meters) instead of
+    auto-computed values.
+    
+    Attributes:
+        edge_overrides: Optional edge feature overrides
+        custom_topology: Optional custom topology (for testing)
+    
+    Examples:
+        >>> request = AdvancedInferenceRequest(
+        ...     equipment_id="pump_system_01",
+        ...     timestamp=datetime.now(),
+        ...     sensor_readings={...},
+        ...     topology_id="standard_pump_system",
+        ...     edge_overrides={
+        ...         "pump_1->valve_1": EdgeOverride(
+        ...             flow_rate_lpm=118.2  # From flow meter
+        ...         )
+        ...     }
+        ... )
+    """
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "equipment_id": "pump_system_01",
+                "timestamp": "2025-12-03T00:00:00Z",
+                "sensor_readings": {
+                    "pump_1": {"pressure_bar": 150.2, "temperature_c": 65.3}
+                },
+                "topology_id": "standard_pump_system",
+                "edge_overrides": {
+                    "pump_1->valve_1": {
+                        "flow_rate_lpm": 118.2
+                    }
+                }
+            }
+        }
+    )
+    
+    edge_overrides: Optional[Dict[str, EdgeOverride]] = Field(
+        default=None,
+        description="Optional edge feature overrides {edge_id: override}"
+    )
+    
+    custom_topology: Optional[dict] = Field(
+        default=None,
+        description="Optional custom topology (for testing/advanced use)"
+    )
+
+
+# ============================================================================
+# Legacy API Request Schemas (Backward Compatibility)
+# ============================================================================
 
 class PredictionRequest(BaseModel):
     """Single equipment prediction request.
@@ -173,8 +436,6 @@ class BatchPredictionRequest(BaseModel):
         description="List of prediction requests"
     )
 
-
-# ==================== Legacy Request Schemas ====================
 
 class InferenceRequest(BaseModel):
     """Запрос на inference для одной единицы оборудования.
