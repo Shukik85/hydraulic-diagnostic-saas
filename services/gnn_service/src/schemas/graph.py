@@ -10,7 +10,8 @@ Python 3.14 Features:
 
 from __future__ import annotations  # PEP 649: Deferred annotations
 
-from typing import Dict, List, Literal, Annotated
+from datetime import date, datetime
+from typing import Dict, List, Literal, Annotated, Optional
 from enum import Enum
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator, computed_field
@@ -25,6 +26,7 @@ class ComponentType(str, Enum):
     GEAR_PUMP = "gear_pump"
     PISTON_PUMP = "piston_pump"
     VANE_PUMP = "vane_pump"
+    PUMP = "pump"  # Generic alias
     
     # Клапаны
     HYDRAULIC_VALVE = "hydraulic_valve"
@@ -32,11 +34,13 @@ class ComponentType(str, Enum):
     PRESSURE_RELIEF_VALVE = "pressure_relief_valve"
     FLOW_CONTROL_VALVE = "flow_control_valve"
     CHECK_VALVE = "check_valve"
+    VALVE = "valve"  # Generic alias
     
     # Приводы
     HYDRAULIC_CYLINDER = "hydraulic_cylinder"
     HYDRAULIC_MOTOR = "hydraulic_motor"
     ROTARY_ACTUATOR = "rotary_actuator"
+    CYLINDER = "cylinder"  # Generic alias
     
     # Прочие
     ACCUMULATOR = "accumulator"
@@ -44,6 +48,15 @@ class ComponentType(str, Enum):
     RESERVOIR = "reservoir"
     HEAT_EXCHANGER = "heat_exchanger"
     MANIFOLD = "manifold"
+
+
+class EdgeMaterial(str, Enum):
+    """Материалы соединений."""
+    
+    STEEL = "steel"
+    RUBBER = "rubber"
+    COMPOSITE = "composite"
+    THERMOPLASTIC = "thermoplastic"
 
 
 class EdgeType(str, Enum):
@@ -60,10 +73,11 @@ class EdgeType(str, Enum):
 class EdgeSpec(BaseModel):
     """Edge specification для GATv2 edge-conditioned attention.
     
-    Содержит характеристики соединения между компонентами,
-    которые используются в GATv2 для модуляции attention weights.
+    Содержит статические и динамические характеристики соединения между 
+    компонентами. Динамические признаки (flow, pressure drop, etc.) могут быть
+    заполнены в runtime или вычислены автоматически из sensor data.
     
-    Attributes:
+    Static Attributes (from topology):
         source_id: ID исходного компонента
         target_id: ID целевого компонента
         edge_type: Тип соединения
@@ -74,20 +88,35 @@ class EdgeSpec(BaseModel):
         has_quick_disconnect: Наличие быстроразъёмного соединения
         material: Материал (steel, rubber, composite)
     
+    Dynamic Attributes (computed at inference):
+        flow_rate_lpm: Real-time flow rate (L/min)
+        pressure_drop_bar: Pressure drop across connection (bar)
+        temperature_delta_c: Temperature difference (°C)
+        vibration_level_g: Average vibration level (g)
+        age_hours: Operating hours since installation
+        last_maintenance_date: Date of last maintenance
+    
     Examples:
+        >>> # Static configuration (from topology)
         >>> edge = EdgeSpec(
         ...     source_id="pump_001",
         ...     target_id="valve_001",
         ...     edge_type=EdgeType.HIGH_PRESSURE_HOSE,
         ...     diameter_mm=16.0,
         ...     length_m=2.5,
-        ...     pressure_rating_bar=350
+        ...     pressure_rating_bar=350,
+        ...     material=EdgeMaterial.STEEL
         ... )
+        >>> 
+        >>> # With dynamic features (at inference)
+        >>> edge.flow_rate_lpm = 115.3
+        >>> edge.pressure_drop_bar = 2.1
+        >>> edge.temperature_delta_c = 1.5
     """
     
     model_config = ConfigDict(
         strict=True,
-        frozen=True,
+        frozen=False,  # Changed from True to allow dynamic field updates
         use_enum_values=True,
         json_schema_extra={
             "example": {
@@ -99,10 +128,21 @@ class EdgeSpec(BaseModel):
                 "pressure_rating_bar": 350,
                 "flow_direction": "bidirectional",
                 "has_quick_disconnect": False,
-                "material": "steel"
+                "material": "steel",
+                # Dynamic fields (optional)
+                "flow_rate_lpm": 115.3,
+                "pressure_drop_bar": 2.1,
+                "temperature_delta_c": 1.5,
+                "vibration_level_g": 0.3,
+                "age_hours": 12500.0,
+                "last_maintenance_date": "2024-06-01"
             }
         }
     )
+    
+    # ========================================================================
+    # STATIC FIELDS (from topology configuration)
+    # ========================================================================
     
     source_id: str = Field(
         ...,
@@ -126,14 +166,14 @@ class EdgeSpec(BaseModel):
     diameter_mm: float = Field(
         ...,
         gt=0,
-        le=100,
+        le=500,
         description="Внутренний диаметр гидролинии (мм)"
     )
     
     length_m: float = Field(
         ...,
         gt=0,
-        le=100,
+        le=1000,
         description="Длина соединения (метры)"
     )
     
@@ -154,10 +194,51 @@ class EdgeSpec(BaseModel):
         description="Наличие быстроразъёмного соединения"
     )
     
-    material: Literal["steel", "rubber", "composite", "thermoplastic"] = Field(
-        default="steel",
+    material: EdgeMaterial = Field(
+        default=EdgeMaterial.STEEL,
         description="Материал гидролинии"
     )
+    
+    # ========================================================================
+    # DYNAMIC FIELDS (computed at inference time)
+    # ========================================================================
+    
+    flow_rate_lpm: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Real-time flow rate (L/min). Computed from sensors if not provided."
+    )
+    
+    pressure_drop_bar: Optional[float] = Field(
+        default=None,
+        description="Pressure drop across connection (bar). Computed from ΔP = P_source - P_target."
+    )
+    
+    temperature_delta_c: Optional[float] = Field(
+        default=None,
+        description="Temperature difference across connection (°C). Computed from ΔT = T_source - T_target."
+    )
+    
+    vibration_level_g: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Average vibration level at connection (g). Computed from adjacent sensors."
+    )
+    
+    age_hours: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="Connection age in operating hours. Computed from install_date if available."
+    )
+    
+    last_maintenance_date: Optional[date] = Field(
+        default=None,
+        description="Date of last maintenance. Used to compute maintenance_score [0, 1]."
+    )
+    
+    # ========================================================================
+    # COMPUTED PROPERTIES (static)
+    # ========================================================================
     
     @computed_field
     @property
@@ -180,6 +261,55 @@ class EdgeSpec(BaseModel):
         }
         factor = material_factors.get(self.material, 1.0)
         return factor * self.length_m / (self.diameter_mm ** 4)
+    
+    # ========================================================================
+    # DYNAMIC METHODS
+    # ========================================================================
+    
+    def get_age_hours(self, current_time: datetime) -> float:
+        """Get connection age in hours.
+        
+        Returns age_hours if set, otherwise 0 (unknown age).
+        For topology-based age computation, see EdgeConfiguration.get_age_hours().
+        
+        Args:
+            current_time: Current timestamp
+        
+        Returns:
+            Age in hours (0 if unknown)
+        """
+        return self.age_hours if self.age_hours is not None else 0.0
+    
+    def get_maintenance_score(self, current_date: date | datetime) -> float:
+        """Compute maintenance score [0, 1].
+        
+        Score decays linearly from 1.0 (just maintained) to 0.0 (365+ days ago).
+        Returns 0.5 if no maintenance history (neutral).
+        
+        Args:
+            current_date: Current date/datetime
+        
+        Returns:
+            Maintenance score in [0, 1]
+        
+        Examples:
+            >>> edge = EdgeSpec(..., last_maintenance_date=date(2024, 6, 1))
+            >>> edge.get_maintenance_score(date(2024, 7, 1))  # 30 days ago
+            0.918  # ≈ 1.0 - 30/365
+            >>> edge.get_maintenance_score(date(2025, 6, 1))  # 365 days ago
+            0.0
+        """
+        if not self.last_maintenance_date:
+            return 0.5  # Unknown = neutral
+        
+        if isinstance(current_date, datetime):
+            current_date = current_date.date()
+        
+        days_since = (current_date - self.last_maintenance_date).days
+        
+        # Linear decay over 365 days
+        score = max(0.0, 1.0 - days_since / 365.0)
+        return score
 
 
 class ComponentSpec(BaseModel):
