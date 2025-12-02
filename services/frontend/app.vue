@@ -20,5 +20,8 @@ onMounted(() => {
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+    
+    <!-- Toast notifications -->
+    <SharedToastContainer />
   </div>
 </template>
