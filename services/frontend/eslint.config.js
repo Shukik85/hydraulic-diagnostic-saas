@@ -1,5 +1,5 @@
 // ESLint Configuration for Hydraulic Diagnostic SaaS
-// Strict TypeScript + Vue 3 + Import rules
+// Strict TypeScript + Vue 3 + Import rules + Nuxt Auto-imports
 
 import js from '@eslint/js';
 import typescript from '@typescript-eslint/eslint-plugin';
@@ -45,6 +45,66 @@ export default [
         sourceType: 'module',
         project: './.nuxt/tsconfig.json', // Nuxt 4 auto-generated
       },
+      globals: {
+        // Nuxt auto-imports (composables, utils)
+        definePageMeta: 'readonly',
+        defineNuxtComponent: 'readonly',
+        defineNuxtPlugin: 'readonly',
+        defineNuxtRouteMiddleware: 'readonly',
+        navigateTo: 'readonly',
+        abortNavigation: 'readonly',
+        useFetch: 'readonly',
+        useAsyncData: 'readonly',
+        useLazyFetch: 'readonly',
+        useLazyAsyncData: 'readonly',
+        useNuxtApp: 'readonly',
+        useRuntimeConfig: 'readonly',
+        useState: 'readonly',
+        useCookie: 'readonly',
+        useRequestHeaders: 'readonly',
+        useRequestEvent: 'readonly',
+        useRouter: 'readonly',
+        useRoute: 'readonly',
+        useSeoMeta: 'readonly',
+        useHead: 'readonly',
+        useError: 'readonly',
+        showError: 'readonly',
+        clearError: 'readonly',
+        createError: 'readonly',
+        useHydration: 'readonly',
+        callOnce: 'readonly',
+        // Vue auto-imports
+        ref: 'readonly',
+        computed: 'readonly',
+        reactive: 'readonly',
+        readonly: 'readonly',
+        watch: 'readonly',
+        watchEffect: 'readonly',
+        onMounted: 'readonly',
+        onBeforeMount: 'readonly',
+        onBeforeUnmount: 'readonly',
+        onUnmounted: 'readonly',
+        onUpdated: 'readonly',
+        onBeforeUpdate: 'readonly',
+        toRef: 'readonly',
+        toRefs: 'readonly',
+        unref: 'readonly',
+        isRef: 'readonly',
+        nextTick: 'readonly',
+        provide: 'readonly',
+        inject: 'readonly',
+        defineProps: 'readonly',
+        defineEmits: 'readonly',
+        defineExpose: 'readonly',
+        defineOptions: 'readonly',
+        defineSlots: 'readonly',
+        defineModel: 'readonly',
+        withDefaults: 'readonly',
+        // Custom auto-imports (composables, stores, utils)
+        useAuthStore: 'readonly',
+        useToast: 'readonly',
+        useApi: 'readonly',
+      },
     },
     rules: {
       // TypeScript strict rules
@@ -63,6 +123,8 @@ export default [
       '@typescript-eslint/await-thenable': 'error',
       '@typescript-eslint/no-misused-promises': 'error',
       '@typescript-eslint/require-await': 'warn',
+      // Disable no-undef for Nuxt auto-imports (TypeScript handles this)
+      'no-undef': 'off',
     },
   },
 
