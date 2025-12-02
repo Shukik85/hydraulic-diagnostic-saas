@@ -138,6 +138,34 @@ export default defineNuxtConfig({
     dirs: ['composables', 'utils', 'stores', 'types'],
   },
 
+  // Components auto-import configuration
+  components: [
+    {
+      path: '~/components/ui',
+      pathPrefix: false, // Import as <Button> not <UiButton>
+    },
+    {
+      path: '~/components/shared',
+      pathPrefix: false, // Import as <KpiCard> not <SharedKpiCard>
+    },
+    {
+      path: '~/components/diagnosis',
+      pathPrefix: false,
+    },
+    {
+      path: '~/components/admin',
+      pathPrefix: false,
+    },
+    {
+      path: '~/components/wizard',
+      pathPrefix: false,
+    },
+    {
+      path: '~/components', // Catch any other components in root
+      pathPrefix: false,
+    },
+  ],
+
   experimental: {
     typescriptBundlerResolution: true,
     granularCachedData: true,
