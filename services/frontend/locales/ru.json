@@ -40,9 +40,39 @@
   },
   "dashboard": {
     "title": "Панель управления",
-    "subtitle": "Обзор платформы и ключевые метрики",
+    "subtitle": "Добро пожаловать! Вот что происходит с вашими системами",
     "welcome": "Добро пожаловать",
-    "overview": "Обзор"
+    "overview": "Обзор",
+    "stats": {
+      "activeSystems": "Активные системы",
+      "activeSystemsDesc": "Все системы работают",
+      "allOk": "Всё ОК",
+      "activeAlerts": "Активные алерты",
+      "activeAlertsDesc": "Требуется внимание",
+      "systemUptime": "Время работы",
+      "systemUptimeDesc": "За последние 30 дней"
+    },
+    "quickActions": {
+      "title": "Быстрые действия",
+      "startDiagnosis": "Запустить диагностику",
+      "startDiagnosisDesc": "Выполнить анализ системы",
+      "manageSystems": "Управление системами",
+      "manageSystemsDesc": "Настроить устройства",
+      "viewReports": "Просмотр отчетов",
+      "viewReportsDesc": "История анализа",
+      "settings": "Настройки",
+      "settingsDesc": "Предпочтения"
+    },
+    "recentActivity": {
+      "title": "Недавняя активность",
+      "systemDiagnosed": "Диагностика системы #A24",
+      "alertPressure": "Алерт: Падение давления",
+      "reportGenerated": "Отчет сформирован",
+      "systemAdded": "Добавлена новая система",
+      "viewAll": "Вся активность",
+      "minutesAgo": "{count} минут назад",
+      "hoursAgo": "{count} часов назад"
+    }
   },
   "wizard": {
     "pageTitle": "Мастер метаданных",
