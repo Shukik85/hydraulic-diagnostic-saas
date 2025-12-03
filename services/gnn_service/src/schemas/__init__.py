@@ -28,7 +28,7 @@ from .metadata import (
     SystemConfig,
 )
 
-# Graph
+# Graph (removed ComponentRole - doesn't exist)
 from .graph import (
     GraphTopology,
     ComponentSpec,
@@ -36,7 +36,6 @@ from .graph import (
     EdgeType,
     EdgeMaterial,
     ComponentType,
-    ComponentRole,
 )
 
 # Topology
@@ -61,14 +60,13 @@ __all__ = [
     "SensorConfig",
     "SensorType",
     "SystemConfig",
-    # Graph
+    # Graph (no ComponentRole)
     "GraphTopology",
     "ComponentSpec",
     "EdgeSpec",
     "EdgeType",
     "EdgeMaterial",
     "ComponentType",
-    "ComponentRole",
     # Topology
     "TopologyTemplate",
 ]
