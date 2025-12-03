@@ -73,6 +73,7 @@ export default [
         createError: 'readonly',
         useHydration: 'readonly',
         callOnce: 'readonly',
+        useId: 'readonly',
         // Vue auto-imports
         ref: 'readonly',
         computed: 'readonly',
