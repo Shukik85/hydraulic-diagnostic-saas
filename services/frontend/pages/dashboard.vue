@@ -103,7 +103,7 @@ useSeoMeta({
               <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
                 Quick Actions
               </h2>
-              <Icon name="heroicons:lightning-bolt" class="h-5 w-5 text-primary-600 dark:text-primary-400" />
+              <Icon name="heroicons:bolt" class="h-5 w-5 text-primary-600 dark:text-primary-400" />
             </div>
             
             <div class="grid gap-4 sm:grid-cols-2">
