@@ -1,12 +1,31 @@
 <script setup lang="ts">
-const { locale, setLocale } = useI18n();
+import { computed } from 'vue';
 
 const languages = [
   { code: 'ru', label: 'RU', name: 'Русский' },
   { code: 'en', label: 'EN', name: 'English' },
 ];
 
+// Check if i18n is available
+let locale: any;
+let setLocale: any;
+
+try {
+  const i18n = useI18n();
+  locale = i18n.locale;
+  setLocale = i18n.setLocale;
+} catch (error) {
+  console.error('i18n not available:', error);
+  // Fallback to ref
+  locale = ref('ru');
+  setLocale = (code: string) => {
+    locale.value = code;
+    console.log('i18n not available, locale set to:', code);
+  };
+}
+
 const switchLanguage = (code: string) => {
+  console.log('Language switching:', locale.value, '->', code);
   setLocale(code);
 };
 </script>
