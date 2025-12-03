@@ -50,7 +50,7 @@ def load_edge_specifications(edge_specs_path: Path) -> Dict[str, EdgeSpec]:
         edge_id = f"{edge_data['source_id']}_to_{edge_data['target_id']}"
         
         # Parse material
-        material_str = edge_data['material'].lower()
+        material_str = edge_data.get('material', 'steel').lower()
         if material_str == 'steel':
             material = EdgeMaterial.STEEL
         elif material_str == 'rubber':
@@ -58,26 +58,24 @@ def load_edge_specifications(edge_specs_path: Path) -> Dict[str, EdgeSpec]:
         else:
             material = EdgeMaterial.COMPOSITE
         
-        # Parse edge type
-        edge_type_str = edge_data['edge_type'].lower()
-        if edge_type_str == 'pipe':
-            edge_type = EdgeType.PIPE
-        elif edge_type_str == 'hose':
-            edge_type = EdgeType.HOSE
+        # Parse edge type (use correct EdgeType enum values)
+        edge_type_str = edge_data.get('edge_type', 'hydraulic_line').lower()
+        if edge_type_str in ['pipe', 'hydraulic_line']:
+            edge_type = EdgeType.HYDRAULIC_LINE
+        elif edge_type_str in ['hose', 'high_pressure_hose']:
+            edge_type = EdgeType.HIGH_PRESSURE_HOSE
+        elif edge_type_str == 'low_pressure_return':
+            edge_type = EdgeType.LOW_PRESSURE_RETURN
+        elif edge_type_str == 'pilot_line':
+            edge_type = EdgeType.PILOT_LINE
+        elif edge_type_str == 'drain_line':
+            edge_type = EdgeType.DRAIN_LINE
+        elif edge_type_str == 'manifold_connection':
+            edge_type = EdgeType.MANIFOLD_CONNECTION
         else:
-            edge_type = EdgeType.PIPE  # Default
+            edge_type = EdgeType.HYDRAULIC_LINE  # Default
         
-        # Parse install date
-        install_date = None
-        if 'install_date' in edge_data:
-            try:
-                install_date = datetime.fromisoformat(
-                    edge_data['install_date'].replace('Z', '+00:00')
-                )
-            except:
-                pass
-        
-        # Create EdgeSpec
+        # Create EdgeSpec (only with fields that exist)
         edge_spec = EdgeSpec(
             source_id=edge_data['source_id'],
             target_id=edge_data['target_id'],
@@ -85,9 +83,7 @@ def load_edge_specifications(edge_specs_path: Path) -> Dict[str, EdgeSpec]:
             diameter_mm=edge_data['diameter_mm'],
             length_m=edge_data['length_m'],
             material=material,
-            pressure_rating_bar=edge_data.get('pressure_rating_bar', 300.0),
-            temperature_rating_c=edge_data.get('temperature_rating_c', 100.0),
-            install_date=install_date
+            pressure_rating_bar=edge_data.get('pressure_rating_bar', 300)
         )
         
         edge_specs[edge_id] = edge_spec
@@ -184,20 +180,18 @@ def convert_graph_to_14d(
                     diameter_mm=edge_spec_orig.diameter_mm,
                     length_m=edge_spec_orig.length_m,
                     material=edge_spec_orig.material,
-                    pressure_rating_bar=edge_spec_orig.pressure_rating_bar,
-                    temperature_rating_c=edge_spec_orig.temperature_rating_c,
-                    install_date=edge_spec_orig.install_date
+                    pressure_rating_bar=edge_spec_orig.pressure_rating_bar
                 )
             else:
                 # Default edge spec
                 edge_spec = EdgeSpec(
                     source_id=source_id,
                     target_id=target_id,
-                    edge_type=EdgeType.PIPE,
+                    edge_type=EdgeType.HYDRAULIC_LINE,
                     diameter_mm=20.0,
                     length_m=2.0,
                     material=EdgeMaterial.STEEL,
-                    pressure_rating_bar=300.0
+                    pressure_rating_bar=300
                 )
         
         # Compute dynamic features
