@@ -1,107 +1,110 @@
 # GNN Service Dependencies - Production Ready
-# Python 3.14.0 + PyTorch 2.9.1 + CUDA 12.9
+# Python 3.14.0 + PyTorch 2.9+ + CUDA 12.9 (optional)
 
 # === Core Framework ===
-fastapi==0.115.0
-uvicorn[standard]==0.31.0
-pydantic==2.9.0
-pydantic-settings==2.5.0
+fastapi>=0.115.0
+uvicorn[standard]>=0.31.0
+pydantic>=2.9.0
+pydantic-settings>=2.5.0
 
 # === Machine Learning ===
-# PyTorch 2.9.1 (latest available)
+# PyTorch 2.9+ (latest available)
 torch>=2.9.0
 torchvision>=0.20.0
 torchaudio>=2.5.0
 
-# PyTorch Geometric 2.6.1
-torch-geometric==2.6.1
-torch-scatter
-torch-sparse
-torch-cluster
+# PyTorch Geometric 2.6+
+torch-geometric>=2.6.0
 
-# PyTorch Lightning 2.4.0 for training
-pytorch-lightning==2.4.0
-torchmetrics==1.4.0
+# PyG Extensions (OPTIONAL - for production speedup)
+# Install separately with pre-built wheels:
+#   pip install torch-scatter torch-sparse torch-cluster \
+#     -f https://data.pyg.org/whl/torch-2.9.0+cpu.html
+#
+# OR for CUDA 12.1:
+#   pip install torch-scatter torch-sparse torch-cluster \
+#     -f https://data.pyg.org/whl/torch-2.9.0+cu121.html
+#
+# Note: These require compilation if installed from source
 
-# ONNX for model export
-onnx==1.16.0
-onnxruntime-gpu==1.19.0
+# PyTorch Lightning 2.4+ for training
+pytorch-lightning>=2.4.0
+torchmetrics>=1.4.0
+
+# ONNX for model export (optional)
+onnx>=1.16.0
+# onnxruntime-gpu>=1.19.0  # Uncomment for GPU inference
 
 # === Data Processing ===
-numpy==1.26.4
-pandas==2.2.2
-scipy==1.14.0
-scikit-learn==1.5.0
+numpy>=1.26.0
+pandas>=2.2.0
+scipy>=1.14.0
+scikit-learn>=1.5.0
+python-dateutil>=2.8.0
 
 # === Database ===
 # Async PostgreSQL/TimescaleDB
-asyncpg==0.29.0
-sqlalchemy[asyncio]==2.0.32
-alembic==1.13.2
-psycopg2-binary==2.9.9
+asyncpg>=0.29.0
+sqlalchemy[asyncio]>=2.0.0
+alembic>=1.13.0
+psycopg2-binary>=2.9.0
 
 # === Async & Concurrency ===
-aiofiles==24.1.0
-aiohttp==3.10.0
+aiofiles>=24.1.0
+aiohttp>=3.10.0
 
 # === Caching & Queue ===
-redis==5.0.8
-aioredis==2.0.1
-celery==5.4.0
+redis>=5.0.0
+aioredis>=2.0.0
+celery>=5.4.0
 
 # === Observability ===
 # Structured logging
-python-json-logger==2.0.7
+python-json-logger>=2.0.0
 
 # Prometheus metrics
-prometheus-client==0.21.0
-prometheus-fastapi-instrumentator==7.0.0
+prometheus-client>=0.21.0
+prometheus-fastapi-instrumentator>=7.0.0
 
 # System monitoring
-psutil==6.0.0
-py-cpuinfo==9.0.0
-
-# OpenTelemetry (optional)
-# opentelemetry-api==1.26.0
-# opentelemetry-sdk==1.26.0
-# opentelemetry-instrumentation-fastapi==0.47b0
+psutil>=6.0.0
+py-cpuinfo>=9.0.0
 
 # === Security ===
-PyJWT==2.9.0
-cryptography==43.0.0
-python-multipart==0.0.9
+PyJWT>=2.9.0
+cryptography>=43.0.0
+python-multipart>=0.0.9
 
 # === HTTP Client ===
-httpx==0.27.0
+httpx>=0.27.0
 
 # === Configuration ===
-python-dotenv==1.0.1
-pyyaml==6.0.2
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
 
 # === Utilities ===
-click==8.1.7
-rich==13.7.1
-tqdm==4.66.4
+click>=8.1.0
+rich>=13.7.0
+tqdm>=4.66.0
 
 # === Type Checking (dev) ===
-mypy==1.11.0
-types-redis==4.6.0.20240726
-types-aiofiles==24.1.0.20240626
+mypy>=1.11.0
+types-redis>=4.6.0
+types-aiofiles>=24.1.0
 
 # === Code Quality (dev) ===
-ruff==0.5.0
-black==24.4.2
-isort==5.13.2
+ruff>=0.5.0
+black>=24.4.0
+isort>=5.13.0
 
 # === Testing (dev) ===
-pytest==8.3.0
-pytest-asyncio==0.23.8
-pytest-cov==5.0.0
-pytest-mock==3.14.0
-pytest-timeout==2.3.1
-httpx-mock==0.3.0
+pytest>=8.3.0
+pytest-asyncio>=0.23.0
+pytest-cov>=5.0.0
+pytest-mock>=3.14.0
+pytest-timeout>=2.3.0
 
 # === Documentation (dev) ===
-mkdocs==1.6.0
-mkdocs-material==9.5.28
-mkdocstrings[python]==0.25.0
+mkdocs>=1.6.0
+mkdocs-material>=9.5.0
+mkdocstrings[python]>=0.25.0
