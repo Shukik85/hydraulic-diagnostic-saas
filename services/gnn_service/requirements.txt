@@ -1,5 +1,5 @@
 # GNN Service Dependencies - Production Ready
-# Python 3.14.0 + PyTorch 2.8 + CUDA 12.8
+# Python 3.14.0 + PyTorch 2.9.1 + CUDA 12.9
 
 # === Core Framework ===
 fastapi==0.115.0
@@ -8,17 +8,16 @@ pydantic==2.9.0
 pydantic-settings==2.5.0
 
 # === Machine Learning ===
-# PyTorch 2.8 with CUDA 12.8 support (released Aug 2025)
-# Install: pip install torch==2.8.0 torchvision==0.19.0 --index-url https://download.pytorch.org/whl/cu128
-torch==2.8.0
-torchvision==0.19.0
-torchaudio==2.5.0
+# PyTorch 2.9.1 (latest available)
+torch>=2.9.0
+torchvision>=0.20.0
+torchaudio>=2.5.0
 
 # PyTorch Geometric 2.6.1
 torch-geometric==2.6.1
-torch-scatter==2.1.2
-torch-sparse==0.6.18
-torch-cluster==1.6.3
+torch-scatter
+torch-sparse
+torch-cluster
 
 # PyTorch Lightning 2.4.0 for training
 pytorch-lightning==2.4.0
