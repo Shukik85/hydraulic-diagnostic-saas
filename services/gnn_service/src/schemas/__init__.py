@@ -19,13 +19,13 @@ from .responses import (
     HealthResponse,
 )
 
-# Metadata
+# Metadata (now with TimeWindow!)
 from .metadata import (
     TimeWindow,
     EquipmentMetadata,
     SensorConfig,
-    ComponentType,
-    ComponentRole,
+    SensorType,
+    SystemConfig,
 )
 
 # Graph
@@ -35,6 +35,8 @@ from .graph import (
     EdgeSpec,
     EdgeType,
     EdgeMaterial,
+    ComponentType,
+    ComponentRole,
 )
 
 # Topology
@@ -57,14 +59,16 @@ __all__ = [
     "TimeWindow",
     "EquipmentMetadata",
     "SensorConfig",
-    "ComponentType",
-    "ComponentRole",
+    "SensorType",
+    "SystemConfig",
     # Graph
     "GraphTopology",
     "ComponentSpec",
     "EdgeSpec",
     "EdgeType",
     "EdgeMaterial",
+    "ComponentType",
+    "ComponentRole",
     # Topology
     "TopologyTemplate",
 ]
