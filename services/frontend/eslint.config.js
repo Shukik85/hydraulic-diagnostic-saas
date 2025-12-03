@@ -74,6 +74,7 @@ export default [
         useHydration: 'readonly',
         callOnce: 'readonly',
         useId: 'readonly',
+        useI18n: 'readonly',
         // Vue auto-imports
         ref: 'readonly',
         computed: 'readonly',
@@ -103,6 +104,7 @@ export default [
         withDefaults: 'readonly',
         // Custom auto-imports (composables, stores, utils)
         useAuthStore: 'readonly',
+        useUiStore: 'readonly',
         useToast: 'readonly',
         useApi: 'readonly',
       },
