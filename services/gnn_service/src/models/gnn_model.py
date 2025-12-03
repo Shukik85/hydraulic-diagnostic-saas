@@ -46,6 +46,23 @@ class UniversalTemporalGNN(nn.Module):
         - Cross-task attention (task correlation)
         - torch.compile optimization (PyTorch 2.8)
     
+    Edge Features (14D - Phase 3.1):
+        Static (8D):
+            - diameter_norm
+            - length_norm
+            - cross_section_area_norm
+            - pressure_loss_coeff_norm
+            - pressure_rating_norm
+            - material_onehot (3D: steel, rubber, composite)
+        
+        Dynamic (6D):
+            - flow_rate_lpm (physics-based or measured)
+            - pressure_drop_bar
+            - temperature_delta_c
+            - vibration_level_g
+            - age_hours
+            - maintenance_score
+    
     Args:
         in_channels: Размерность входных node features
         hidden_channels: Размерность скрытых слоёв
@@ -57,7 +74,7 @@ class UniversalTemporalGNN(nn.Module):
         ma_order: Moving average order для ARMA attention
         dropout: Dropout rate
         use_edge_features: Использовать edge features
-        edge_feature_dim: Размерность edge features (если используются)
+        edge_feature_dim: Размерность edge features (14 с Phase 3.1)
         use_compile: Применить torch.compile (PyTorch 2.8)
         compile_mode: Режим компиляции
     
@@ -69,6 +86,7 @@ class UniversalTemporalGNN(nn.Module):
         ...     num_gat_layers=3,
         ...     lstm_hidden=256,
         ...     lstm_layers=2,
+        ...     edge_feature_dim=14,  # Phase 3.1: 14D edges
         ...     use_compile=True
         ... )
         >>> 
@@ -76,9 +94,15 @@ class UniversalTemporalGNN(nn.Module):
         >>> health, degradation, anomaly = model(
         ...     x=node_features,
         ...     edge_index=edge_index,
-        ...     edge_attr=edge_features,
+        ...     edge_attr=edge_features,  # [E, 14]
         ...     batch=batch_assignment
         ... )
+    
+    Note:
+        ⚠️ Breaking change in Phase 3.1:
+        edge_feature_dim: 8 → 14
+        Old checkpoints (v1.x) несовместимы.
+        Требуется retraining с v2.0.0+
     """
     
     def __init__(
@@ -93,7 +117,7 @@ class UniversalTemporalGNN(nn.Module):
         ma_order: int = 2,
         dropout: float = 0.3,
         use_edge_features: bool = True,
-        edge_feature_dim: int = 8,
+        edge_feature_dim: int = 14,  # Phase 3.1: 14D (was 8D)
         use_compile: bool = True,
         compile_mode: Literal["default", "reduce-overhead", "max-autotune"] = "reduce-overhead",
     ):
@@ -105,6 +129,7 @@ class UniversalTemporalGNN(nn.Module):
         self.num_gat_layers = num_gat_layers
         self.lstm_hidden = lstm_hidden
         self.use_edge_features = use_edge_features
+        self.edge_feature_dim = edge_feature_dim  # Store for checkpoint
         self.use_compile = use_compile
         
         # Input projection
@@ -235,7 +260,7 @@ class UniversalTemporalGNN(nn.Module):
         Args:
             x: Node features [N, F_in]
             edge_index: Edge connectivity [2, E]
-            edge_attr: Edge features [E, F_edge] (опционально)
+            edge_attr: Edge features [E, 14] (Phase 3.1: 14D)
             batch: Batch assignment [N] (опционально)
             return_attention: Вернуть attention weights для визуализации
         
@@ -246,7 +271,7 @@ class UniversalTemporalGNN(nn.Module):
             attention_weights: List of attention weights (если requested)
         
         Shape:
-            - Input: x [N, F_in], edge_index [2, E], edge_attr [E, F_edge]
+            - Input: x [N, F_in], edge_index [2, E], edge_attr [E, 14]
             - Output: health [B, 1], degradation [B, 1], anomaly [B, 9]
             где N = total nodes, E = total edges, B = batch size
         """
@@ -258,7 +283,7 @@ class UniversalTemporalGNN(nn.Module):
         
         # 2. Edge feature projection (если есть)
         if self.use_edge_features and edge_attr is not None:
-            edge_attr = self.edge_projection(edge_attr)  # [E, F_edge] -> [E, H//num_heads]
+            edge_attr = self.edge_projection(edge_attr)  # [E, 14] -> [E, H//num_heads]
         
         # 3. GATv2 spatial processing
         for i, (gat_layer, norm) in enumerate(zip(self.gat_layers, self.gat_norms)):
@@ -327,7 +352,9 @@ class UniversalTemporalGNN(nn.Module):
             "num_gat_layers": self.num_gat_layers,
             "lstm_hidden": self.lstm_hidden,
             "use_edge_features": self.use_edge_features,
+            "edge_feature_dim": self.edge_feature_dim,  # Phase 3.1: Track edge dim
             "use_compile": self.use_compile,
+            "model_version": "v2.0.0",  # Phase 3.1: Version for checkpoint compatibility
         }
     
     @torch.inference_mode()  # PyTorch 2.8 optimization
