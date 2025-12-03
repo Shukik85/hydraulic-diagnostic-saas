@@ -10,7 +10,7 @@ Python 3.14 Features:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -304,7 +304,7 @@ class HealthResponse(BaseModel):
         description="Service uptime in seconds"
     )
     
-    details: Dict[str, any] = Field(
+    details: Dict[str, Any] = Field(
         default_factory=dict,
         description="Additional health check details"
     )
