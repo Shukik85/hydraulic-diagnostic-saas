@@ -41,27 +41,27 @@ class FeatureConfig:
         >>> config.total_features_per_sensor
         42  # Statistical(8) + Frequency(10) + Temporal(20) + Hydraulic(4)
     """
-    
+
     # Statistical features
     use_statistical: bool = True
     percentiles: list[int] = field(default_factory=lambda: [5, 25, 50, 75, 95])
-    
+
     # Frequency domain features
     use_frequency: bool = True
     num_frequencies: int = 10
-    
+
     # Temporal features
     use_temporal: bool = True
     window_sizes: list[int] = field(default_factory=lambda: [5, 10, 30])
-    
+
     # Hydraulic-specific features
     use_hydraulic: bool = True
-    
+
     # Preprocessing
     normalization: Literal["standardize", "minmax", "robust", "none"] = "standardize"
     handle_missing: Literal["ffill", "bfill", "interpolate", "drop"] = "ffill"
     outlier_threshold: float = 3.0  # Standard deviations
-    
+
     @property
     def statistical_features_count(self) -> int:
         """Количество statistical features.
@@ -72,7 +72,7 @@ class FeatureConfig:
         if not self.use_statistical:
             return 0
         return 11  # mean, std, min, max, 5 percentiles, skew, kurtosis
-    
+
     @property
     def frequency_features_count(self) -> int:
         """Количество frequency features.
@@ -83,7 +83,7 @@ class FeatureConfig:
         if not self.use_frequency:
             return 0
         return self.num_frequencies + 2
-    
+
     @property
     def temporal_features_count(self) -> int:
         """Количество temporal features.
@@ -94,7 +94,7 @@ class FeatureConfig:
         if not self.use_temporal:
             return 0
         return len(self.window_sizes) * 2 + 5  # Rolling mean/std + EMA + autocorr + trend
-    
+
     @property
     def hydraulic_features_count(self) -> int:
         """Количество hydraulic-specific features.
@@ -105,7 +105,7 @@ class FeatureConfig:
         if not self.use_hydraulic:
             return 0
         return 4
-    
+
     @property
     def total_features_per_sensor(self) -> int:
         """Общее количество features per sensor.
@@ -141,26 +141,26 @@ class DataLoaderConfig:
         >>> config = DataLoaderConfig(batch_size=32, num_workers=4)
         >>> train_loader = create_dataloader(dataset, config=config, split="train")
     """
-    
+
     # Batch configuration
     batch_size: int = 32
-    
+
     # Worker configuration
     num_workers: int = 4
     pin_memory: bool = True
     persistent_workers: bool = True
     prefetch_factor: int = 2
-    
+
     # Shuffle configuration
     shuffle_train: bool = True
     shuffle_val: bool = False
     shuffle_test: bool = False
-    
+
     # Drop last batch
     drop_last_train: bool = False
     drop_last_val: bool = False
     drop_last_test: bool = False
-    
+
     def get_loader_kwargs(self, split: Literal["train", "val", "test"]) -> dict:
         """Получить kwargs для DataLoader в зависимости от split.
         
@@ -180,13 +180,13 @@ class DataLoaderConfig:
             "val": self.shuffle_val,
             "test": self.shuffle_test,
         }
-        
+
         drop_last_map = {
             "train": self.drop_last_train,
             "val": self.drop_last_val,
             "test": self.drop_last_test,
         }
-        
+
         return {
             "batch_size": self.batch_size,
             "shuffle": shuffle_map[split],

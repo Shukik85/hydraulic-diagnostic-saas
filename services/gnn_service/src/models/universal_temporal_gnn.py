@@ -12,11 +12,9 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import Dict, Literal
-
 import torch
-import torch.nn as nn
-from torch_geometric.nn import GATv2Conv, global_mean_pool, global_max_pool
+from torch import nn
+from torch_geometric.nn import GATv2Conv, global_mean_pool
 
 
 class UniversalTemporalGNN(nn.Module):
@@ -71,7 +69,7 @@ class UniversalTemporalGNN(nn.Module):
         - Multi-level GNN: https://arxiv.org/abs/2404.10324
         - Hydraulic diagnostics: https://pmc.ncbi.nlm.nih.gov/articles/PMC11125296/
     """
-    
+
     def __init__(
         self,
         in_channels: int,
@@ -84,7 +82,7 @@ class UniversalTemporalGNN(nn.Module):
         use_compile: bool = False,
     ):
         super().__init__()
-        
+
         self.in_channels = in_channels
         self.hidden_channels = hidden_channels
         self.num_heads = num_heads
@@ -92,7 +90,7 @@ class UniversalTemporalGNN(nn.Module):
         self.lstm_hidden = lstm_hidden
         self.lstm_layers = lstm_layers
         self.dropout = dropout
-        
+
         # Initial projection
         self.initial_projection = nn.Sequential(
             nn.Linear(in_channels, hidden_channels),
@@ -100,7 +98,7 @@ class UniversalTemporalGNN(nn.Module):
             nn.ReLU(),
             nn.Dropout(dropout)
         )
-        
+
         # GATv2 layers
         self.gat_layers = nn.ModuleList()
         for i in range(num_gat_layers):
@@ -115,14 +113,14 @@ class UniversalTemporalGNN(nn.Module):
                     add_self_loops=True
                 )
             )
-        
+
         # Graph normalization after GAT
         self.graph_norms = nn.ModuleList([
             nn.LayerNorm(hidden_channels) for _ in range(num_gat_layers)
         ])
-        
+
         # === Component-Level Heads (after GATv2, before pooling) ===
-        
+
         self.component_health = nn.Sequential(
             nn.Linear(hidden_channels, 64),
             nn.ReLU(),
@@ -130,14 +128,14 @@ class UniversalTemporalGNN(nn.Module):
             nn.Linear(64, 1),
             nn.Sigmoid()  # [N, 1] ∈ [0, 1]
         )
-        
+
         self.component_anomaly = nn.Sequential(
             nn.Linear(hidden_channels, 128),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(128, 9)  # [N, 9] logits for 9 anomaly types
         )
-        
+
         # LSTM for temporal modeling
         self.lstm = nn.LSTM(
             input_size=hidden_channels,
@@ -146,9 +144,9 @@ class UniversalTemporalGNN(nn.Module):
             dropout=dropout if lstm_layers > 1 else 0.0,
             batch_first=True
         )
-        
+
         # === Graph-Level Heads (after LSTM) ===
-        
+
         self.health_head = nn.Sequential(
             nn.Linear(lstm_hidden, 64),
             nn.ReLU(),
@@ -156,7 +154,7 @@ class UniversalTemporalGNN(nn.Module):
             nn.Linear(64, 1),
             nn.Sigmoid()  # [B, 1] ∈ [0, 1]
         )
-        
+
         self.degradation_head = nn.Sequential(
             nn.Linear(lstm_hidden, 64),
             nn.ReLU(),
@@ -164,14 +162,14 @@ class UniversalTemporalGNN(nn.Module):
             nn.Linear(64, 1),
             nn.Sigmoid()  # [B, 1] ∈ [0, 1]
         )
-        
+
         self.anomaly_head = nn.Sequential(
             nn.Linear(lstm_hidden, 128),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(128, 9)  # [B, 9] logits for 9 anomaly types
         )
-        
+
         self.rul_head = nn.Sequential(
             nn.Linear(lstm_hidden, 128),
             nn.ReLU(),
@@ -179,18 +177,18 @@ class UniversalTemporalGNN(nn.Module):
             nn.Linear(128, 1),
             nn.Softplus()  # [B, 1] ∈ [0, ∞) - RUL in hours
         )
-        
+
         # Compile if requested (PyTorch 2.8 optimization)
         if use_compile:
             self.forward = torch.compile(self.forward)
-    
+
     def forward(
         self,
         x: torch.Tensor,
         edge_index: torch.Tensor,
         edge_attr: torch.Tensor,
         batch: torch.Tensor
-    ) -> Dict[str, Dict[str, torch.Tensor]]:
+    ) -> dict[str, dict[str, torch.Tensor]]:
         """Forward pass with multi-level predictions.
         
         Args:
@@ -226,58 +224,58 @@ class UniversalTemporalGNN(nn.Module):
         """
         # === 1. Initial Projection ===
         h = self.initial_projection(x)  # [N, F] → [N, hidden]
-        
+
         # === 2. GATv2 Spatial Encoding ===
         for i, gat_layer in enumerate(self.gat_layers):
             # GAT with edge features
             h_new = gat_layer(h, edge_index, edge_attr)  # [N, hidden]
-            
+
             # Graph normalization
             h_new = self.graph_norms[i](h_new)
-            
+
             # Residual connection (skip first layer)
             if i > 0:
                 h = h + h_new
             else:
                 h = h_new
-            
+
             # ReLU activation
             h = torch.relu(h)
-        
+
         # === 3. Component-Level Predictions ===
         component_health = self.component_health(h)      # [N, 1]
         component_anomaly = self.component_anomaly(h)    # [N, 9]
-        
+
         # === 4. Global Pooling ===
         # Mean pooling for graph-level representation
         graph_repr = global_mean_pool(h, batch)          # [B, hidden]
-        
+
         # === 5. LSTM Temporal Modeling ===
         # Add sequence dimension for LSTM
         lstm_input = graph_repr.unsqueeze(1)             # [B, 1, hidden]
         lstm_out, _ = self.lstm(lstm_input)              # [B, 1, lstm_hidden]
         lstm_out = lstm_out.squeeze(1)                   # [B, lstm_hidden]
-        
+
         # === 6. Graph-Level Predictions ===
         graph_health = self.health_head(lstm_out)        # [B, 1]
         graph_degradation = self.degradation_head(lstm_out)  # [B, 1]
         graph_anomaly = self.anomaly_head(lstm_out)      # [B, 9]
         graph_rul = self.rul_head(lstm_out)              # [B, 1]
-        
+
         # === 7. Return Nested Structure ===
         return {
-            'component': {
-                'health': component_health,
-                'anomaly': component_anomaly
+            "component": {
+                "health": component_health,
+                "anomaly": component_anomaly
             },
-            'graph': {
-                'health': graph_health,
-                'degradation': graph_degradation,
-                'anomaly': graph_anomaly,
-                'rul': graph_rul
+            "graph": {
+                "health": graph_health,
+                "degradation": graph_degradation,
+                "anomaly": graph_anomaly,
+                "rul": graph_rul
             }
         }
-    
+
     def get_num_parameters(self) -> int:
         """Get total number of trainable parameters.
         
@@ -285,8 +283,8 @@ class UniversalTemporalGNN(nn.Module):
             Number of parameters
         """
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
-    
-    def get_model_info(self) -> Dict[str, int | str]:
+
+    def get_model_info(self) -> dict[str, int | str]:
         """Get model information.
         
         Returns:

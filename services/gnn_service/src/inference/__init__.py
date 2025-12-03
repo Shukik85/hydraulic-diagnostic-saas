@@ -12,12 +12,12 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from src.inference.model_manager import ModelManager, ModelConfig
-from src.inference.inference_engine import InferenceEngine, InferenceConfig
+from src.inference.inference_engine import InferenceConfig, InferenceEngine
+from src.inference.model_manager import ModelConfig, ModelManager
 
 __all__ = [
-    "ModelManager",
-    "ModelConfig",
-    "InferenceEngine",
     "InferenceConfig",
+    "InferenceEngine",
+    "ModelConfig",
+    "ModelManager",
 ]

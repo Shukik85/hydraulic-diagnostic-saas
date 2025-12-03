@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, Optional
 
 import numpy as np
 from pydantic import BaseModel, Field
@@ -43,22 +42,22 @@ class NormalizationStatistics(BaseModel):
         # Age (always positive)
         age_max: Maximum age in hours
     """
-    
+
     # Flow rate statistics (log-transformed)
     flow_log_mean: float = Field(default=4.0, description="Mean of log(1 + flow)")
     flow_log_std: float = Field(default=1.0, description="Std of log(1 + flow)")
-    
+
     # Pressure drop statistics
     pressure_drop_mean: float = Field(default=2.0, description="Mean ΔP (bar)")
     pressure_drop_std: float = Field(default=1.0, description="Std ΔP (bar)")
-    
+
     # Temperature delta statistics
     temp_delta_mean: float = Field(default=5.0, description="Mean ΔT (°C)")
     temp_delta_std: float = Field(default=3.0, description="Std ΔT (°C)")
-    
+
     # Vibration statistics
     vibration_max: float = Field(default=10.0, description="Max vibration (g)")
-    
+
     # Age statistics
     age_max: float = Field(default=100000.0, description="Max age (hours)")
 
@@ -87,19 +86,19 @@ class EdgeFeatureNormalizer:
         >>> # Save with checkpoint
         >>> normalizer.save("normalizer_stats.json")
     """
-    
-    def __init__(self, stats: Optional[NormalizationStatistics] = None):
+
+    def __init__(self, stats: NormalizationStatistics | None = None):
         """Initialize normalizer with optional pre-computed statistics.
         
         Args:
             stats: Pre-computed statistics (None = use defaults)
         """
         self.stats = stats or NormalizationStatistics()
-    
+
     # ========================================================================
     # Flow Rate (Log-transform + Z-score)
     # ========================================================================
-    
+
     def normalize_flow(self, flow_lpm: float) -> float:
         """Normalize flow rate using log-transform + z-score.
         
@@ -118,13 +117,13 @@ class EdgeFeatureNormalizer:
         """
         # Log transform (handles 0 flow gracefully)
         flow_log = np.log1p(flow_lpm)  # log(1 + x)
-        
+
         # Z-score normalization
         flow_norm = (flow_log - self.stats.flow_log_mean) / self.stats.flow_log_std
-        
+
         # Clip outliers to [-5, 5] standard deviations
         return np.clip(flow_norm, -5.0, 5.0)
-    
+
     def denormalize_flow(self, flow_norm: float) -> float:
         """Denormalize flow rate back to L/min.
         
@@ -136,16 +135,16 @@ class EdgeFeatureNormalizer:
         """
         # Reverse z-score
         flow_log = flow_norm * self.stats.flow_log_std + self.stats.flow_log_mean
-        
+
         # Reverse log transform
         flow_lpm = np.expm1(flow_log)  # exp(x) - 1
-        
+
         return max(0.0, flow_lpm)  # Ensure non-negative
-    
+
     # ========================================================================
     # Pressure Drop (Z-score)
     # ========================================================================
-    
+
     def normalize_pressure_drop(self, dp_bar: float) -> float:
         """Normalize pressure drop using z-score.
         
@@ -164,7 +163,7 @@ class EdgeFeatureNormalizer:
         """
         dp_norm = (dp_bar - self.stats.pressure_drop_mean) / self.stats.pressure_drop_std
         return np.clip(dp_norm, -5.0, 5.0)
-    
+
     def denormalize_pressure_drop(self, dp_norm: float) -> float:
         """Denormalize pressure drop back to bar.
         
@@ -175,11 +174,11 @@ class EdgeFeatureNormalizer:
             Pressure drop in bar
         """
         return dp_norm * self.stats.pressure_drop_std + self.stats.pressure_drop_mean
-    
+
     # ========================================================================
     # Temperature Delta (Z-score)
     # ========================================================================
-    
+
     def normalize_temp_delta(self, dt_c: float) -> float:
         """Normalize temperature delta using z-score.
         
@@ -198,7 +197,7 @@ class EdgeFeatureNormalizer:
         """
         dt_norm = (dt_c - self.stats.temp_delta_mean) / self.stats.temp_delta_std
         return np.clip(dt_norm, -5.0, 5.0)
-    
+
     def denormalize_temp_delta(self, dt_norm: float) -> float:
         """Denormalize temperature delta back to °C.
         
@@ -209,11 +208,11 @@ class EdgeFeatureNormalizer:
             Temperature delta in °C
         """
         return dt_norm * self.stats.temp_delta_std + self.stats.temp_delta_mean
-    
+
     # ========================================================================
     # Vibration (Min-Max [0, 1])
     # ========================================================================
-    
+
     def normalize_vibration(self, vib_g: float) -> float:
         """Normalize vibration level to [0, 1].
         
@@ -232,7 +231,7 @@ class EdgeFeatureNormalizer:
         """
         vib_norm = vib_g / self.stats.vibration_max
         return np.clip(vib_norm, 0.0, 1.0)
-    
+
     def denormalize_vibration(self, vib_norm: float) -> float:
         """Denormalize vibration level back to g.
         
@@ -243,11 +242,11 @@ class EdgeFeatureNormalizer:
             Vibration level in g
         """
         return vib_norm * self.stats.vibration_max
-    
+
     # ========================================================================
     # Age (Min-Max [0, 1])
     # ========================================================================
-    
+
     def normalize_age(self, age_hours: float) -> float:
         """Normalize age to [0, 1].
         
@@ -266,7 +265,7 @@ class EdgeFeatureNormalizer:
         """
         age_norm = age_hours / self.stats.age_max
         return np.clip(age_norm, 0.0, 1.0)
-    
+
     def denormalize_age(self, age_norm: float) -> float:
         """Denormalize age back to hours.
         
@@ -277,11 +276,11 @@ class EdgeFeatureNormalizer:
             Age in hours
         """
         return age_norm * self.stats.age_max
-    
+
     # ========================================================================
     # Maintenance Score (No normalization - already [0, 1])
     # ========================================================================
-    
+
     def normalize_maintenance_score(self, score: float) -> float:
         """No normalization needed (already [0, 1]).
         
@@ -292,12 +291,12 @@ class EdgeFeatureNormalizer:
             Same score (pass-through)
         """
         return np.clip(score, 0.0, 1.0)
-    
+
     # ========================================================================
     # Batch Operations
     # ========================================================================
-    
-    def normalize_all(self, features: Dict[str, float]) -> Dict[str, float]:
+
+    def normalize_all(self, features: dict[str, float]) -> dict[str, float]:
         """Normalize all edge features at once.
         
         Args:
@@ -326,12 +325,12 @@ class EdgeFeatureNormalizer:
             "age_hours": self.normalize_age(features["age_hours"]),
             "maintenance_score": self.normalize_maintenance_score(features["maintenance_score"])
         }
-    
+
     # ========================================================================
     # Fit from Training Data
     # ========================================================================
-    
-    def fit(self, training_features: list[Dict[str, float]]) -> None:
+
+    def fit(self, training_features: list[dict[str, float]]) -> None:
         """Compute normalization statistics from training data.
         
         Args:
@@ -351,30 +350,30 @@ class EdgeFeatureNormalizer:
         temps = [f["temperature_delta_c"] for f in training_features]
         vibrations = [f["vibration_level_g"] for f in training_features]
         ages = [f["age_hours"] for f in training_features]
-        
+
         # Flow rate: log-transform then compute mean/std
         flow_logs = [np.log1p(f) for f in flows]
         self.stats.flow_log_mean = float(np.mean(flow_logs))
         self.stats.flow_log_std = float(np.std(flow_logs) + 1e-6)  # Avoid division by zero
-        
+
         # Pressure drop: mean/std
         self.stats.pressure_drop_mean = float(np.mean(pressures))
         self.stats.pressure_drop_std = float(np.std(pressures) + 1e-6)
-        
+
         # Temperature delta: mean/std
         self.stats.temp_delta_mean = float(np.mean(temps))
         self.stats.temp_delta_std = float(np.std(temps) + 1e-6)
-        
+
         # Vibration: max
         self.stats.vibration_max = float(np.percentile(vibrations, 99))  # 99th percentile (robust)
-        
+
         # Age: max
         self.stats.age_max = float(np.percentile(ages, 99))  # 99th percentile (robust)
-    
+
     # ========================================================================
     # Persistence
     # ========================================================================
-    
+
     def save(self, path: str | Path) -> None:
         """Save normalization statistics to JSON file.
         
@@ -388,10 +387,10 @@ class EdgeFeatureNormalizer:
         """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(path, 'w') as f:
+
+        with open(path, "w") as f:
             json.dump(self.stats.model_dump(), f, indent=2)
-    
+
     @classmethod
     def load(cls, path: str | Path) -> EdgeFeatureNormalizer:
         """Load normalization statistics from JSON file.
@@ -405,21 +404,21 @@ class EdgeFeatureNormalizer:
         Examples:
             >>> normalizer = EdgeFeatureNormalizer.load("checkpoints/normalizer_v2.0.0.json")
         """
-        with open(path, 'r') as f:
+        with open(path) as f:
             stats_dict = json.load(f)
-        
+
         stats = NormalizationStatistics(**stats_dict)
         return cls(stats=stats)
-    
-    def get_stats(self) -> Dict:
+
+    def get_stats(self) -> dict:
         """Get statistics as dictionary (for checkpoint saving).
         
         Returns:
             Statistics dictionary
         """
         return self.stats.model_dump()
-    
-    def load_stats(self, stats_dict: Dict) -> None:
+
+    def load_stats(self, stats_dict: dict) -> None:
         """Load statistics from dictionary.
         
         Args:
@@ -433,7 +432,7 @@ class EdgeFeatureNormalizer:
 # ============================================================================
 
 def create_edge_feature_normalizer(
-    stats: Optional[NormalizationStatistics] = None
+    stats: NormalizationStatistics | None = None
 ) -> EdgeFeatureNormalizer:
     """Create EdgeFeatureNormalizer instance.
     

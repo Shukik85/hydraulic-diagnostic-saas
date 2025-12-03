@@ -18,15 +18,12 @@ Python: 3.14+
 from __future__ import annotations
 
 import math
-from datetime import date, datetime
-from typing import Dict, Optional
+from datetime import datetime
 
 import numpy as np
-from pydantic import BaseModel
 
-from ..schemas.graph import EdgeSpec, EdgeMaterial
+from ..schemas.graph import EdgeMaterial, EdgeSpec
 from ..schemas.requests import ComponentSensorReading
-
 
 # ============================================================================
 # Fluid Properties (Hydraulic Oil ISO VG 46)
@@ -54,9 +51,9 @@ def get_fluid_density(temperature_c: float) -> float:
     # Temperature coefficient: ~0.7 kg/m³ per °C
     rho_15 = 880.0
     temp_coeff = -0.7
-    
+
     rho = rho_15 + temp_coeff * (temperature_c - 15.0)
-    
+
     # Clamp to reasonable range
     return np.clip(rho, 800.0, 900.0)
 
@@ -81,7 +78,7 @@ def get_fluid_viscosity(temperature_c: float) -> float:
     """
     # Walther equation parameters for ISO VG 46
     # log(log(ν + 0.8)) = A - B * log(T_K)
-    
+
     # Known points: ν(40°C) = 46 cSt, ν(100°C) = 6.8 cSt
     if temperature_c <= 40:
         # Linear extrapolation below 40°C
@@ -100,7 +97,7 @@ def get_fluid_viscosity(temperature_c: float) -> float:
         log_nu_100 = math.log(6.8)
         log_nu = log_nu_40 + t * (log_nu_100 - log_nu_40)
         nu = math.exp(log_nu)
-    
+
     # Clamp to reasonable range
     return np.clip(nu, 1.0, 1000.0)
 
@@ -133,7 +130,7 @@ def get_material_roughness(material: EdgeMaterial | str) -> float:
         "composite": 0.10,
         "thermoplastic": 0.08
     }
-    
+
     return roughness_map.get(material, 0.10)  # Default: medium roughness
 
 
@@ -164,22 +161,21 @@ def estimate_friction_factor(
     if reynolds_number < 2300:
         # Laminar flow: f = 64/Re
         return 64.0 / reynolds_number
-    elif reynolds_number < 4000:
+    if reynolds_number < 4000:
         # Transition region: linear interpolation
         f_laminar = 64.0 / 2300
         f_turbulent = estimate_friction_factor(relative_roughness, 4000)
         t = (reynolds_number - 2300) / (4000 - 2300)
         return f_laminar + t * (f_turbulent - f_laminar)
-    else:
-        # Turbulent flow: Haaland approximation
-        # 1/√f = -1.8 * log₁₀[(ε/D/3.7)^1.11 + 6.9/Re]
-        term1 = (relative_roughness / 3.7) ** 1.11
-        term2 = 6.9 / reynolds_number
-        
-        inv_sqrt_f = -1.8 * math.log10(term1 + term2)
-        f = 1.0 / (inv_sqrt_f ** 2)
-        
-        return f
+    # Turbulent flow: Haaland approximation
+    # 1/√f = -1.8 * log₁₀[(ε/D/3.7)^1.11 + 6.9/Re]
+    term1 = (relative_roughness / 3.7) ** 1.11
+    term2 = 6.9 / reynolds_number
+
+    inv_sqrt_f = -1.8 * math.log10(term1 + term2)
+    f = 1.0 / (inv_sqrt_f ** 2)
+
+    return f
 
 
 def estimate_flow_rate_darcy_weisbach(
@@ -218,44 +214,44 @@ def estimate_flow_rate_darcy_weisbach(
     """
     if pressure_drop_pa <= 0:
         return 0.0
-    
+
     # Fluid properties
     rho = get_fluid_density(temperature_c)  # kg/m³
     nu = get_fluid_viscosity(temperature_c) # mm²/s = 1e-6 m²/s
     mu = rho * nu * 1e-6  # Dynamic viscosity (Pa·s)
-    
+
     # Geometry
     area = math.pi * (diameter_m / 2) ** 2  # m²
     roughness = get_material_roughness(material)  # mm
     relative_roughness = (roughness / 1000) / diameter_m  # dimensionless
-    
+
     # Initial guess for velocity (assuming f ≈ 0.02)
     f_guess = 0.02
     v_guess = math.sqrt((2 * pressure_drop_pa) / (rho * f_guess * (length_m / diameter_m)))
-    
+
     # Iterative refinement (max 10 iterations)
     velocity = v_guess
     for _ in range(10):
         # Reynolds number
         Re = (rho * velocity * diameter_m) / mu
-        
+
         # Friction factor
         f = estimate_friction_factor(relative_roughness, Re)
-        
+
         # Updated velocity
         velocity_new = math.sqrt((2 * pressure_drop_pa) / (rho * f * (length_m / diameter_m)))
-        
+
         # Check convergence
         if abs(velocity_new - velocity) / velocity < 0.01:  # 1% tolerance
             velocity = velocity_new
             break
-        
+
         velocity = velocity_new
-    
+
     # Flow rate
     Q_m3s = area * velocity  # m³/s
     Q_lpm = Q_m3s * 60000    # L/min
-    
+
     return Q_lpm
 
 
@@ -287,17 +283,16 @@ class EdgeFeatureComputer:
         >>> features.keys()
         dict_keys(['flow_rate_lpm', 'pressure_drop_bar', ...])
     """
-    
+
     def __init__(self):
         """Initialize EdgeFeatureComputer."""
-        pass
-    
+
     def compute_edge_features(
         self,
         edge: EdgeSpec,
-        sensor_readings: Dict[str, ComponentSensorReading],
+        sensor_readings: dict[str, ComponentSensorReading],
         current_time: datetime
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Compute all dynamic edge features.
         
         Args:
@@ -314,37 +309,37 @@ class EdgeFeatureComputer:
         # Get sensor data for source and target
         src_sensors = sensor_readings.get(edge.source_id)
         tgt_sensors = sensor_readings.get(edge.target_id)
-        
+
         if not src_sensors or not tgt_sensors:
             raise KeyError(
                 f"Missing sensor data for edge {edge.source_id}->{edge.target_id}"
             )
-        
+
         # 1. Pressure drop (direct calculation)
         pressure_drop = self._compute_pressure_drop(src_sensors, tgt_sensors)
-        
+
         # 2. Temperature delta (direct calculation)
         temp_delta = self._compute_temperature_delta(src_sensors, tgt_sensors)
-        
+
         # 3. Average temperature (for flow estimation)
         avg_temp = (src_sensors.temperature_c + tgt_sensors.temperature_c) / 2
-        
+
         # 4. Flow rate (Darcy-Weisbach estimation)
         flow_rate = self._estimate_flow_rate(
             edge=edge,
             pressure_drop_bar=pressure_drop,
             temperature_c=avg_temp
         )
-        
+
         # 5. Vibration level (average)
         vibration = self._compute_vibration_level(src_sensors, tgt_sensors)
-        
+
         # 6. Age (from install date or edge.age_hours)
         age_hours = edge.get_age_hours(current_time)
-        
+
         # 7. Maintenance score (from last maintenance or edge method)
         maintenance_score = edge.get_maintenance_score(current_time)
-        
+
         return {
             "flow_rate_lpm": flow_rate,
             "pressure_drop_bar": pressure_drop,
@@ -353,7 +348,7 @@ class EdgeFeatureComputer:
             "age_hours": age_hours,
             "maintenance_score": maintenance_score
         }
-    
+
     def _compute_pressure_drop(
         self,
         src_sensors: ComponentSensorReading,
@@ -371,7 +366,7 @@ class EdgeFeatureComputer:
             Pressure drop in bar (can be negative for backflow)
         """
         return src_sensors.pressure_bar - tgt_sensors.pressure_bar
-    
+
     def _compute_temperature_delta(
         self,
         src_sensors: ComponentSensorReading,
@@ -389,7 +384,7 @@ class EdgeFeatureComputer:
             Temperature delta in °C (can be negative)
         """
         return src_sensors.temperature_c - tgt_sensors.temperature_c
-    
+
     def _estimate_flow_rate(
         self,
         edge: EdgeSpec,
@@ -408,11 +403,11 @@ class EdgeFeatureComputer:
         """
         if pressure_drop_bar <= 0:
             return 0.0
-        
+
         # Convert units
         pressure_drop_pa = pressure_drop_bar * 1e5  # bar → Pa
         diameter_m = edge.diameter_mm / 1000        # mm → m
-        
+
         # Call physics-based estimator
         flow_rate = estimate_flow_rate_darcy_weisbach(
             pressure_drop_pa=pressure_drop_pa,
@@ -421,9 +416,9 @@ class EdgeFeatureComputer:
             temperature_c=temperature_c,
             material=edge.material
         )
-        
+
         return flow_rate
-    
+
     def _compute_vibration_level(
         self,
         src_sensors: ComponentSensorReading,
@@ -442,24 +437,24 @@ class EdgeFeatureComputer:
             Average vibration in g
         """
         vibrations = []
-        
+
         if src_sensors.vibration_g is not None:
             vibrations.append(src_sensors.vibration_g)
-        
+
         if tgt_sensors.vibration_g is not None:
             vibrations.append(tgt_sensors.vibration_g)
-        
+
         if not vibrations:
             return 0.0
-        
+
         return sum(vibrations) / len(vibrations)
-    
+
     def compute_all_edges(
         self,
         edges: list[EdgeSpec],
-        sensor_readings: Dict[str, ComponentSensorReading],
+        sensor_readings: dict[str, ComponentSensorReading],
         current_time: datetime
-    ) -> Dict[str, Dict[str, float]]:
+    ) -> dict[str, dict[str, float]]:
         """Compute features for all edges in topology.
         
         Args:
@@ -481,10 +476,10 @@ class EdgeFeatureComputer:
             115.3
         """
         all_features = {}
-        
+
         for edge in edges:
             edge_id = f"{edge.source_id}->{edge.target_id}"
-            
+
             try:
                 features = self.compute_edge_features(
                     edge=edge,
@@ -496,10 +491,10 @@ class EdgeFeatureComputer:
                 # Log warning but continue
                 print(f"Warning: Could not compute features for {edge_id}: {e}")
                 all_features[edge_id] = self._get_default_features()
-        
+
         return all_features
-    
-    def _get_default_features(self) -> Dict[str, float]:
+
+    def _get_default_features(self) -> dict[str, float]:
         """Get default features when computation fails.
         
         Returns all features as 0 (or neutral values).

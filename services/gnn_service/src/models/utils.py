@@ -13,11 +13,12 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-import torch
-import torch.nn as nn
+import logging
 from pathlib import Path
 from typing import Any
-import logging
+
+import torch
+from torch import nn
 
 logger = logging.getLogger(__name__)
 
@@ -46,28 +47,28 @@ def initialize_model(
             elif method == "xavier_normal":
                 nn.init.xavier_normal_(module.weight)
             elif method == "kaiming_uniform":
-                nn.init.kaiming_uniform_(module.weight, nonlinearity='relu')
+                nn.init.kaiming_uniform_(module.weight, nonlinearity="relu")
             elif method == "kaiming_normal":
-                nn.init.kaiming_normal_(module.weight, nonlinearity='relu')
-            
+                nn.init.kaiming_normal_(module.weight, nonlinearity="relu")
+
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
-        
+
         elif isinstance(module, (nn.LSTM, nn.GRU)):
             for name, param in module.named_parameters():
-                if 'weight_ih' in name:
+                if "weight_ih" in name:
                     nn.init.xavier_uniform_(param)
-                elif 'weight_hh' in name:
+                elif "weight_hh" in name:
                     nn.init.orthogonal_(param)
-                elif 'bias' in name:
+                elif "bias" in name:
                     nn.init.zeros_(param)
-        
+
         elif isinstance(module, (nn.LayerNorm, nn.BatchNorm1d)):
             if module.weight is not None:
                 nn.init.ones_(module.weight)
             if module.bias is not None:
                 nn.init.zeros_(module.bias)
-    
+
     logger.info(f"Model initialized with {method}")
     return model
 
@@ -104,24 +105,24 @@ def save_checkpoint(
     """
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     checkpoint = {
         "epoch": epoch,
         "model_state_dict": model.state_dict(),
         "loss": loss,
         "metrics": metrics,
     }
-    
+
     if optimizer is not None:
         checkpoint["optimizer_state_dict"] = optimizer.state_dict()
-    
+
     if model_config is not None:
         checkpoint["model_config"] = model_config
-    
+
     # Добавить PyTorch и CUDA версии
     checkpoint["pytorch_version"] = torch.__version__
     checkpoint["cuda_version"] = torch.version.cuda if torch.cuda.is_available() else None
-    
+
     torch.save(checkpoint, save_path)
     logger.info(f"Checkpoint saved to {save_path}")
 
@@ -149,27 +150,27 @@ def load_checkpoint(
         >>> print(f"Loaded epoch {checkpoint['epoch']}")
     """
     checkpoint_path = Path(checkpoint_path)
-    
+
     if not checkpoint_path.exists():
         raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
-    
+
     # Load checkpoint
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
-    
+
     # Load model weights
     model.load_state_dict(checkpoint["model_state_dict"])
     logger.info(f"Model weights loaded from {checkpoint_path}")
-    
+
     # Load optimizer state (if provided)
     if optimizer is not None and "optimizer_state_dict" in checkpoint:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
         logger.info("Optimizer state loaded")
-    
+
     # Log metadata
     logger.info(f"Checkpoint epoch: {checkpoint.get('epoch', 'unknown')}")
     logger.info(f"Checkpoint loss: {checkpoint.get('loss', 'unknown')}")
     logger.info(f"PyTorch version: {checkpoint.get('pytorch_version', 'unknown')}")
-    
+
     return checkpoint
 
 
@@ -194,8 +195,7 @@ def count_parameters(
     """
     if trainable_only:
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
-    else:
-        return sum(p.numel() for p in model.parameters())
+    return sum(p.numel() for p in model.parameters())
 
 
 def model_summary(
@@ -221,17 +221,17 @@ def model_summary(
     """
     total_params = count_parameters(model, trainable_only=False)
     trainable_params = count_parameters(model, trainable_only=True)
-    
+
     # Calculate memory footprint (approximate)
     param_memory_mb = (total_params * 4) / (1024 ** 2)  # 4 bytes per float32
-    
+
     summary = {
         "total_params": total_params,
         "trainable_params": trainable_params,
         "non_trainable_params": total_params - trainable_params,
         "memory_mb": param_memory_mb,
     }
-    
+
     # Layer breakdown
     layer_summary = []
     for name, module in model.named_modules():
@@ -243,12 +243,12 @@ def model_summary(
                     "type": module.__class__.__name__,
                     "params": num_params
                 })
-    
+
     summary["layers"] = layer_summary
-    
+
     # Model type
     summary["model_type"] = model.__class__.__name__
-    
+
     return summary
 
 
@@ -270,7 +270,7 @@ def print_model_summary(model: nn.Module) -> None:
         ================================
     """
     summary = model_summary(model)
-    
+
     print(f"\nModel: {summary['model_type']}")
     print("=" * 50)
     print(f"Total Parameters: {summary['total_params']:,}")
@@ -278,7 +278,7 @@ def print_model_summary(model: nn.Module) -> None:
     print(f"Non-trainable Parameters: {summary['non_trainable_params']:,}")
     print(f"Memory Footprint: {summary['memory_mb']:.2f} MB")
     print("=" * 50)
-    
+
     # Top 10 layers by parameter count
     if "layers" in summary:
         sorted_layers = sorted(
@@ -286,13 +286,13 @@ def print_model_summary(model: nn.Module) -> None:
             key=lambda x: x["params"],
             reverse=True
         )[:10]
-        
+
         print("\nTop 10 Layers by Parameter Count:")
         print("-" * 50)
         for layer in sorted_layers:
             print(f"{layer['name']:40s} | {layer['params']:>10,} params")
         print("-" * 50)
-    
+
     print()
 
 
@@ -332,14 +332,14 @@ def model_to_device(
     """
     device = torch.device(device)
     model = model.to(device)
-    
+
     logger.info(f"Model moved to {device}")
-    
+
     # Log GPU memory if CUDA
     if device.type == "cuda":
         memory_allocated = torch.cuda.memory_allocated(device) / (1024 ** 2)
         logger.info(f"GPU memory allocated: {memory_allocated:.2f} MB")
-    
+
     return model
 
 
@@ -365,11 +365,11 @@ def freeze_layers(
             if name.startswith(layer_name):
                 param.requires_grad = False
                 logger.info(f"Frozen parameter: {name}")
-    
+
     trainable = count_parameters(model, trainable_only=True)
     total = count_parameters(model, trainable_only=False)
     logger.info(f"Trainable parameters: {trainable:,} / {total:,}")
-    
+
     return model
 
 
@@ -384,6 +384,6 @@ def unfreeze_all_layers(model: nn.Module) -> nn.Module:
     """
     for param in model.parameters():
         param.requires_grad = True
-    
+
     logger.info("All layers unfrozen")
     return model

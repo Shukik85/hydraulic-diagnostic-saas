@@ -9,11 +9,9 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import List, Dict, Annotated, Literal
 from datetime import datetime
-from pathlib import Path
 
-from pydantic import BaseModel, Field, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ModelInfo(BaseModel):
@@ -38,7 +36,7 @@ class ModelInfo(BaseModel):
         ...     loaded=True
         ... )
     """
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -53,7 +51,7 @@ class ModelInfo(BaseModel):
             }
         }
     )
-    
+
     path: str = Field(..., description="Model file path")
     version: str = Field(..., description="Model version")
     device: str = Field(..., description="Device (cpu/cuda)")
@@ -85,7 +83,7 @@ class ModelVersion(BaseModel):
         ...     architecture="GATv2-ARMA-LSTM"
         ... )
     """
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -99,7 +97,7 @@ class ModelVersion(BaseModel):
             }
         }
     )
-    
+
     version: str = Field(..., description="Semantic version (e.g., 2.0.0)")
     path: str = Field(..., description="Checkpoint path")
     created_at: datetime = Field(

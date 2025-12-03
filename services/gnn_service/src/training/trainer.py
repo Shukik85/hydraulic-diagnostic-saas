@@ -17,20 +17,19 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
-from dataclasses import dataclass
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import (
-    ModelCheckpoint,
     EarlyStopping,
     LearningRateMonitor,
-    RichProgressBar,
+    ModelCheckpoint,
     RichModelSummary,
+    RichProgressBar,
 )
-from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
+from pytorch_lightning.loggers import CSVLogger, TensorBoardLogger
 from pytorch_lightning.strategies import DDPStrategy
 
 
@@ -55,28 +54,28 @@ class TrainerConfig:
     """
     # Training duration
     max_epochs: int = 100
-    
+
     # Hardware
     accelerator: Literal["gpu", "cpu", "mps"] = "gpu"
     devices: int = 1
     precision: Literal["32", "16", "bf16"] = "16"
-    
+
     # Optimization
     gradient_clip_val: float = 1.0
     accumulate_grad_batches: int = 1
-    
+
     # Logging
     log_every_n_steps: int = 10
     val_check_interval: float = 1.0  # Every epoch
-    
+
     # Reproducibility
     deterministic: bool = False
-    
+
     # Features
     enable_checkpointing: bool = True
     enable_progress_bar: bool = True
     enable_model_summary: bool = True
-    
+
     # Distributed
     strategy: str | DDPStrategy = "auto"
 
@@ -161,11 +160,11 @@ def create_checkpoint_callback(
         >>> trainer = pl.Trainer(callbacks=[checkpoint])
     """
     config = config or CheckpointConfig()
-    
+
     # Ensure directory exists
     dirpath = Path(config.dirpath)
     dirpath.mkdir(parents=True, exist_ok=True)
-    
+
     return ModelCheckpoint(
         dirpath=str(dirpath),
         filename=config.filename,
@@ -197,7 +196,7 @@ def create_early_stopping_callback(
         >>> trainer = pl.Trainer(callbacks=[early_stop])
     """
     config = config or EarlyStoppingConfig()
-    
+
     return EarlyStopping(
         monitor=config.monitor,
         patience=config.patience,
@@ -227,11 +226,11 @@ def create_tensorboard_logger(
         >>> # View logs: tensorboard --logdir=logs
     """
     config = config or LoggerConfig()
-    
+
     # Ensure directory exists
     save_dir = Path(config.save_dir)
     save_dir.mkdir(parents=True, exist_ok=True)
-    
+
     return TensorBoardLogger(
         save_dir=str(save_dir),
         name=config.name,
@@ -296,32 +295,32 @@ def create_trainer(
     checkpoint_config = checkpoint_config or CheckpointConfig()
     early_stopping_config = early_stopping_config or EarlyStoppingConfig()
     logger_config = logger_config or LoggerConfig()
-    
+
     # === Callbacks ===
     callbacks = []
-    
+
     # ModelCheckpoint
     if trainer_config.enable_checkpointing:
         callbacks.append(create_checkpoint_callback(checkpoint_config))
-    
+
     # EarlyStopping
     callbacks.append(create_early_stopping_callback(early_stopping_config))
-    
+
     # Learning rate monitor
     callbacks.append(LearningRateMonitor(logging_interval="step"))
-    
+
     # Progress bar (if enabled)
     if trainer_config.enable_progress_bar:
         callbacks.append(RichProgressBar())
-    
+
     # Model summary (if enabled)
     if trainer_config.enable_model_summary:
         callbacks.append(RichModelSummary(max_depth=2))
-    
+
     # Additional callbacks
     if additional_callbacks:
         callbacks.extend(additional_callbacks)
-    
+
     # === Loggers ===
     loggers = [
         create_tensorboard_logger(logger_config),
@@ -330,10 +329,10 @@ def create_trainer(
             name=f"{logger_config.name}_csv",
         ),
     ]
-    
+
     # === Distributed Strategy ===
     strategy = trainer_config.strategy
-    
+
     # If using multiple GPUs, configure DDP
     if isinstance(trainer_config.devices, int) and trainer_config.devices > 1:
         if strategy == "auto":
@@ -341,48 +340,48 @@ def create_trainer(
                 find_unused_parameters=False,
                 gradient_as_bucket_view=True,
             )
-    
+
     # === Create Trainer ===
     trainer = pl.Trainer(
         # Duration
         max_epochs=trainer_config.max_epochs,
-        
+
         # Hardware
         accelerator=trainer_config.accelerator,
         devices=trainer_config.devices,
         precision=trainer_config.precision,
         strategy=strategy,
-        
+
         # Optimization
         gradient_clip_val=trainer_config.gradient_clip_val,
         gradient_clip_algorithm="norm",
         accumulate_grad_batches=trainer_config.accumulate_grad_batches,
-        
+
         # Validation
         check_val_every_n_epoch=1,
         val_check_interval=trainer_config.val_check_interval,
-        
+
         # Logging
         log_every_n_steps=trainer_config.log_every_n_steps,
         logger=loggers,
-        
+
         # Callbacks
         callbacks=callbacks,
         enable_checkpointing=trainer_config.enable_checkpointing,
         enable_progress_bar=trainer_config.enable_progress_bar,
         enable_model_summary=trainer_config.enable_model_summary,
-        
+
         # Reproducibility
         deterministic=trainer_config.deterministic,
-        
+
         # Development
         fast_dev_run=fast_dev_run,
-        
+
         # Performance
         benchmark=True,
         inference_mode=True,  # Faster validation
     )
-    
+
     return trainer
 
 
@@ -409,17 +408,17 @@ def create_development_trainer() -> pl.Trainer:
         enable_progress_bar=True,
         enable_model_summary=True,
     )
-    
+
     early_stopping_config = EarlyStoppingConfig(
         patience=10,  # Shorter patience
         verbose=True,
     )
-    
+
     checkpoint_config = CheckpointConfig(
         dirpath="checkpoints/dev",
         save_top_k=2,
     )
-    
+
     return create_trainer(
         trainer_config=trainer_config,
         checkpoint_config=checkpoint_config,
@@ -457,23 +456,23 @@ def create_production_trainer(
         log_every_n_steps=50,
         accumulate_grad_batches=1,
     )
-    
+
     early_stopping_config = EarlyStoppingConfig(
         patience=30,  # Longer patience
         min_delta=1e-5,
     )
-    
+
     checkpoint_config = CheckpointConfig(
         dirpath="checkpoints/production",
         save_top_k=5,
         save_last=True,
     )
-    
+
     logger_config = LoggerConfig(
         save_dir="logs/production",
         name="hydraulic_gnn_prod",
     )
-    
+
     return create_trainer(
         trainer_config=trainer_config,
         checkpoint_config=checkpoint_config,

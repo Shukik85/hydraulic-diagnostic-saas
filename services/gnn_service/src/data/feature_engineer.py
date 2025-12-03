@@ -13,13 +13,13 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pandas as pd
-from scipy import stats, signal
+from scipy import stats
 from scipy.fft import rfft, rfftfreq
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-import logging
-from typing import Literal
+from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
 from src.data.feature_config import FeatureConfig
 
@@ -51,13 +51,13 @@ class FeatureEngineer:
         >>> features = engineer.extract_all_features(data)
         >>> features.shape  # [S, total_features_per_sensor]
     """
-    
+
     def __init__(self, config: FeatureConfig):
         self.config = config
-        
+
         # Initialize scalers
         self.scalers: dict[str, StandardScaler | MinMaxScaler | RobustScaler] = {}
-    
+
     def extract_statistical_features(
         self,
         data: pd.Series | np.ndarray
@@ -82,10 +82,10 @@ class FeatureEngineer:
         """
         if isinstance(data, pd.Series):
             data = data.values
-        
+
         if len(data) == 0:
             return np.zeros(11)
-        
+
         features = [
             np.mean(data),
             np.std(data),
@@ -93,17 +93,17 @@ class FeatureEngineer:
             np.max(data),
             np.median(data),
         ]
-        
+
         # Percentiles
         for p in self.config.percentiles:
             features.append(np.percentile(data, p))
-        
+
         # Higher-order statistics
         features.append(stats.skew(data))
         features.append(stats.kurtosis(data))
-        
+
         return np.array(features, dtype=np.float32)
-    
+
     def extract_frequency_features(
         self,
         data: pd.Series | np.ndarray,
@@ -130,36 +130,36 @@ class FeatureEngineer:
         """
         if isinstance(data, pd.Series):
             data = data.values
-        
+
         if len(data) < 4:
             return np.zeros(self.config.num_frequencies + 2, dtype=np.float32)
-        
+
         # FFT
         fft_values = rfft(data)
         fft_magnitudes = np.abs(fft_values)
         fft_freqs = rfftfreq(len(data), 1.0 / sampling_rate)
-        
+
         # Top N frequencies
         top_indices = np.argsort(fft_magnitudes)[-self.config.num_frequencies:]
         top_magnitudes = fft_magnitudes[top_indices]
-        
+
         # Dominant frequency
         dominant_idx = np.argmax(fft_magnitudes[1:]) + 1  # Skip DC component
         dominant_freq = fft_freqs[dominant_idx]
-        
+
         # Spectral entropy
         psd = fft_magnitudes ** 2
         psd_normalized = psd / psd.sum()
         spectral_entropy = -np.sum(psd_normalized * np.log(psd_normalized + 1e-10))
-        
+
         features = np.concatenate([
             top_magnitudes,
             [dominant_freq],
             [spectral_entropy]
         ])
-        
+
         return features.astype(np.float32)
-    
+
     def extract_temporal_features(
         self,
         data: pd.Series | np.ndarray
@@ -187,22 +187,22 @@ class FeatureEngineer:
             series = data
         else:
             series = pd.Series(data)
-        
+
         if len(series) < max(self.config.window_sizes):
             return np.zeros(len(self.config.window_sizes) * 2 + 5, dtype=np.float32)
-        
+
         features = []
-        
+
         # Rolling statistics
         for window in self.config.window_sizes:
             rolling_mean = series.rolling(window=window).mean().iloc[-1]
             rolling_std = series.rolling(window=window).std().iloc[-1]
             features.extend([rolling_mean, rolling_std])
-        
+
         # Exponential moving average
         ema = series.ewm(span=10).mean().iloc[-1]
         features.append(ema)
-        
+
         # Autocorrelation
         for lag in [1, 5, 10]:
             if len(series) > lag:
@@ -210,14 +210,14 @@ class FeatureEngineer:
                 features.append(autocorr if not np.isnan(autocorr) else 0.0)
             else:
                 features.append(0.0)
-        
+
         # Linear trend
         x = np.arange(len(series))
         slope, _ = np.polyfit(x, series.values, deg=1)
         features.append(slope)
-        
+
         return np.array(features, dtype=np.float32)
-    
+
     def extract_hydraulic_features(
         self,
         data: pd.DataFrame
@@ -246,7 +246,7 @@ class FeatureEngineer:
             >>> features[0]  # Pressure ratio ~ 0.95
         """
         features = []
-        
+
         # 1. Pressure ratio (эффективность системы)
         if "pressure_in" in data.columns and "pressure_out" in data.columns:
             p_in = data["pressure_in"].mean()
@@ -255,7 +255,7 @@ class FeatureEngineer:
             features.append(pressure_ratio)
         else:
             features.append(0.0)
-        
+
         # 2. Temperature delta (перегрев)
         temp_cols = [col for col in data.columns if "temperature" in col.lower()]
         if temp_cols:
@@ -264,7 +264,7 @@ class FeatureEngineer:
             features.append(temp_delta)
         else:
             features.append(0.0)
-        
+
         # 3. Flow efficiency (simplified)
         if "flow_rate" in data.columns and "pressure_in" in data.columns:
             flow = data["flow_rate"].mean()
@@ -273,7 +273,7 @@ class FeatureEngineer:
             features.append(efficiency)
         else:
             features.append(0.0)
-        
+
         # 4. Cavitation index (риск кавитации)
         if "pressure_in" in data.columns:
             p_in = data["pressure_in"]
@@ -282,9 +282,9 @@ class FeatureEngineer:
             features.append(cavitation_index)
         else:
             features.append(0.0)
-        
+
         return np.array(features, dtype=np.float32)
-    
+
     def normalize_features(
         self,
         features: np.ndarray,
@@ -309,10 +309,10 @@ class FeatureEngineer:
         """
         if self.config.normalization == "none":
             return features
-        
+
         # Get or create scaler
         scaler_key = sensor_id if sensor_id else "global"
-        
+
         if fit or scaler_key not in self.scalers:
             # Create scaler
             if self.config.normalization == "standardize":
@@ -323,18 +323,18 @@ class FeatureEngineer:
                 scaler = RobustScaler()
             else:
                 raise ValueError(f"Unknown normalization method: {self.config.normalization}")
-            
+
             # Fit
             scaler.fit(features.reshape(-1, 1))
             self.scalers[scaler_key] = scaler
         else:
             scaler = self.scalers[scaler_key]
-        
+
         # Transform
         normalized = scaler.transform(features.reshape(-1, 1)).flatten()
-        
+
         return normalized.astype(np.float32)
-    
+
     def handle_missing_data(
         self,
         data: pd.DataFrame
@@ -354,9 +354,9 @@ class FeatureEngineer:
         """
         if data.isna().sum().sum() == 0:
             return data
-        
+
         method = self.config.handle_missing
-        
+
         if method == "ffill":
             data = data.ffill()
         elif method == "bfill":
@@ -367,12 +367,12 @@ class FeatureEngineer:
             data = data.dropna()
         else:
             raise ValueError(f"Unknown missing data method: {method}")
-        
+
         # If still NaN (e.g., all NaN column), fill with 0
         data = data.fillna(0)
-        
+
         return data
-    
+
     def remove_outliers(
         self,
         data: pd.DataFrame
@@ -393,28 +393,28 @@ class FeatureEngineer:
             >>> cleaned["pressure"].max()  # ~ 103 (outlier replaced)
         """
         threshold = self.config.outlier_threshold
-        
+
         for col in data.columns:
             # Z-score
             mean = data[col].mean()
             std = data[col].std()
-            
+
             if std == 0:
                 continue
-            
+
             z_scores = np.abs((data[col] - mean) / std)
-            
+
             # Replace outliers with median
             outlier_mask = z_scores > threshold
             if outlier_mask.any():
                 median_val = data[col].median()
                 data.loc[outlier_mask, col] = median_val
-                
+
                 num_outliers = outlier_mask.sum()
                 logger.debug(f"Removed {num_outliers} outliers from {col}")
-        
+
         return data
-    
+
     def extract_all_features(
         self,
         data: pd.DataFrame,
@@ -440,44 +440,44 @@ class FeatureEngineer:
         # 1. Preprocess
         data = self.handle_missing_data(data)
         data = self.remove_outliers(data)
-        
+
         all_features = []
-        
+
         # 2. Extract per-sensor features
         for col in data.columns:
             sensor_features = []
-            
+
             # Statistical
             if self.config.use_statistical:
                 stat_feats = self.extract_statistical_features(data[col])
                 sensor_features.append(stat_feats)
-            
+
             # Frequency
             if self.config.use_frequency:
                 freq_feats = self.extract_frequency_features(data[col], sampling_rate)
                 sensor_features.append(freq_feats)
-            
+
             # Temporal
             if self.config.use_temporal:
                 temp_feats = self.extract_temporal_features(data[col])
                 sensor_features.append(temp_feats)
-            
+
             # Concatenate sensor features
             if sensor_features:
                 all_sensor_feats = np.concatenate(sensor_features)
                 all_features.append(all_sensor_feats)
-        
+
         # 3. Extract hydraulic features (global)
         if self.config.use_hydraulic:
             hydraulic_feats = self.extract_hydraulic_features(data)
             all_features.append(hydraulic_feats)
-        
+
         # 4. Concatenate all
         if not all_features:
             return np.array([], dtype=np.float32)
-        
+
         features = np.concatenate(all_features)
-        
+
         logger.debug(f"Extracted {len(features)} features from {len(data.columns)} sensors")
-        
+
         return features

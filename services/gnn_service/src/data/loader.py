@@ -12,11 +12,12 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-import torch
-from torch.utils.data import DataLoader, random_split
-from torch_geometric.data import Data, Batch
 import logging
 from typing import Literal
+
+import torch
+from torch.utils.data import DataLoader, random_split
+from torch_geometric.data import Batch, Data
 
 from src.data.dataset import HydraulicGraphDataset
 from src.data.feature_config import DataLoaderConfig
@@ -95,24 +96,24 @@ def create_dataloader(
     """
     if config is None:
         config = DataLoaderConfig()
-    
+
     # Get base kwargs from config
     loader_kwargs = config.get_loader_kwargs(split)
-    
+
     # Override with provided kwargs
     loader_kwargs.update(kwargs)
-    
+
     # Add collate function
     loader_kwargs["collate_fn"] = hydraulic_collate_fn
-    
+
     # Create DataLoader
     loader = DataLoader(dataset, **loader_kwargs)
-    
+
     logger.info(
         f"Created {split} DataLoader: batch_size={loader_kwargs['batch_size']}, "
         f"num_workers={loader_kwargs['num_workers']}, shuffle={loader_kwargs['shuffle']}"
     )
-    
+
     return loader
 
 
@@ -145,24 +146,24 @@ def create_train_val_loaders(
     """
     if not 0 < train_ratio < 1:
         raise ValueError(f"train_ratio must be in (0, 1), got {train_ratio}")
-    
+
     # Split dataset
     train_size = int(len(dataset) * train_ratio)
     val_size = len(dataset) - train_size
-    
+
     generator = torch.Generator().manual_seed(seed)
     train_dataset, val_dataset = random_split(
         dataset,
         [train_size, val_size],
         generator=generator
     )
-    
+
     logger.info(f"Split dataset: train={train_size}, val={val_size}")
-    
+
     # Create loaders
     train_loader = create_dataloader(train_dataset, config, split="train")
     val_loader = create_dataloader(val_dataset, config, split="val")
-    
+
     return train_loader, val_loader
 
 
@@ -194,24 +195,24 @@ def create_train_val_test_loaders(
     """
     if not 0 < train_ratio + val_ratio < 1:
         raise ValueError(f"train_ratio + val_ratio must be < 1, got {train_ratio + val_ratio}")
-    
+
     # Split dataset
     train_size = int(len(dataset) * train_ratio)
     val_size = int(len(dataset) * val_ratio)
     test_size = len(dataset) - train_size - val_size
-    
+
     generator = torch.Generator().manual_seed(seed)
     train_dataset, val_dataset, test_dataset = random_split(
         dataset,
         [train_size, val_size, test_size],
         generator=generator
     )
-    
+
     logger.info(f"Split dataset: train={train_size}, val={val_size}, test={test_size}")
-    
+
     # Create loaders
     train_loader = create_dataloader(train_dataset, config, split="train")
     val_loader = create_dataloader(val_dataset, config, split="val")
     test_loader = create_dataloader(test_dataset, config, split="test")
-    
+
     return train_loader, val_loader, test_loader

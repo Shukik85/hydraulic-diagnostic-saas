@@ -4,38 +4,37 @@ All Pydantic schemas for GNN service.
 """
 
 # Requests
+# Graph (removed ComponentRole - doesn't exist)
+from .graph import (
+    ComponentSpec,
+    ComponentType,
+    EdgeMaterial,
+    EdgeSpec,
+    EdgeType,
+    GraphTopology,
+)
+
+# Metadata (now with TimeWindow!)
+from .metadata import (
+    EquipmentMetadata,
+    SensorConfig,
+    SensorType,
+    SystemConfig,
+    TimeWindow,
+)
 from .requests import (
-    InferenceRequest,
     ComponentSensorReading,
+    InferenceRequest,
     MinimalInferenceRequest,
 )
 
 # Responses
 from .responses import (
-    PredictionResponse,
     ComponentPrediction,
     GraphPrediction,
-    ModelInfo,
     HealthResponse,
-)
-
-# Metadata (now with TimeWindow!)
-from .metadata import (
-    TimeWindow,
-    EquipmentMetadata,
-    SensorConfig,
-    SensorType,
-    SystemConfig,
-)
-
-# Graph (removed ComponentRole - doesn't exist)
-from .graph import (
-    GraphTopology,
-    ComponentSpec,
-    EdgeSpec,
-    EdgeType,
-    EdgeMaterial,
-    ComponentType,
+    ModelInfo,
+    PredictionResponse,
 )
 
 # Topology

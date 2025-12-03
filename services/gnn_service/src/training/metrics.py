@@ -16,21 +16,19 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import Dict, Literal, Any
 from dataclasses import dataclass, field
+from typing import Any, Literal
 
 import torch
-import torch.nn.functional as F
 from torchmetrics import (
-    Metric,
-    MetricCollection,
+    AUROC,
+    F1Score,
     MeanAbsoluteError,
     MeanSquaredError,
-    R2Score,
+    Metric,
     Precision,
+    R2Score,
     Recall,
-    F1Score,
-    AUROC,
 )
 
 
@@ -69,7 +67,7 @@ class RegressionMetrics(Metric):
         >>> metrics.update(preds, targets)
         >>> result = metrics.compute()  # {"graph_health_mae": 0.05, ...}
     """
-    
+
     def __init__(
         self,
         prefix: str = "",
@@ -82,18 +80,18 @@ class RegressionMetrics(Metric):
             **kwargs: Additional Metric arguments
         """
         super().__init__(**kwargs)
-        
+
         self.prefix = prefix
-        
+
         # Register metric components
         self.mae = MeanAbsoluteError()
         self.mse = MeanSquaredError(squared=False)  # RMSE
         self.r2 = R2Score()
-        
+
         # For MAPE computation
         self.add_state("sum_ape", default=torch.tensor(0.0), dist_reduce_fx="sum")
         self.add_state("total", default=torch.tensor(0), dist_reduce_fx="sum")
-    
+
     def update(
         self,
         preds: torch.Tensor,
@@ -108,19 +106,19 @@ class RegressionMetrics(Metric):
         # Flatten tensors
         preds_flat = preds.flatten()
         target_flat = target.flatten()
-        
+
         # Update torchmetrics
         self.mae.update(preds_flat, target_flat)
         self.mse.update(preds_flat, target_flat)
         self.r2.update(preds_flat, target_flat)
-        
+
         # Update MAPE state (avoid division by zero)
         epsilon = 1e-8
         ape = torch.abs((target_flat - preds_flat) / (target_flat + epsilon))
         self.sum_ape += ape.sum()
         self.total += target_flat.numel()
-    
-    def compute(self) -> Dict[str, torch.Tensor]:
+
+    def compute(self) -> dict[str, torch.Tensor]:
         """Compute final metrics.
         
         Returns:
@@ -130,14 +128,14 @@ class RegressionMetrics(Metric):
         rmse_val = self.mse.compute()
         r2_val = self.r2.compute()
         mape_val = self.sum_ape / self.total if self.total > 0 else torch.tensor(0.0)
-        
+
         return {
             f"{self.prefix}mae": mae_val,
             f"{self.prefix}rmse": rmse_val,
             f"{self.prefix}r2": r2_val,
             f"{self.prefix}mape": mape_val,
         }
-    
+
     def reset(self) -> None:
         """Reset all metric states."""
         self.mae.reset()
@@ -171,7 +169,7 @@ class ClassificationMetrics(Metric):
         >>> metrics.update(logits, targets)
         >>> result = metrics.compute()
     """
-    
+
     def __init__(
         self,
         num_classes: int,
@@ -190,15 +188,15 @@ class ClassificationMetrics(Metric):
             **kwargs: Additional Metric arguments
         """
         super().__init__(**kwargs)
-        
+
         self.num_classes = num_classes
         self.average = average
         self.threshold = threshold
         self.prefix = prefix
-        
+
         # Multi-label classification task
         task = "multilabel"
-        
+
         # Register metrics
         self.precision = Precision(
             task=task,
@@ -206,27 +204,27 @@ class ClassificationMetrics(Metric):
             average=average,
             threshold=threshold
         )
-        
+
         self.recall = Recall(
             task=task,
             num_labels=num_classes,
             average=average,
             threshold=threshold
         )
-        
+
         self.f1 = F1Score(
             task=task,
             num_labels=num_classes,
             average=average,
             threshold=threshold
         )
-        
+
         self.auroc = AUROC(
             task=task,
             num_labels=num_classes,
             average=average
         )
-    
+
     def update(
         self,
         preds: torch.Tensor,
@@ -240,14 +238,14 @@ class ClassificationMetrics(Metric):
         """
         # Convert logits to probabilities for AUROC
         probs = torch.sigmoid(preds)
-        
+
         # Update all metrics
         self.precision.update(preds, target.long())
         self.recall.update(preds, target.long())
         self.f1.update(preds, target.long())
         self.auroc.update(probs, target.long())
-    
-    def compute(self) -> Dict[str, torch.Tensor]:
+
+    def compute(self) -> dict[str, torch.Tensor]:
         """Compute final metrics.
         
         Returns:
@@ -257,14 +255,14 @@ class ClassificationMetrics(Metric):
         recall_val = self.recall.compute()
         f1_val = self.f1.compute()
         auroc_val = self.auroc.compute()
-        
+
         return {
             f"{self.prefix}precision": precision_val,
             f"{self.prefix}recall": recall_val,
             f"{self.prefix}f1": f1_val,
             f"{self.prefix}auroc": auroc_val,
         }
-    
+
     def reset(self) -> None:
         """Reset all metric states."""
         self.precision.reset()
@@ -290,7 +288,7 @@ class RULMetrics(Metric):
         >>> metrics.update(rul_preds, rul_targets)
         >>> result = metrics.compute()  # Includes horizon-specific accuracy
     """
-    
+
     def __init__(
         self,
         horizons: list[int] | None = None,
@@ -305,13 +303,13 @@ class RULMetrics(Metric):
             **kwargs: Additional Metric arguments
         """
         super().__init__(**kwargs)
-        
+
         self.horizons = horizons or [24, 72, 168]
         self.prefix = prefix
-        
+
         # Base regression metrics
         self.mae = MeanAbsoluteError()
-        
+
         # Horizon accuracy states
         for horizon in self.horizons:
             self.add_state(
@@ -319,10 +317,10 @@ class RULMetrics(Metric):
                 default=torch.tensor(0),
                 dist_reduce_fx="sum"
             )
-        
+
         self.add_state("total", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("asymmetric_loss_sum", default=torch.tensor(0.0), dist_reduce_fx="sum")
-    
+
     def update(
         self,
         preds: torch.Tensor,
@@ -336,18 +334,18 @@ class RULMetrics(Metric):
         """
         preds_flat = preds.flatten()
         target_flat = target.flatten()
-        
+
         # Base MAE
         self.mae.update(preds_flat, target_flat)
-        
+
         # Error
         error = preds_flat - target_flat
-        
+
         # Horizon accuracy: within ±h hours
         for horizon in self.horizons:
             correct = (torch.abs(error) <= horizon).sum()
             getattr(self, f"correct_h{horizon}").add_(correct)
-        
+
         # Asymmetric loss (penalize late predictions more)
         # L = |e| if e >= 0 (early/on-time), 2|e| if e < 0 (late)
         asymmetric = torch.where(
@@ -356,40 +354,40 @@ class RULMetrics(Metric):
             2 * torch.abs(error)
         )
         self.asymmetric_loss_sum += asymmetric.sum()
-        
+
         self.total += target_flat.numel()
-    
-    def compute(self) -> Dict[str, torch.Tensor]:
+
+    def compute(self) -> dict[str, torch.Tensor]:
         """Compute RUL metrics.
         
         Returns:
             Metric dictionary including horizon accuracies
         """
         mae_val = self.mae.compute()
-        
+
         # Horizon accuracy
         horizon_acc = {}
         for horizon in self.horizons:
             correct = getattr(self, f"correct_h{horizon}")
             accuracy = correct.float() / self.total if self.total > 0 else torch.tensor(0.0)
             horizon_acc[f"{self.prefix}acc_h{horizon}"] = accuracy
-        
+
         # Asymmetric loss
         asymmetric_val = self.asymmetric_loss_sum / self.total if self.total > 0 else torch.tensor(0.0)
-        
+
         return {
             f"{self.prefix}mae": mae_val,
             f"{self.prefix}asymmetric_loss": asymmetric_val,
             **horizon_acc,
         }
-    
+
     def reset(self) -> None:
         """Reset all metric states."""
         self.mae.reset()
-        
+
         for horizon in self.horizons:
             getattr(self, f"correct_h{horizon}").zero_()
-        
+
         self.total.zero_()
         self.asymmetric_loss_sum.zero_()
 
@@ -416,7 +414,7 @@ class MultiLevelMetrics:
         >>> result = metrics.compute()  # All metrics
         >>> metrics.reset()
     """
-    
+
     def __init__(
         self,
         config: MetricConfig | None = None,
@@ -430,43 +428,43 @@ class MultiLevelMetrics:
         """
         self.config = config or MetricConfig()
         self.stage = stage
-        
+
         # === Component-Level Metrics ===
         self.component_health_metrics = RegressionMetrics(
             prefix=f"{stage}/component_health_"
         )
-        
+
         self.component_anomaly_metrics = ClassificationMetrics(
             num_classes=self.config.num_anomaly_classes,
             average=self.config.component_average,
             threshold=self.config.anomaly_threshold,
             prefix=f"{stage}/component_anomaly_"
         )
-        
+
         # === Graph-Level Metrics ===
         self.graph_health_metrics = RegressionMetrics(
             prefix=f"{stage}/graph_health_"
         )
-        
+
         self.graph_degradation_metrics = RegressionMetrics(
             prefix=f"{stage}/graph_degradation_"
         )
-        
+
         self.graph_anomaly_metrics = ClassificationMetrics(
             num_classes=self.config.num_anomaly_classes,
             average=self.config.anomaly_average,
             threshold=self.config.anomaly_threshold,
             prefix=f"{stage}/graph_anomaly_"
         )
-        
+
         self.graph_rul_metrics = RULMetrics(
             horizons=self.config.rul_horizons,
             prefix=f"{stage}/graph_rul_"
         )
-    
+
     def update(
         self,
-        outputs: Dict[str, Dict[str, torch.Tensor]],
+        outputs: dict[str, dict[str, torch.Tensor]],
         batch: Any
     ) -> None:
         """Update all metrics with batch predictions.
@@ -482,69 +480,69 @@ class MultiLevelMetrics:
         """
         # === Component-Level Updates ===
         self.component_health_metrics.update(
-            outputs['component']['health'],
+            outputs["component"]["health"],
             batch.y_component_health
         )
-        
+
         self.component_anomaly_metrics.update(
-            outputs['component']['anomaly'],
+            outputs["component"]["anomaly"],
             batch.y_component_anomaly
         )
-        
+
         # === Graph-Level Updates ===
         self.graph_health_metrics.update(
-            outputs['graph']['health'],
+            outputs["graph"]["health"],
             batch.y_graph_health
         )
-        
+
         self.graph_degradation_metrics.update(
-            outputs['graph']['degradation'],
+            outputs["graph"]["degradation"],
             batch.y_graph_degradation
         )
-        
+
         self.graph_anomaly_metrics.update(
-            outputs['graph']['anomaly'],
+            outputs["graph"]["anomaly"],
             batch.y_graph_anomaly
         )
-        
+
         self.graph_rul_metrics.update(
-            outputs['graph']['rul'],
+            outputs["graph"]["rul"],
             batch.y_graph_rul
         )
-    
-    def compute(self) -> Dict[str, torch.Tensor]:
+
+    def compute(self) -> dict[str, torch.Tensor]:
         """Compute all metrics.
         
         Returns:
             Flat dictionary with all metrics
         """
         metrics = {}
-        
+
         # Component-level
         metrics.update(self.component_health_metrics.compute())
         metrics.update(self.component_anomaly_metrics.compute())
-        
+
         # Graph-level
         metrics.update(self.graph_health_metrics.compute())
         metrics.update(self.graph_degradation_metrics.compute())
         metrics.update(self.graph_anomaly_metrics.compute())
         metrics.update(self.graph_rul_metrics.compute())
-        
+
         return metrics
-    
+
     def reset(self) -> None:
         """Reset all metric states."""
         # Component-level
         self.component_health_metrics.reset()
         self.component_anomaly_metrics.reset()
-        
+
         # Graph-level
         self.graph_health_metrics.reset()
         self.graph_degradation_metrics.reset()
         self.graph_anomaly_metrics.reset()
         self.graph_rul_metrics.reset()
-    
-    def log_dict(self) -> Dict[str, float]:
+
+    def log_dict(self) -> dict[str, float]:
         """Get metrics as float dict for Lightning logging.
         
         Returns:
@@ -577,5 +575,5 @@ def create_metrics(
         num_anomaly_classes=num_anomaly_classes,
         rul_horizons=rul_horizons or [24, 72, 168]
     )
-    
+
     return MultiLevelMetrics(config=config, stage=stage)

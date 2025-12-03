@@ -26,8 +26,6 @@ Pydantic: 2.x
 from __future__ import annotations
 
 from datetime import date, datetime
-from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -62,28 +60,28 @@ class EdgeConfiguration(BaseModel):
         ...     install_date=date(2020, 1, 15)
         ... )
     """
-    
+
     source_id: str = Field(description="Source component ID")
     target_id: str = Field(description="Target component ID")
     diameter_mm: float = Field(gt=0, le=500, description="Diameter in mm")
     length_m: float = Field(gt=0, le=1000, description="Length in meters")
     material: EdgeMaterial = Field(description="Pipe/hose material")
     pressure_rating_bar: float = Field(gt=0, description="Max pressure in bar")
-    install_date: Optional[date] = Field(default=None, description="Installation date")
-    last_maintenance_date: Optional[date] = Field(default=None, description="Last maintenance")
-    
-    @field_validator('last_maintenance_date')
+    install_date: date | None = Field(default=None, description="Installation date")
+    last_maintenance_date: date | None = Field(default=None, description="Last maintenance")
+
+    @field_validator("last_maintenance_date")
     @classmethod
-    def validate_maintenance_after_install(cls, v: Optional[date], info) -> Optional[date]:
+    def validate_maintenance_after_install(cls, v: date | None, info) -> date | None:
         """Ensure maintenance date is after installation."""
-        if v and info.data.get('install_date'):
-            if v < info.data['install_date']:
+        if v and info.data.get("install_date"):
+            if v < info.data["install_date"]:
                 raise ValueError(
                     f"Maintenance date {v} cannot be before install date "
                     f"{info.data['install_date']}"
                 )
         return v
-    
+
     def get_age_hours(self, current_date: date | datetime) -> float:
         """Compute connection age in hours.
         
@@ -95,13 +93,13 @@ class EdgeConfiguration(BaseModel):
         """
         if not self.install_date:
             return 0.0
-        
+
         if isinstance(current_date, datetime):
             current_date = current_date.date()
-        
+
         delta = current_date - self.install_date
         return delta.days * 24.0
-    
+
     def get_maintenance_score(self, current_date: date | datetime) -> float:
         """Compute maintenance score [0, 1].
         
@@ -116,16 +114,16 @@ class EdgeConfiguration(BaseModel):
         """
         if not self.last_maintenance_date:
             return 0.5  # Unknown = neutral
-        
+
         if isinstance(current_date, datetime):
             current_date = current_date.date()
-        
+
         days_since = (current_date - self.last_maintenance_date).days
-        
+
         # Decay over 365 days
         score = max(0.0, 1.0 - days_since / 365.0)
         return score
-    
+
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -152,11 +150,11 @@ class ComponentConfiguration(BaseModel):
         component_type: Type of component (pump, valve, etc.)
         description: Human-readable description
     """
-    
+
     component_id: str = Field(description="Unique component ID")
     component_type: ComponentType = Field(description="Component type")
-    description: Optional[str] = Field(default=None, description="Component description")
-    
+    description: str | None = Field(default=None, description="Component description")
+
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -196,30 +194,30 @@ class TopologyConfig(BaseModel):
         ...     edges=[...]
         ... )
     """
-    
+
     topology_id: str = Field(description="Unique topology identifier")
     name: str = Field(description="Human-readable name")
-    description: Optional[str] = Field(default=None, description="Detailed description")
+    description: str | None = Field(default=None, description="Detailed description")
     components: list[ComponentConfiguration] = Field(description="System components")
     edges: list[EdgeConfiguration] = Field(description="Component connections")
     created_at: datetime = Field(default_factory=datetime.now, description="Creation time")
     updated_at: datetime = Field(default_factory=datetime.now, description="Last update")
-    
-    @field_validator('edges')
+
+    @field_validator("edges")
     @classmethod
     def validate_edges_reference_components(cls, v: list[EdgeConfiguration], info) -> list[EdgeConfiguration]:
         """Ensure all edges reference existing components."""
-        components = info.data.get('components', [])
+        components = info.data.get("components", [])
         component_ids = {c.component_id for c in components}
-        
+
         for edge in v:
             if edge.source_id not in component_ids:
                 raise ValueError(f"Edge source '{edge.source_id}' not in components")
             if edge.target_id not in component_ids:
                 raise ValueError(f"Edge target '{edge.target_id}' not in components")
-        
+
         return v
-    
+
     @classmethod
     def from_template(cls, template: TopologyTemplate, topology_id: str) -> TopologyConfig:
         """Create config from template.
@@ -238,7 +236,7 @@ class TopologyConfig(BaseModel):
             components=template.components,
             edges=template.edges
         )
-    
+
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -281,14 +279,14 @@ class TopologyTemplate(BaseModel):
         edges: Standard connections
         category: Template category (e.g., 'pump_systems')
     """
-    
+
     template_id: str = Field(description="Template identifier")
     name: str = Field(description="Template name")
     description: str = Field(description="Template description")
     components: list[ComponentConfiguration] = Field(description="Template components")
     edges: list[EdgeConfiguration] = Field(description="Template edges")
     category: str = Field(default="general", description="Template category")
-    
+
     model_config = {
         "json_schema_extra": {
             "examples": [
@@ -351,7 +349,7 @@ TOPOLOGY_TEMPLATES: dict[str, TopologyTemplate] = {
             ),
         ]
     ),
-    
+
     "dual_pump_system": TopologyTemplate(
         template_id="dual_pump_system",
         name="Dual Pump System with Redundancy",
@@ -406,7 +404,7 @@ TOPOLOGY_TEMPLATES: dict[str, TopologyTemplate] = {
             ),
         ]
     ),
-    
+
     "hydraulic_circuit_type_a": TopologyTemplate(
         template_id="hydraulic_circuit_type_a",
         name="Industrial Hydraulic Circuit Type A",
@@ -489,7 +487,7 @@ def get_template(template_id: str) -> TopologyTemplate:
     return TOPOLOGY_TEMPLATES[template_id]
 
 
-def list_templates(category: Optional[str] = None) -> list[TopologyTemplate]:
+def list_templates(category: str | None = None) -> list[TopologyTemplate]:
     """List available topology templates.
     
     Args:
@@ -504,8 +502,8 @@ def list_templates(category: Optional[str] = None) -> list[TopologyTemplate]:
         ...     print(f"{t.template_id}: {t.name}")
     """
     templates = list(TOPOLOGY_TEMPLATES.values())
-    
+
     if category:
         templates = [t for t in templates if t.category == category]
-    
+
     return templates

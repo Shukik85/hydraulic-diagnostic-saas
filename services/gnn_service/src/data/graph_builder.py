@@ -13,27 +13,25 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-import torch
-import numpy as np
-import pandas as pd
-from torch_geometric.data import Data
 import logging
-from typing import Any, Dict, Optional
 from datetime import datetime
 
+import numpy as np
+import pandas as pd
+import torch
+from torch_geometric.data import Data
+
+from src.data.edge_features import EdgeFeatureComputer, create_edge_feature_computer
+from src.data.feature_config import FeatureConfig
+from src.data.feature_engineer import FeatureEngineer
+from src.data.normalization import EdgeFeatureNormalizer, create_edge_feature_normalizer
 from src.schemas import (
-    GraphTopology,
-    EquipmentMetadata,
     ComponentSpec,
     EdgeSpec,
-    ComponentType,
-    EdgeType
+    EquipmentMetadata,
+    GraphTopology,
 )
 from src.schemas.requests import ComponentSensorReading
-from src.data.feature_engineer import FeatureEngineer
-from src.data.feature_config import FeatureConfig
-from src.data.edge_features import EdgeFeatureComputer, create_edge_feature_computer
-from src.data.normalization import EdgeFeatureNormalizer, create_edge_feature_normalizer
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +90,7 @@ class GraphBuilder:
         >>> graph.edge_index.shape  # [2, num_edges]
         >>> graph.edge_attr.shape  # [num_edges, 14]
     """
-    
+
     def __init__(
         self,
         feature_engineer: FeatureEngineer | None = None,
@@ -105,12 +103,12 @@ class GraphBuilder:
             FeatureConfig()
         )
         self.feature_config = feature_config or FeatureConfig()
-        
+
         # Phase 3.1: Dynamic edge features
         self.use_dynamic_features = use_dynamic_features
         self.edge_feature_computer = edge_feature_computer or create_edge_feature_computer()
         self.edge_normalizer = edge_normalizer or create_edge_feature_normalizer()
-    
+
     def build_component_features(
         self,
         component_id: str,
@@ -143,7 +141,7 @@ class GraphBuilder:
             col for col in sensor_data.columns
             if component_id in col
         ]
-        
+
         if not component_cols:
             logger.warning(f"No sensors found for component {component_id}")
             # Return zeros
@@ -152,14 +150,14 @@ class GraphBuilder:
                 dtype=np.float32
             )
             return torch.from_numpy(dummy_features)
-        
+
         component_data = sensor_data[component_cols]
-        
+
         # Extract features
         features = self.feature_engineer.extract_all_features(component_data)
-        
+
         return torch.from_numpy(features)
-    
+
     def build_edge_features_static(
         self,
         edge_spec: EdgeSpec
@@ -181,34 +179,34 @@ class GraphBuilder:
             features: Array [8]
         """
         features = []
-        
+
         # 1. Diameter (normalized to typical range 6-50mm)
         diameter_norm = edge_spec.diameter_mm / 50.0
         features.append(diameter_norm)
-        
+
         # 2. Length (normalized to typical range 0.1-10m)
         length_norm = edge_spec.length_m / 10.0
         features.append(length_norm)
-        
+
         # 3. Cross-section area (computed)
         radius_m = (edge_spec.diameter_mm / 1000.0) / 2.0
         area = np.pi * radius_m ** 2
         area_norm = area / 0.002  # Normalize to typical max area
         features.append(area_norm)
-        
+
         # 4. Pressure loss coefficient (Darcy-Weisbach approx)
         # Loss ∝ length / diameter^4
         pressure_loss_coeff = edge_spec.length_m / (edge_spec.diameter_mm ** 4 + 1e-6)
         pressure_loss_coeff_norm = np.clip(pressure_loss_coeff * 1000, 0, 1)  # Normalize
         features.append(pressure_loss_coeff_norm)
-        
+
         # 5. Pressure rating (normalized to typical 100-400 bar)
         if edge_spec.pressure_rating_bar is not None:
             rating_norm = edge_spec.pressure_rating_bar / 400.0
             features.append(rating_norm)
         else:
             features.append(0.5)  # Default mid-range
-        
+
         # 6. Material one-hot (3D: steel, rubber, composite)
         material_map = {
             "steel": [1, 0, 0],
@@ -218,17 +216,17 @@ class GraphBuilder:
         }
         material = edge_spec.material or "steel"
         # Handle enum
-        if hasattr(material, 'value'):
+        if hasattr(material, "value"):
             material = material.value
         material_encoding = material_map.get(material.lower(), [1, 0, 0])  # Default steel
         features.extend(material_encoding)
-        
+
         return np.array(features, dtype=np.float32)
-    
+
     def build_edge_features_dynamic(
         self,
         edge_spec: EdgeSpec,
-        sensor_readings: Dict[str, ComponentSensorReading],
+        sensor_readings: dict[str, ComponentSensorReading],
         current_time: datetime
     ) -> np.ndarray:
         """Построить dynamic edge features (6D).
@@ -276,10 +274,10 @@ class GraphBuilder:
                 logger.warning(f"Could not compute dynamic features for edge: {e}")
                 # Return defaults
                 raw_features = self.edge_feature_computer._get_default_features()
-        
+
         # Normalize features
         normalized = self.edge_normalizer.normalize_all(raw_features)
-        
+
         # Return as array (ordered)
         features = [
             normalized["flow_rate_lpm"],
@@ -289,14 +287,14 @@ class GraphBuilder:
             normalized["age_hours"],
             normalized["maintenance_score"]
         ]
-        
+
         return np.array(features, dtype=np.float32)
-    
+
     def build_edge_features(
         self,
         edge_spec: EdgeSpec,
-        sensor_readings: Optional[Dict[str, ComponentSensorReading]] = None,
-        current_time: Optional[datetime] = None
+        sensor_readings: dict[str, ComponentSensorReading] | None = None,
+        current_time: datetime | None = None
     ) -> torch.Tensor:
         """Построить complete edge features (14D).
         
@@ -326,7 +324,7 @@ class GraphBuilder:
         """
         # Static features (8D)
         static_features = self.build_edge_features_static(edge_spec)
-        
+
         # Dynamic features (6D)
         if self.use_dynamic_features and sensor_readings is not None and current_time is not None:
             try:
@@ -341,19 +339,19 @@ class GraphBuilder:
         else:
             # No dynamic features available
             dynamic_features = np.zeros(6, dtype=np.float32)
-        
+
         # Concatenate: [8 static] + [6 dynamic] = [14]
         all_features = np.concatenate([static_features, dynamic_features])
-        
+
         return torch.from_numpy(all_features)
-    
+
     def build_graph(
         self,
         sensor_data: pd.DataFrame,
         topology: GraphTopology,
         metadata: EquipmentMetadata,
-        sensor_readings: Optional[Dict[str, ComponentSensorReading]] = None,
-        current_time: Optional[datetime] = None
+        sensor_readings: dict[str, ComponentSensorReading] | None = None,
+        current_time: datetime | None = None
     ) -> Data:
         """Построить complete PyG graph.
         
@@ -388,7 +386,7 @@ class GraphBuilder:
         # 1. Build node features
         node_features_list = []
         component_id_to_idx = {}  # Map component_id -> node index
-        
+
         for idx, (comp_id, comp_spec) in enumerate(topology.components.items()):
             features = self.build_component_features(
                 component_id=comp_id,
@@ -397,29 +395,29 @@ class GraphBuilder:
             )
             node_features_list.append(features)
             component_id_to_idx[comp_id] = idx
-        
+
         # Stack node features
         if not node_features_list:
             raise ValueError("No components in topology")
-        
+
         x = torch.stack(node_features_list)  # [N, F]
-        
+
         # 2. Build edge_index and edge_attr
         edge_index_list = []
         edge_attr_list = []
-        
+
         for edge_spec in topology.edges:
             # Get node indices
             source_idx = component_id_to_idx.get(edge_spec.source_id)
             target_idx = component_id_to_idx.get(edge_spec.target_id)
-            
+
             if source_idx is None or target_idx is None:
                 logger.warning(f"Edge references unknown component: {edge_spec}")
                 continue
-            
+
             # Add edge
             edge_index_list.append([source_idx, target_idx])
-            
+
             # Add edge features (14D: 8 static + 6 dynamic)
             edge_features = self.build_edge_features(
                 edge_spec,
@@ -427,12 +425,12 @@ class GraphBuilder:
                 current_time=current_time
             )
             edge_attr_list.append(edge_features)
-            
+
             # Add reverse edge if bidirectional
             if edge_spec.is_bidirectional:
                 edge_index_list.append([target_idx, source_idx])
                 edge_attr_list.append(edge_features)  # Same features
-        
+
         # Convert to tensors
         if not edge_index_list:
             logger.warning("No edges in topology - creating self-loops")
@@ -445,25 +443,25 @@ class GraphBuilder:
         else:
             edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
             edge_attr = torch.stack(edge_attr_list)
-        
+
         # 3. Create PyG Data
         graph = Data(
             x=x,
             edge_index=edge_index,
             edge_attr=edge_attr
         )
-        
+
         # 4. Validate
         if not self.validate_graph(graph):
             raise ValueError("Invalid graph structure")
-        
+
         logger.info(
             f"Built graph: {graph.num_nodes} nodes, {graph.num_edges} edges, "
             f"node features: {graph.x.shape[1]}, edge features: {graph.edge_attr.shape[1]}"
         )
-        
+
         return graph
-    
+
     def validate_graph(self, data: Data) -> bool:
         """Валидировать PyG graph structure.
         
@@ -489,11 +487,11 @@ class GraphBuilder:
         if data.x is None or data.x.numel() == 0:
             logger.error("Node features are empty")
             return False
-        
+
         if torch.isnan(data.x).any() or torch.isinf(data.x).any():
             logger.error("Node features contain NaN or inf")
             return False
-        
+
         # Check edge index
         if data.edge_index is None or data.edge_index.numel() == 0:
             logger.warning("Edge index is empty (graph has no edges)")
@@ -503,7 +501,7 @@ class GraphBuilder:
             if max_idx >= data.num_nodes:
                 logger.error(f"Edge index out of bounds: {max_idx} >= {data.num_nodes}")
                 return False
-        
+
         # Check edge attributes
         if data.edge_attr is not None:
             if data.edge_attr.shape[0] != data.num_edges:
@@ -511,7 +509,7 @@ class GraphBuilder:
                     f"Edge attr count mismatch: {data.edge_attr.shape[0]} != {data.num_edges}"
                 )
                 return False
-            
+
             # Check edge feature dimension (should be 14)
             expected_edge_dim = 14
             if data.edge_attr.shape[1] != expected_edge_dim:
@@ -519,13 +517,13 @@ class GraphBuilder:
                     f"Edge feature dimension mismatch: {data.edge_attr.shape[1]} != {expected_edge_dim}"
                 )
                 return False
-            
+
             if torch.isnan(data.edge_attr).any() or torch.isinf(data.edge_attr).any():
                 logger.error("Edge features contain NaN or inf")
                 return False
-        
+
         return True
-    
+
     def get_component_sensor_columns(
         self,
         component_id: str,

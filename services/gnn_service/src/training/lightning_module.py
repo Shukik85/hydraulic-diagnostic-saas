@@ -15,16 +15,17 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import Any, Dict, Tuple, Literal
+from typing import Any, Literal
 
-import torch
-import torch.nn as nn
 import pytorch_lightning as pl
-from torch.optim import Adam, AdamW
-from torch.optim.lr_scheduler import ReduceLROnPlateau, CosineAnnealingLR
+import torch
+from torch import nn
+from torch.optim import Adam
+from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
 from src.models import UniversalTemporalGNN
-from .losses import FocalLoss, WingLoss, QuantileRULLoss, UncertaintyWeighting
+
+from .losses import FocalLoss, QuantileRULLoss, UncertaintyWeighting, WingLoss
 
 
 class HydraulicGNNModule(pl.LightningModule):
@@ -56,7 +57,7 @@ class HydraulicGNNModule(pl.LightningModule):
         >>> trainer = pl.Trainer(max_epochs=100)
         >>> trainer.fit(module, train_loader, val_loader)
     """
-    
+
     def __init__(
         self,
         in_channels: int,
@@ -69,7 +70,7 @@ class HydraulicGNNModule(pl.LightningModule):
         weight_decay: float = 1e-5,
         scheduler_type: Literal["plateau", "cosine", "none"] = "plateau",
         loss_weighting: Literal["fixed", "uncertainty"] = "fixed",
-        loss_weights: Dict[str, float] | None = None,
+        loss_weights: dict[str, float] | None = None,
         use_focal_loss: bool = True,
         use_wing_loss: bool = True,
         use_quantile_rul: bool = True,
@@ -95,10 +96,10 @@ class HydraulicGNNModule(pl.LightningModule):
             **kwargs: Additional model arguments
         """
         super().__init__()
-        
+
         # Save hyperparameters
         self.save_hyperparameters()
-        
+
         # Model
         self.model = UniversalTemporalGNN(
             in_channels=in_channels,
@@ -110,23 +111,23 @@ class HydraulicGNNModule(pl.LightningModule):
             use_compile=False,  # Disable for training
             **kwargs
         )
-        
+
         # Training config
         self.learning_rate = learning_rate
         self.weight_decay = weight_decay
         self.scheduler_type = scheduler_type
         self.loss_weighting = loss_weighting
-        
+
         # === Graph-Level Loss Functions ===
         self.graph_health_loss = WingLoss() if use_wing_loss else nn.MSELoss()
         self.graph_degradation_loss = WingLoss() if use_wing_loss else nn.MSELoss()
         self.graph_anomaly_loss = FocalLoss(gamma=2.0) if use_focal_loss else nn.BCEWithLogitsLoss()
         self.graph_rul_loss = QuantileRULLoss() if use_quantile_rul else nn.MSELoss()
-        
+
         # === Component-Level Loss Functions ===
         self.component_health_loss = WingLoss() if use_wing_loss else nn.MSELoss()
         self.component_anomaly_loss = FocalLoss(gamma=2.0) if use_focal_loss else nn.BCEWithLogitsLoss()
-        
+
         # === Multi-Task Weighting ===
         if loss_weighting == "fixed":
             self.loss_weights = loss_weights or {
@@ -140,14 +141,14 @@ class HydraulicGNNModule(pl.LightningModule):
         elif loss_weighting == "uncertainty":
             # 6 tasks: 4 graph + 2 component
             self.uncertainty_weighter = UncertaintyWeighting(num_tasks=6)
-    
+
     def forward(
         self,
         x: torch.Tensor,
         edge_index: torch.Tensor,
         edge_attr: torch.Tensor,
         batch: torch.Tensor
-    ) -> Dict[str, Dict[str, torch.Tensor]]:
+    ) -> dict[str, dict[str, torch.Tensor]]:
         """Forward pass with multi-level predictions.
         
         Args:
@@ -165,12 +166,12 @@ class HydraulicGNNModule(pl.LightningModule):
             }
         """
         return self.model(x, edge_index, edge_attr, batch)
-    
+
     def compute_loss(
         self,
-        outputs: Dict[str, Dict[str, torch.Tensor]],
+        outputs: dict[str, dict[str, torch.Tensor]],
         batch: Any
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Compute multi-level multi-task loss.
         
         Args:
@@ -183,36 +184,36 @@ class HydraulicGNNModule(pl.LightningModule):
         """
         # === Graph-Level Losses ===
         graph_health_loss = self.graph_health_loss(
-            outputs['graph']['health'],
+            outputs["graph"]["health"],
             batch.y_graph_health
         )
-        
+
         graph_degradation_loss = self.graph_degradation_loss(
-            outputs['graph']['degradation'],
+            outputs["graph"]["degradation"],
             batch.y_graph_degradation
         )
-        
+
         graph_anomaly_loss = self.graph_anomaly_loss(
-            outputs['graph']['anomaly'],
+            outputs["graph"]["anomaly"],
             batch.y_graph_anomaly
         )
-        
+
         graph_rul_loss = self.graph_rul_loss(
-            outputs['graph']['rul'],
+            outputs["graph"]["rul"],
             batch.y_graph_rul
         )
-        
+
         # === Component-Level Losses ===
         component_health_loss = self.component_health_loss(
-            outputs['component']['health'],
+            outputs["component"]["health"],
             batch.y_component_health
         )
-        
+
         component_anomaly_loss = self.component_anomaly_loss(
-            outputs['component']['anomaly'],
+            outputs["component"]["anomaly"],
             batch.y_component_anomaly
         )
-        
+
         # === Combine Losses ===
         if self.loss_weighting == "fixed":
             total_loss = (
@@ -233,7 +234,7 @@ class HydraulicGNNModule(pl.LightningModule):
                 "component_anomaly": component_anomaly_loss,
             }
             total_loss = self.uncertainty_weighter(losses)
-        
+
         # Loss dict for logging
         loss_dict = {
             "graph_health": graph_health_loss,
@@ -244,9 +245,9 @@ class HydraulicGNNModule(pl.LightningModule):
             "component_anomaly": component_anomaly_loss,
             "total": total_loss,
         }
-        
+
         return total_loss, loss_dict
-    
+
     def training_step(
         self,
         batch: Any,
@@ -268,10 +269,10 @@ class HydraulicGNNModule(pl.LightningModule):
             edge_attr=batch.edge_attr,
             batch=batch.batch
         )
-        
+
         # Compute loss
         total_loss, loss_dict = self.compute_loss(outputs, batch)
-        
+
         # Log metrics
         self.log("train/graph_health_loss", loss_dict["graph_health"], prog_bar=False)
         self.log("train/graph_degradation_loss", loss_dict["graph_degradation"], prog_bar=False)
@@ -280,7 +281,7 @@ class HydraulicGNNModule(pl.LightningModule):
         self.log("train/component_health_loss", loss_dict["component_health"], prog_bar=False)
         self.log("train/component_anomaly_loss", loss_dict["component_anomaly"], prog_bar=False)
         self.log("train/total_loss", total_loss, prog_bar=True)
-        
+
         # Log uncertainty weights if using uncertainty weighting
         if self.loss_weighting == "uncertainty":
             log_vars = self.uncertainty_weighter.log_vars
@@ -290,9 +291,9 @@ class HydraulicGNNModule(pl.LightningModule):
             self.log("train/weight_graph_rul", torch.exp(-log_vars[3]))
             self.log("train/weight_component_health", torch.exp(-log_vars[4]))
             self.log("train/weight_component_anomaly", torch.exp(-log_vars[5]))
-        
+
         return total_loss
-    
+
     def validation_step(
         self,
         batch: Any,
@@ -314,10 +315,10 @@ class HydraulicGNNModule(pl.LightningModule):
             edge_attr=batch.edge_attr,
             batch=batch.batch
         )
-        
+
         # Compute loss
         total_loss, loss_dict = self.compute_loss(outputs, batch)
-        
+
         # Log metrics
         self.log("val/graph_health_loss", loss_dict["graph_health"], prog_bar=False)
         self.log("val/graph_degradation_loss", loss_dict["graph_degradation"], prog_bar=False)
@@ -326,9 +327,9 @@ class HydraulicGNNModule(pl.LightningModule):
         self.log("val/component_health_loss", loss_dict["component_health"], prog_bar=False)
         self.log("val/component_anomaly_loss", loss_dict["component_anomaly"], prog_bar=False)
         self.log("val/total_loss", total_loss, prog_bar=True)
-        
+
         return total_loss
-    
+
     def test_step(
         self,
         batch: Any,
@@ -350,10 +351,10 @@ class HydraulicGNNModule(pl.LightningModule):
             edge_attr=batch.edge_attr,
             batch=batch.batch
         )
-        
+
         # Compute loss
         total_loss, loss_dict = self.compute_loss(outputs, batch)
-        
+
         # Log metrics
         self.log("test/graph_health_loss", loss_dict["graph_health"])
         self.log("test/graph_degradation_loss", loss_dict["graph_degradation"])
@@ -362,10 +363,10 @@ class HydraulicGNNModule(pl.LightningModule):
         self.log("test/component_health_loss", loss_dict["component_health"])
         self.log("test/component_anomaly_loss", loss_dict["component_anomaly"])
         self.log("test/total_loss", total_loss)
-        
+
         return total_loss
-    
-    def configure_optimizers(self) -> Dict[str, Any]:
+
+    def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers.
         
         Returns:
@@ -377,7 +378,7 @@ class HydraulicGNNModule(pl.LightningModule):
             lr=self.learning_rate,
             weight_decay=self.weight_decay
         )
-        
+
         # Scheduler
         if self.scheduler_type == "plateau":
             scheduler = ReduceLROnPlateau(
@@ -387,7 +388,7 @@ class HydraulicGNNModule(pl.LightningModule):
                 patience=10,
                 verbose=True
             )
-            
+
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
@@ -397,14 +398,14 @@ class HydraulicGNNModule(pl.LightningModule):
                     "frequency": 1
                 }
             }
-        
-        elif self.scheduler_type == "cosine":
+
+        if self.scheduler_type == "cosine":
             scheduler = CosineAnnealingLR(
                 optimizer,
                 T_max=100,
                 eta_min=1e-6
             )
-            
+
             return {
                 "optimizer": optimizer,
                 "lr_scheduler": {
@@ -413,7 +414,6 @@ class HydraulicGNNModule(pl.LightningModule):
                     "frequency": 1
                 }
             }
-        
-        else:
-            # No scheduler
-            return {"optimizer": optimizer}
+
+        # No scheduler
+        return {"optimizer": optimizer}

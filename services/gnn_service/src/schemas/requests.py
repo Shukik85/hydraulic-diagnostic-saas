@@ -9,10 +9,10 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import List, Dict, Any, Annotated, Literal, Optional
 from datetime import datetime
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TimeWindow(BaseModel):
@@ -30,7 +30,7 @@ class TimeWindow(BaseModel):
         ... )
         >>> window.duration_hours  # 480.0
     """
-    
+
     model_config = ConfigDict(
         strict=True,
         json_schema_extra={
@@ -41,22 +41,22 @@ class TimeWindow(BaseModel):
             }
         }
     )
-    
+
     start_time: datetime = Field(
         ...,
         description="Начало временного окна (ISO 8601)"
     )
-    
+
     end_time: datetime = Field(
         ...,
         description="Конец временного окна (ISO 8601)"
     )
-    
+
     timezone: str = Field(
         default="UTC",
         description="Временная зона (IANA timezone name)"
     )
-    
+
     @field_validator("end_time")
     @classmethod
     def validate_end_after_start(cls, v: datetime, info) -> datetime:
@@ -64,19 +64,19 @@ class TimeWindow(BaseModel):
         if "start_time" in info.data:
             if v <= info.data["start_time"]:
                 raise ValueError("end_time must be after start_time")
-            
+
             # Maximum window: 30 days
             delta = v - info.data["start_time"]
             if delta.days > 30:
                 raise ValueError("Time window cannot exceed 30 days")
-        
+
         return v
-    
+
     @property
     def duration_seconds(self) -> float:
         """Длительность окна (секунды)."""
         return (self.end_time - self.start_time).total_seconds()
-    
+
     @property
     def duration_hours(self) -> float:
         """Длительность окна (часы)."""
@@ -107,7 +107,7 @@ class ComponentSensorReading(BaseModel):
         ...     vibration_g=0.8
         ... )
     """
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -118,36 +118,36 @@ class ComponentSensorReading(BaseModel):
             }
         }
     )
-    
+
     pressure_bar: float = Field(
         ...,
         ge=0,
         le=1000,
         description="Pressure in bar"
     )
-    
+
     temperature_c: float = Field(
         ...,
         ge=-20,
         le=150,
         description="Temperature in °C"
     )
-    
-    vibration_g: Optional[float] = Field(
+
+    vibration_g: float | None = Field(
         default=None,
         ge=0,
         le=50,
         description="Vibration level in g (optional)"
     )
-    
-    flow_rate_lpm: Optional[float] = Field(
+
+    flow_rate_lpm: float | None = Field(
         default=None,
         ge=0,
         le=1000,
         description="Flow rate in L/min (optional, from flow meter if available)"
     )
-    
-    rpm: Optional[float] = Field(
+
+    rpm: float | None = Field(
         default=None,
         ge=0,
         le=10000,
@@ -172,7 +172,7 @@ class EdgeOverride(BaseModel):
         ...     flow_rate_lpm=118.2  # From flow meter
         ... )
     """
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -180,24 +180,24 @@ class EdgeOverride(BaseModel):
             }
         }
     )
-    
-    flow_rate_lpm: Optional[float] = Field(
+
+    flow_rate_lpm: float | None = Field(
         default=None,
         ge=0,
         description="Override flow rate with measured value"
     )
-    
-    pressure_drop_bar: Optional[float] = Field(
+
+    pressure_drop_bar: float | None = Field(
         default=None,
         description="Override pressure drop"
     )
-    
-    temperature_delta_c: Optional[float] = Field(
+
+    temperature_delta_c: float | None = Field(
         default=None,
         description="Override temperature delta"
     )
-    
-    vibration_level_g: Optional[float] = Field(
+
+    vibration_level_g: float | None = Field(
         default=None,
         ge=0,
         description="Override vibration level"
@@ -239,7 +239,7 @@ class MinimalInferenceRequest(BaseModel):
         ...     topology_id="standard_pump_system"
         ... )
     """
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -265,25 +265,25 @@ class MinimalInferenceRequest(BaseModel):
             }
         }
     )
-    
+
     equipment_id: str = Field(
         ...,
         min_length=1,
         max_length=100,
         description="Unique equipment identifier"
     )
-    
+
     timestamp: datetime = Field(
         ...,
         description="Timestamp of sensor readings (ISO 8601)"
     )
-    
-    sensor_readings: Dict[str, ComponentSensorReading] = Field(
+
+    sensor_readings: dict[str, ComponentSensorReading] = Field(
         ...,
         min_length=1,
         description="Sensor readings per component {component_id: reading}"
     )
-    
+
     topology_id: str = Field(
         default="default",
         description="Pre-configured topology identifier"
@@ -314,7 +314,7 @@ class AdvancedInferenceRequest(MinimalInferenceRequest):
         ...     }
         ... )
     """
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -332,13 +332,13 @@ class AdvancedInferenceRequest(MinimalInferenceRequest):
             }
         }
     )
-    
-    edge_overrides: Optional[Dict[str, EdgeOverride]] = Field(
+
+    edge_overrides: dict[str, EdgeOverride] | None = Field(
         default=None,
         description="Optional edge feature overrides {edge_id: override}"
     )
-    
-    custom_topology: Optional[dict] = Field(
+
+    custom_topology: dict | None = Field(
         default=None,
         description="Optional custom topology (for testing/advanced use)"
     )
@@ -365,7 +365,7 @@ class PredictionRequest(BaseModel):
         ...     }
         ... )
     """
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -378,14 +378,14 @@ class PredictionRequest(BaseModel):
             }
         }
     )
-    
+
     equipment_id: str = Field(
         ...,
         min_length=1,
         description="Equipment ID"
     )
-    
-    sensor_data: Dict[str, List[float]] | Any = Field(
+
+    sensor_data: dict[str, list[float]] | Any = Field(
         ...,
         description="Sensor data (dict or pandas DataFrame)"
     )
@@ -405,7 +405,7 @@ class BatchPredictionRequest(BaseModel):
         ...     ]
         ... )
     """
-    
+
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
@@ -428,8 +428,8 @@ class BatchPredictionRequest(BaseModel):
             }
         }
     )
-    
-    requests: List[PredictionRequest] = Field(
+
+    requests: list[PredictionRequest] = Field(
         ...,
         min_length=1,
         max_length=100,
@@ -458,7 +458,7 @@ class InferenceRequest(BaseModel):
         ...     include_recommendations=True
         ... )
     """
-    
+
     model_config = ConfigDict(
         strict=True,
         json_schema_extra={
@@ -474,34 +474,34 @@ class InferenceRequest(BaseModel):
             }
         }
     )
-    
+
     equipment_id: str = Field(
         ...,
         min_length=1,
         max_length=100,
         description="Уникальный ID оборудования"
     )
-    
+
     time_window: TimeWindow = Field(
         ...,
         description="Временное окно для анализа данных сенсоров"
     )
-    
+
     include_attention_weights: bool = Field(
         default=False,
         description="Вернуть attention weights для визуализации (увеличивает размер ответа)"
     )
-    
+
     include_recommendations: bool = Field(
         default=True,
         description="Вернуть рекомендации по обслуживанию"
     )
-    
+
     confidence_threshold: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
         default=0.7,
         description="Минимальная confidence для включения результатов"
     )
-    
+
     custom_parameters: dict[str, str | int | float | bool] = Field(
         default_factory=dict,
         description="Дополнительные параметры для специфичных use cases"
@@ -525,7 +525,7 @@ class BatchInferenceRequest(BaseModel):
         ...     priority="normal"
         ... )
     """
-    
+
     model_config = ConfigDict(
         strict=True,
         json_schema_extra={
@@ -551,27 +551,27 @@ class BatchInferenceRequest(BaseModel):
             }
         }
     )
-    
-    requests: List[InferenceRequest] = Field(
+
+    requests: list[InferenceRequest] = Field(
         ...,
         min_length=1,
         max_length=100,
         description="Список inference запросов"
     )
-    
+
     priority: Literal["low", "normal", "high", "critical"] = Field(
         default="normal",
         description="Приоритет обработки batch"
     )
-    
+
     max_parallel: Annotated[int, Field(ge=1, le=10)] = Field(
         default=4,
         description="Максимальное количество параллельных inference"
     )
-    
+
     @field_validator("requests")
     @classmethod
-    def validate_unique_equipment_ids(cls, v: List[InferenceRequest]) -> List[InferenceRequest]:
+    def validate_unique_equipment_ids(cls, v: list[InferenceRequest]) -> list[InferenceRequest]:
         """Проверка уникальности equipment_id в batch."""
         equipment_ids = [req.equipment_id for req in v]
         if len(equipment_ids) != len(set(equipment_ids)):
@@ -589,15 +589,15 @@ class TrainingRequest(BaseModel):
         use_pretrained: Использовать ли pretrained weights
         pretrained_model_path: Путь к pretrained модели
     """
-    
+
     model_config = ConfigDict(strict=True)
-    
+
     dataset_path: str = Field(
         ...,
         min_length=1,
         description="Путь к preprocessed dataset"
     )
-    
+
     model_name: str = Field(
         ...,
         min_length=1,
@@ -605,22 +605,22 @@ class TrainingRequest(BaseModel):
         pattern=r"^[a-zA-Z0-9_-]+$",
         description="Имя модели для сохранения checkpoint"
     )
-    
+
     config_override: dict[str, int | float | bool | str] = Field(
         default_factory=dict,
         description="Override параметров из SystemConfig"
     )
-    
+
     use_pretrained: bool = Field(
         default=False,
         description="Начать с pretrained weights"
     )
-    
+
     pretrained_model_path: str | None = Field(
         default=None,
         description="Путь к pretrained модели (если use_pretrained=True)"
     )
-    
+
     @field_validator("pretrained_model_path")
     @classmethod
     def validate_pretrained_path(cls, v: str | None, info) -> str | None:

@@ -20,14 +20,15 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch_geometric.nn import GATv2Conv, global_mean_pool
 from typing import Literal
 
-from src.models.layers import ARMAAttentionLSTM, EdgeConditionedGATv2Layer
+import torch
+import torch.nn.functional as F
+from torch import nn
+from torch_geometric.nn import global_mean_pool
+
 from src.models.attention import CrossTaskAttention
+from src.models.layers import ARMAAttentionLSTM, EdgeConditionedGATv2Layer
 
 
 class UniversalTemporalGNN(nn.Module):
@@ -104,7 +105,7 @@ class UniversalTemporalGNN(nn.Module):
         Old checkpoints (v1.x) несовместимы.
         Требуется retraining с v2.0.0+
     """
-    
+
     def __init__(
         self,
         in_channels: int,
@@ -122,7 +123,7 @@ class UniversalTemporalGNN(nn.Module):
         compile_mode: Literal["default", "reduce-overhead", "max-autotune"] = "reduce-overhead",
     ):
         super().__init__()
-        
+
         self.in_channels = in_channels
         self.hidden_channels = hidden_channels
         self.num_heads = num_heads
@@ -131,14 +132,14 @@ class UniversalTemporalGNN(nn.Module):
         self.use_edge_features = use_edge_features
         self.edge_feature_dim = edge_feature_dim  # Store for checkpoint
         self.use_compile = use_compile
-        
+
         # Input projection
         self.input_projection = nn.Linear(in_channels, hidden_channels)
-        
+
         # Edge feature projection (если используются)
         if use_edge_features:
             self.edge_projection = nn.Linear(edge_feature_dim, hidden_channels // num_heads)
-        
+
         # GATv2 layers для spatial modeling
         self.gat_layers = nn.ModuleList()
         for i in range(num_gat_layers):
@@ -153,12 +154,12 @@ class UniversalTemporalGNN(nn.Module):
                 bias=True
             )
             self.gat_layers.append(layer)
-        
+
         # Layer normalization после каждого GAT
         self.gat_norms = nn.ModuleList([
             nn.LayerNorm(hidden_channels) for _ in range(num_gat_layers)
         ])
-        
+
         # ARMA-Attention LSTM для temporal modeling
         self.temporal_lstm = ARMAAttentionLSTM(
             input_dim=hidden_channels,
@@ -169,14 +170,14 @@ class UniversalTemporalGNN(nn.Module):
             dropout=dropout if lstm_layers > 1 else 0.0,
             bidirectional=False
         )
-        
+
         # Multi-task learning head с cross-task attention
         self.task_attention = CrossTaskAttention(
             hidden_dim=lstm_hidden,
             num_tasks=3,
             num_heads=4
         )
-        
+
         # Task-specific heads
         self.health_head = nn.Sequential(
             nn.Linear(lstm_hidden, 64),
@@ -185,7 +186,7 @@ class UniversalTemporalGNN(nn.Module):
             nn.Linear(64, 1),
             nn.Sigmoid()  # [0, 1] range
         )
-        
+
         self.degradation_head = nn.Sequential(
             nn.Linear(lstm_hidden, 64),
             nn.ReLU(),
@@ -193,21 +194,21 @@ class UniversalTemporalGNN(nn.Module):
             nn.Linear(64, 1),
             nn.Sigmoid()  # [0, 1] range
         )
-        
+
         self.anomaly_head = nn.Sequential(
             nn.Linear(lstm_hidden, 64),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(64, 9)  # 9 anomaly types (from AnomalyType enum)
         )
-        
+
         # Initialize weights
         self._initialize_weights()
-        
+
         # Apply torch.compile (PyTorch 2.8)
         if use_compile:
             self._apply_torch_compile(compile_mode)
-    
+
     def _initialize_weights(self) -> None:
         """Инициализация весов модели.
         
@@ -220,13 +221,13 @@ class UniversalTemporalGNN(nn.Module):
                     nn.init.zeros_(module.bias)
             elif isinstance(module, nn.LSTM):
                 for name, param in module.named_parameters():
-                    if 'weight_ih' in name:
+                    if "weight_ih" in name:
                         nn.init.xavier_uniform_(param)
-                    elif 'weight_hh' in name:
+                    elif "weight_hh" in name:
                         nn.init.orthogonal_(param)
-                    elif 'bias' in name:
+                    elif "bias" in name:
                         nn.init.zeros_(param)
-    
+
     def _apply_torch_compile(self, mode: str) -> None:
         """Применить torch.compile к forward pass (PyTorch 2.8).
         
@@ -244,7 +245,7 @@ class UniversalTemporalGNN(nn.Module):
             fullgraph=False,  # Allow graph breaks
             dynamic=True  # Support variable batch sizes
         )
-    
+
     def forward(
         self,
         x: torch.Tensor,
@@ -276,15 +277,15 @@ class UniversalTemporalGNN(nn.Module):
             где N = total nodes, E = total edges, B = batch size
         """
         attention_weights = []
-        
+
         # 1. Input projection
         x = self.input_projection(x)  # [N, F_in] -> [N, H]
         x = F.relu(x)
-        
+
         # 2. Edge feature projection (если есть)
         if self.use_edge_features and edge_attr is not None:
             edge_attr = self.edge_projection(edge_attr)  # [E, 14] -> [E, H//num_heads]
-        
+
         # 3. GATv2 spatial processing
         for i, (gat_layer, norm) in enumerate(zip(self.gat_layers, self.gat_norms)):
             # GATv2 с edge conditioning
@@ -295,17 +296,17 @@ class UniversalTemporalGNN(nn.Module):
                 attention_weights.append(attn)
             else:
                 x_new = gat_layer(x, edge_index, edge_attr=edge_attr)
-            
+
             # Residual connection + normalization
             if i > 0:
                 x = x + x_new  # Skip connection
             else:
                 x = x_new
-            
+
             x = norm(x)
             x = F.relu(x)
             x = F.dropout(x, p=0.3, training=self.training)
-        
+
         # 4. Graph-level pooling для каждого equipment
         if batch is None:
             # Single graph - global mean pooling
@@ -313,32 +314,32 @@ class UniversalTemporalGNN(nn.Module):
         else:
             # Batch of graphs
             x_pooled = global_mean_pool(x, batch)  # [B, H]
-        
+
         # 5. Temporal modeling с ARMA-LSTM
         # Reshape для LSTM: [B, T=1, H] (здесь T=1, т.к. graph уже агрегирован)
         # В реальности будет sequence of graphs
         x_temporal = x_pooled.unsqueeze(1)  # [B, 1, H]
-        
+
         # ARMA-Attention LSTM
         lstm_out, (h_n, c_n) = self.temporal_lstm(x_temporal)  # lstm_out: [B, 1, lstm_hidden]
-        
+
         # Use final hidden state
         final_hidden = h_n[-1]  # [B, lstm_hidden]
-        
+
         # 6. Multi-task head с cross-task attention
         # Create task representations
         task_repr = self.task_attention(final_hidden)  # [3, B, lstm_hidden]
-        
+
         # 7. Task-specific predictions
         health = self.health_head(task_repr[0])  # [B, 1]
         degradation = self.degradation_head(task_repr[1])  # [B, 1]
         anomaly = self.anomaly_head(task_repr[2])  # [B, 9]
-        
+
         if return_attention:
             return health, degradation, anomaly, attention_weights
-        
+
         return health, degradation, anomaly
-    
+
     def get_model_config(self) -> dict[str, int | float | bool | str]:
         """Получить конфигурацию модели для checkpoint.
         
@@ -356,7 +357,7 @@ class UniversalTemporalGNN(nn.Module):
             "use_compile": self.use_compile,
             "model_version": "v2.0.0",  # Phase 3.1: Version for checkpoint compatibility
         }
-    
+
     @torch.inference_mode()  # PyTorch 2.8 optimization
     def predict(
         self,
@@ -371,14 +372,14 @@ class UniversalTemporalGNN(nn.Module):
             Dictionary с predictions и metadata
         """
         self.eval()
-        
+
         health, degradation, anomaly = self.forward(
             x, edge_index, edge_attr, batch, return_attention=False
         )
-        
+
         # Apply softmax к anomaly logits
         anomaly_probs = F.softmax(anomaly, dim=-1)
-        
+
         return {
             "health": health,
             "degradation": degradation,

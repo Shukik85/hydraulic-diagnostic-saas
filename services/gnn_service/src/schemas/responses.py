@@ -10,9 +10,9 @@ Python 3.14 Features:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ComponentPrediction(BaseModel):
@@ -36,29 +36,29 @@ class ComponentPrediction(BaseModel):
         ...     }
         ... )
     """
-    
+
     model_config = ConfigDict(frozen=False)
-    
+
     component_id: str = Field(
         ...,
         description="Unique component identifier",
         examples=["pump_01", "valve_23", "cylinder_07"]
     )
-    
+
     component_type: str = Field(
         ...,
         description="Type of hydraulic component",
         examples=["pump", "valve", "cylinder", "filter", "motor"]
     )
-    
+
     health: float = Field(
         ...,
         ge=0.0,
         le=1.0,
         description="Component health score (1.0=perfect, 0.0=critical)"
     )
-    
-    anomalies: Dict[str, float] = Field(
+
+    anomalies: dict[str, float] = Field(
         default_factory=dict,
         description="Anomaly probabilities per type"
     )
@@ -81,30 +81,30 @@ class GraphPrediction(BaseModel):
         ...     anomalies={"pressure_drop": 0.15, "contamination": 0.08}
         ... )
     """
-    
+
     model_config = ConfigDict(frozen=False)
-    
+
     health: float = Field(
         ...,
         ge=0.0,
         le=1.0,
         description="Overall system health score (1.0=perfect, 0.0=critical)"
     )
-    
+
     degradation: float = Field(
         ...,
         ge=0.0,
         le=1.0,
         description="System degradation rate (0.0=stable, 1.0=rapid degradation)"
     )
-    
+
     rul_hours: float = Field(
         ...,
         ge=0.0,
         description="Remaining useful life in hours until predicted failure"
     )
-    
-    anomalies: Dict[str, float] = Field(
+
+    anomalies: dict[str, float] = Field(
         default_factory=dict,
         description="System-level anomaly probabilities per type"
     )
@@ -147,46 +147,46 @@ class PredictionResponse(BaseModel):
         ...     inference_time_ms=120.5
         ... )
     """
-    
+
     model_config = ConfigDict(frozen=False)
-    
+
     request_id: str = Field(
         ...,
         description="Unique request identifier"
     )
-    
+
     equipment_id: str = Field(
         ...,
         description="Equipment identifier"
     )
-    
+
     timestamp: datetime = Field(
         default_factory=datetime.utcnow,
         description="Prediction timestamp (UTC)"
     )
-    
-    component: List[ComponentPrediction] = Field(
+
+    component: list[ComponentPrediction] = Field(
         default_factory=list,
         description="Component-level predictions (per-node)"
     )
-    
+
     graph: GraphPrediction = Field(
         ...,
         description="Graph-level predictions (entire equipment)"
     )
-    
+
     model_version: str = Field(
         ...,
         description="Model version used for inference",
         examples=["v2.0.0", "v2.1.0"]
     )
-    
+
     inference_time_ms: float = Field(
         ...,
         ge=0.0,
         description="Inference latency in milliseconds"
     )
-    
+
     # Optional metadata
     confidence: float | None = Field(
         default=None,
@@ -194,8 +194,8 @@ class PredictionResponse(BaseModel):
         le=1.0,
         description="Overall prediction confidence"
     )
-    
-    warnings: List[str] = Field(
+
+    warnings: list[str] = Field(
         default_factory=list,
         description="Any warnings or notes about the prediction"
     )
@@ -213,45 +213,45 @@ class ModelInfo(BaseModel):
         training_date: When model was trained
         metrics: Model performance metrics
     """
-    
+
     model_config = ConfigDict(frozen=False)
-    
+
     version: str = Field(
         ...,
         description="Model version (semantic versioning)",
         examples=["v2.0.0"]
     )
-    
+
     architecture: str = Field(
         ...,
         description="Model architecture name",
         examples=["UniversalTemporalGNN"]
     )
-    
+
     num_parameters: int = Field(
         ...,
         ge=0,
         description="Total trainable parameters"
     )
-    
+
     input_features: int = Field(
         ...,
         ge=1,
         description="Expected input node feature dimension"
     )
-    
+
     output_structure: str = Field(
         ...,
         description="Output structure description",
         examples=["multi-level: component + graph"]
     )
-    
+
     training_date: datetime | None = Field(
         default=None,
         description="Model training completion date"
     )
-    
-    metrics: Dict[str, float] = Field(
+
+    metrics: dict[str, float] = Field(
         default_factory=dict,
         description="Model performance metrics"
     )
@@ -268,43 +268,43 @@ class HealthResponse(BaseModel):
         memory_usage_mb: Memory usage in MB
         uptime_seconds: Service uptime
     """
-    
+
     model_config = ConfigDict(frozen=False)
-    
+
     status: str = Field(
         ...,
         description="Service status",
         examples=["healthy", "degraded", "unhealthy"]
     )
-    
+
     timestamp: datetime = Field(
         default_factory=datetime.utcnow,
         description="Health check timestamp (UTC)"
     )
-    
+
     model_loaded: bool = Field(
         ...,
         description="Whether model is loaded and ready"
     )
-    
+
     gpu_available: bool = Field(
         ...,
         description="Whether GPU is available for inference"
     )
-    
+
     memory_usage_mb: float = Field(
         ...,
         ge=0.0,
         description="Current memory usage in MB"
     )
-    
+
     uptime_seconds: float = Field(
         ...,
         ge=0.0,
         description="Service uptime in seconds"
     )
-    
-    details: Dict[str, Any] = Field(
+
+    details: dict[str, Any] = Field(
         default_factory=dict,
         description="Additional health check details"
     )

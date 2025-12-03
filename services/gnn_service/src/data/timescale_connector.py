@@ -13,15 +13,16 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-import asyncpg
-import pandas as pd
+import asyncio
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Any
-import asyncio
-from contextlib import asynccontextmanager
 
-from src.schemas import TimeWindow, EquipmentMetadata, SensorConfig
+import asyncpg
+import pandas as pd
+
+from src.schemas import EquipmentMetadata, TimeWindow
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class TimescaleConnector:
         >>> 
         >>> await connector.close()
     """
-    
+
     def __init__(
         self,
         db_url: str,
@@ -70,10 +71,10 @@ class TimescaleConnector:
         self.pool_max_size = pool_max_size
         self.command_timeout = command_timeout
         self.max_retries = max_retries
-        
+
         self.pool: asyncpg.Pool | None = None
         self._connected = False
-    
+
     async def connect(self) -> None:
         """Установить connection pool.
         
@@ -92,14 +93,14 @@ class TimescaleConnector:
         except Exception as e:
             logger.error(f"Failed to connect to TimescaleDB: {e}")
             raise ConnectionError(f"TimescaleDB connection failed: {e}") from e
-    
+
     async def close(self) -> None:
         """Закрыть connection pool."""
         if self.pool is not None:
             await self.pool.close()
             self._connected = False
             logger.info("TimescaleDB connection closed")
-    
+
     @asynccontextmanager
     async def get_connection(self):
         """Получить connection из pool (context manager).
@@ -112,10 +113,10 @@ class TimescaleConnector:
         """
         if self.pool is None:
             raise RuntimeError("Connection pool not initialized. Call connect() first.")
-        
+
         async with self.pool.acquire() as conn:
             yield conn
-    
+
     async def _execute_with_retry(
         self,
         query_func,
@@ -137,18 +138,18 @@ class TimescaleConnector:
         for attempt in range(self.max_retries):
             try:
                 return await query_func(*args, **kwargs)
-            except (asyncpg.PostgresError, asyncio.TimeoutError) as e:
+            except (TimeoutError, asyncpg.PostgresError) as e:
                 if attempt == self.max_retries - 1:
                     logger.error(f"Query failed after {self.max_retries} attempts: {e}")
                     raise
-                
+
                 # Exponential backoff
                 wait_time = 2 ** attempt
                 logger.warning(f"Query failed (attempt {attempt + 1}/{self.max_retries}), retrying in {wait_time}s: {e}")
                 await asyncio.sleep(wait_time)
-        
+
         raise RuntimeError("Should not reach here")
-    
+
     async def fetch_sensor_data(
         self,
         equipment_id: str,
@@ -182,7 +183,7 @@ class TimescaleConnector:
         """
         if not sensors:
             raise ValueError("Sensors list cannot be empty")
-        
+
         async def _fetch():
             query = """
                 SELECT 
@@ -196,7 +197,7 @@ class TimescaleConnector:
             """.format(
                 sensor_columns=", ".join(sensors)
             )
-            
+
             async with self.get_connection() as conn:
                 rows = await conn.fetch(
                     query,
@@ -204,19 +205,19 @@ class TimescaleConnector:
                     time_window.start_time,
                     time_window.end_time
                 )
-            
+
             # Convert to DataFrame
             if not rows:
                 logger.warning(f"No data found for {equipment_id} in time window {time_window}")
                 return pd.DataFrame(columns=["timestamp"] + sensors)
-            
+
             df = pd.DataFrame(rows, columns=["timestamp"] + sensors)
             logger.info(f"Fetched {len(df)} samples for {equipment_id}")
-            
+
             return df
-        
+
         return await self._execute_with_retry(_fetch)
-    
+
     async def fetch_batch_sensor_data(
         self,
         requests: list[tuple[str, TimeWindow, list[str]]]
@@ -241,10 +242,10 @@ class TimescaleConnector:
             self.fetch_sensor_data(eq_id, tw, sensors)
             for eq_id, tw, sensors in requests
         ]
-        
+
         # Execute concurrently
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Build result dict
         result_dict = {}
         for (eq_id, _, _), result in zip(requests, results):
@@ -253,9 +254,9 @@ class TimescaleConnector:
                 result_dict[eq_id] = pd.DataFrame()  # Empty DataFrame
             else:
                 result_dict[eq_id] = result
-        
+
         return result_dict
-    
+
     async def get_equipment_metadata(
         self,
         equipment_id: str
@@ -288,25 +289,25 @@ class TimescaleConnector:
                 FROM equipment_metadata
                 WHERE equipment_id = $1
             """
-            
+
             async with self.get_connection() as conn:
                 row = await conn.fetchrow(query, equipment_id)
-            
+
             if row is None:
                 raise ValueError(f"Equipment not found: {equipment_id}")
-            
+
             # Parse to EquipmentMetadata
             # TODO: Full parsing когда schema ready
             logger.info(f"Fetched metadata for {equipment_id}")
-            
+
             return row
-        
+
         result = await self._execute_with_retry(_fetch)
-        
+
         # Convert to EquipmentMetadata
         # For now, return raw data (will integrate with schema later)
         return result
-    
+
     async def health_check(self) -> bool:
         """Проверить database connection health.
         
@@ -319,7 +320,7 @@ class TimescaleConnector:
         """
         if not self._connected or self.pool is None:
             return False
-        
+
         try:
             async with self.get_connection() as conn:
                 await conn.fetchval("SELECT 1")
@@ -327,7 +328,7 @@ class TimescaleConnector:
         except Exception as e:
             logger.error(f"Health check failed: {e}")
             return False
-    
+
     async def get_equipment_count(self) -> int:
         """Получить количество equipment в database.
         
@@ -339,9 +340,9 @@ class TimescaleConnector:
             async with self.get_connection() as conn:
                 count = await conn.fetchval(query)
             return count
-        
+
         return await self._execute_with_retry(_fetch)
-    
+
     async def get_time_range(
         self,
         equipment_id: str
@@ -366,17 +367,17 @@ class TimescaleConnector:
                 FROM sensor_data
                 WHERE equipment_id = $1
             """
-            
+
             async with self.get_connection() as conn:
                 row = await conn.fetchrow(query, equipment_id)
-            
-            if row is None or row['min_time'] is None:
+
+            if row is None or row["min_time"] is None:
                 raise ValueError(f"No data found for equipment: {equipment_id}")
-            
-            return (row['min_time'], row['max_time'])
-        
+
+            return (row["min_time"], row["max_time"])
+
         return await self._execute_with_retry(_fetch)
-    
+
     def __repr__(self) -> str:
         status = "connected" if self._connected else "disconnected"
         return f"TimescaleConnector(status={status}, pool={self.pool_min_size}-{self.pool_max_size})"

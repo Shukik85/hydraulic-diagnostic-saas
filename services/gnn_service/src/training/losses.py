@@ -14,11 +14,11 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from typing import Dict, Literal
+from typing import Literal
 
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
+from torch import nn
 
 
 class FocalLoss(nn.Module):
@@ -38,7 +38,7 @@ class FocalLoss(nn.Module):
         >>> targets = torch.randint(0, 2, (32, 9)).float()  # [B, C]
         >>> loss = loss_fn(logits, targets)
     """
-    
+
     def __init__(
         self,
         alpha: float | torch.Tensor = 0.25,
@@ -49,7 +49,7 @@ class FocalLoss(nn.Module):
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
-    
+
     def forward(
         self,
         logits: torch.Tensor,
@@ -66,34 +66,33 @@ class FocalLoss(nn.Module):
         """
         # Sigmoid probabilities
         probs = torch.sigmoid(logits)
-        
+
         # Binary cross-entropy
         bce = F.binary_cross_entropy_with_logits(
             logits,
             targets,
             reduction="none"
         )
-        
+
         # Focal term: (1 - p_t)^gamma
         p_t = probs * targets + (1 - probs) * (1 - targets)
         focal_term = (1 - p_t) ** self.gamma
-        
+
         # Alpha weighting
         if isinstance(self.alpha, (int, float)):
             alpha_t = self.alpha * targets + (1 - self.alpha) * (1 - targets)
         else:
             alpha_t = self.alpha
-        
+
         # Focal loss
         loss = alpha_t * focal_term * bce
-        
+
         # Reduction
         if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == "sum":
+        if self.reduction == "sum":
             return loss.sum()
-        else:
-            return loss
+        return loss
 
 
 class WingLoss(nn.Module):
@@ -116,7 +115,7 @@ class WingLoss(nn.Module):
         >>> target = torch.randn(32, 1)
         >>> loss = loss_fn(pred, target)
     """
-    
+
     def __init__(
         self,
         omega: float = 10.0,
@@ -127,12 +126,12 @@ class WingLoss(nn.Module):
         self.omega = omega
         self.epsilon = epsilon
         self.reduction = reduction
-        
+
         # Precompute constant C
         self.C = self.omega - self.omega * torch.log(
             torch.tensor(1.0 + self.omega / self.epsilon)
         )
-    
+
     def forward(
         self,
         pred: torch.Tensor,
@@ -148,21 +147,20 @@ class WingLoss(nn.Module):
             loss: Wing loss scalar or [B, 1]
         """
         delta = torch.abs(pred - target)
-        
+
         # Wing loss formula
         loss = torch.where(
             delta < self.omega,
             self.omega * torch.log(1 + delta / self.epsilon),
             delta - self.C
         )
-        
+
         # Reduction
         if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == "sum":
+        if self.reduction == "sum":
             return loss.sum()
-        else:
-            return loss
+        return loss
 
 
 class QuantileRULLoss(nn.Module):
@@ -194,22 +192,22 @@ class QuantileRULLoss(nn.Module):
         >>> target_log = torch.log1p(target)
         >>> loss = loss_fn(pred_log, target_log)
     """
-    
+
     def __init__(
         self,
         quantiles: list[float] = [0.1, 0.5, 0.9],
         reduction: Literal["mean", "sum", "none"] = "mean"
     ):
         super().__init__()
-        
+
         # Validate quantiles
         for q in quantiles:
             if not 0 < q < 1:
                 raise ValueError(f"Quantile must be in (0, 1), got {q}")
-        
+
         self.quantiles = quantiles
         self.reduction = reduction
-    
+
     def forward(
         self,
         pred: torch.Tensor,
@@ -242,30 +240,29 @@ class QuantileRULLoss(nn.Module):
                 → Underestimation penalized 9x more!
         """
         losses = []
-        
+
         for q in self.quantiles:
             # Error: positive if underestimated, negative if overestimated
             error = target - pred
-            
+
             # Quantile loss (asymmetric)
             quantile_loss = torch.max(
                 q * error,
                 (q - 1) * error
             )
-            
+
             losses.append(quantile_loss)
-        
+
         # Stack and average over quantiles
         stacked_losses = torch.stack(losses, dim=0)  # [num_quantiles, B, 1]
         loss = stacked_losses.mean(dim=0)  # [B, 1]
-        
+
         # Reduction
         if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == "sum":
+        if self.reduction == "sum":
             return loss.sum()
-        else:
-            return loss
+        return loss
 
 
 class UncertaintyWeighting(nn.Module):
@@ -290,22 +287,22 @@ class UncertaintyWeighting(nn.Module):
         ... }
         >>> total_loss = weighter(losses)
     """
-    
+
     def __init__(
         self,
         num_tasks: int,
         init_log_var: float = 0.0
     ):
         super().__init__()
-        
+
         # Learnable log variances (one per task)
         self.log_vars = nn.Parameter(
             torch.full((num_tasks,), init_log_var)
         )
-    
+
     def forward(
         self,
-        losses: Dict[str, torch.Tensor]
+        losses: dict[str, torch.Tensor]
     ) -> torch.Tensor:
         """Compute weighted loss.
         
@@ -319,16 +316,16 @@ class UncertaintyWeighting(nn.Module):
             Formula: L_total = sum_i (exp(-log_var_i) * L_i + log_var_i)
         """
         task_names = list(losses.keys())
-        
+
         total_loss = 0.0
-        
+
         for i, task_name in enumerate(task_names):
             # Uncertainty weighting
             precision = torch.exp(-self.log_vars[i])
             loss_weighted = precision * losses[task_name] + self.log_vars[i]
-            
+
             total_loss = total_loss + loss_weighted
-        
+
         return total_loss
 
 
@@ -354,25 +351,25 @@ class MultiTaskLoss(nn.Module):
         >>> loss = multi_loss(health_pred, degradation_pred, anomaly_logits,
         ...                   health_true, degradation_true, anomaly_true)
     """
-    
+
     def __init__(
         self,
         health_loss: nn.Module | None = None,
         degradation_loss: nn.Module | None = None,
         anomaly_loss: nn.Module | None = None,
         weighting: Literal["fixed", "uncertainty"] = "fixed",
-        loss_weights: Dict[str, float] | None = None
+        loss_weights: dict[str, float] | None = None
     ):
         super().__init__()
-        
+
         # Loss functions
         self.health_loss = health_loss or nn.MSELoss()
         self.degradation_loss = degradation_loss or nn.MSELoss()
         self.anomaly_loss = anomaly_loss or nn.BCEWithLogitsLoss()
-        
+
         # Weighting strategy
         self.weighting = weighting
-        
+
         if weighting == "fixed":
             self.loss_weights = loss_weights or {
                 "health": 1.0,
@@ -381,7 +378,7 @@ class MultiTaskLoss(nn.Module):
             }
         elif weighting == "uncertainty":
             self.uncertainty_weighter = UncertaintyWeighting(num_tasks=3)
-    
+
     def forward(
         self,
         health_pred: torch.Tensor,
@@ -390,7 +387,7 @@ class MultiTaskLoss(nn.Module):
         health_true: torch.Tensor,
         degradation_true: torch.Tensor,
         anomaly_true: torch.Tensor
-    ) -> tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Compute multi-task loss.
         
         Args:
@@ -412,7 +409,7 @@ class MultiTaskLoss(nn.Module):
             degradation_true
         )
         anomaly_loss = self.anomaly_loss(anomaly_logits, anomaly_true)
-        
+
         # Combine losses
         if self.weighting == "fixed":
             total_loss = (
@@ -427,7 +424,7 @@ class MultiTaskLoss(nn.Module):
                 "anomaly": anomaly_loss
             }
             total_loss = self.uncertainty_weighter(losses)
-        
+
         # Return total + individual losses
         loss_dict = {
             "health": health_loss,
@@ -435,5 +432,5 @@ class MultiTaskLoss(nn.Module):
             "anomaly": anomaly_loss,
             "total": total_loss
         }
-        
+
         return total_loss, loss_dict
