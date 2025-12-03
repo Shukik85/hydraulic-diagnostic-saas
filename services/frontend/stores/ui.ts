@@ -99,15 +99,32 @@ export const useUiStore = defineStore('ui', {
       
       // Apply theme to document
       if (import.meta.client) {
+        let appliedTheme = theme;
+        
         if (theme === 'auto') {
           const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-          document.documentElement.setAttribute('data-color-scheme', prefersDark ? 'dark' : 'light');
+          appliedTheme = prefersDark ? 'dark' : 'light';
+        }
+        
+        console.log('Applying theme to DOM:', appliedTheme);
+        
+        // Set data-color-scheme attribute
+        document.documentElement.setAttribute('data-color-scheme', appliedTheme);
+        
+        // Also add/remove dark class for compatibility
+        if (appliedTheme === 'dark') {
+          document.documentElement.classList.add('dark');
         } else {
-          document.documentElement.setAttribute('data-color-scheme', theme);
+          document.documentElement.classList.remove('dark');
         }
         
         // Save to localStorage
         localStorage.setItem('theme', theme);
+        
+        console.log('Theme applied. Current attributes:', {
+          'data-color-scheme': document.documentElement.getAttribute('data-color-scheme'),
+          'classList': document.documentElement.classList.toString(),
+        });
       }
     },
 
