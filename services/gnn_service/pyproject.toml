@@ -48,6 +48,9 @@ ignore = [
     "E501",  # line too long (handled by black)
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
+    "RUF001",  # Allow Cyrillic characters in strings (intentional for Russian docs)
+    "RUF002",  # Allow Cyrillic characters in docstrings (intentional for Russian docs)
+    "ARG002",  # Allow unused method arguments (needed for interface compatibility)
 ]
 
 [tool.ruff.lint.per-file-ignores]
