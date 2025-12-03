@@ -1,5 +1,5 @@
 # GNN Service Dependencies - Production Ready
-# Python 3.14.0 + PyTorch 2.9+ + CUDA 12.9 (optional)
+# Python 3.14.0 + PyTorch 2.9+ + CUDA 12.6/12.8/13.0
 
 # === Core Framework ===
 fastapi>=0.115.0
@@ -18,14 +18,26 @@ torch-geometric>=2.6.0
 
 # PyG Extensions (OPTIONAL - for production speedup)
 # Install separately with pre-built wheels:
+#
+# For CPU (validation/testing):
 #   pip install torch-scatter torch-sparse torch-cluster \
 #     -f https://data.pyg.org/whl/torch-2.9.0+cpu.html
 #
-# OR for CUDA 12.1:
+# For CUDA 12.6:
 #   pip install torch-scatter torch-sparse torch-cluster \
-#     -f https://data.pyg.org/whl/torch-2.9.0+cu121.html
+#     -f https://data.pyg.org/whl/torch-2.9.0+cu126.html
 #
-# Note: These require compilation if installed from source
+# For CUDA 12.8:
+#   pip install torch-scatter torch-sparse torch-cluster \
+#     -f https://data.pyg.org/whl/torch-2.9.0+cu128.html
+#
+# For CUDA 13.0 (newest, Blackwell GPUs):
+#   pip install torch-scatter torch-sparse torch-cluster \
+#     -f https://data.pyg.org/whl/torch-2.9.0+cu130.html
+#
+# Note: These extensions are OPTIONAL.
+#       PyTorch Geometric works without them (slower but functional).
+#       Only install if you need production performance.
 
 # PyTorch Lightning 2.4+ for training
 pytorch-lightning>=2.4.0
