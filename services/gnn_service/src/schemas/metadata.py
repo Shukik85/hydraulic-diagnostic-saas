@@ -16,6 +16,53 @@ from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict, field_validator, computed_field
 
 
+class TimeWindow(BaseModel):
+    """Time window for data queries.
+    
+    Represents a time range [start_time, end_time].
+    
+    Attributes:
+        start_time: Start of time window
+        end_time: End of time window
+    
+    Examples:
+        >>> window = TimeWindow(
+        ...     start_time=datetime(2025, 11, 1),
+        ...     end_time=datetime(2025, 11, 21)
+        ... )
+        >>> window.duration_minutes
+        28800.0
+    """
+    
+    model_config = ConfigDict(frozen=False)
+    
+    start_time: datetime = Field(
+        ...,
+        description="Start of time window (inclusive)"
+    )
+    
+    end_time: datetime = Field(
+        ...,
+        description="End of time window (inclusive)"
+    )
+    
+    @field_validator("end_time")
+    @classmethod
+    def validate_end_after_start(cls, v: datetime, info) -> datetime:
+        """Validate end_time > start_time."""
+        if "start_time" in info.data:
+            if v <= info.data["start_time"]:
+                raise ValueError("end_time must be greater than start_time")
+        return v
+    
+    @computed_field
+    @property
+    def duration_minutes(self) -> float:
+        """Duration in minutes."""
+        delta = self.end_time - self.start_time
+        return delta.total_seconds() / 60.0
+
+
 class SensorType(str, Enum):
     """Типы сенсоров гидравлической системы."""
     
