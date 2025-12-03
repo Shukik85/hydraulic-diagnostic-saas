@@ -31,17 +31,17 @@ from src.data.loader import (
 from src.data.timescale_connector import TimescaleConnector
 
 __all__ = [
+    "DataLoaderConfig",
     # Configs
     "FeatureConfig",
-    "DataLoaderConfig",
-    # Components
-    "TimescaleConnector",
     "FeatureEngineer",
     "GraphBuilder",
     "HydraulicGraphDataset",
-    # DataLoader utilities
-    "hydraulic_collate_fn",
+    # Components
+    "TimescaleConnector",
     "create_dataloader",
     "create_train_val_loaders",
     "create_train_val_test_loaders",
+    # DataLoader utilities
+    "hydraulic_collate_fn",
 ]

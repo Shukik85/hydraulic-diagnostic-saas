@@ -19,27 +19,21 @@ from torch import nn
 
 class MultiHeadAttention(nn.Module):
     """Standard multi-head attention.
-    
+
     Классический Transformer attention с Scaled Dot-Product.
-    
+
     Args:
         embed_dim: Embedding dimensionality
         num_heads: Number of attention heads
         dropout: Dropout rate
         bias: Use bias in projections
-    
+
     Examples:
         >>> attn = MultiHeadAttention(embed_dim=256, num_heads=8)
         >>> out, attn_weights = attn(query, key, value)
     """
 
-    def __init__(
-        self,
-        embed_dim: int,
-        num_heads: int = 8,
-        dropout: float = 0.1,
-        bias: bool = True
-    ):
+    def __init__(self, embed_dim: int, num_heads: int = 8, dropout: float = 0.1, bias: bool = True):
         super().__init__()
 
         assert embed_dim % num_heads == 0, "embed_dim must be divisible by num_heads"
@@ -47,7 +41,7 @@ class MultiHeadAttention(nn.Module):
         self.embed_dim = embed_dim
         self.num_heads = num_heads
         self.head_dim = embed_dim // num_heads
-        self.scale = self.head_dim ** -0.5
+        self.scale = self.head_dim**-0.5
 
         # Q, K, V projections
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
@@ -65,17 +59,17 @@ class MultiHeadAttention(nn.Module):
         key: torch.Tensor,
         value: torch.Tensor,
         attn_mask: torch.Tensor | None = None,
-        return_attention: bool = False
+        return_attention: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Forward pass.
-        
+
         Args:
             query: Query tensor [B, T_q, E]
             key: Key tensor [B, T_k, E]
             value: Value tensor [B, T_v, E]
             attn_mask: Attention mask [T_q, T_k] or None
             return_attention: Return attention weights
-        
+
         Returns:
             output: Attention output [B, T_q, E]
             attn_weights: Attention weights [B, num_heads, T_q, T_k] (if requested)
@@ -89,9 +83,15 @@ class MultiHeadAttention(nn.Module):
         V = self.v_proj(value)  # [B, T_v, E]
 
         # Reshape to multi-head
-        Q = Q.view(B, T_q, self.num_heads, self.head_dim).transpose(1, 2)  # [B, heads, T_q, head_dim]
-        K = K.view(B, T_k, self.num_heads, self.head_dim).transpose(1, 2)  # [B, heads, T_k, head_dim]
-        V = V.view(B, T_k, self.num_heads, self.head_dim).transpose(1, 2)  # [B, heads, T_v, head_dim]
+        Q = Q.view(B, T_q, self.num_heads, self.head_dim).transpose(
+            1, 2
+        )  # [B, heads, T_q, head_dim]
+        K = K.view(B, T_k, self.num_heads, self.head_dim).transpose(
+            1, 2
+        )  # [B, heads, T_k, head_dim]
+        V = V.view(B, T_k, self.num_heads, self.head_dim).transpose(
+            1, 2
+        )  # [B, heads, T_v, head_dim]
 
         # Scaled dot-product attention
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) * self.scale  # [B, heads, T_q, T_k]
@@ -122,31 +122,26 @@ class MultiHeadAttention(nn.Module):
 
 class CrossTaskAttention(nn.Module):
     """Cross-task attention для multi-task learning.
-    
+
     Моделирует корреляции между задачами:
     - Низкий health -> высокая degradation
     - Высокая degradation -> вероятность anomaly
-    
+
     Reference:
         Multi-task Graph Anomaly Detection (Microsoft, 2022)
         +11.4% F1-score improvement
-    
+
     Args:
         hidden_dim: Hidden dimensionality
         num_tasks: Number of tasks (3: health, degradation, anomaly)
         num_heads: Number of attention heads
-    
+
     Examples:
         >>> cross_attn = CrossTaskAttention(hidden_dim=256, num_tasks=3)
         >>> task_repr = cross_attn(shared_repr)  # [B, H] -> [3, B, H]
     """
 
-    def __init__(
-        self,
-        hidden_dim: int,
-        num_tasks: int = 3,
-        num_heads: int = 4
-    ):
+    def __init__(self, hidden_dim: int, num_tasks: int = 3, num_heads: int = 4):
         super().__init__()
 
         self.hidden_dim = hidden_dim
@@ -155,9 +150,7 @@ class CrossTaskAttention(nn.Module):
 
         # Shared encoder
         self.shared_encoder = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Dropout(0.2)
+            nn.Linear(hidden_dim, hidden_dim), nn.ReLU(), nn.Dropout(0.2)
         )
 
         # Multi-head attention для task interaction
@@ -165,68 +158,59 @@ class CrossTaskAttention(nn.Module):
             embed_dim=hidden_dim,
             num_heads=num_heads,
             dropout=0.1,
-            batch_first=False  # [T, B, E] format
+            batch_first=False,  # [T, B, E] format
         )
 
         # Task-specific projections
-        self.task_projections = nn.ModuleList([
-            nn.Linear(hidden_dim, hidden_dim) for _ in range(num_tasks)
-        ])
+        self.task_projections = nn.ModuleList(
+            [nn.Linear(hidden_dim, hidden_dim) for _ in range(num_tasks)]
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x: Shared representation [B, H]
-        
+
         Returns:
             task_repr: Task-specific representations [num_tasks, B, H]
         """
-        B, H = x.shape
+        _B, _H = x.shape
 
         # Shared encoding
         shared = self.shared_encoder(x)  # [B, H]
 
         # Create task representations
-        task_repr = torch.stack([
-            proj(shared) for proj in self.task_projections
-        ], dim=0)  # [num_tasks, B, H]
+        task_repr = torch.stack(
+            [proj(shared) for proj in self.task_projections], dim=0
+        )  # [num_tasks, B, H]
 
         # Cross-task attention
         # Each task attends to other tasks
-        task_repr_attended, attn_weights = self.task_interaction(
-            query=task_repr,
-            key=task_repr,
-            value=task_repr
+        task_repr_attended, _attn_weights = self.task_interaction(
+            query=task_repr, key=task_repr, value=task_repr
         )  # [num_tasks, B, H]
 
         # Residual connection
-        task_repr = task_repr + task_repr_attended
-
-        return task_repr
+        return task_repr + task_repr_attended
 
 
 class EdgeAwareAttention(nn.Module):
     """Edge-aware attention mechanism.
-    
+
     Attention с учётом edge features для modulation.
-    
+
     Args:
         node_dim: Node feature dimensionality
         edge_dim: Edge feature dimensionality
         num_heads: Number of attention heads
-    
+
     Examples:
         >>> attn = EdgeAwareAttention(node_dim=128, edge_dim=8, num_heads=8)
         >>> out = attn(x, edge_index, edge_attr)
     """
 
-    def __init__(
-        self,
-        node_dim: int,
-        edge_dim: int,
-        num_heads: int = 8
-    ):
+    def __init__(self, node_dim: int, edge_dim: int, num_heads: int = 8):
         super().__init__()
 
         assert node_dim % num_heads == 0
@@ -242,22 +226,19 @@ class EdgeAwareAttention(nn.Module):
         # Edge-to-attention mapping
         self.edge_to_attn = nn.Sequential(
             nn.Linear(edge_dim, num_heads),
-            nn.Sigmoid()  # Gate: [0, 1]
+            nn.Sigmoid(),  # Gate: [0, 1]
         )
 
     def forward(
-        self,
-        x: torch.Tensor,
-        edge_index: torch.Tensor,
-        edge_attr: torch.Tensor
+        self, x: torch.Tensor, edge_index: torch.Tensor, edge_attr: torch.Tensor
     ) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x: Node features [N, node_dim]
             edge_index: Edge connectivity [2, E]
             edge_attr: Edge features [E, edge_dim]
-        
+
         Returns:
             out: Updated node features [N, node_dim]
         """

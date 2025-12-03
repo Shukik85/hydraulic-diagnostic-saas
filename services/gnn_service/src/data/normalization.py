@@ -20,25 +20,25 @@ from pydantic import BaseModel, Field
 
 class NormalizationStatistics(BaseModel):
     """Statistics for edge feature normalization.
-    
+
     Computed from training data and saved with model checkpoint.
-    
+
     Attributes:
         # Flow rate (log-transformed)
         flow_log_mean: Mean of log(1 + flow_rate)
         flow_log_std: Std of log(1 + flow_rate)
-        
+
         # Pressure drop (can be negative)
         pressure_drop_mean: Mean pressure drop
         pressure_drop_std: Std pressure drop
-        
+
         # Temperature delta (can be negative)
         temp_delta_mean: Mean temperature delta
         temp_delta_std: Std temperature delta
-        
+
         # Vibration (always positive)
         vibration_max: Maximum vibration level
-        
+
         # Age (always positive)
         age_max: Maximum age in hours
     """
@@ -64,7 +64,7 @@ class NormalizationStatistics(BaseModel):
 
 class EdgeFeatureNormalizer:
     """Normalizer for dynamic edge features.
-    
+
     Uses mixed normalization strategy:
     1. Flow rate: log + z-score (right-skewed)
     2. Pressure drop: z-score (can be negative)
@@ -72,24 +72,24 @@ class EdgeFeatureNormalizer:
     4. Vibration: min-max [0, 1] (bounded positive)
     5. Age: min-max [0, 1] (monotonic)
     6. Maintenance score: no normalization (already [0, 1])
-    
+
     Examples:
         >>> normalizer = EdgeFeatureNormalizer()
-        >>> 
+        >>>
         >>> # Fit from training data
         >>> training_features = [...]
         >>> normalizer.fit(training_features)
-        >>> 
+        >>>
         >>> # Transform for inference
         >>> normalized = normalizer.normalize_flow(115.3)
-        >>> 
+        >>>
         >>> # Save with checkpoint
         >>> normalizer.save("normalizer_stats.json")
     """
 
     def __init__(self, stats: NormalizationStatistics | None = None):
         """Initialize normalizer with optional pre-computed statistics.
-        
+
         Args:
             stats: Pre-computed statistics (None = use defaults)
         """
@@ -101,15 +101,15 @@ class EdgeFeatureNormalizer:
 
     def normalize_flow(self, flow_lpm: float) -> float:
         """Normalize flow rate using log-transform + z-score.
-        
+
         Handles right-skewed distribution of flow rates.
-        
+
         Args:
             flow_lpm: Flow rate in L/min
-        
+
         Returns:
             Normalized flow rate
-        
+
         Examples:
             >>> normalizer = EdgeFeatureNormalizer()
             >>> normalizer.normalize_flow(115.3)
@@ -126,10 +126,10 @@ class EdgeFeatureNormalizer:
 
     def denormalize_flow(self, flow_norm: float) -> float:
         """Denormalize flow rate back to L/min.
-        
+
         Args:
             flow_norm: Normalized flow rate
-        
+
         Returns:
             Flow rate in L/min
         """
@@ -147,15 +147,15 @@ class EdgeFeatureNormalizer:
 
     def normalize_pressure_drop(self, dp_bar: float) -> float:
         """Normalize pressure drop using z-score.
-        
+
         Can handle negative values (backflow).
-        
+
         Args:
             dp_bar: Pressure drop in bar
-        
+
         Returns:
             Normalized pressure drop
-        
+
         Examples:
             >>> normalizer = EdgeFeatureNormalizer()
             >>> normalizer.normalize_pressure_drop(2.1)
@@ -166,10 +166,10 @@ class EdgeFeatureNormalizer:
 
     def denormalize_pressure_drop(self, dp_norm: float) -> float:
         """Denormalize pressure drop back to bar.
-        
+
         Args:
             dp_norm: Normalized pressure drop
-        
+
         Returns:
             Pressure drop in bar
         """
@@ -181,15 +181,15 @@ class EdgeFeatureNormalizer:
 
     def normalize_temp_delta(self, dt_c: float) -> float:
         """Normalize temperature delta using z-score.
-        
+
         Can handle negative values (cooling).
-        
+
         Args:
             dt_c: Temperature delta in °C
-        
+
         Returns:
             Normalized temperature delta
-        
+
         Examples:
             >>> normalizer = EdgeFeatureNormalizer()
             >>> normalizer.normalize_temp_delta(1.5)
@@ -200,10 +200,10 @@ class EdgeFeatureNormalizer:
 
     def denormalize_temp_delta(self, dt_norm: float) -> float:
         """Denormalize temperature delta back to °C.
-        
+
         Args:
             dt_norm: Normalized temperature delta
-        
+
         Returns:
             Temperature delta in °C
         """
@@ -215,15 +215,15 @@ class EdgeFeatureNormalizer:
 
     def normalize_vibration(self, vib_g: float) -> float:
         """Normalize vibration level to [0, 1].
-        
+
         Uses min-max normalization for bounded positive values.
-        
+
         Args:
             vib_g: Vibration level in g
-        
+
         Returns:
             Normalized vibration [0, 1]
-        
+
         Examples:
             >>> normalizer = EdgeFeatureNormalizer()
             >>> normalizer.normalize_vibration(0.3)
@@ -234,10 +234,10 @@ class EdgeFeatureNormalizer:
 
     def denormalize_vibration(self, vib_norm: float) -> float:
         """Denormalize vibration level back to g.
-        
+
         Args:
             vib_norm: Normalized vibration [0, 1]
-        
+
         Returns:
             Vibration level in g
         """
@@ -249,15 +249,15 @@ class EdgeFeatureNormalizer:
 
     def normalize_age(self, age_hours: float) -> float:
         """Normalize age to [0, 1].
-        
+
         Uses min-max normalization for monotonic positive values.
-        
+
         Args:
             age_hours: Age in hours
-        
+
         Returns:
             Normalized age [0, 1]
-        
+
         Examples:
             >>> normalizer = EdgeFeatureNormalizer()
             >>> normalizer.normalize_age(12500.0)
@@ -268,10 +268,10 @@ class EdgeFeatureNormalizer:
 
     def denormalize_age(self, age_norm: float) -> float:
         """Denormalize age back to hours.
-        
+
         Args:
             age_norm: Normalized age [0, 1]
-        
+
         Returns:
             Age in hours
         """
@@ -283,10 +283,10 @@ class EdgeFeatureNormalizer:
 
     def normalize_maintenance_score(self, score: float) -> float:
         """No normalization needed (already [0, 1]).
-        
+
         Args:
             score: Maintenance score [0, 1]
-        
+
         Returns:
             Same score (pass-through)
         """
@@ -298,13 +298,13 @@ class EdgeFeatureNormalizer:
 
     def normalize_all(self, features: dict[str, float]) -> dict[str, float]:
         """Normalize all edge features at once.
-        
+
         Args:
             features: Dictionary with 6 edge features
-        
+
         Returns:
             Dictionary with normalized features
-        
+
         Examples:
             >>> features = {
             ...     "flow_rate_lpm": 115.3,
@@ -323,7 +323,7 @@ class EdgeFeatureNormalizer:
             "temperature_delta_c": self.normalize_temp_delta(features["temperature_delta_c"]),
             "vibration_level_g": self.normalize_vibration(features["vibration_level_g"]),
             "age_hours": self.normalize_age(features["age_hours"]),
-            "maintenance_score": self.normalize_maintenance_score(features["maintenance_score"])
+            "maintenance_score": self.normalize_maintenance_score(features["maintenance_score"]),
         }
 
     # ========================================================================
@@ -332,10 +332,10 @@ class EdgeFeatureNormalizer:
 
     def fit(self, training_features: list[dict[str, float]]) -> None:
         """Compute normalization statistics from training data.
-        
+
         Args:
             training_features: List of feature dictionaries from training set
-        
+
         Examples:
             >>> training_data = [
             ...     {"flow_rate_lpm": 100, "pressure_drop_bar": 2.0, ...},
@@ -376,12 +376,12 @@ class EdgeFeatureNormalizer:
 
     def save(self, path: str | Path) -> None:
         """Save normalization statistics to JSON file.
-        
+
         Typically saved alongside model checkpoint.
-        
+
         Args:
             path: Path to save JSON file
-        
+
         Examples:
             >>> normalizer.save("checkpoints/normalizer_v2.0.0.json")
         """
@@ -394,13 +394,13 @@ class EdgeFeatureNormalizer:
     @classmethod
     def load(cls, path: str | Path) -> EdgeFeatureNormalizer:
         """Load normalization statistics from JSON file.
-        
+
         Args:
             path: Path to JSON file
-        
+
         Returns:
             Configured EdgeFeatureNormalizer
-        
+
         Examples:
             >>> normalizer = EdgeFeatureNormalizer.load("checkpoints/normalizer_v2.0.0.json")
         """
@@ -412,7 +412,7 @@ class EdgeFeatureNormalizer:
 
     def get_stats(self) -> dict:
         """Get statistics as dictionary (for checkpoint saving).
-        
+
         Returns:
             Statistics dictionary
         """
@@ -420,7 +420,7 @@ class EdgeFeatureNormalizer:
 
     def load_stats(self, stats_dict: dict) -> None:
         """Load statistics from dictionary.
-        
+
         Args:
             stats_dict: Statistics dictionary from checkpoint
         """
@@ -431,23 +431,24 @@ class EdgeFeatureNormalizer:
 # Factory Function
 # ============================================================================
 
+
 def create_edge_feature_normalizer(
-    stats: NormalizationStatistics | None = None
+    stats: NormalizationStatistics | None = None,
 ) -> EdgeFeatureNormalizer:
     """Create EdgeFeatureNormalizer instance.
-    
+
     Factory function for consistency with other modules.
-    
+
     Args:
         stats: Optional pre-computed statistics
-    
+
     Returns:
         Configured EdgeFeatureNormalizer
-    
+
     Examples:
         >>> # With defaults
         >>> normalizer = create_edge_feature_normalizer()
-        >>> 
+        >>>
         >>> # With custom stats
         >>> stats = NormalizationStatistics(flow_log_mean=4.5, ...)
         >>> normalizer = create_edge_feature_normalizer(stats)

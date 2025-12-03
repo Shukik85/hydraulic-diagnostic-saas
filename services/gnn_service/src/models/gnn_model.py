@@ -33,20 +33,20 @@ from src.models.layers import ARMAAttentionLSTM, EdgeConditionedGATv2Layer
 
 class UniversalTemporalGNN(nn.Module):
     """Universal Temporal GNN для multi-label classification.
-    
+
     Архитектура:
         1. Input projection
         2. GATv2 layers (spatial graph modeling)
         3. ARMA-LSTM (temporal sequence modeling)
         4. Multi-task head (health + degradation + anomaly)
-    
+
     Features:
         - GATv2 dynamic attention (vs static GAT)
         - Edge-conditioned attention (hydraulic topology)
         - ARMA-based temporal attention (ICLR 2025)
         - Cross-task attention (task correlation)
         - torch.compile optimization (PyTorch 2.8)
-    
+
     Edge Features (14D - Phase 3.1):
         Static (8D):
             - diameter_norm
@@ -55,7 +55,7 @@ class UniversalTemporalGNN(nn.Module):
             - pressure_loss_coeff_norm
             - pressure_rating_norm
             - material_onehot (3D: steel, rubber, composite)
-        
+
         Dynamic (6D):
             - flow_rate_lpm (physics-based or measured)
             - pressure_drop_bar
@@ -63,7 +63,7 @@ class UniversalTemporalGNN(nn.Module):
             - vibration_level_g
             - age_hours
             - maintenance_score
-    
+
     Args:
         in_channels: Размерность входных node features
         hidden_channels: Размерность скрытых слоёв
@@ -78,7 +78,7 @@ class UniversalTemporalGNN(nn.Module):
         edge_feature_dim: Размерность edge features (14 с Phase 3.1)
         use_compile: Применить torch.compile (PyTorch 2.8)
         compile_mode: Режим компиляции
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(
         ...     in_channels=12,
@@ -90,7 +90,7 @@ class UniversalTemporalGNN(nn.Module):
         ...     edge_feature_dim=14,  # Phase 3.1: 14D edges
         ...     use_compile=True
         ... )
-        >>> 
+        >>>
         >>> # Forward pass
         >>> health, degradation, anomaly = model(
         ...     x=node_features,
@@ -98,7 +98,7 @@ class UniversalTemporalGNN(nn.Module):
         ...     edge_attr=edge_features,  # [E, 14]
         ...     batch=batch_assignment
         ... )
-    
+
     Note:
         ⚠️ Breaking change in Phase 3.1:
         edge_feature_dim: 8 → 14
@@ -151,14 +151,14 @@ class UniversalTemporalGNN(nn.Module):
                 edge_dim=hidden_channels // num_heads if use_edge_features else None,
                 concat=True,
                 add_self_loops=True,
-                bias=True
+                bias=True,
             )
             self.gat_layers.append(layer)
 
         # Layer normalization после каждого GAT
-        self.gat_norms = nn.ModuleList([
-            nn.LayerNorm(hidden_channels) for _ in range(num_gat_layers)
-        ])
+        self.gat_norms = nn.ModuleList(
+            [nn.LayerNorm(hidden_channels) for _ in range(num_gat_layers)]
+        )
 
         # ARMA-Attention LSTM для temporal modeling
         self.temporal_lstm = ARMAAttentionLSTM(
@@ -168,15 +168,11 @@ class UniversalTemporalGNN(nn.Module):
             ar_order=ar_order,
             ma_order=ma_order,
             dropout=dropout if lstm_layers > 1 else 0.0,
-            bidirectional=False
+            bidirectional=False,
         )
 
         # Multi-task learning head с cross-task attention
-        self.task_attention = CrossTaskAttention(
-            hidden_dim=lstm_hidden,
-            num_tasks=3,
-            num_heads=4
-        )
+        self.task_attention = CrossTaskAttention(hidden_dim=lstm_hidden, num_tasks=3, num_heads=4)
 
         # Task-specific heads
         self.health_head = nn.Sequential(
@@ -184,7 +180,7 @@ class UniversalTemporalGNN(nn.Module):
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(64, 1),
-            nn.Sigmoid()  # [0, 1] range
+            nn.Sigmoid(),  # [0, 1] range
         )
 
         self.degradation_head = nn.Sequential(
@@ -192,14 +188,14 @@ class UniversalTemporalGNN(nn.Module):
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(64, 1),
-            nn.Sigmoid()  # [0, 1] range
+            nn.Sigmoid(),  # [0, 1] range
         )
 
         self.anomaly_head = nn.Sequential(
             nn.Linear(lstm_hidden, 64),
             nn.ReLU(),
             nn.Dropout(dropout),
-            nn.Linear(64, 9)  # 9 anomaly types (from AnomalyType enum)
+            nn.Linear(64, 9),  # 9 anomaly types (from AnomalyType enum)
         )
 
         # Initialize weights
@@ -211,7 +207,7 @@ class UniversalTemporalGNN(nn.Module):
 
     def _initialize_weights(self) -> None:
         """Инициализация весов модели.
-        
+
         Использует Xavier/Glorot для linear layers и orthogonal для LSTM.
         """
         for module in self.modules():
@@ -230,10 +226,10 @@ class UniversalTemporalGNN(nn.Module):
 
     def _apply_torch_compile(self, mode: str) -> None:
         """Применить torch.compile к forward pass (PyTorch 2.8).
-        
+
         Args:
             mode: "default", "reduce-overhead", или "max-autotune"
-        
+
         Note:
             Компиляция выполняется при первом forward pass.
             Expect ~30s warmup, затем 1.5x speedup.
@@ -243,7 +239,7 @@ class UniversalTemporalGNN(nn.Module):
             self.forward,
             mode=mode,
             fullgraph=False,  # Allow graph breaks
-            dynamic=True  # Support variable batch sizes
+            dynamic=True,  # Support variable batch sizes
         )
 
     def forward(
@@ -252,25 +248,26 @@ class UniversalTemporalGNN(nn.Module):
         edge_index: torch.Tensor,
         edge_attr: torch.Tensor | None = None,
         batch: torch.Tensor | None = None,
-        return_attention: bool = False
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor] | tuple[
-        torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor]
-    ]:
+        return_attention: bool = False,
+    ) -> (
+        tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        | tuple[torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor]]
+    ):
         """Forward pass через GNN.
-        
+
         Args:
             x: Node features [N, F_in]
             edge_index: Edge connectivity [2, E]
             edge_attr: Edge features [E, 14] (Phase 3.1: 14D)
             batch: Batch assignment [N] (опционально)
             return_attention: Вернуть attention weights для визуализации
-        
+
         Returns:
             health: Health scores [B, 1] в range [0, 1]
             degradation: Degradation rates [B, 1] в range [0, 1]
             anomaly: Anomaly logits [B, 9] (raw logits, не probabilities)
             attention_weights: List of attention weights (если requested)
-        
+
         Shape:
             - Input: x [N, F_in], edge_index [2, E], edge_attr [E, 14]
             - Output: health [B, 1], degradation [B, 1], anomaly [B, 9]
@@ -287,7 +284,7 @@ class UniversalTemporalGNN(nn.Module):
             edge_attr = self.edge_projection(edge_attr)  # [E, 14] -> [E, H//num_heads]
 
         # 3. GATv2 spatial processing
-        for i, (gat_layer, norm) in enumerate(zip(self.gat_layers, self.gat_norms)):
+        for i, (gat_layer, norm) in enumerate(zip(self.gat_layers, self.gat_norms, strict=False)):
             # GATv2 с edge conditioning
             if return_attention:
                 x_new, attn = gat_layer(
@@ -321,7 +318,7 @@ class UniversalTemporalGNN(nn.Module):
         x_temporal = x_pooled.unsqueeze(1)  # [B, 1, H]
 
         # ARMA-Attention LSTM
-        lstm_out, (h_n, c_n) = self.temporal_lstm(x_temporal)  # lstm_out: [B, 1, lstm_hidden]
+        _lstm_out, (h_n, _c_n) = self.temporal_lstm(x_temporal)  # lstm_out: [B, 1, lstm_hidden]
 
         # Use final hidden state
         final_hidden = h_n[-1]  # [B, lstm_hidden]
@@ -342,7 +339,7 @@ class UniversalTemporalGNN(nn.Module):
 
     def get_model_config(self) -> dict[str, int | float | bool | str]:
         """Получить конфигурацию модели для checkpoint.
-        
+
         Returns:
             Dictionary с параметрами модели
         """
@@ -364,10 +361,10 @@ class UniversalTemporalGNN(nn.Module):
         x: torch.Tensor,
         edge_index: torch.Tensor,
         edge_attr: torch.Tensor | None = None,
-        batch: torch.Tensor | None = None
+        batch: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor]:
         """Inference mode prediction.
-        
+
         Returns:
             Dictionary с predictions и metadata
         """

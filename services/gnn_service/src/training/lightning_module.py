@@ -30,7 +30,7 @@ from .losses import FocalLoss, QuantileRULLoss, UncertaintyWeighting, WingLoss
 
 class HydraulicGNNModule(pl.LightningModule):
     """PyTorch Lightning module for hydraulic diagnostics.
-    
+
     Wraps UniversalTemporalGNN with Lightning training infrastructure:
     - Automatic optimization
     - Multi-level loss computation (component + graph)
@@ -38,14 +38,14 @@ class HydraulicGNNModule(pl.LightningModule):
     - Advanced losses (Focal, Wing, Quantile)
     - Metric tracking
     - Learning rate scheduling
-    
+
     Attributes:
         model: UniversalTemporalGNN instance
         learning_rate: Optimizer learning rate
         weight_decay: L2 regularization
         scheduler_type: LR scheduler type
         loss_weighting: Loss weighting strategy
-    
+
     Examples:
         >>> module = HydraulicGNNModule(
         ...     in_channels=34,
@@ -74,10 +74,10 @@ class HydraulicGNNModule(pl.LightningModule):
         use_focal_loss: bool = True,
         use_wing_loss: bool = True,
         use_quantile_rul: bool = True,
-        **kwargs
+        **kwargs,
     ):
         """Initialize Lightning module.
-        
+
         Args:
             in_channels: Input feature dimension
             hidden_channels: Hidden dimension
@@ -109,7 +109,7 @@ class HydraulicGNNModule(pl.LightningModule):
             lstm_hidden=lstm_hidden,
             lstm_layers=lstm_layers,
             use_compile=False,  # Disable for training
-            **kwargs
+            **kwargs,
         )
 
         # Training config
@@ -126,7 +126,9 @@ class HydraulicGNNModule(pl.LightningModule):
 
         # === Component-Level Loss Functions ===
         self.component_health_loss = WingLoss() if use_wing_loss else nn.MSELoss()
-        self.component_anomaly_loss = FocalLoss(gamma=2.0) if use_focal_loss else nn.BCEWithLogitsLoss()
+        self.component_anomaly_loss = (
+            FocalLoss(gamma=2.0) if use_focal_loss else nn.BCEWithLogitsLoss()
+        )
 
         # === Multi-Task Weighting ===
         if loss_weighting == "fixed":
@@ -147,82 +149,70 @@ class HydraulicGNNModule(pl.LightningModule):
         x: torch.Tensor,
         edge_index: torch.Tensor,
         edge_attr: torch.Tensor,
-        batch: torch.Tensor
+        batch: torch.Tensor,
     ) -> dict[str, dict[str, torch.Tensor]]:
         """Forward pass with multi-level predictions.
-        
+
         Args:
             x: Node features [N, F]
             edge_index: Edge connectivity [2, E]
             edge_attr: Edge features [E, 8]
             batch: Batch assignment [N]
-        
+
         Returns:
             Nested dict:
             {
                 'component': {'health': [N, 1], 'anomaly': [N, 9]},
-                'graph': {'health': [B, 1], 'degradation': [B, 1], 
+                'graph': {'health': [B, 1], 'degradation': [B, 1],
                           'anomaly': [B, 9], 'rul': [B, 1]}
             }
         """
         return self.model(x, edge_index, edge_attr, batch)
 
     def compute_loss(
-        self,
-        outputs: dict[str, dict[str, torch.Tensor]],
-        batch: Any
+        self, outputs: dict[str, dict[str, torch.Tensor]], batch: Any
     ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """Compute multi-level multi-task loss.
-        
+
         Args:
             outputs: Model outputs (nested dict)
             batch: Batch data with targets
-        
+
         Returns:
             total_loss: Combined loss
             loss_dict: Individual losses
         """
         # === Graph-Level Losses ===
-        graph_health_loss = self.graph_health_loss(
-            outputs["graph"]["health"],
-            batch.y_graph_health
-        )
+        graph_health_loss = self.graph_health_loss(outputs["graph"]["health"], batch.y_graph_health)
 
         graph_degradation_loss = self.graph_degradation_loss(
-            outputs["graph"]["degradation"],
-            batch.y_graph_degradation
+            outputs["graph"]["degradation"], batch.y_graph_degradation
         )
 
         graph_anomaly_loss = self.graph_anomaly_loss(
-            outputs["graph"]["anomaly"],
-            batch.y_graph_anomaly
+            outputs["graph"]["anomaly"], batch.y_graph_anomaly
         )
 
-        graph_rul_loss = self.graph_rul_loss(
-            outputs["graph"]["rul"],
-            batch.y_graph_rul
-        )
+        graph_rul_loss = self.graph_rul_loss(outputs["graph"]["rul"], batch.y_graph_rul)
 
         # === Component-Level Losses ===
         component_health_loss = self.component_health_loss(
-            outputs["component"]["health"],
-            batch.y_component_health
+            outputs["component"]["health"], batch.y_component_health
         )
 
         component_anomaly_loss = self.component_anomaly_loss(
-            outputs["component"]["anomaly"],
-            batch.y_component_anomaly
+            outputs["component"]["anomaly"], batch.y_component_anomaly
         )
 
         # === Combine Losses ===
         if self.loss_weighting == "fixed":
             total_loss = (
-                self.loss_weights["graph_health"] * graph_health_loss +
-                self.loss_weights["graph_degradation"] * graph_degradation_loss +
-                self.loss_weights["graph_anomaly"] * graph_anomaly_loss +
-                self.loss_weights["graph_rul"] * graph_rul_loss +
-                self.loss_weights["component_health"] * component_health_loss +
-                self.loss_weights["component_anomaly"] * component_anomaly_loss
+                self.loss_weights["graph_health"] * graph_health_loss
+                + self.loss_weights["graph_degradation"] * graph_degradation_loss
+                + self.loss_weights["graph_anomaly"] * graph_anomaly_loss
+                + self.loss_weights["graph_rul"] * graph_rul_loss
+                + self.loss_weights["component_health"] * component_health_loss
+                + self.loss_weights["component_anomaly"] * component_anomaly_loss
             )
         elif self.loss_weighting == "uncertainty":
             losses = {
@@ -248,26 +238,19 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss, loss_dict
 
-    def training_step(
-        self,
-        batch: Any,
-        batch_idx: int
-    ) -> torch.Tensor:
+    def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
         """Training step.
-        
+
         Args:
             batch: Batch from DataLoader
             batch_idx: Batch index
-        
+
         Returns:
             loss: Total loss
         """
         # Forward pass
         outputs = self(
-            x=batch.x,
-            edge_index=batch.edge_index,
-            edge_attr=batch.edge_attr,
-            batch=batch.batch
+            x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
         )
 
         # Compute loss
@@ -294,26 +277,19 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss
 
-    def validation_step(
-        self,
-        batch: Any,
-        batch_idx: int
-    ) -> torch.Tensor:
+    def validation_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
         """Validation step.
-        
+
         Args:
             batch: Batch from DataLoader
             batch_idx: Batch index
-        
+
         Returns:
             loss: Total loss
         """
         # Forward pass
         outputs = self(
-            x=batch.x,
-            edge_index=batch.edge_index,
-            edge_attr=batch.edge_attr,
-            batch=batch.batch
+            x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
         )
 
         # Compute loss
@@ -330,26 +306,19 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss
 
-    def test_step(
-        self,
-        batch: Any,
-        batch_idx: int
-    ) -> torch.Tensor:
+    def test_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
         """Test step.
-        
+
         Args:
             batch: Batch from DataLoader
             batch_idx: Batch index
-        
+
         Returns:
             loss: Total loss
         """
         # Forward pass
         outputs = self(
-            x=batch.x,
-            edge_index=batch.edge_index,
-            edge_attr=batch.edge_attr,
-            batch=batch.batch
+            x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
         )
 
         # Compute loss
@@ -368,25 +337,17 @@ class HydraulicGNNModule(pl.LightningModule):
 
     def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers.
-        
+
         Returns:
             config: Optimizer and scheduler configuration
         """
         # Optimizer
-        optimizer = Adam(
-            self.parameters(),
-            lr=self.learning_rate,
-            weight_decay=self.weight_decay
-        )
+        optimizer = Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
         # Scheduler
         if self.scheduler_type == "plateau":
             scheduler = ReduceLROnPlateau(
-                optimizer,
-                mode="min",
-                factor=0.5,
-                patience=10,
-                verbose=True
+                optimizer, mode="min", factor=0.5, patience=10, verbose=True
             )
 
             return {
@@ -395,24 +356,16 @@ class HydraulicGNNModule(pl.LightningModule):
                     "scheduler": scheduler,
                     "monitor": "val/total_loss",
                     "interval": "epoch",
-                    "frequency": 1
-                }
+                    "frequency": 1,
+                },
             }
 
         if self.scheduler_type == "cosine":
-            scheduler = CosineAnnealingLR(
-                optimizer,
-                T_max=100,
-                eta_min=1e-6
-            )
+            scheduler = CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-6)
 
             return {
                 "optimizer": optimizer,
-                "lr_scheduler": {
-                    "scheduler": scheduler,
-                    "interval": "epoch",
-                    "frequency": 1
-                }
+                "lr_scheduler": {"scheduler": scheduler, "interval": "epoch", "frequency": 1},
             }
 
         # No scheduler

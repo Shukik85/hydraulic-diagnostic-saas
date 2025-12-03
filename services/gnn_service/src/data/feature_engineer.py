@@ -14,6 +14,7 @@ Python 3.14 Features:
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -21,33 +22,34 @@ from scipy import stats
 from scipy.fft import rfft, rfftfreq
 from sklearn.preprocessing import MinMaxScaler, RobustScaler, StandardScaler
 
-from src.data.feature_config import FeatureConfig
+if TYPE_CHECKING:
+    from src.data.feature_config import FeatureConfig
 
 logger = logging.getLogger(__name__)
 
 
 class FeatureEngineer:
     """Feature extraction pipeline для sensor data.
-    
+
     Combines multiple feature types:
     - Statistical features (11 per sensor)
     - Frequency features (num_frequencies + 2 per sensor)
     - Temporal features (11 per sensor)
     - Hydraulic-specific features (4 total)
-    
+
     Args:
         config: FeatureConfig instance
-    
+
     Examples:
         >>> config = FeatureConfig(use_statistical=True, num_frequencies=10)
         >>> engineer = FeatureEngineer(config)
-        >>> 
+        >>>
         >>> # Sensor data: [T, S] where T=time samples, S=sensors
         >>> data = pd.DataFrame({
         ...     "pressure_pump": [...],
         ...     "temperature": [...]
         ... })
-        >>> 
+        >>>
         >>> features = engineer.extract_all_features(data)
         >>> features.shape  # [S, total_features_per_sensor]
     """
@@ -58,23 +60,20 @@ class FeatureEngineer:
         # Initialize scalers
         self.scalers: dict[str, StandardScaler | MinMaxScaler | RobustScaler] = {}
 
-    def extract_statistical_features(
-        self,
-        data: pd.Series | np.ndarray
-    ) -> np.ndarray:
+    def extract_statistical_features(self, data: pd.Series | np.ndarray) -> np.ndarray:
         """Извлечь statistical features.
-        
+
         Features:
         - Mean, std, min, max
         - Percentiles (5th, 25th, 50th, 75th, 95th)
         - Skewness, kurtosis
-        
+
         Args:
             data: Time-series data [T]
-        
+
         Returns:
             features: Statistical features [11]
-        
+
         Examples:
             >>> data = pd.Series([1.0, 2.0, 3.0, 4.0, 5.0])
             >>> features = engineer.extract_statistical_features(data)
@@ -105,24 +104,22 @@ class FeatureEngineer:
         return np.array(features, dtype=np.float32)
 
     def extract_frequency_features(
-        self,
-        data: pd.Series | np.ndarray,
-        sampling_rate: float = 1.0
+        self, data: pd.Series | np.ndarray, sampling_rate: float = 1.0
     ) -> np.ndarray:
         """Извлечь frequency domain features.
-        
+
         Features:
         - Top N FFT magnitudes
         - Dominant frequency
         - Spectral entropy
-        
+
         Args:
             data: Time-series data [T]
             sampling_rate: Sampling rate в Hz
-        
+
         Returns:
             features: Frequency features [num_frequencies + 2]
-        
+
         Examples:
             >>> data = np.sin(2 * np.pi * 5 * np.arange(100) / 100)  # 5 Hz signal
             >>> features = engineer.extract_frequency_features(data, sampling_rate=100)
@@ -140,7 +137,7 @@ class FeatureEngineer:
         fft_freqs = rfftfreq(len(data), 1.0 / sampling_rate)
 
         # Top N frequencies
-        top_indices = np.argsort(fft_magnitudes)[-self.config.num_frequencies:]
+        top_indices = np.argsort(fft_magnitudes)[-self.config.num_frequencies :]
         top_magnitudes = fft_magnitudes[top_indices]
 
         # Dominant frequency
@@ -148,45 +145,35 @@ class FeatureEngineer:
         dominant_freq = fft_freqs[dominant_idx]
 
         # Spectral entropy
-        psd = fft_magnitudes ** 2
+        psd = fft_magnitudes**2
         psd_normalized = psd / psd.sum()
         spectral_entropy = -np.sum(psd_normalized * np.log(psd_normalized + 1e-10))
 
-        features = np.concatenate([
-            top_magnitudes,
-            [dominant_freq],
-            [spectral_entropy]
-        ])
+        features = np.concatenate([top_magnitudes, [dominant_freq], [spectral_entropy]])
 
         return features.astype(np.float32)
 
-    def extract_temporal_features(
-        self,
-        data: pd.Series | np.ndarray
-    ) -> np.ndarray:
+    def extract_temporal_features(self, data: pd.Series | np.ndarray) -> np.ndarray:
         """Извлечь temporal features.
-        
+
         Features:
         - Rolling mean/std для каждого window size
         - Exponential moving average
         - Autocorrelation (lags: 1, 5, 10)
         - Linear trend slope
-        
+
         Args:
             data: Time-series data [T]
-        
+
         Returns:
             features: Temporal features [2 * len(window_sizes) + 5]
-        
+
         Examples:
             >>> data = np.arange(100) + np.random.randn(100)  # Trending
             >>> features = engineer.extract_temporal_features(data)
             >>> features[-1]  # Trend slope ~ 1.0
         """
-        if isinstance(data, pd.Series):
-            series = data
-        else:
-            series = pd.Series(data)
+        series = data if isinstance(data, pd.Series) else pd.Series(data)
 
         if len(series) < max(self.config.window_sizes):
             return np.zeros(len(self.config.window_sizes) * 2 + 5, dtype=np.float32)
@@ -218,24 +205,21 @@ class FeatureEngineer:
 
         return np.array(features, dtype=np.float32)
 
-    def extract_hydraulic_features(
-        self,
-        data: pd.DataFrame
-    ) -> np.ndarray:
+    def extract_hydraulic_features(self, data: pd.DataFrame) -> np.ndarray:
         """Извлечь hydraulic-specific features.
-        
+
         Features:
         - Pressure ratio (outlet/inlet)
         - Temperature delta (max - min)
         - Flow efficiency (estimated)
         - Cavitation index (pressure-based)
-        
+
         Args:
             data: DataFrame с sensor columns
-        
+
         Returns:
             features: Hydraulic features [4]
-        
+
         Examples:
             >>> data = pd.DataFrame({
             ...     "pressure_in": [100, 105, 102],
@@ -286,21 +270,18 @@ class FeatureEngineer:
         return np.array(features, dtype=np.float32)
 
     def normalize_features(
-        self,
-        features: np.ndarray,
-        sensor_id: str | None = None,
-        fit: bool = False
+        self, features: np.ndarray, sensor_id: str | None = None, fit: bool = False
     ) -> np.ndarray:
         """Нормализовать features.
-        
+
         Args:
             features: Features array [F]
             sensor_id: Sensor identifier для per-sensor normalization
             fit: Fit scaler (для training) или transform only (inference)
-        
+
         Returns:
             normalized: Normalized features [F]
-        
+
         Examples:
             >>> features = np.array([100, 200, 150, 50])
             >>> normalized = engineer.normalize_features(features, fit=True)
@@ -322,7 +303,8 @@ class FeatureEngineer:
             elif self.config.normalization == "robust":
                 scaler = RobustScaler()
             else:
-                raise ValueError(f"Unknown normalization method: {self.config.normalization}")
+                msg = f"Unknown normalization method: {self.config.normalization}"
+                raise ValueError(msg)
 
             # Fit
             scaler.fit(features.reshape(-1, 1))
@@ -335,18 +317,15 @@ class FeatureEngineer:
 
         return normalized.astype(np.float32)
 
-    def handle_missing_data(
-        self,
-        data: pd.DataFrame
-    ) -> pd.DataFrame:
+    def handle_missing_data(self, data: pd.DataFrame) -> pd.DataFrame:
         """Обработать missing values.
-        
+
         Args:
             data: DataFrame с возможными NaN
-        
+
         Returns:
             cleaned: DataFrame без NaN
-        
+
         Examples:
             >>> data = pd.DataFrame({"pressure": [100, np.nan, 102, 103]})
             >>> cleaned = engineer.handle_missing_data(data)
@@ -366,27 +345,23 @@ class FeatureEngineer:
         elif method == "drop":
             data = data.dropna()
         else:
-            raise ValueError(f"Unknown missing data method: {method}")
+            msg = f"Unknown missing data method: {method}"
+            raise ValueError(msg)
 
         # If still NaN (e.g., all NaN column), fill with 0
-        data = data.fillna(0)
+        return data.fillna(0)
 
-        return data
-
-    def remove_outliers(
-        self,
-        data: pd.DataFrame
-    ) -> pd.DataFrame:
+    def remove_outliers(self, data: pd.DataFrame) -> pd.DataFrame:
         """Удалить outliers.
-        
+
         Uses z-score method: |value - mean| > threshold * std
-        
+
         Args:
             data: DataFrame with sensor readings
-        
+
         Returns:
             cleaned: DataFrame с заменёнными outliers (median)
-        
+
         Examples:
             >>> data = pd.DataFrame({"pressure": [100, 101, 102, 500, 103]})  # 500 is outlier
             >>> cleaned = engineer.remove_outliers(data)
@@ -415,20 +390,16 @@ class FeatureEngineer:
 
         return data
 
-    def extract_all_features(
-        self,
-        data: pd.DataFrame,
-        sampling_rate: float = 1.0
-    ) -> np.ndarray:
+    def extract_all_features(self, data: pd.DataFrame, sampling_rate: float = 1.0) -> np.ndarray:
         """Извлечь all features из sensor data.
-        
+
         Args:
             data: DataFrame с sensor columns [T, S]
             sampling_rate: Sampling rate в Hz
-        
+
         Returns:
             features: Feature matrix [S * features_per_sensor + hydraulic_features]
-        
+
         Examples:
             >>> data = pd.DataFrame({
             ...     "pressure_pump": [...],  # T samples

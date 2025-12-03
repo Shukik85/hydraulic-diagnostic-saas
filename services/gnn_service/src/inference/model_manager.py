@@ -43,31 +43,32 @@ class ModelConfig:
             self.model_path = Path(self.model_path)
 
         if not self.model_path.exists():
-            raise FileNotFoundError(f"Model checkpoint not found: {self.model_path}")
+            msg = f"Model checkpoint not found: {self.model_path}"
+            raise FileNotFoundError(msg)
 
 
 class ModelManager:
     """Manager для model loading, caching, versioning.
-    
+
     Features:
     - Singleton pattern (one manager per process)
     - LRU cache для models
     - Thread-safe operations
     - Device management
     - Model validation
-    
+
     Examples:
         >>> manager = ModelManager()
-        >>> 
+        >>>
         >>> # Load model
         >>> model = manager.load_model(
         ...     model_path="models/best.ckpt",
         ...     device="cuda"
         ... )
-        >>> 
+        >>>
         >>> # Get cached model
         >>> model = manager.get_model("models/best.ckpt")
-        >>> 
+        >>>
         >>> # Clear cache
         >>> manager.clear_cache()
     """
@@ -99,20 +100,20 @@ class ModelManager:
         device: Literal["cpu", "cuda", "auto"] = "auto",
         use_compile: bool = True,
         compile_mode: str = "reduce-overhead",
-        force_reload: bool = False
+        force_reload: bool = False,
     ) -> torch.nn.Module:
         """Load model from checkpoint.
-        
+
         Args:
             model_path: Path to checkpoint file
             device: Device to load model on
             use_compile: Enable torch.compile
             compile_mode: Compilation mode
             force_reload: Force reload even if cached
-        
+
         Returns:
             model: Loaded model
-        
+
         Examples:
             >>> manager = ModelManager()
             >>> model = manager.load_model(
@@ -141,7 +142,7 @@ class ModelManager:
                 model_path=model_path,
                 device=device,
                 use_compile=use_compile,
-                compile_mode=compile_mode
+                compile_mode=compile_mode,
             )
 
             # Determine device
@@ -167,7 +168,7 @@ class ModelManager:
                     num_gat_layers=model_config.get("num_gat_layers", 3),
                     lstm_hidden=model_config.get("lstm_hidden", 256),
                     lstm_layers=model_config.get("lstm_layers", 2),
-                    use_compile=False  # Will compile separately if needed
+                    use_compile=False,  # Will compile separately if needed
                 )
 
                 # Load state dict
@@ -199,18 +200,18 @@ class ModelManager:
                 return model
 
             except Exception as e:
-                logger.error(f"Failed to load model from {model_path}: {e}")
+                logger.exception(f"Failed to load model from {model_path}: {e}")
                 raise
 
     def get_model(self, model_path: str | Path) -> torch.nn.Module | None:
         """Get cached model.
-        
+
         Args:
             model_path: Path to checkpoint
-        
+
         Returns:
             model: Cached model or None
-        
+
         Examples:
             >>> manager = ModelManager()
             >>> model = manager.get_model("models/best.ckpt")
@@ -222,16 +223,16 @@ class ModelManager:
 
     def clear_cache(self, model_path: str | Path | None = None):
         """Clear model cache.
-        
+
         Args:
             model_path: Specific model to clear, or None for all
-        
+
         Examples:
             >>> manager = ModelManager()
-            >>> 
+            >>>
             >>> # Clear specific model
             >>> manager.clear_cache("models/v1.0.0/best.ckpt")
-            >>> 
+            >>>
             >>> # Clear all models
             >>> manager.clear_cache()
         """
@@ -252,10 +253,10 @@ class ModelManager:
 
     def list_cached_models(self) -> list[str]:
         """List cached models.
-        
+
         Returns:
             paths: List of cached model paths
-        
+
         Examples:
             >>> manager = ModelManager()
             >>> models = manager.list_cached_models()
@@ -265,13 +266,13 @@ class ModelManager:
 
     def get_model_info(self, model_path: str | Path) -> dict | None:
         """Get model information.
-        
+
         Args:
             model_path: Path to checkpoint
-        
+
         Returns:
             info: Model info dict or None
-        
+
         Examples:
             >>> manager = ModelManager()
             >>> info = manager.get_model_info("models/best.ckpt")
@@ -290,25 +291,27 @@ class ModelManager:
             "device": next(model.parameters()).device.type,
             "num_parameters": sum(p.numel() for p in model.parameters()),
             "compiled": config.use_compile,
-            "mode": model.training
+            "mode": model.training,
         }
 
     def _validate_model(self, model: torch.nn.Module):
         """Validate loaded model.
-        
+
         Args:
             model: Model to validate
-        
+
         Raises:
             ValueError: If model invalid
         """
         # Check model has forward method
         if not hasattr(model, "forward"):
-            raise ValueError("Model missing forward method")
+            msg = "Model missing forward method"
+            raise ValueError(msg)
 
         # Check model has parameters
         if sum(1 for _ in model.parameters()) == 0:
-            raise ValueError("Model has no parameters")
+            msg = "Model has no parameters"
+            raise ValueError(msg)
 
         # Check model is in eval mode
         if model.training:
@@ -319,11 +322,11 @@ class ModelManager:
 
     def warmup(self, model_path: str | Path, batch_size: int = 1):
         """Warmup model (JIT compilation, cache warming).
-        
+
         Args:
             model_path: Path to model
             batch_size: Batch size для warmup
-        
+
         Examples:
             >>> manager = ModelManager()
             >>> model = manager.load_model("models/best.ckpt")
@@ -331,7 +334,8 @@ class ModelManager:
         """
         model = self.get_model(model_path)
         if model is None:
-            raise ValueError(f"Model not loaded: {model_path}")
+            msg = f"Model not loaded: {model_path}"
+            raise ValueError(msg)
 
         logger.info(f"Warming up model: {Path(model_path).name}")
 
@@ -342,10 +346,7 @@ class ModelManager:
         dummy_x = torch.randn(10 * batch_size, 34, device=device)  # 10 nodes per graph
         dummy_edge_index = torch.randint(0, 10, (2, 20 * batch_size), device=device)
         dummy_edge_attr = torch.randn(20 * batch_size, 8, device=device)
-        dummy_batch = torch.repeat_interleave(
-            torch.arange(batch_size, device=device),
-            10
-        )
+        dummy_batch = torch.repeat_interleave(torch.arange(batch_size, device=device), 10)
 
         # Warmup forward passes
         with torch.inference_mode():
@@ -354,7 +355,7 @@ class ModelManager:
                     x=dummy_x,
                     edge_index=dummy_edge_index,
                     edge_attr=dummy_edge_attr,
-                    batch=dummy_batch
+                    batch=dummy_batch,
                 )
 
         logger.info("Model warmup complete")

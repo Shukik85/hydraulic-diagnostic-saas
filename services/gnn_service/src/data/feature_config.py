@@ -19,7 +19,7 @@ from typing import Literal
 @dataclass(slots=True, frozen=True)
 class FeatureConfig:
     """Configuration для feature engineering.
-    
+
     Attributes:
         use_statistical: Использовать statistical features (mean, std, etc.)
         percentiles: Percentiles для вычисления
@@ -31,7 +31,7 @@ class FeatureConfig:
         normalization: Метод нормализации (standardize, minmax, robust)
         handle_missing: Метод обработки пропусков (ffill, bfill, interpolate, drop)
         outlier_threshold: Threshold для outlier detection (в стандартных отклонениях)
-    
+
     Examples:
         >>> config = FeatureConfig(
         ...     use_statistical=True,
@@ -65,7 +65,7 @@ class FeatureConfig:
     @property
     def statistical_features_count(self) -> int:
         """Количество statistical features.
-        
+
         Returns:
             count: mean(1) + std(1) + min(1) + max(1) + percentiles(5) + skew(1) + kurt(1) = 11
         """
@@ -76,7 +76,7 @@ class FeatureConfig:
     @property
     def frequency_features_count(self) -> int:
         """Количество frequency features.
-        
+
         Returns:
             count: FFT magnitudes + dominant freq + spectral entropy = num_frequencies + 2
         """
@@ -87,7 +87,7 @@ class FeatureConfig:
     @property
     def temporal_features_count(self) -> int:
         """Количество temporal features.
-        
+
         Returns:
             count: (rolling_mean + rolling_std) * windows + EMA + autocorr(3) + trend = 2*3 + 5
         """
@@ -98,7 +98,7 @@ class FeatureConfig:
     @property
     def hydraulic_features_count(self) -> int:
         """Количество hydraulic-specific features.
-        
+
         Returns:
             count: pressure_ratio + temp_delta + flow_efficiency + cavitation_index = 4
         """
@@ -109,7 +109,7 @@ class FeatureConfig:
     @property
     def total_features_per_sensor(self) -> int:
         """Общее количество features per sensor.
-        
+
         Returns:
             count: Statistical + Frequency + Temporal + Hydraulic
         """
@@ -124,7 +124,7 @@ class FeatureConfig:
 @dataclass(slots=True, frozen=True)
 class DataLoaderConfig:
     """Configuration для PyTorch DataLoader.
-    
+
     Attributes:
         batch_size: Размер batch (количество graphs)
         num_workers: Количество worker processes для data loading
@@ -136,7 +136,7 @@ class DataLoaderConfig:
         shuffle_test: Shuffle test data
         drop_last_train: Drop last incomplete batch в training
         drop_last_val: Drop last incomplete batch в validation
-    
+
     Examples:
         >>> config = DataLoaderConfig(batch_size=32, num_workers=4)
         >>> train_loader = create_dataloader(dataset, config=config, split="train")
@@ -163,13 +163,13 @@ class DataLoaderConfig:
 
     def get_loader_kwargs(self, split: Literal["train", "val", "test"]) -> dict:
         """Получить kwargs для DataLoader в зависимости от split.
-        
+
         Args:
             split: Dataset split (train, val, test)
-        
+
         Returns:
             kwargs: Dictionary с параметрами для DataLoader
-        
+
         Examples:
             >>> config = DataLoaderConfig()
             >>> train_kwargs = config.get_loader_kwargs("train")

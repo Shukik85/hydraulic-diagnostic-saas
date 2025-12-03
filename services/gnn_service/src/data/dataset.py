@@ -18,32 +18,34 @@ import hashlib
 import json
 import logging
 import pickle
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import torch
 from torch.utils.data import Dataset
 from torch_geometric.data import Data
 
-from src.data.feature_engineer import FeatureEngineer
-from src.data.graph_builder import GraphBuilder
-from src.data.timescale_connector import TimescaleConnector
-from src.schemas import GraphTopology
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from src.data.feature_engineer import FeatureEngineer
+    from src.data.graph_builder import GraphBuilder
+    from src.data.timescale_connector import TimescaleConnector
+    from src.schemas import GraphTopology
 
 logger = logging.getLogger(__name__)
 
 
 class HydraulicGraphDataset(Dataset):
     """PyTorch Dataset для hydraulic graphs.
-    
+
     Features:
     - Lazy loading: graphs built on-demand
     - Caching: disk-based with invalidation
     - Preloading: optional for faster training
     - Transforms: data augmentation support
     - Multi-worker safe: file locking
-    
+
     Args:
         data_path: Path to equipment list JSON file
         timescale_connector: TimescaleConnector instance
@@ -53,11 +55,11 @@ class HydraulicGraphDataset(Dataset):
         transform: Optional transform function
         cache_dir: Directory для caching (None = no caching)
         preload: Preload all data to RAM
-    
+
     Examples:
         >>> connector = TimescaleConnector(db_url=DB_URL)
         >>> await connector.connect()
-        >>> 
+        >>>
         >>> dataset = HydraulicGraphDataset(
         ...     data_path="data/equipment_list.json",
         ...     timescale_connector=connector,
@@ -66,7 +68,7 @@ class HydraulicGraphDataset(Dataset):
         ...     sequence_length=10,
         ...     cache_dir="data/cache"
         ... )
-        >>> 
+        >>>
         >>> len(dataset)  # Number of equipment
         >>> graph = dataset[0]  # Load first graph
     """
@@ -80,7 +82,7 @@ class HydraulicGraphDataset(Dataset):
         sequence_length: int = 10,
         transform: Callable[[Data], Data] | None = None,
         cache_dir: Path | str | None = None,
-        preload: bool = False
+        preload: bool = False,
     ):
         self.data_path = Path(data_path)
         self.connector = timescale_connector
@@ -111,15 +113,16 @@ class HydraulicGraphDataset(Dataset):
 
     def _load_equipment_list(self) -> list[dict[str, Any]]:
         """Загрузить equipment list из JSON.
-        
+
         Returns:
             equipment_list: List of equipment metadata dicts
-        
+
         Raises:
             FileNotFoundError: Если data_path не существует
         """
         if not self.data_path.exists():
-            raise FileNotFoundError(f"Equipment list not found: {self.data_path}")
+            msg = f"Equipment list not found: {self.data_path}"
+            raise FileNotFoundError(msg)
 
         with open(self.data_path) as f:
             equipment_list = json.load(f)
@@ -129,16 +132,17 @@ class HydraulicGraphDataset(Dataset):
 
     def _get_cache_path(self, equipment_id: str, topology_hash: str) -> Path:
         """Получить cache file path.
-        
+
         Args:
             equipment_id: Equipment identifier
             topology_hash: Hash of topology (for invalidation)
-        
+
         Returns:
             cache_path: Path to cache file
         """
         if self.cache_dir is None:
-            raise RuntimeError("Cache directory not configured")
+            msg = "Cache directory not configured"
+            raise RuntimeError(msg)
 
         # Include topology hash для cache invalidation
         cache_filename = f"{equipment_id}_{topology_hash[:8]}.pkl"
@@ -146,10 +150,10 @@ class HydraulicGraphDataset(Dataset):
 
     def _compute_topology_hash(self, topology: GraphTopology) -> str:
         """Вычислить hash of topology (для cache invalidation).
-        
+
         Args:
             topology: GraphTopology instance
-        
+
         Returns:
             hash: SHA256 hash string
         """
@@ -163,10 +167,10 @@ class HydraulicGraphDataset(Dataset):
 
     def _load_from_cache(self, cache_path: Path) -> Data | None:
         """Загрузить graph from cache.
-        
+
         Args:
             cache_path: Path to cache file
-        
+
         Returns:
             graph: Cached Data object or None
         """
@@ -184,7 +188,7 @@ class HydraulicGraphDataset(Dataset):
 
     def _save_to_cache(self, cache_path: Path, graph: Data) -> None:
         """Сохранить graph to cache.
-        
+
         Args:
             cache_path: Path to cache file
             graph: Data object to cache
@@ -198,10 +202,10 @@ class HydraulicGraphDataset(Dataset):
 
     def _build_graph_for_equipment(self, equipment_item: dict[str, Any]) -> Data:
         """Построить graph для equipment.
-        
+
         Args:
             equipment_item: Equipment metadata dict
-        
+
         Returns:
             graph: PyG Data object
         """
@@ -213,10 +217,7 @@ class HydraulicGraphDataset(Dataset):
 
         # Dummy graph: 5 nodes, 6 edges
         x = torch.randn(5, self.feature_engineer.config.total_features_per_sensor)
-        edge_index = torch.tensor([
-            [0, 1, 1, 2, 2, 3],
-            [1, 0, 2, 1, 3, 2]
-        ], dtype=torch.long)
+        edge_index = torch.tensor([[0, 1, 1, 2, 2, 3], [1, 0, 2, 1, 3, 2]], dtype=torch.long)
         edge_attr = torch.randn(6, 8)
 
         return Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
@@ -236,7 +237,7 @@ class HydraulicGraphDataset(Dataset):
 
     def __len__(self) -> int:
         """Dataset size.
-        
+
         Returns:
             size: Количество equipment
         """
@@ -244,13 +245,13 @@ class HydraulicGraphDataset(Dataset):
 
     def __getitem__(self, idx: int) -> Data:
         """Get graph by index.
-        
+
         Args:
             idx: Index в equipment list
-        
+
         Returns:
             graph: PyG Data object
-        
+
         Examples:
             >>> graph = dataset[0]
             >>> graph.x.shape  # [N, F]
@@ -287,10 +288,10 @@ class HydraulicGraphDataset(Dataset):
 
     def get_equipment_ids(self) -> list[str]:
         """Получить список equipment IDs.
-        
+
         Returns:
             ids: List of equipment identifiers
-        
+
         Examples:
             >>> ids = dataset.get_equipment_ids()
             >>> print(f"Equipment: {ids}")
@@ -299,10 +300,10 @@ class HydraulicGraphDataset(Dataset):
 
     def get_statistics(self) -> dict[str, Any]:
         """Получить dataset statistics.
-        
+
         Returns:
             stats: Dictionary с статистикой
-        
+
         Examples:
             >>> stats = dataset.get_statistics()
             >>> print(f"Average nodes: {stats['avg_num_nodes']}")
@@ -312,15 +313,15 @@ class HydraulicGraphDataset(Dataset):
         sample_size = min(10, len(self))
         graphs = [self[i] for i in range(sample_size)]
 
-        stats = {
+        return {
             "dataset_size": len(self),
             "sample_size": sample_size,
             "avg_num_nodes": np.mean([g.num_nodes for g in graphs]),
             "avg_num_edges": np.mean([g.num_edges for g in graphs]),
             "avg_node_features": graphs[0].x.shape[1] if graphs else 0,
-            "avg_edge_features": graphs[0].edge_attr.shape[1] if graphs and graphs[0].edge_attr is not None else 0,
+            "avg_edge_features": graphs[0].edge_attr.shape[1]
+            if graphs and graphs[0].edge_attr is not None
+            else 0,
             "cache_enabled": self.cache_dir is not None,
             "preloaded": self.preload,
         }
-
-        return stats

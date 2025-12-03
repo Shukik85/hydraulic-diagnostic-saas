@@ -72,11 +72,11 @@ class EdgeType(str, Enum):
 
 class EdgeSpec(BaseModel):
     """Edge specification для GATv2 edge-conditioned attention.
-    
-    Содержит статические и динамические характеристики соединения между 
+
+    Содержит статические и динамические характеристики соединения между
     компонентами. Динамические признаки (flow, pressure drop, etc.) могут быть
     заполнены в runtime или вычислены автоматически из sensor data.
-    
+
     Static Attributes (from topology):
         source_id: ID исходного компонента
         target_id: ID целевого компонента
@@ -87,7 +87,7 @@ class EdgeSpec(BaseModel):
         flow_direction: Направление потока
         has_quick_disconnect: Наличие быстроразъёмного соединения
         material: Материал (steel, rubber, composite)
-    
+
     Dynamic Attributes (computed at inference):
         flow_rate_lpm: Real-time flow rate (L/min)
         pressure_drop_bar: Pressure drop across connection (bar)
@@ -95,7 +95,7 @@ class EdgeSpec(BaseModel):
         vibration_level_g: Average vibration level (g)
         age_hours: Operating hours since installation
         last_maintenance_date: Date of last maintenance
-    
+
     Examples:
         >>> # Static configuration (from topology)
         >>> edge = EdgeSpec(
@@ -107,7 +107,7 @@ class EdgeSpec(BaseModel):
         ...     pressure_rating_bar=350,
         ...     material=EdgeMaterial.STEEL
         ... )
-        >>> 
+        >>>
         >>> # With dynamic features (at inference)
         >>> edge.flow_rate_lpm = 115.3
         >>> edge.pressure_drop_bar = 2.1
@@ -135,67 +135,38 @@ class EdgeSpec(BaseModel):
                 "temperature_delta_c": 1.5,
                 "vibration_level_g": 0.3,
                 "age_hours": 12500.0,
-                "last_maintenance_date": "2024-06-01"
+                "last_maintenance_date": "2024-06-01",
             }
-        }
+        },
     )
 
     # ========================================================================
     # STATIC FIELDS (from topology configuration)
     # ========================================================================
 
-    source_id: str = Field(
-        ...,
-        min_length=1,
-        max_length=50,
-        description="ID исходного компонента"
-    )
+    source_id: str = Field(..., min_length=1, max_length=50, description="ID исходного компонента")
 
-    target_id: str = Field(
-        ...,
-        min_length=1,
-        max_length=50,
-        description="ID целевого компонента"
-    )
+    target_id: str = Field(..., min_length=1, max_length=50, description="ID целевого компонента")
 
-    edge_type: EdgeType = Field(
-        ...,
-        description="Тип соединения между компонентами"
-    )
+    edge_type: EdgeType = Field(..., description="Тип соединения между компонентами")
 
-    diameter_mm: float = Field(
-        ...,
-        gt=0,
-        le=500,
-        description="Внутренний диаметр гидролинии (мм)"
-    )
+    diameter_mm: float = Field(..., gt=0, le=500, description="Внутренний диаметр гидролинии (мм)")
 
-    length_m: float = Field(
-        ...,
-        gt=0,
-        le=1000,
-        description="Длина соединения (метры)"
-    )
+    length_m: float = Field(..., gt=0, le=1000, description="Длина соединения (метры)")
 
     pressure_rating_bar: Annotated[float, Field(gt=0, le=1000)] = Field(
-        ...,
-        description="Номинальное рабочее давление (бар)"
+        ..., description="Номинальное рабочее давление (бар)"
     )
 
     flow_direction: Literal["unidirectional", "bidirectional"] = Field(
-        default="unidirectional",
-        description="Направление потока"
+        default="unidirectional", description="Направление потока"
     )
 
     has_quick_disconnect: bool = Field(
-        default=False,
-        description="Наличие быстроразъёмного соединения"
+        default=False, description="Наличие быстроразъёмного соединения"
     )
 
-    material: EdgeMaterial = Field(
-        default=EdgeMaterial.STEEL,
-        description="Материал гидролинии"
-    )
+    material: EdgeMaterial = Field(default=EdgeMaterial.STEEL, description="Материал гидролинии")
 
     # ========================================================================
     # DYNAMIC FIELDS (computed at inference time)
@@ -204,34 +175,34 @@ class EdgeSpec(BaseModel):
     flow_rate_lpm: float | None = Field(
         default=None,
         ge=0,
-        description="Real-time flow rate (L/min). Computed from sensors if not provided."
+        description="Real-time flow rate (L/min). Computed from sensors if not provided.",
     )
 
     pressure_drop_bar: float | None = Field(
         default=None,
-        description="Pressure drop across connection (bar). Computed from ΔP = P_source - P_target."
+        description="Pressure drop across connection (bar). Computed from ΔP = P_source - P_target.",
     )
 
     temperature_delta_c: float | None = Field(
         default=None,
-        description="Temperature difference across connection (°C). Computed from ΔT = T_source - T_target."
+        description="Temperature difference across connection (°C). Computed from ΔT = T_source - T_target.",
     )
 
     vibration_level_g: float | None = Field(
         default=None,
         ge=0,
-        description="Average vibration level at connection (g). Computed from adjacent sensors."
+        description="Average vibration level at connection (g). Computed from adjacent sensors.",
     )
 
     age_hours: float | None = Field(
         default=None,
         ge=0,
-        description="Connection age in operating hours. Computed from install_date if available."
+        description="Connection age in operating hours. Computed from install_date if available.",
     )
 
     last_maintenance_date: date | None = Field(
         default=None,
-        description="Date of last maintenance. Used to compute maintenance_score [0, 1]."
+        description="Date of last maintenance. Used to compute maintenance_score [0, 1].",
     )
 
     # ========================================================================
@@ -248,17 +219,12 @@ class EdgeSpec(BaseModel):
     @property
     def pressure_loss_coefficient(self) -> float:
         """Упрощённый коэффициент потерь давления.
-        
+
         Зависит от длины, диаметра и материала.
         """
-        material_factors = {
-            "steel": 1.0,
-            "rubber": 1.2,
-            "composite": 1.1,
-            "thermoplastic": 1.15
-        }
+        material_factors = {"steel": 1.0, "rubber": 1.2, "composite": 1.1, "thermoplastic": 1.15}
         factor = material_factors.get(self.material, 1.0)
-        return factor * self.length_m / (self.diameter_mm ** 4)
+        return factor * self.length_m / (self.diameter_mm**4)
 
     # ========================================================================
     # DYNAMIC METHODS
@@ -266,13 +232,13 @@ class EdgeSpec(BaseModel):
 
     def get_age_hours(self, current_time: datetime) -> float:
         """Get connection age in hours.
-        
+
         Returns age_hours if set, otherwise 0 (unknown age).
         For topology-based age computation, see EdgeConfiguration.get_age_hours().
-        
+
         Args:
             current_time: Current timestamp
-        
+
         Returns:
             Age in hours (0 if unknown)
         """
@@ -280,16 +246,16 @@ class EdgeSpec(BaseModel):
 
     def get_maintenance_score(self, current_date: date | datetime) -> float:
         """Compute maintenance score [0, 1].
-        
+
         Score decays linearly from 1.0 (just maintained) to 0.0 (365+ days ago).
         Returns 0.5 if no maintenance history (neutral).
-        
+
         Args:
             current_date: Current date/datetime
-        
+
         Returns:
             Maintenance score in [0, 1]
-        
+
         Examples:
             >>> edge = EdgeSpec(..., last_maintenance_date=date(2024, 6, 1))
             >>> edge.get_maintenance_score(date(2024, 7, 1))  # 30 days ago
@@ -306,16 +272,15 @@ class EdgeSpec(BaseModel):
         days_since = (current_date - self.last_maintenance_date).days
 
         # Linear decay over 365 days
-        score = max(0.0, 1.0 - days_since / 365.0)
-        return score
+        return max(0.0, 1.0 - days_since / 365.0)
 
 
 class ComponentSpec(BaseModel):
     """Спецификация компонента гидравлической системы.
-    
+
     Представляет один компонент (node) в графе с его характеристиками,
     подключенными сенсорами и метаданными.
-    
+
     Attributes:
         component_id: Уникальный идентификатор компонента
         component_type: Тип компонента (pump, valve, cylinder, etc.)
@@ -325,7 +290,7 @@ class ComponentSpec(BaseModel):
         nominal_flow_lpm: Номинальный расход (л/мин)
         rated_power_kw: Номинальная мощность (кВт)
         metadata: Дополнительные метаданные
-    
+
     Examples:
         >>> component = ComponentSpec(
         ...     component_id="pump_main_001",
@@ -355,10 +320,10 @@ class ComponentSpec(BaseModel):
                     "manufacturer": "Bosch Rexroth",
                     "model": "A10VSO",
                     "serial_number": "12345678",
-                    "installation_date": "2023-01-15"
-                }
+                    "installation_date": "2023-01-15",
+                },
             }
-        }
+        },
     )
 
     component_id: str = Field(
@@ -366,44 +331,36 @@ class ComponentSpec(BaseModel):
         min_length=1,
         max_length=50,
         pattern=r"^[a-zA-Z0-9_-]+$",
-        description="Уникальный идентификатор компонента"
+        description="Уникальный идентификатор компонента",
     )
 
     component_type: ComponentType = Field(
-        ...,
-        description="Тип компонента (pump, valve, cylinder, etc.)"
+        ..., description="Тип компонента (pump, valve, cylinder, etc.)"
     )
 
     sensors: list[str] = Field(
-        ...,
-        min_length=1,
-        max_length=20,
-        description="Список ID подключенных сенсоров"
+        ..., min_length=1, max_length=20, description="Список ID подключенных сенсоров"
     )
 
     feature_dim: Annotated[int, Field(gt=0, le=256)] = Field(
-        ...,
-        description="Размерность вектора признаков для этого компонента"
+        ..., description="Размерность вектора признаков для этого компонента"
     )
 
     nominal_pressure_bar: Annotated[float, Field(gt=0, le=1000)] = Field(
-        ...,
-        description="Номинальное рабочее давление (бар)"
+        ..., description="Номинальное рабочее давление (бар)"
     )
 
     nominal_flow_lpm: Annotated[float, Field(gt=0, le=1000)] = Field(
-        ...,
-        description="Номинальный расход жидкости (литры/мин)"
+        ..., description="Номинальный расход жидкости (литры/мин)"
     )
 
     rated_power_kw: Annotated[float, Field(ge=0, le=500)] = Field(
-        default=0.0,
-        description="Номинальная мощность (кВт), 0 для пассивных компонентов"
+        default=0.0, description="Номинальная мощность (кВт), 0 для пассивных компонентов"
     )
 
     metadata: dict[str, str | int | float | bool] = Field(
         default_factory=dict,
-        description="Дополнительные метаданные (manufacturer, model, serial, etc.)"
+        description="Дополнительные метаданные (manufacturer, model, serial, etc.)",
     )
 
     @field_validator("sensors")
@@ -411,7 +368,8 @@ class ComponentSpec(BaseModel):
     def validate_unique_sensors(cls, v: list[str]) -> list[str]:
         """Проверка уникальности sensor IDs."""
         if len(v) != len(set(v)):
-            raise ValueError("Sensor IDs must be unique")
+            msg = "Sensor IDs must be unique"
+            raise ValueError(msg)
         return v
 
     @computed_field
@@ -425,16 +383,16 @@ class ComponentSpec(BaseModel):
 
 class GraphTopology(BaseModel):
     """Топология гидравлического графа.
-    
+
     Определяет структуру графа: компоненты (nodes), соединения (edges)
     и их характеристики. Используется для построения PyTorch Geometric Data.
-    
+
     Attributes:
         equipment_id: ID оборудования
         components: Словарь {component_id: ComponentSpec}
         edges: Список соединений между компонентами с характеристиками
         topology_version: Версия топологии (для tracking изменений)
-    
+
     Examples:
         >>> topology = GraphTopology(
         ...     equipment_id="excavator_001",
@@ -457,15 +415,32 @@ class GraphTopology(BaseModel):
             "example": {
                 "equipment_id": "excavator_001",
                 "components": {
-                    "pump_001": {"component_id": "pump_001", "component_type": "piston_pump", "sensors": ["pressure"], "feature_dim": 8},
-                    "valve_001": {"component_id": "valve_001", "component_type": "directional_valve", "sensors": ["position"], "feature_dim": 6}
+                    "pump_001": {
+                        "component_id": "pump_001",
+                        "component_type": "piston_pump",
+                        "sensors": ["pressure"],
+                        "feature_dim": 8,
+                    },
+                    "valve_001": {
+                        "component_id": "valve_001",
+                        "component_type": "directional_valve",
+                        "sensors": ["position"],
+                        "feature_dim": 6,
+                    },
                 },
                 "edges": [
-                    {"source_id": "pump_001", "target_id": "valve_001", "edge_type": "high_pressure_hose", "diameter_mm": 16, "length_m": 2.5, "pressure_rating_bar": 350}
+                    {
+                        "source_id": "pump_001",
+                        "target_id": "valve_001",
+                        "edge_type": "high_pressure_hose",
+                        "diameter_mm": 16,
+                        "length_m": 2.5,
+                        "pressure_rating_bar": 350,
+                    }
                 ],
-                "topology_version": "v1.0"
+                "topology_version": "v1.0",
             }
-        }
+        },
     )
 
     equipment_id: str = Field(
@@ -473,25 +448,19 @@ class GraphTopology(BaseModel):
         min_length=1,
         max_length=100,
         pattern=r"^[a-zA-Z0-9_-]+$",
-        description="Уникальный идентификатор оборудования"
+        description="Уникальный идентификатор оборудования",
     )
 
     components: dict[str, ComponentSpec] = Field(
-        ...,
-        min_length=2,
-        description="Словарь компонентов {component_id: ComponentSpec}"
+        ..., min_length=2, description="Словарь компонентов {component_id: ComponentSpec}"
     )
 
     edges: list[EdgeSpec] = Field(
-        ...,
-        min_length=1,
-        description="Список соединений между компонентами с характеристиками"
+        ..., min_length=1, description="Список соединений между компонентами с характеристиками"
     )
 
     topology_version: str = Field(
-        default="v1.0",
-        pattern=r"^v\d+\.\d+$",
-        description="Версия топологии (для tracking)"
+        default="v1.0", pattern=r"^v\d+\.\d+$", description="Версия топологии (для tracking)"
     )
 
     @field_validator("components")
@@ -500,9 +469,8 @@ class GraphTopology(BaseModel):
         """Проверка соответствия ключей и component_id."""
         for key, component in v.items():
             if key != component.component_id:
-                raise ValueError(
-                    f"Key '{key}' does not match component_id '{component.component_id}'"
-                )
+                msg = f"Key '{key}' does not match component_id '{component.component_id}'"
+                raise ValueError(msg)
         return v
 
     @field_validator("edges")
@@ -513,18 +481,16 @@ class GraphTopology(BaseModel):
             component_ids = set(info.data["components"].keys())
             for edge in v:
                 if edge.source_id not in component_ids:
-                    raise ValueError(
-                        f"Edge source_id '{edge.source_id}' not found in components"
-                    )
+                    msg = f"Edge source_id '{edge.source_id}' not found in components"
+                    raise ValueError(msg)
                 if edge.target_id not in component_ids:
-                    raise ValueError(
-                        f"Edge target_id '{edge.target_id}' not found in components"
-                    )
+                    msg = f"Edge target_id '{edge.target_id}' not found in components"
+                    raise ValueError(msg)
         return v
 
     def validate_connectivity(self) -> bool:
         """Проверка связности графа (все компоненты достижимы).
-        
+
         Returns:
             True если граф связный, False иначе
         """
@@ -573,7 +539,7 @@ class GraphTopology(BaseModel):
 
     def get_component_types_distribution(self) -> dict[ComponentType, int]:
         """Распределение типов компонентов.
-        
+
         Returns:
             Словарь {ComponentType: count}
         """
@@ -585,7 +551,7 @@ class GraphTopology(BaseModel):
 
     def get_edge_types_distribution(self) -> dict[EdgeType, int]:
         """Распределение типов соединений.
-        
+
         Returns:
             Словарь {EdgeType: count}
         """
@@ -597,7 +563,7 @@ class GraphTopology(BaseModel):
 
     def to_pyg_format(self) -> tuple[dict[str, int], list[tuple[int, int]]]:
         """Конвертация в формат PyTorch Geometric.
-        
+
         Returns:
             node_mapping: {component_id: node_index}
             edge_list: [(source_idx, target_idx), ...]
@@ -607,8 +573,7 @@ class GraphTopology(BaseModel):
 
         # Create edge list with indices
         edge_list = [
-            (node_mapping[edge.source_id], node_mapping[edge.target_id])
-            for edge in self.edges
+            (node_mapping[edge.source_id], node_mapping[edge.target_id]) for edge in self.edges
         ]
 
         return node_mapping, edge_list

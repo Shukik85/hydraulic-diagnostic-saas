@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class ModelInfo(BaseModel):
     """Model information.
-    
+
     Attributes:
         path: Model file path
         version: Model version (extracted from filename)
@@ -25,7 +25,7 @@ class ModelInfo(BaseModel):
         size_mb: Model file size in MB
         loaded: Whether model is currently loaded
         loaded_at: When model was loaded
-    
+
     Examples:
         >>> info = ModelInfo(
         ...     path="models/checkpoints/v2.0.0.ckpt",
@@ -47,7 +47,7 @@ class ModelInfo(BaseModel):
                 "size_mb": 45.3,
                 "loaded": True,
                 "loaded_at": "2025-11-26T20:00:00Z",
-                "compiled": True
+                "compiled": True,
             }
         }
     )
@@ -64,7 +64,7 @@ class ModelInfo(BaseModel):
 
 class ModelVersion(BaseModel):
     """Model version metadata.
-    
+
     Attributes:
         version: Semantic version
         path: Model checkpoint path
@@ -73,7 +73,7 @@ class ModelVersion(BaseModel):
         num_parameters: Parameter count
         architecture: Architecture name
         is_current: Currently active model
-    
+
     Examples:
         >>> version = ModelVersion(
         ...     version="2.0.0",
@@ -93,24 +93,15 @@ class ModelVersion(BaseModel):
                 "size_mb": 45.3,
                 "num_parameters": 2500000,
                 "architecture": "GATv2-ARMA-LSTM",
-                "is_current": True
+                "is_current": True,
             }
         }
     )
 
     version: str = Field(..., description="Semantic version (e.g., 2.0.0)")
     path: str = Field(..., description="Checkpoint path")
-    created_at: datetime = Field(
-        default_factory=datetime.now,
-        description="Creation timestamp"
-    )
+    created_at: datetime = Field(default_factory=datetime.now, description="Creation timestamp")
     size_mb: float = Field(..., ge=0, description="File size (MB)")
     num_parameters: int = Field(..., ge=0, description="Parameter count")
-    architecture: str = Field(
-        default="GATv2-ARMA-LSTM",
-        description="Architecture name"
-    )
-    is_current: bool = Field(
-        default=False,
-        description="Currently active model"
-    )
+    architecture: str = Field(default="GATv2-ARMA-LSTM", description="Architecture name")
+    is_current: bool = Field(default=False, description="Currently active model")

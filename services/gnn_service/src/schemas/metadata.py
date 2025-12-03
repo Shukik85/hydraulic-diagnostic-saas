@@ -18,13 +18,13 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validat
 
 class TimeWindow(BaseModel):
     """Time window for data queries.
-    
+
     Represents a time range [start_time, end_time].
-    
+
     Attributes:
         start_time: Start of time window
         end_time: End of time window
-    
+
     Examples:
         >>> window = TimeWindow(
         ...     start_time=datetime(2025, 11, 1),
@@ -36,23 +36,17 @@ class TimeWindow(BaseModel):
 
     model_config = ConfigDict(frozen=False)
 
-    start_time: datetime = Field(
-        ...,
-        description="Start of time window (inclusive)"
-    )
+    start_time: datetime = Field(..., description="Start of time window (inclusive)")
 
-    end_time: datetime = Field(
-        ...,
-        description="End of time window (inclusive)"
-    )
+    end_time: datetime = Field(..., description="End of time window (inclusive)")
 
     @field_validator("end_time")
     @classmethod
     def validate_end_after_start(cls, v: datetime, info) -> datetime:
         """Validate end_time > start_time."""
-        if "start_time" in info.data:
-            if v <= info.data["start_time"]:
-                raise ValueError("end_time must be greater than start_time")
+        if "start_time" in info.data and v <= info.data["start_time"]:
+            msg = "end_time must be greater than start_time"
+            raise ValueError(msg)
         return v
 
     @computed_field
@@ -96,7 +90,7 @@ class SensorType(str, Enum):
 
 class SensorConfig(BaseModel):
     """Конфигурация отдельного сенсора.
-    
+
     Attributes:
         sensor_id: Уникальный ID сенсора
         sensor_type: Тип сенсора
@@ -108,7 +102,7 @@ class SensorConfig(BaseModel):
         range_max: Максимальное значение диапазона
         calibration_date: Дата последней калибровки
         is_active: Активен ли сенсор
-    
+
     Examples:
         >>> sensor = SensorConfig(
         ...     sensor_id="pressure_pump_out",
@@ -136,9 +130,9 @@ class SensorConfig(BaseModel):
                 "range_min": 0.0,
                 "range_max": 400.0,
                 "calibration_date": "2024-06-15T10:00:00Z",
-                "is_active": True
+                "is_active": True,
             }
-        }
+        },
     )
 
     sensor_id: str = Field(
@@ -146,57 +140,36 @@ class SensorConfig(BaseModel):
         min_length=1,
         max_length=100,
         pattern=r"^[a-zA-Z0-9_-]+$",
-        description="Уникальный идентификатор сенсора"
+        description="Уникальный идентификатор сенсора",
     )
 
-    sensor_type: SensorType = Field(
-        ...,
-        description="Тип сенсора"
-    )
+    sensor_type: SensorType = Field(..., description="Тип сенсора")
 
     component_id: str = Field(
-        ...,
-        min_length=1,
-        max_length=50,
-        description="ID компонента, к которому подключен сенсор"
+        ..., min_length=1, max_length=50, description="ID компонента, к которому подключен сенсор"
     )
 
     unit: str = Field(
-        ...,
-        min_length=1,
-        max_length=20,
-        description="Единица измерения (bar, °C, L/min, mm, etc.)"
+        ..., min_length=1, max_length=20, description="Единица измерения (bar, °C, L/min, mm, etc.)"
     )
 
     sampling_rate_hz: Annotated[float, Field(gt=0, le=10000)] = Field(
-        ...,
-        description="Частота дискретизации (Гц)"
+        ..., description="Частота дискретизации (Гц)"
     )
 
     accuracy_percent: Annotated[float, Field(gt=0, le=100)] = Field(
-        ...,
-        description="Точность измерения (% от full scale)"
+        ..., description="Точность измерения (% от full scale)"
     )
 
-    range_min: float = Field(
-        ...,
-        description="Минимальное значение измерительного диапазона"
-    )
+    range_min: float = Field(..., description="Минимальное значение измерительного диапазона")
 
-    range_max: float = Field(
-        ...,
-        description="Максимальное значение измерительного диапазона"
-    )
+    range_max: float = Field(..., description="Максимальное значение измерительного диапазона")
 
     calibration_date: datetime | None = Field(
-        default=None,
-        description="Дата последней калибровки (ISO 8601)"
+        default=None, description="Дата последней калибровки (ISO 8601)"
     )
 
-    is_active: bool = Field(
-        default=True,
-        description="Активен ли сенсор в данный момент"
-    )
+    is_active: bool = Field(default=True, description="Активен ли сенсор в данный момент")
 
     @field_validator("range_min", "range_max")
     @classmethod
@@ -204,7 +177,8 @@ class SensorConfig(BaseModel):
         """Валидация корректности диапазона."""
         if info.field_name == "range_max" and "range_min" in info.data:
             if v <= info.data["range_min"]:
-                raise ValueError("range_max must be greater than range_min")
+                msg = "range_max must be greater than range_min"
+                raise ValueError(msg)
         return v
 
     @computed_field
@@ -222,10 +196,10 @@ class SensorConfig(BaseModel):
 
 class EquipmentMetadata(BaseModel):
     """Метаданные оборудования.
-    
+
     Полная информация об оборудовании, включая технические характеристики,
     историю обслуживания и текущие параметры работы.
-    
+
     Attributes:
         equipment_id: Уникальный ID оборудования
         equipment_type: Тип (excavator, loader, crane, etc.)
@@ -263,9 +237,9 @@ class EquipmentMetadata(BaseModel):
                 "hydraulic_system_type": "closed_loop",
                 "fluid_type": "ISO VG 46",
                 "tank_capacity_liters": 180.0,
-                "max_working_pressure_bar": 350
+                "max_working_pressure_bar": 350,
             }
-        }
+        },
     )
 
     equipment_id: str = Field(..., min_length=1, max_length=100)
@@ -275,68 +249,50 @@ class EquipmentMetadata(BaseModel):
     serial_number: str = Field(..., min_length=1, max_length=100)
 
     manufacture_year: Annotated[int, Field(ge=1950, le=2030)] = Field(
-        ...,
-        description="Год выпуска оборудования"
+        ..., description="Год выпуска оборудования"
     )
 
-    installation_date: datetime = Field(
-        ...,
-        description="Дата ввода в эксплуатацию"
-    )
+    installation_date: datetime = Field(..., description="Дата ввода в эксплуатацию")
 
     operating_hours: Annotated[float, Field(ge=0, le=100000)] = Field(
-        ...,
-        description="Общая наработка (моточасы)"
+        ..., description="Общая наработка (моточасы)"
     )
 
     last_maintenance_date: datetime | None = Field(
-        default=None,
-        description="Дата последнего технического обслуживания"
+        default=None, description="Дата последнего технического обслуживания"
     )
 
-    next_maintenance_due: datetime | None = Field(
-        default=None,
-        description="Дата планового ТО"
-    )
+    next_maintenance_due: datetime | None = Field(default=None, description="Дата планового ТО")
 
     hydraulic_system_type: Literal["open_loop", "closed_loop", "hybrid"] = Field(
-        default="closed_loop",
-        description="Тип гидравлической системы"
+        default="closed_loop", description="Тип гидравлической системы"
     )
 
-    fluid_type: str = Field(
-        ...,
-        description="Тип гидравлической жидкости (ISO VG grade)"
-    )
+    fluid_type: str = Field(..., description="Тип гидравлической жидкости (ISO VG grade)")
 
     fluid_viscosity_grade: Annotated[int, Field(ge=10, le=1000)] = Field(
-        default=46,
-        description="Класс вязкости по ISO VG"
+        default=46, description="Класс вязкости по ISO VG"
     )
 
     tank_capacity_liters: Annotated[float, Field(gt=0, le=5000)] = Field(
-        ...,
-        description="Объём гидробака (литры)"
+        ..., description="Объём гидробака (литры)"
     )
 
     max_working_pressure_bar: Annotated[int, Field(gt=0, le=1000)] = Field(
-        ...,
-        description="Максимальное рабочее давление (бар)"
+        ..., description="Максимальное рабочее давление (бар)"
     )
 
     sensors: list[SensorConfig] = Field(
-        default_factory=list,
-        description="Конфигурации всех установленных сенсоров"
+        default_factory=list, description="Конфигурации всех установленных сенсоров"
     )
 
     location: dict[str, str | float] = Field(
         default_factory=dict,
-        description="Географическое расположение (latitude, longitude, site_name)"
+        description="Географическое расположение (latitude, longitude, site_name)",
     )
 
     custom_metadata: dict[str, str | int | float | bool] = Field(
-        default_factory=dict,
-        description="Дополнительные пользовательские поля"
+        default_factory=dict, description="Дополнительные пользовательские поля"
     )
 
     @computed_field
@@ -361,9 +317,9 @@ class EquipmentMetadata(BaseModel):
 
 class SystemConfig(BaseModel):
     """Конфигурация всей системы диагностики.
-    
+
     Глобальные параметры для inference, training и monitoring.
-    
+
     Attributes:
         inference_config: Параметры inference
         training_config: Параметры обучения
@@ -374,143 +330,108 @@ class SystemConfig(BaseModel):
 
     # Inference parameters
     inference_batch_size: Annotated[int, Field(ge=1, le=256)] = Field(
-        default=32,
-        description="Размер батча для inference"
+        default=32, description="Размер батча для inference"
     )
 
     inference_timeout_seconds: Annotated[int, Field(ge=1, le=300)] = Field(
-        default=30,
-        description="Таймаут inference запроса (секунды)"
+        default=30, description="Таймаут inference запроса (секунды)"
     )
 
-    use_gpu: bool = Field(
-        default=True,
-        description="Использовать ли GPU для inference"
-    )
+    use_gpu: bool = Field(default=True, description="Использовать ли GPU для inference")
 
     gpu_device_id: Annotated[int, Field(ge=0, le=7)] = Field(
-        default=0,
-        description="ID GPU устройства"
+        default=0, description="ID GPU устройства"
     )
 
-    use_amp: bool = Field(
-        default=True,
-        description="Использовать Automatic Mixed Precision"
-    )
+    use_amp: bool = Field(default=True, description="Использовать Automatic Mixed Precision")
 
-    use_compile: bool = Field(
-        default=True,
-        description="Использовать torch.compile (PyTorch 2.8)"
-    )
+    use_compile: bool = Field(default=True, description="Использовать torch.compile (PyTorch 2.8)")
 
     # Training parameters
     training_epochs: Annotated[int, Field(ge=1, le=1000)] = Field(
-        default=100,
-        description="Количество эпох обучения"
+        default=100, description="Количество эпох обучения"
     )
 
     training_batch_size: Annotated[int, Field(ge=1, le=256)] = Field(
-        default=16,
-        description="Размер батча для обучения"
+        default=16, description="Размер батча для обучения"
     )
 
     learning_rate: Annotated[float, Field(gt=0, le=1.0)] = Field(
-        default=0.001,
-        description="Learning rate"
+        default=0.001, description="Learning rate"
     )
 
     use_float8_training: bool = Field(
-        default=False,
-        description="Использовать float8 training (PyTorch 2.8, требует A100/H100)"
+        default=False, description="Использовать float8 training (PyTorch 2.8, требует A100/H100)"
     )
 
     use_distributed: bool = Field(
-        default=False,
-        description="Использовать distributed training (DDP)"
+        default=False, description="Использовать distributed training (DDP)"
     )
 
     num_gpus: Annotated[int, Field(ge=1, le=8)] = Field(
-        default=1,
-        description="Количество GPU для distributed training"
+        default=1, description="Количество GPU для distributed training"
     )
 
     # Model parameters
     hidden_channels: Annotated[int, Field(ge=32, le=512)] = Field(
-        default=128,
-        description="Размерность скрытых слоёв GNN"
+        default=128, description="Размерность скрытых слоёв GNN"
     )
 
     num_attention_heads: Annotated[int, Field(ge=1, le=16)] = Field(
-        default=8,
-        description="Количество attention heads в GAT"
+        default=8, description="Количество attention heads в GAT"
     )
 
     num_gat_layers: Annotated[int, Field(ge=1, le=10)] = Field(
-        default=3,
-        description="Количество GAT layers"
+        default=3, description="Количество GAT layers"
     )
 
     lstm_hidden: Annotated[int, Field(ge=64, le=1024)] = Field(
-        default=256,
-        description="Размерность LSTM hidden state"
+        default=256, description="Размерность LSTM hidden state"
     )
 
     lstm_layers: Annotated[int, Field(ge=1, le=5)] = Field(
-        default=2,
-        description="Количество LSTM layers"
+        default=2, description="Количество LSTM layers"
     )
 
     dropout: Annotated[float, Field(ge=0.0, le=0.9)] = Field(
-        default=0.3,
-        description="Dropout rate"
+        default=0.3, description="Dropout rate"
     )
 
     # Data parameters
     sequence_length: Annotated[int, Field(ge=5, le=100)] = Field(
-        default=10,
-        description="Длина временной последовательности"
+        default=10, description="Длина временной последовательности"
     )
 
     window_minutes: Annotated[int, Field(ge=5, le=1440)] = Field(
-        default=60,
-        description="Размер временного окна (минуты)"
+        default=60, description="Размер временного окна (минуты)"
     )
 
     # Health thresholds
     health_threshold_warning: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
-        default=0.7,
-        description="Порог health score для warning"
+        default=0.7, description="Порог health score для warning"
     )
 
     health_threshold_critical: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
-        default=0.5,
-        description="Порог health score для critical"
+        default=0.5, description="Порог health score для critical"
     )
 
     degradation_threshold: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
-        default=0.1,
-        description="Порог degradation rate для alert"
+        default=0.1, description="Порог degradation rate для alert"
     )
 
     anomaly_confidence_threshold: Annotated[float, Field(ge=0.0, le=1.0)] = Field(
-        default=0.8,
-        description="Минимальная confidence для anomaly alert"
+        default=0.8, description="Минимальная confidence для anomaly alert"
     )
 
     # Monitoring
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO",
-        description="Уровень логирования"
+        default="INFO", description="Уровень логирования"
     )
 
-    enable_metrics: bool = Field(
-        default=True,
-        description="Включить Prometheus metrics"
-    )
+    enable_metrics: bool = Field(default=True, description="Включить Prometheus metrics")
 
     metrics_port: Annotated[int, Field(ge=1024, le=65535)] = Field(
-        default=9090,
-        description="Порт для Prometheus metrics"
+        default=9090, description="Порт для Prometheus metrics"
     )
 
     @field_validator("health_threshold_critical")
@@ -519,7 +440,6 @@ class SystemConfig(BaseModel):
         """Critical threshold должен быть ниже warning."""
         if "health_threshold_warning" in info.data:
             if v >= info.data["health_threshold_warning"]:
-                raise ValueError(
-                    "health_threshold_critical must be less than health_threshold_warning"
-                )
+                msg = "health_threshold_critical must be less than health_threshold_warning"
+                raise ValueError(msg)
         return v

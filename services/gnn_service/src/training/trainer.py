@@ -36,7 +36,7 @@ from pytorch_lightning.strategies import DDPStrategy
 @dataclass
 class TrainerConfig:
     """Configuration for PyTorch Lightning Trainer.
-    
+
     Attributes:
         max_epochs: Maximum training epochs
         accelerator: Device type (gpu/cpu/mps)
@@ -52,6 +52,7 @@ class TrainerConfig:
         enable_model_summary: Show model summary
         strategy: Distributed strategy
     """
+
     # Training duration
     max_epochs: int = 100
 
@@ -83,7 +84,7 @@ class TrainerConfig:
 @dataclass
 class CheckpointConfig:
     """Configuration for ModelCheckpoint callback.
-    
+
     Attributes:
         dirpath: Checkpoint save directory
         filename: Checkpoint filename pattern
@@ -94,6 +95,7 @@ class CheckpointConfig:
         every_n_epochs: Save every N epochs
         verbose: Print save messages
     """
+
     dirpath: str | Path = "checkpoints"
     filename: str = "hydraulic-gnn-{epoch:02d}-{val_total_loss:.4f}"
     monitor: str = "val/total_loss"
@@ -107,7 +109,7 @@ class CheckpointConfig:
 @dataclass
 class EarlyStoppingConfig:
     """Configuration for EarlyStopping callback.
-    
+
     Attributes:
         monitor: Metric to monitor
         patience: Epochs without improvement before stopping
@@ -116,6 +118,7 @@ class EarlyStoppingConfig:
         verbose: Print stopping messages
         strict: Raise error if metric not found
     """
+
     monitor: str = "val/total_loss"
     patience: int = 20
     mode: Literal["min", "max"] = "min"
@@ -127,7 +130,7 @@ class EarlyStoppingConfig:
 @dataclass
 class LoggerConfig:
     """Configuration for logging.
-    
+
     Attributes:
         save_dir: Log save directory
         name: Experiment name
@@ -135,6 +138,7 @@ class LoggerConfig:
         log_graph: Log model graph
         default_hp_metric: Default hyperparameter metric
     """
+
     save_dir: str | Path = "logs"
     name: str = "hydraulic_gnn"
     version: str | None = None
@@ -142,19 +146,17 @@ class LoggerConfig:
     default_hp_metric: bool = False
 
 
-def create_checkpoint_callback(
-    config: CheckpointConfig | None = None
-) -> ModelCheckpoint:
+def create_checkpoint_callback(config: CheckpointConfig | None = None) -> ModelCheckpoint:
     """Create ModelCheckpoint callback.
-    
+
     Saves best models based on validation loss.
-    
+
     Args:
         config: Checkpoint configuration
-    
+
     Returns:
         Configured ModelCheckpoint callback
-        
+
     Examples:
         >>> checkpoint = create_checkpoint_callback()
         >>> trainer = pl.Trainer(callbacks=[checkpoint])
@@ -178,19 +180,17 @@ def create_checkpoint_callback(
     )
 
 
-def create_early_stopping_callback(
-    config: EarlyStoppingConfig | None = None
-) -> EarlyStopping:
+def create_early_stopping_callback(config: EarlyStoppingConfig | None = None) -> EarlyStopping:
     """Create EarlyStopping callback.
-    
+
     Stops training when validation metric stops improving.
-    
+
     Args:
         config: Early stopping configuration
-    
+
     Returns:
         Configured EarlyStopping callback
-        
+
     Examples:
         >>> early_stop = create_early_stopping_callback()
         >>> trainer = pl.Trainer(callbacks=[early_stop])
@@ -207,19 +207,17 @@ def create_early_stopping_callback(
     )
 
 
-def create_tensorboard_logger(
-    config: LoggerConfig | None = None
-) -> TensorBoardLogger:
+def create_tensorboard_logger(config: LoggerConfig | None = None) -> TensorBoardLogger:
     """Create TensorBoard logger.
-    
+
     Logs metrics, hyperparameters, and model graph.
-    
+
     Args:
         config: Logger configuration
-    
+
     Returns:
         Configured TensorBoard logger
-        
+
     Examples:
         >>> logger = create_tensorboard_logger()
         >>> trainer = pl.Trainer(logger=logger)
@@ -249,7 +247,7 @@ def create_trainer(
     fast_dev_run: bool = False,
 ) -> pl.Trainer:
     """Factory for creating production-ready Lightning Trainer.
-    
+
     Creates fully configured Trainer with:
         - ModelCheckpoint callback
         - EarlyStopping callback
@@ -259,7 +257,7 @@ def create_trainer(
         - Rich progress bar
         - Gradient clipping
         - Mixed precision (FP16)
-    
+
     Args:
         trainer_config: Trainer configuration
         checkpoint_config: Checkpoint configuration
@@ -267,14 +265,14 @@ def create_trainer(
         logger_config: Logger configuration
         additional_callbacks: Additional callbacks
         fast_dev_run: Run single batch for debugging
-    
+
     Returns:
         Configured Lightning Trainer
-        
+
     Examples:
         >>> # Development trainer (fast iteration)
         >>> dev_trainer = create_trainer(fast_dev_run=True)
-        >>> 
+        >>>
         >>> # Production trainer (full training)
         >>> prod_config = TrainerConfig(
         ...     max_epochs=200,
@@ -282,7 +280,7 @@ def create_trainer(
         ...     devices=2
         ... )
         >>> prod_trainer = create_trainer(trainer_config=prod_config)
-        >>> 
+        >>>
         >>> # Custom checkpoint location
         >>> checkpoint_cfg = CheckpointConfig(
         ...     dirpath="models/checkpoints",
@@ -342,61 +340,51 @@ def create_trainer(
             )
 
     # === Create Trainer ===
-    trainer = pl.Trainer(
+    return pl.Trainer(
         # Duration
         max_epochs=trainer_config.max_epochs,
-
         # Hardware
         accelerator=trainer_config.accelerator,
         devices=trainer_config.devices,
         precision=trainer_config.precision,
         strategy=strategy,
-
         # Optimization
         gradient_clip_val=trainer_config.gradient_clip_val,
         gradient_clip_algorithm="norm",
         accumulate_grad_batches=trainer_config.accumulate_grad_batches,
-
         # Validation
         check_val_every_n_epoch=1,
         val_check_interval=trainer_config.val_check_interval,
-
         # Logging
         log_every_n_steps=trainer_config.log_every_n_steps,
         logger=loggers,
-
         # Callbacks
         callbacks=callbacks,
         enable_checkpointing=trainer_config.enable_checkpointing,
         enable_progress_bar=trainer_config.enable_progress_bar,
         enable_model_summary=trainer_config.enable_model_summary,
-
         # Reproducibility
         deterministic=trainer_config.deterministic,
-
         # Development
         fast_dev_run=fast_dev_run,
-
         # Performance
         benchmark=True,
         inference_mode=True,  # Faster validation
     )
 
-    return trainer
-
 
 def create_development_trainer() -> pl.Trainer:
     """Create trainer optimized for development.
-    
+
     Fast iteration with:
         - Lower precision (FP16)
         - Frequent logging
         - Short patience
         - Rich progress bar
-    
+
     Returns:
         Development-optimized Trainer
-        
+
     Examples:
         >>> trainer = create_development_trainer()
         >>> trainer.fit(module, train_loader, val_loader)
@@ -426,25 +414,22 @@ def create_development_trainer() -> pl.Trainer:
     )
 
 
-def create_production_trainer(
-    max_epochs: int = 200,
-    devices: int = 1
-) -> pl.Trainer:
+def create_production_trainer(max_epochs: int = 200, devices: int = 1) -> pl.Trainer:
     """Create trainer optimized for production training.
-    
+
     Full training with:
         - High precision or mixed precision
         - Long patience
         - Extensive checkpointing
         - Multi-GPU support
-    
+
     Args:
         max_epochs: Maximum training epochs
         devices: Number of GPUs
-    
+
     Returns:
         Production-optimized Trainer
-        
+
     Examples:
         >>> trainer = create_production_trainer(max_epochs=300, devices=2)
         >>> trainer.fit(module, train_loader, val_loader)

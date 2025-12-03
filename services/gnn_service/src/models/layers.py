@@ -21,17 +21,17 @@ from torch_geometric.utils import softmax
 
 class EdgeConditionedGATv2Layer(nn.Module):
     """GATv2 layer с edge-conditioned attention.
-    
+
     Расширение GATv2 для учёта edge features (diameter, length, material, etc.).
     Важно для hydraulic systems, где свойства соединений влияют на распространение проблем.
-    
+
     GATv2 vs GAT:
         - GAT: attention = LeakyReLU(a^T [Wh_i || Wh_j])
         - GATv2: attention = a^T LeakyReLU(W [h_i || h_j])  # Dynamic!
-    
+
     Edge Conditioning:
         attention = attention * edge_weight_fn(edge_features)
-    
+
     Args:
         in_channels: Input feature dimensionality
         out_channels: Output feature dimensionality (per head)
@@ -41,7 +41,7 @@ class EdgeConditionedGATv2Layer(nn.Module):
         concat: Concatenate multi-head outputs (True) or average (False)
         add_self_loops: Add self-loops to graph
         bias: Use bias in linear layers
-    
+
     Examples:
         >>> layer = EdgeConditionedGATv2Layer(
         ...     in_channels=128,
@@ -62,7 +62,7 @@ class EdgeConditionedGATv2Layer(nn.Module):
         edge_dim: int | None = None,
         concat: bool = True,
         add_self_loops: bool = True,
-        bias: bool = True
+        bias: bool = True,
     ):
         super().__init__()
 
@@ -82,15 +82,12 @@ class EdgeConditionedGATv2Layer(nn.Module):
             add_self_loops=add_self_loops,
             edge_dim=edge_dim,  # Edge features support
             bias=bias,
-            share_weights=False  # Separate weights for source/target
+            share_weights=False,  # Separate weights for source/target
         )
 
         # Edge feature gating (для управления влиянием edge features)
         if edge_dim is not None:
-            self.edge_gate = nn.Sequential(
-                nn.Linear(edge_dim, heads),
-                nn.Sigmoid()
-            )
+            self.edge_gate = nn.Sequential(nn.Linear(edge_dim, heads), nn.Sigmoid())
         else:
             self.edge_gate = None
 
@@ -99,16 +96,16 @@ class EdgeConditionedGATv2Layer(nn.Module):
         x: torch.Tensor,
         edge_index: torch.Tensor,
         edge_attr: torch.Tensor | None = None,
-        return_attention_weights: bool = False
+        return_attention_weights: bool = False,
     ) -> torch.Tensor | tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass.
-        
+
         Args:
             x: Node features [N, F_in]
             edge_index: Edge connectivity [2, E]
             edge_attr: Edge features [E, F_edge]
             return_attention_weights: Return attention weights
-        
+
         Returns:
             out: Updated node features [N, F_out * heads] or [N, F_out]
             attention: (edge_index, attention_weights) if requested
@@ -128,23 +125,22 @@ class EdgeConditionedGATv2Layer(nn.Module):
                 alpha = softmax(alpha, edge_idx[1], num_nodes=x.size(0))
 
             return out, (edge_idx, alpha)
-        out = self.gatv2(x, edge_index, edge_attr=edge_attr)
-        return out
+        return self.gatv2(x, edge_index, edge_attr=edge_attr)
 
 
 class ARMAAttentionLSTM(nn.Module):
     """LSTM с ARMA-based attention mechanism.
-    
+
     Autoregressive Moving-Average (ARMA) attention для time series.
     Интегрирует:
     - AR component: исторические тренды
     - MA component: инерционные процессы
-    
+
     Reference:
         Autoregressive Moving-average Attention Mechanism for Time Series
         Forecasting (ICLR 2025 submission)
         Результат: +9.1% improvement в forecasting accuracy
-    
+
     Args:
         input_dim: Input feature dimensionality
         hidden_dim: LSTM hidden state dimensionality
@@ -153,7 +149,7 @@ class ARMAAttentionLSTM(nn.Module):
         ma_order: Moving average order (typically 2-3)
         dropout: Dropout rate
         bidirectional: Use bidirectional LSTM
-    
+
     Examples:
         >>> lstm = ARMAAttentionLSTM(
         ...     input_dim=128,
@@ -173,7 +169,7 @@ class ARMAAttentionLSTM(nn.Module):
         ar_order: int = 3,
         ma_order: int = 2,
         dropout: float = 0.0,
-        bidirectional: bool = False
+        bidirectional: bool = False,
     ):
         super().__init__()
 
@@ -191,7 +187,7 @@ class ARMAAttentionLSTM(nn.Module):
             num_layers=num_layers,
             batch_first=True,
             dropout=dropout,
-            bidirectional=bidirectional
+            bidirectional=bidirectional,
         )
 
         # ARMA attention parameters
@@ -210,26 +206,23 @@ class ARMAAttentionLSTM(nn.Module):
         # Output projection
         self.output_proj = nn.Linear(lstm_output_dim, lstm_output_dim)
 
-    def _compute_arma_attention(
-        self,
-        lstm_out: torch.Tensor
-    ) -> torch.Tensor:
+    def _compute_arma_attention(self, lstm_out: torch.Tensor) -> torch.Tensor:
         """Compute ARMA-based attention weights.
-        
+
         Args:
             lstm_out: LSTM output [B, T, H]
-        
+
         Returns:
             attention: Attention weights [B, T, 1]
         """
-        B, T, H = lstm_out.shape
+        _B, T, H = lstm_out.shape
 
         # Queries, Keys, Values
         Q = self.query_proj(lstm_out)  # [B, T, H]
         K = self.key_proj(lstm_out)  # [B, T, H]
 
         # Standard attention scores
-        attn_scores = torch.bmm(Q, K.transpose(1, 2)) / (H ** 0.5)  # [B, T, T]
+        attn_scores = torch.bmm(Q, K.transpose(1, 2)) / (H**0.5)  # [B, T, T]
 
         # Apply ARMA modulation
         arma_modulation = self._compute_arma_modulation(T).to(lstm_out.device)  # [T, T]
@@ -238,16 +231,14 @@ class ARMAAttentionLSTM(nn.Module):
         attn_scores = attn_scores * arma_modulation.unsqueeze(0)  # [B, T, T]
 
         # Softmax
-        attn_weights = F.softmax(attn_scores, dim=-1)  # [B, T, T]
-
-        return attn_weights
+        return F.softmax(attn_scores, dim=-1)  # [B, T, T]
 
     def _compute_arma_modulation(self, seq_len: int) -> torch.Tensor:
         """Compute ARMA modulation matrix.
-        
+
         Args:
             seq_len: Sequence length T
-        
+
         Returns:
             modulation: ARMA modulation matrix [T, T]
         """
@@ -268,21 +259,17 @@ class ARMAAttentionLSTM(nn.Module):
             ma_component += self.ma_weights[i] * ma_mask
 
         # Combined ARMA modulation
-        modulation = torch.exp(ar_component + ma_component)
-
-        return modulation
+        return torch.exp(ar_component + ma_component)
 
     def forward(
-        self,
-        x: torch.Tensor,
-        hidden: tuple[torch.Tensor, torch.Tensor] | None = None
+        self, x: torch.Tensor, hidden: tuple[torch.Tensor, torch.Tensor] | None = None
     ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         """Forward pass.
-        
+
         Args:
             x: Input sequence [B, T, F]
             hidden: Initial hidden state (h_0, c_0) or None
-        
+
         Returns:
             output: ARMA-attended output [B, T, H]
             hidden: Final hidden state (h_n, c_n)
@@ -308,42 +295,35 @@ class ARMAAttentionLSTM(nn.Module):
 
 class SpectralTemporalLayer(nn.Module):
     """Spectral-temporal layer для frequency domain processing.
-    
+
     Обработка временных рядов в частотной области.
     Полезно для:
     - Выявление циклических паттернов (pressure oscillations)
     - Обнаружение резонансных частот (cavitation, vibration)
     - Анализ гармоник (harmonics в sensor signals)
-    
+
     Reference:
         Spectral-Temporal GNN (IEEE TPAMI 2025)
         State-of-the-art для long-term forecasting
-    
+
     Args:
         hidden_dim: Hidden dimensionality
         num_frequencies: Number of frequency components to keep
         dropout: Dropout rate
-    
+
     Examples:
         >>> layer = SpectralTemporalLayer(hidden_dim=128, num_frequencies=32)
         >>> out = layer(x)  # x: [B, T, 128]
     """
 
-    def __init__(
-        self,
-        hidden_dim: int,
-        num_frequencies: int = 32,
-        dropout: float = 0.1
-    ):
+    def __init__(self, hidden_dim: int, num_frequencies: int = 32, dropout: float = 0.1):
         super().__init__()
 
         self.hidden_dim = hidden_dim
         self.num_frequencies = num_frequencies
 
         # Learnable frequency filters
-        self.freq_filter = nn.Parameter(
-            torch.ones(num_frequencies, hidden_dim)
-        )
+        self.freq_filter = nn.Parameter(torch.ones(num_frequencies, hidden_dim))
 
         # Projection layers
         self.freq_proj = nn.Linear(hidden_dim, hidden_dim)
@@ -354,10 +334,10 @@ class SpectralTemporalLayer(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x: Time series features [B, T, H]
-        
+
         Returns:
             out: Spectral-temporal features [B, T, H]
         """
@@ -380,9 +360,11 @@ class SpectralTemporalLayer(nn.Module):
         # 4. Pad back to original frequency count
         if num_freq < T // 2 + 1:
             padding = torch.zeros(
-                B, T // 2 + 1 - num_freq, H,
+                B,
+                T // 2 + 1 - num_freq,
+                H,
                 dtype=x_freq_filtered.dtype,
-                device=x_freq_filtered.device
+                device=x_freq_filtered.device,
             )
             x_freq_filtered = torch.cat([x_freq_filtered, padding], dim=1)
 
@@ -398,16 +380,14 @@ class SpectralTemporalLayer(nn.Module):
         # 8. Fusion
         out = x_freq_features + x_time_features
         out = self.dropout(out)
-        out = self.layer_norm(out + residual)  # Residual connection
-
-        return out
+        return self.layer_norm(out + residual)  # Residual connection
 
 
 class DynamicGraphNorm(nn.Module):
     """Dynamic graph normalization layer.
-    
+
     Адаптивная нормализация для графов с разным количеством nodes.
-    
+
     Args:
         hidden_dim: Feature dimensionality
         eps: Epsilon для numerical stability
@@ -420,17 +400,13 @@ class DynamicGraphNorm(nn.Module):
         self.gamma = nn.Parameter(torch.ones(hidden_dim))
         self.beta = nn.Parameter(torch.zeros(hidden_dim))
 
-    def forward(
-        self,
-        x: torch.Tensor,
-        batch: torch.Tensor | None = None
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, batch: torch.Tensor | None = None) -> torch.Tensor:
         """Forward pass.
-        
+
         Args:
             x: Node features [N, H]
             batch: Batch assignment [N] or None
-        
+
         Returns:
             normalized: Normalized features [N, H]
         """
@@ -446,7 +422,7 @@ class DynamicGraphNorm(nn.Module):
 
             # Compute per-graph std
             centered = x - mean
-            var = global_mean_pool(centered ** 2, batch)  # [B, H]
+            var = global_mean_pool(centered**2, batch)  # [B, H]
             std = (var + self.eps).sqrt()
             std = std[batch]  # [N, H]
 
@@ -454,6 +430,4 @@ class DynamicGraphNorm(nn.Module):
         normalized = (x - mean) / (std + self.eps)
 
         # Affine transformation
-        normalized = normalized * self.gamma + self.beta
-
-        return normalized
+        return normalized * self.gamma + self.beta

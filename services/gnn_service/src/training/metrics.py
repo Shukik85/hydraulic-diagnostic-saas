@@ -35,7 +35,7 @@ from torchmetrics import (
 @dataclass
 class MetricConfig:
     """Configuration for metric computation.
-    
+
     Attributes:
         num_anomaly_classes: Number of anomaly types (9 for hydraulics)
         rul_horizons: RUL prediction horizons in hours
@@ -43,6 +43,7 @@ class MetricConfig:
         anomaly_average: Averaging method for anomaly metrics
         anomaly_threshold: Threshold for binary anomaly detection
     """
+
     num_anomaly_classes: int = 9
     rul_horizons: list[int] = field(default_factory=lambda: [24, 72, 168])  # 1d, 3d, 1w
     component_average: Literal["micro", "macro"] = "macro"
@@ -52,29 +53,25 @@ class MetricConfig:
 
 class RegressionMetrics(Metric):
     """Metrics for regression tasks (health, degradation, RUL).
-    
+
     Computes:
         - MAE (Mean Absolute Error)
         - RMSE (Root Mean Squared Error)
         - R² (Coefficient of Determination)
         - MAPE (Mean Absolute Percentage Error)
-    
+
     Attributes:
         prefix: Metric name prefix (e.g., "graph_health_")
-        
+
     Examples:
         >>> metrics = RegressionMetrics(prefix="graph_health_")
         >>> metrics.update(preds, targets)
         >>> result = metrics.compute()  # {"graph_health_mae": 0.05, ...}
     """
 
-    def __init__(
-        self,
-        prefix: str = "",
-        **kwargs
-    ):
+    def __init__(self, prefix: str = "", **kwargs):
         """Initialize regression metrics.
-        
+
         Args:
             prefix: Metric name prefix
             **kwargs: Additional Metric arguments
@@ -92,13 +89,9 @@ class RegressionMetrics(Metric):
         self.add_state("sum_ape", default=torch.tensor(0.0), dist_reduce_fx="sum")
         self.add_state("total", default=torch.tensor(0), dist_reduce_fx="sum")
 
-    def update(
-        self,
-        preds: torch.Tensor,
-        target: torch.Tensor
-    ) -> None:
+    def update(self, preds: torch.Tensor, target: torch.Tensor) -> None:
         """Update metrics with batch predictions.
-        
+
         Args:
             preds: Predictions [B, 1] or [N, 1]
             target: Ground truth [B, 1] or [N, 1]
@@ -120,7 +113,7 @@ class RegressionMetrics(Metric):
 
     def compute(self) -> dict[str, torch.Tensor]:
         """Compute final metrics.
-        
+
         Returns:
             Metric dictionary with prefix
         """
@@ -147,19 +140,19 @@ class RegressionMetrics(Metric):
 
 class ClassificationMetrics(Metric):
     """Metrics for multi-label classification (anomaly detection).
-    
+
     Computes:
         - Precision (per-class and averaged)
         - Recall (per-class and averaged)
         - F1 Score (per-class and averaged)
         - AUC-ROC (per-class and averaged)
-    
+
     Attributes:
         num_classes: Number of anomaly types
         average: Averaging method (micro/macro/weighted)
         threshold: Binary classification threshold
         prefix: Metric name prefix
-        
+
     Examples:
         >>> metrics = ClassificationMetrics(
         ...     num_classes=9,
@@ -176,10 +169,10 @@ class ClassificationMetrics(Metric):
         average: Literal["micro", "macro", "weighted"] = "macro",
         threshold: float = 0.5,
         prefix: str = "",
-        **kwargs
+        **kwargs,
     ):
         """Initialize classification metrics.
-        
+
         Args:
             num_classes: Number of classes
             average: Averaging method
@@ -199,39 +192,20 @@ class ClassificationMetrics(Metric):
 
         # Register metrics
         self.precision = Precision(
-            task=task,
-            num_labels=num_classes,
-            average=average,
-            threshold=threshold
+            task=task, num_labels=num_classes, average=average, threshold=threshold
         )
 
         self.recall = Recall(
-            task=task,
-            num_labels=num_classes,
-            average=average,
-            threshold=threshold
+            task=task, num_labels=num_classes, average=average, threshold=threshold
         )
 
-        self.f1 = F1Score(
-            task=task,
-            num_labels=num_classes,
-            average=average,
-            threshold=threshold
-        )
+        self.f1 = F1Score(task=task, num_labels=num_classes, average=average, threshold=threshold)
 
-        self.auroc = AUROC(
-            task=task,
-            num_labels=num_classes,
-            average=average
-        )
+        self.auroc = AUROC(task=task, num_labels=num_classes, average=average)
 
-    def update(
-        self,
-        preds: torch.Tensor,
-        target: torch.Tensor
-    ) -> None:
+    def update(self, preds: torch.Tensor, target: torch.Tensor) -> None:
         """Update metrics with batch predictions.
-        
+
         Args:
             preds: Logits [B, C] or [N, C]
             target: Binary labels [B, C] or [N, C]
@@ -247,7 +221,7 @@ class ClassificationMetrics(Metric):
 
     def compute(self) -> dict[str, torch.Tensor]:
         """Compute final metrics.
-        
+
         Returns:
             Metric dictionary with prefix
         """
@@ -273,30 +247,25 @@ class ClassificationMetrics(Metric):
 
 class RULMetrics(Metric):
     """Specialized metrics for Remaining Useful Life prediction.
-    
+
     Computes:
         - Horizon Accuracy: % predictions within ±h hours
         - Asymmetric Loss: Penalizes late predictions more
         - Mean Horizon Error: Error at specific horizons
-    
+
     Attributes:
         horizons: Prediction horizons in hours [24, 72, 168]
         prefix: Metric name prefix
-        
+
     Examples:
         >>> metrics = RULMetrics(horizons=[24, 72, 168], prefix="graph_rul_")
         >>> metrics.update(rul_preds, rul_targets)
         >>> result = metrics.compute()  # Includes horizon-specific accuracy
     """
 
-    def __init__(
-        self,
-        horizons: list[int] | None = None,
-        prefix: str = "",
-        **kwargs
-    ):
+    def __init__(self, horizons: list[int] | None = None, prefix: str = "", **kwargs):
         """Initialize RUL metrics.
-        
+
         Args:
             horizons: Time horizons in hours
             prefix: Metric name prefix
@@ -312,22 +281,14 @@ class RULMetrics(Metric):
 
         # Horizon accuracy states
         for horizon in self.horizons:
-            self.add_state(
-                f"correct_h{horizon}",
-                default=torch.tensor(0),
-                dist_reduce_fx="sum"
-            )
+            self.add_state(f"correct_h{horizon}", default=torch.tensor(0), dist_reduce_fx="sum")
 
         self.add_state("total", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("asymmetric_loss_sum", default=torch.tensor(0.0), dist_reduce_fx="sum")
 
-    def update(
-        self,
-        preds: torch.Tensor,
-        target: torch.Tensor
-    ) -> None:
+    def update(self, preds: torch.Tensor, target: torch.Tensor) -> None:
         """Update RUL metrics.
-        
+
         Args:
             preds: RUL predictions [B, 1]
             target: True RUL [B, 1]
@@ -348,18 +309,14 @@ class RULMetrics(Metric):
 
         # Asymmetric loss (penalize late predictions more)
         # L = |e| if e >= 0 (early/on-time), 2|e| if e < 0 (late)
-        asymmetric = torch.where(
-            error >= 0,
-            torch.abs(error),
-            2 * torch.abs(error)
-        )
+        asymmetric = torch.where(error >= 0, torch.abs(error), 2 * torch.abs(error))
         self.asymmetric_loss_sum += asymmetric.sum()
 
         self.total += target_flat.numel()
 
     def compute(self) -> dict[str, torch.Tensor]:
         """Compute RUL metrics.
-        
+
         Returns:
             Metric dictionary including horizon accuracies
         """
@@ -373,7 +330,9 @@ class RULMetrics(Metric):
             horizon_acc[f"{self.prefix}acc_h{horizon}"] = accuracy
 
         # Asymmetric loss
-        asymmetric_val = self.asymmetric_loss_sum / self.total if self.total > 0 else torch.tensor(0.0)
+        asymmetric_val = (
+            self.asymmetric_loss_sum / self.total if self.total > 0 else torch.tensor(0.0)
+        )
 
         return {
             f"{self.prefix}mae": mae_val,
@@ -394,21 +353,21 @@ class RULMetrics(Metric):
 
 class MultiLevelMetrics:
     """Unified metrics for multi-level predictions (component + graph).
-    
+
     Manages all metrics for Universal Temporal GNN:
         - Component-level: health (regression), anomaly (classification)
         - Graph-level: health, degradation (regression), anomaly (classification), RUL (RUL metrics)
-    
+
     Integrates with PyTorch Lightning for automatic logging.
-    
+
     Attributes:
         config: Metric configuration
         stage: Training stage (train/val/test)
-        
+
     Examples:
         >>> config = MetricConfig(num_anomaly_classes=9)
         >>> metrics = MultiLevelMetrics(config, stage="val")
-        >>> 
+        >>>
         >>> # During validation
         >>> metrics.update(outputs, batch)
         >>> result = metrics.compute()  # All metrics
@@ -416,12 +375,10 @@ class MultiLevelMetrics:
     """
 
     def __init__(
-        self,
-        config: MetricConfig | None = None,
-        stage: Literal["train", "val", "test"] = "train"
+        self, config: MetricConfig | None = None, stage: Literal["train", "val", "test"] = "train"
     ):
         """Initialize multi-level metrics.
-        
+
         Args:
             config: Metric configuration
             stage: Training stage for logging prefix
@@ -430,89 +387,66 @@ class MultiLevelMetrics:
         self.stage = stage
 
         # === Component-Level Metrics ===
-        self.component_health_metrics = RegressionMetrics(
-            prefix=f"{stage}/component_health_"
-        )
+        self.component_health_metrics = RegressionMetrics(prefix=f"{stage}/component_health_")
 
         self.component_anomaly_metrics = ClassificationMetrics(
             num_classes=self.config.num_anomaly_classes,
             average=self.config.component_average,
             threshold=self.config.anomaly_threshold,
-            prefix=f"{stage}/component_anomaly_"
+            prefix=f"{stage}/component_anomaly_",
         )
 
         # === Graph-Level Metrics ===
-        self.graph_health_metrics = RegressionMetrics(
-            prefix=f"{stage}/graph_health_"
-        )
+        self.graph_health_metrics = RegressionMetrics(prefix=f"{stage}/graph_health_")
 
-        self.graph_degradation_metrics = RegressionMetrics(
-            prefix=f"{stage}/graph_degradation_"
-        )
+        self.graph_degradation_metrics = RegressionMetrics(prefix=f"{stage}/graph_degradation_")
 
         self.graph_anomaly_metrics = ClassificationMetrics(
             num_classes=self.config.num_anomaly_classes,
             average=self.config.anomaly_average,
             threshold=self.config.anomaly_threshold,
-            prefix=f"{stage}/graph_anomaly_"
+            prefix=f"{stage}/graph_anomaly_",
         )
 
         self.graph_rul_metrics = RULMetrics(
-            horizons=self.config.rul_horizons,
-            prefix=f"{stage}/graph_rul_"
+            horizons=self.config.rul_horizons, prefix=f"{stage}/graph_rul_"
         )
 
-    def update(
-        self,
-        outputs: dict[str, dict[str, torch.Tensor]],
-        batch: Any
-    ) -> None:
+    def update(self, outputs: dict[str, dict[str, torch.Tensor]], batch: Any) -> None:
         """Update all metrics with batch predictions.
-        
+
         Args:
             outputs: Model outputs (nested dict)
                 {
                     'component': {'health': [N,1], 'anomaly': [N,9]},
-                    'graph': {'health': [B,1], 'degradation': [B,1], 
+                    'graph': {'health': [B,1], 'degradation': [B,1],
                               'anomaly': [B,9], 'rul': [B,1]}
                 }
             batch: Batch with ground truth targets
         """
         # === Component-Level Updates ===
         self.component_health_metrics.update(
-            outputs["component"]["health"],
-            batch.y_component_health
+            outputs["component"]["health"], batch.y_component_health
         )
 
         self.component_anomaly_metrics.update(
-            outputs["component"]["anomaly"],
-            batch.y_component_anomaly
+            outputs["component"]["anomaly"], batch.y_component_anomaly
         )
 
         # === Graph-Level Updates ===
-        self.graph_health_metrics.update(
-            outputs["graph"]["health"],
-            batch.y_graph_health
-        )
+        self.graph_health_metrics.update(outputs["graph"]["health"], batch.y_graph_health)
 
         self.graph_degradation_metrics.update(
-            outputs["graph"]["degradation"],
-            batch.y_graph_degradation
+            outputs["graph"]["degradation"], batch.y_graph_degradation
         )
 
-        self.graph_anomaly_metrics.update(
-            outputs["graph"]["anomaly"],
-            batch.y_graph_anomaly
-        )
+        self.graph_anomaly_metrics.update(outputs["graph"]["anomaly"], batch.y_graph_anomaly)
 
-        self.graph_rul_metrics.update(
-            outputs["graph"]["rul"],
-            batch.y_graph_rul
-        )
+        self.graph_rul_metrics.update(outputs["graph"]["rul"], batch.y_graph_rul)
 
     def compute(self) -> dict[str, torch.Tensor]:
         """Compute all metrics.
-        
+
         Returns:
             Flat dictionary with all metrics
         """
@@ -544,7 +478,7 @@ class MultiLevelMetrics:
 
     def log_dict(self) -> dict[str, float]:
         """Get metrics as float dict for Lightning logging.
-        
+
         Returns:
             Metric dictionary with float values
         """
@@ -555,25 +489,24 @@ class MultiLevelMetrics:
 def create_metrics(
     stage: Literal["train", "val", "test"],
     num_anomaly_classes: int = 9,
-    rul_horizons: list[int] | None = None
+    rul_horizons: list[int] | None = None,
 ) -> MultiLevelMetrics:
     """Factory for creating multi-level metrics.
-    
+
     Args:
         stage: Training stage
         num_anomaly_classes: Number of anomaly types
         rul_horizons: RUL prediction horizons
-    
+
     Returns:
         Configured MultiLevelMetrics instance
-        
+
     Examples:
         >>> val_metrics = create_metrics("val", num_anomaly_classes=9)
         >>> test_metrics = create_metrics("test", rul_horizons=[24, 72, 168])
     """
     config = MetricConfig(
-        num_anomaly_classes=num_anomaly_classes,
-        rul_horizons=rul_horizons or [24, 72, 168]
+        num_anomaly_classes=num_anomaly_classes, rul_horizons=rul_horizons or [24, 72, 168]
     )
 
     return MultiLevelMetrics(config=config, stage=stage)

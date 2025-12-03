@@ -23,19 +23,16 @@ from torch import nn
 logger = logging.getLogger(__name__)
 
 
-def initialize_model(
-    model: nn.Module,
-    method: str = "xavier_uniform"
-) -> nn.Module:
+def initialize_model(model: nn.Module, method: str = "xavier_uniform") -> nn.Module:
     """Инициализировать веса модели.
-    
+
     Args:
         model: PyTorch модель
         method: Метод инициализации (xavier_uniform, kaiming_normal, orthogonal)
-    
+
     Returns:
         model: Модель с инициализированными весами
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(...)
         >>> model = initialize_model(model, method="xavier_uniform")
@@ -80,10 +77,10 @@ def save_checkpoint(
     loss: float,
     metrics: dict[str, float],
     save_path: str | Path,
-    model_config: dict[str, Any] | None = None
+    model_config: dict[str, Any] | None = None,
 ) -> None:
     """Сохранить model checkpoint.
-    
+
     Args:
         model: PyTorch модель
         optimizer: Optimizer (or None)
@@ -92,7 +89,7 @@ def save_checkpoint(
         metrics: Dictionary с метриками
         save_path: Путь для сохранения
         model_config: Конфигурация модели
-    
+
     Examples:
         >>> save_checkpoint(
         ...     model=model,
@@ -131,19 +128,19 @@ def load_checkpoint(
     checkpoint_path: str | Path,
     model: nn.Module,
     optimizer: torch.optim.Optimizer | None = None,
-    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ) -> dict[str, Any]:
     """Загрузить model checkpoint.
-    
+
     Args:
         checkpoint_path: Путь к checkpoint
         model: PyTorch модель для загрузки весов
         optimizer: Optimizer для загрузки state (optional)
         device: Device для загрузки
-    
+
     Returns:
         checkpoint: Dictionary с всей информацией checkpoint
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(...)
         >>> checkpoint = load_checkpoint("checkpoints/best.ckpt", model)
@@ -152,7 +149,8 @@ def load_checkpoint(
     checkpoint_path = Path(checkpoint_path)
 
     if not checkpoint_path.exists():
-        raise FileNotFoundError(f"Checkpoint not found: {checkpoint_path}")
+        msg = f"Checkpoint not found: {checkpoint_path}"
+        raise FileNotFoundError(msg)
 
     # Load checkpoint
     checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
@@ -174,19 +172,16 @@ def load_checkpoint(
     return checkpoint
 
 
-def count_parameters(
-    model: nn.Module,
-    trainable_only: bool = False
-) -> int:
+def count_parameters(model: nn.Module, trainable_only: bool = False) -> int:
     """Подсчитать количество параметров модели.
-    
+
     Args:
         model: PyTorch модель
         trainable_only: Считать только trainable параметры
-    
+
     Returns:
         count: Количество параметров
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(in_channels=12, hidden_channels=128)
         >>> total = count_parameters(model)
@@ -199,20 +194,18 @@ def count_parameters(
 
 
 def model_summary(
-    model: nn.Module,
-    input_size: tuple[int, ...] | None = None,
-    device: str = "cpu"
+    model: nn.Module, input_size: tuple[int, ...] | None = None, device: str = "cpu"
 ) -> dict[str, Any]:
     """Generate model summary.
-    
+
     Args:
         model: PyTorch модель
         input_size: Input tensor size (optional, для FLOPs estimation)
         device: Device для computation
-    
+
     Returns:
         summary: Dictionary с метриками модели
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(in_channels=12, hidden_channels=128)
         >>> summary = model_summary(model)
@@ -223,7 +216,7 @@ def model_summary(
     trainable_params = count_parameters(model, trainable_only=True)
 
     # Calculate memory footprint (approximate)
-    param_memory_mb = (total_params * 4) / (1024 ** 2)  # 4 bytes per float32
+    param_memory_mb = (total_params * 4) / (1024**2)  # 4 bytes per float32
 
     summary = {
         "total_params": total_params,
@@ -238,11 +231,9 @@ def model_summary(
         if len(list(module.children())) == 0:  # Leaf modules only
             num_params = sum(p.numel() for p in module.parameters())
             if num_params > 0:
-                layer_summary.append({
-                    "name": name,
-                    "type": module.__class__.__name__,
-                    "params": num_params
-                })
+                layer_summary.append(
+                    {"name": name, "type": module.__class__.__name__, "params": num_params}
+                )
 
     summary["layers"] = layer_summary
 
@@ -254,14 +245,14 @@ def model_summary(
 
 def print_model_summary(model: nn.Module) -> None:
     """Напечатать human-readable model summary.
-    
+
     Args:
         model: PyTorch модель
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(in_channels=12, hidden_channels=128)
         >>> print_model_summary(model)
-        
+
         Model: UniversalTemporalGNN
         ================================
         Total Parameters: 1,234,567
@@ -271,40 +262,23 @@ def print_model_summary(model: nn.Module) -> None:
     """
     summary = model_summary(model)
 
-    print(f"\nModel: {summary['model_type']}")
-    print("=" * 50)
-    print(f"Total Parameters: {summary['total_params']:,}")
-    print(f"Trainable Parameters: {summary['trainable_params']:,}")
-    print(f"Non-trainable Parameters: {summary['non_trainable_params']:,}")
-    print(f"Memory Footprint: {summary['memory_mb']:.2f} MB")
-    print("=" * 50)
-
     # Top 10 layers by parameter count
     if "layers" in summary:
-        sorted_layers = sorted(
-            summary["layers"],
-            key=lambda x: x["params"],
-            reverse=True
-        )[:10]
+        sorted_layers = sorted(summary["layers"], key=lambda x: x["params"], reverse=True)[:10]
 
-        print("\nTop 10 Layers by Parameter Count:")
-        print("-" * 50)
-        for layer in sorted_layers:
-            print(f"{layer['name']:40s} | {layer['params']:>10,} params")
-        print("-" * 50)
-
-    print()
+        for _layer in sorted_layers:
+            pass
 
 
 def get_device(model: nn.Module) -> torch.device:
     """Получить device модели.
-    
+
     Args:
         model: PyTorch модель
-    
+
     Returns:
         device: torch.device ('cuda:0', 'cpu', etc.)
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(...).to('cuda')
         >>> device = get_device(model)
@@ -313,19 +287,16 @@ def get_device(model: nn.Module) -> torch.device:
     return next(model.parameters()).device
 
 
-def model_to_device(
-    model: nn.Module,
-    device: str | torch.device
-) -> nn.Module:
+def model_to_device(model: nn.Module, device: str | torch.device) -> nn.Module:
     """Перенести модель на device с logging.
-    
+
     Args:
         model: PyTorch модель
         device: Target device
-    
+
     Returns:
         model: Модель на указанном device
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(...)
         >>> model = model_to_device(model, 'cuda:0')
@@ -337,25 +308,22 @@ def model_to_device(
 
     # Log GPU memory if CUDA
     if device.type == "cuda":
-        memory_allocated = torch.cuda.memory_allocated(device) / (1024 ** 2)
+        memory_allocated = torch.cuda.memory_allocated(device) / (1024**2)
         logger.info(f"GPU memory allocated: {memory_allocated:.2f} MB")
 
     return model
 
 
-def freeze_layers(
-    model: nn.Module,
-    layer_names: list[str]
-) -> nn.Module:
+def freeze_layers(model: nn.Module, layer_names: list[str]) -> nn.Module:
     """Заморозить определённые layers (для fine-tuning).
-    
+
     Args:
         model: PyTorch модель
         layer_names: Список имён layers для заморозки
-    
+
     Returns:
         model: Модель с замороженными layers
-    
+
     Examples:
         >>> model = UniversalTemporalGNN(...)
         >>> model = freeze_layers(model, ["gat_layers.0", "gat_layers.1"])
@@ -375,10 +343,10 @@ def freeze_layers(
 
 def unfreeze_all_layers(model: nn.Module) -> nn.Module:
     """Разморозить все layers.
-    
+
     Args:
         model: PyTorch модель
-    
+
     Returns:
         model: Модель с размороженными parameters
     """
