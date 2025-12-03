@@ -8,6 +8,8 @@ useSeoMeta({
   title: 'Dashboard - Hydraulic Diagnostic SaaS',
   description: 'System monitoring dashboard',
 });
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -18,10 +20,10 @@ useSeoMeta({
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 class="mb-2 text-3xl font-bold sm:text-4xl">
-              Dashboard
+              {{ t('dashboard.title') }}
             </h1>
             <p class="text-primary-100">
-              Welcome back! Here's what's happening with your systems
+              {{ t('dashboard.subtitle') }}
             </p>
           </div>
           <div class="flex gap-3">
@@ -50,14 +52,14 @@ useSeoMeta({
               <Icon name="heroicons:server" class="h-6 w-6 text-white" />
             </div>
             <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300">
-              All OK
+              {{ t('dashboard.stats.allOk') }}
             </span>
           </div>
           <div class="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
             24
           </div>
-          <p class="mb-1 font-semibold text-gray-900 dark:text-white">Active Systems</p>
-          <p class="text-sm text-gray-600 dark:text-gray-400">All systems operational</p>
+          <p class="mb-1 font-semibold text-gray-900 dark:text-white">{{ t('dashboard.stats.activeSystems') }}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('dashboard.stats.activeSystemsDesc') }}</p>
         </div>
 
         <!-- Alerts Card -->
@@ -73,8 +75,8 @@ useSeoMeta({
           <div class="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
             3
           </div>
-          <p class="mb-1 font-semibold text-gray-900 dark:text-white">Active Alerts</p>
-          <p class="text-sm text-gray-600 dark:text-gray-400">Requires attention</p>
+          <p class="mb-1 font-semibold text-gray-900 dark:text-white">{{ t('dashboard.stats.activeAlerts') }}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('dashboard.stats.activeAlertsDesc') }}</p>
         </div>
 
         <!-- Uptime Card -->
@@ -90,8 +92,8 @@ useSeoMeta({
           <div class="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
             99.8%
           </div>
-          <p class="mb-1 font-semibold text-gray-900 dark:text-white">System Uptime</p>
-          <p class="text-sm text-gray-600 dark:text-gray-400">Last 30 days</p>
+          <p class="mb-1 font-semibold text-gray-900 dark:text-white">{{ t('dashboard.stats.systemUptime') }}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ t('dashboard.stats.systemUptimeDesc') }}</p>
         </div>
       </div>
 
@@ -101,7 +103,7 @@ useSeoMeta({
           <div class="rounded-2xl bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:bg-gray-900/80">
             <div class="mb-6 flex items-center justify-between">
               <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-                Quick Actions
+                {{ t('dashboard.quickActions.title') }}
               </h2>
               <Icon name="heroicons:bolt" class="h-5 w-5 text-primary-600 dark:text-primary-400" />
             </div>
@@ -116,8 +118,8 @@ useSeoMeta({
                   <Icon name="heroicons:beaker" class="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <div class="font-semibold text-gray-900 dark:text-white">Start Diagnosis</div>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">Run system analysis</div>
+                  <div class="font-semibold text-gray-900 dark:text-white">{{ t('dashboard.quickActions.startDiagnosis') }}</div>
+                  <div class="text-sm text-gray-600 dark:text-gray-400">{{ t('dashboard.quickActions.startDiagnosisDesc') }}</div>
                 </div>
                 <Icon name="heroicons:arrow-right" class="ml-auto h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1" />
               </button>
@@ -131,8 +133,8 @@ useSeoMeta({
                   <Icon name="heroicons:cog-6-tooth" class="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <div class="font-semibold text-gray-900 dark:text-white">Manage Systems</div>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">Configure devices</div>
+                  <div class="font-semibold text-gray-900 dark:text-white">{{ t('dashboard.quickActions.manageSystems') }}</div>
+                  <div class="text-sm text-gray-600 dark:text-gray-400">{{ t('dashboard.quickActions.manageSystemsDesc') }}</div>
                 </div>
                 <Icon name="heroicons:arrow-right" class="ml-auto h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1" />
               </button>
@@ -145,8 +147,8 @@ useSeoMeta({
                   <Icon name="heroicons:document-text" class="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <div class="font-semibold text-gray-900 dark:text-white">View Reports</div>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">Analysis history</div>
+                  <div class="font-semibold text-gray-900 dark:text-white">{{ t('dashboard.quickActions.viewReports') }}</div>
+                  <div class="text-sm text-gray-600 dark:text-gray-400">{{ t('dashboard.quickActions.viewReportsDesc') }}</div>
                 </div>
                 <Icon name="heroicons:arrow-right" class="ml-auto h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1" />
               </button>
@@ -159,8 +161,8 @@ useSeoMeta({
                   <Icon name="heroicons:adjustments-horizontal" class="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <div class="font-semibold text-gray-900 dark:text-white">Settings</div>
-                  <div class="text-sm text-gray-600 dark:text-gray-400">Preferences</div>
+                  <div class="font-semibold text-gray-900 dark:text-white">{{ t('dashboard.quickActions.settings') }}</div>
+                  <div class="text-sm text-gray-600 dark:text-gray-400">{{ t('dashboard.quickActions.settingsDesc') }}</div>
                 </div>
                 <Icon name="heroicons:arrow-right" class="ml-auto h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1" />
               </button>
@@ -173,7 +175,7 @@ useSeoMeta({
           <div class="rounded-2xl bg-white/80 p-6 shadow-lg backdrop-blur-sm dark:bg-gray-900/80">
             <div class="mb-6 flex items-center justify-between">
               <h2 class="text-xl font-semibold text-gray-900 dark:text-white">
-                Recent Activity
+                {{ t('dashboard.recentActivity.title') }}
               </h2>
               <Icon name="heroicons:clock" class="h-5 w-5 text-gray-400" />
             </div>
@@ -186,8 +188,8 @@ useSeoMeta({
                   <Icon name="heroicons:check-circle" class="h-4 w-4 text-green-600 dark:text-green-400" />
                 </div>
                 <div class="flex-1">
-                  <p class="text-sm font-medium text-gray-900 dark:text-white">System #A24 diagnosed</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">2 minutes ago</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ t('dashboard.recentActivity.systemDiagnosed') }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.recentActivity.minutesAgo', { count: 2 }) }}</p>
                 </div>
               </div>
 
@@ -197,8 +199,8 @@ useSeoMeta({
                   <Icon name="heroicons:exclamation-triangle" class="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
                 <div class="flex-1">
-                  <p class="text-sm font-medium text-gray-900 dark:text-white">Alert: Pressure drop</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">15 minutes ago</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ t('dashboard.recentActivity.alertPressure') }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.recentActivity.minutesAgo', { count: 15 }) }}</p>
                 </div>
               </div>
 
@@ -208,8 +210,8 @@ useSeoMeta({
                   <Icon name="heroicons:document-text" class="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div class="flex-1">
-                  <p class="text-sm font-medium text-gray-900 dark:text-white">Report generated</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">1 hour ago</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ t('dashboard.recentActivity.reportGenerated') }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.recentActivity.hoursAgo', { count: 1 }) }}</p>
                 </div>
               </div>
 
@@ -219,15 +221,15 @@ useSeoMeta({
                   <Icon name="heroicons:server" class="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div class="flex-1">
-                  <p class="text-sm font-medium text-gray-900 dark:text-white">New system added</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400">3 hours ago</p>
+                  <p class="text-sm font-medium text-gray-900 dark:text-white">{{ t('dashboard.recentActivity.systemAdded') }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('dashboard.recentActivity.hoursAgo', { count: 3 }) }}</p>
                 </div>
               </div>
             </div>
 
             <!-- View All Link -->
             <button class="mt-6 w-full rounded-lg border-2 border-gray-200 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 dark:border-gray-700 dark:text-gray-300 dark:hover:border-primary-600 dark:hover:bg-primary-900/20 dark:hover:text-primary-300">
-              View All Activity
+              {{ t('dashboard.recentActivity.viewAll') }}
             </button>
           </div>
         </div>
