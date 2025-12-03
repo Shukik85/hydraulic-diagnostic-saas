@@ -28,7 +28,8 @@ const emit = defineEmits<{
   focus: [event: FocusEvent];
 }>();
 
-const inputId = computed(() => props.id || `input-${Math.random().toString(36).substr(2, 9)}`);
+// Use useId() for SSR-safe unique IDs (Nuxt 3+)
+const inputId = computed(() => props.id || useId());
 
 const handleInput = (event: Event) => {
   const target = event.target as HTMLInputElement;
