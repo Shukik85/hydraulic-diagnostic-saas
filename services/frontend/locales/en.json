@@ -40,9 +40,39 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "Platform overview and key metrics",
+    "subtitle": "Welcome back! Here's what's happening with your systems",
     "welcome": "Welcome",
-    "overview": "Overview"
+    "overview": "Overview",
+    "stats": {
+      "activeSystems": "Active Systems",
+      "activeSystemsDesc": "All systems operational",
+      "allOk": "All OK",
+      "activeAlerts": "Active Alerts",
+      "activeAlertsDesc": "Requires attention",
+      "systemUptime": "System Uptime",
+      "systemUptimeDesc": "Last 30 days"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "startDiagnosis": "Start Diagnosis",
+      "startDiagnosisDesc": "Run system analysis",
+      "manageSystems": "Manage Systems",
+      "manageSystemsDesc": "Configure devices",
+      "viewReports": "View Reports",
+      "viewReportsDesc": "Analysis history",
+      "settings": "Settings",
+      "settingsDesc": "Preferences"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "systemDiagnosed": "System #A24 diagnosed",
+      "alertPressure": "Alert: Pressure drop",
+      "reportGenerated": "Report generated",
+      "systemAdded": "New system added",
+      "viewAll": "View All Activity",
+      "minutesAgo": "{count} minutes ago",
+      "hoursAgo": "{count} hours ago"
+    }
   },
   "wizard": {
     "pageTitle": "Metadata Wizard",
