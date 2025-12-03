@@ -4,7 +4,7 @@ Builds PyTorch Geometric graphs:
 - Nodes: hydraulic components
 - Edges: connections (pipes, hoses)
 - Node features: sensor statistics
-- Edge features: physical properties
+- Edge features: 14D (8 static + 6 dynamic)
 
 Python 3.14 Features:
     - Deferred annotations
@@ -18,7 +18,8 @@ import numpy as np
 import pandas as pd
 from torch_geometric.data import Data
 import logging
-from typing import Any
+from typing import Any, Dict, Optional
+from datetime import datetime
 
 from src.schemas import (
     GraphTopology,
@@ -28,8 +29,11 @@ from src.schemas import (
     ComponentType,
     EdgeType
 )
+from src.schemas.requests import ComponentSensorReading
 from src.data.feature_engineer import FeatureEngineer
 from src.data.feature_config import FeatureConfig
+from src.data.edge_features import EdgeFeatureComputer, create_edge_feature_computer
+from src.data.normalization import EdgeFeatureNormalizer, create_edge_feature_normalizer
 
 logger = logging.getLogger(__name__)
 
@@ -41,35 +45,71 @@ class GraphBuilder:
     1. Extract component-level features from sensor data
     2. Build node feature matrix [N, F]
     3. Construct edge_index from topology [2, E]
-    4. Compute edge features from EdgeSpec [E, F_edge]
-    5. Create PyG Data object
+    4. Compute edge features (14D: 8 static + 6 dynamic) [E, 14]
+    5. Normalize edge features
+    6. Create PyG Data object
+    
+    Edge Features (14D):
+        Static (8):
+            - diameter_norm
+            - length_norm
+            - cross_section_area_norm
+            - pressure_loss_coeff_norm
+            - pressure_rating_norm
+            - material_onehot (3D)
+        
+        Dynamic (6):
+            - flow_rate_lpm (computed or measured)
+            - pressure_drop_bar
+            - temperature_delta_c
+            - vibration_level_g
+            - age_hours
+            - maintenance_score
     
     Args:
         feature_engineer: FeatureEngineer instance
         feature_config: FeatureConfig instance
+        edge_feature_computer: EdgeFeatureComputer for dynamic features
+        edge_normalizer: EdgeFeatureNormalizer for normalization
+        use_dynamic_features: Enable dynamic edge features (default: True)
     
     Examples:
-        >>> builder = GraphBuilder(feature_engineer, feature_config)
+        >>> builder = GraphBuilder(
+        ...     feature_engineer,
+        ...     feature_config,
+        ...     use_dynamic_features=True
+        ... )
         >>> 
         >>> graph = builder.build_graph(
         ...     sensor_data=sensor_df,
         ...     topology=topology,
-        ...     metadata=metadata
+        ...     metadata=metadata,
+        ...     current_time=datetime.now(),
+        ...     sensor_readings={...}  # For dynamic features
         ... )
         >>> 
         >>> graph.x.shape  # [num_components, features]
         >>> graph.edge_index.shape  # [2, num_edges]
+        >>> graph.edge_attr.shape  # [num_edges, 14]
     """
     
     def __init__(
         self,
         feature_engineer: FeatureEngineer | None = None,
-        feature_config: FeatureConfig | None = None
+        feature_config: FeatureConfig | None = None,
+        edge_feature_computer: EdgeFeatureComputer | None = None,
+        edge_normalizer: EdgeFeatureNormalizer | None = None,
+        use_dynamic_features: bool = True
     ):
         self.feature_engineer = feature_engineer or FeatureEngineer(
             FeatureConfig()
         )
         self.feature_config = feature_config or FeatureConfig()
+        
+        # Phase 3.1: Dynamic edge features
+        self.use_dynamic_features = use_dynamic_features
+        self.edge_feature_computer = edge_feature_computer or create_edge_feature_computer()
+        self.edge_normalizer = edge_normalizer or create_edge_feature_normalizer()
     
     def build_component_features(
         self,
@@ -120,13 +160,13 @@ class GraphBuilder:
         
         return torch.from_numpy(features)
     
-    def build_edge_features(
+    def build_edge_features_static(
         self,
         edge_spec: EdgeSpec
-    ) -> torch.Tensor:
-        """Построить edge features из EdgeSpec.
+    ) -> np.ndarray:
+        """Построить static edge features (8D).
         
-        Features (8D):
+        Features:
         - diameter_mm (normalized)
         - length_m (normalized)
         - cross_section_area (computed)
@@ -138,19 +178,7 @@ class GraphBuilder:
             edge_spec: EdgeSpec with physical properties
         
         Returns:
-            features: Tensor [8]
-        
-        Examples:
-            >>> edge_spec = EdgeSpec(
-            ...     source_id="pump",
-            ...     target_id="valve",
-            ...     edge_type=EdgeType.PIPE,
-            ...     diameter_mm=16.0,
-            ...     length_m=2.5,
-            ...     pressure_rating_bar=350
-            ... )
-            >>> features = builder.build_edge_features(edge_spec)
-            >>> features.shape  # torch.Size([8])
+            features: Array [8]
         """
         features = []
         
@@ -185,20 +213,147 @@ class GraphBuilder:
         material_map = {
             "steel": [1, 0, 0],
             "rubber": [0, 1, 0],
-            "composite": [0, 0, 1]
+            "composite": [0, 0, 1],
+            "thermoplastic": [0, 0, 1]  # Treat as composite
         }
         material = edge_spec.material or "steel"
-        material_encoding = material_map.get(material, [1, 0, 0])  # Default steel
+        # Handle enum
+        if hasattr(material, 'value'):
+            material = material.value
+        material_encoding = material_map.get(material.lower(), [1, 0, 0])  # Default steel
         features.extend(material_encoding)
         
-        features_array = np.array(features, dtype=np.float32)
-        return torch.from_numpy(features_array)
+        return np.array(features, dtype=np.float32)
+    
+    def build_edge_features_dynamic(
+        self,
+        edge_spec: EdgeSpec,
+        sensor_readings: Dict[str, ComponentSensorReading],
+        current_time: datetime
+    ) -> np.ndarray:
+        """Построить dynamic edge features (6D).
+        
+        Features (auto-computed if not in edge_spec):
+        - flow_rate_lpm (from Darcy-Weisbach or edge_spec)
+        - pressure_drop_bar (from sensors or edge_spec)
+        - temperature_delta_c (from sensors or edge_spec)
+        - vibration_level_g (average or edge_spec)
+        - age_hours (from install date or edge_spec)
+        - maintenance_score (computed or edge_spec)
+        
+        Args:
+            edge_spec: EdgeSpec with optional dynamic fields
+            sensor_readings: Dict of ComponentSensorReading per component
+            current_time: Current timestamp for age calculation
+        
+        Returns:
+            features: Array [6] (normalized)
+        """
+        # Try to get pre-computed features from edge_spec
+        if (edge_spec.flow_rate_lpm is not None and
+            edge_spec.pressure_drop_bar is not None and
+            edge_spec.temperature_delta_c is not None and
+            edge_spec.vibration_level_g is not None and
+            edge_spec.age_hours is not None):
+            # All dynamic features available in edge_spec
+            raw_features = {
+                "flow_rate_lpm": edge_spec.flow_rate_lpm,
+                "pressure_drop_bar": edge_spec.pressure_drop_bar,
+                "temperature_delta_c": edge_spec.temperature_delta_c,
+                "vibration_level_g": edge_spec.vibration_level_g,
+                "age_hours": edge_spec.age_hours,
+                "maintenance_score": edge_spec.get_maintenance_score(current_time)
+            }
+        else:
+            # Compute dynamic features
+            try:
+                raw_features = self.edge_feature_computer.compute_edge_features(
+                    edge=edge_spec,
+                    sensor_readings=sensor_readings,
+                    current_time=current_time
+                )
+            except KeyError as e:
+                logger.warning(f"Could not compute dynamic features for edge: {e}")
+                # Return defaults
+                raw_features = self.edge_feature_computer._get_default_features()
+        
+        # Normalize features
+        normalized = self.edge_normalizer.normalize_all(raw_features)
+        
+        # Return as array (ordered)
+        features = [
+            normalized["flow_rate_lpm"],
+            normalized["pressure_drop_bar"],
+            normalized["temperature_delta_c"],
+            normalized["vibration_level_g"],
+            normalized["age_hours"],
+            normalized["maintenance_score"]
+        ]
+        
+        return np.array(features, dtype=np.float32)
+    
+    def build_edge_features(
+        self,
+        edge_spec: EdgeSpec,
+        sensor_readings: Optional[Dict[str, ComponentSensorReading]] = None,
+        current_time: Optional[datetime] = None
+    ) -> torch.Tensor:
+        """Построить complete edge features (14D).
+        
+        Combines static (8D) and dynamic (6D) features.
+        If dynamic features unavailable, fills with zeros (backward compatible).
+        
+        Args:
+            edge_spec: EdgeSpec with physical properties
+            sensor_readings: Optional sensor readings for dynamic features
+            current_time: Optional timestamp for age calculation
+        
+        Returns:
+            features: Tensor [14]
+        
+        Examples:
+            >>> # With dynamic features
+            >>> features = builder.build_edge_features(
+            ...     edge_spec,
+            ...     sensor_readings={...},
+            ...     current_time=datetime.now()
+            ... )
+            >>> features.shape  # torch.Size([14])
+            >>> 
+            >>> # Without dynamic features (backward compatible)
+            >>> features = builder.build_edge_features(edge_spec)
+            >>> features.shape  # torch.Size([14]) - last 6 are zeros
+        """
+        # Static features (8D)
+        static_features = self.build_edge_features_static(edge_spec)
+        
+        # Dynamic features (6D)
+        if self.use_dynamic_features and sensor_readings is not None and current_time is not None:
+            try:
+                dynamic_features = self.build_edge_features_dynamic(
+                    edge_spec,
+                    sensor_readings,
+                    current_time
+                )
+            except Exception as e:
+                logger.warning(f"Failed to compute dynamic features: {e}. Using zeros.")
+                dynamic_features = np.zeros(6, dtype=np.float32)
+        else:
+            # No dynamic features available
+            dynamic_features = np.zeros(6, dtype=np.float32)
+        
+        # Concatenate: [8 static] + [6 dynamic] = [14]
+        all_features = np.concatenate([static_features, dynamic_features])
+        
+        return torch.from_numpy(all_features)
     
     def build_graph(
         self,
         sensor_data: pd.DataFrame,
         topology: GraphTopology,
-        metadata: EquipmentMetadata
+        metadata: EquipmentMetadata,
+        sensor_readings: Optional[Dict[str, ComponentSensorReading]] = None,
+        current_time: Optional[datetime] = None
     ) -> Data:
         """Построить complete PyG graph.
         
@@ -206,17 +361,29 @@ class GraphBuilder:
             sensor_data: DataFrame с sensor readings [T, sensors]
             topology: GraphTopology с components and edges
             metadata: EquipmentMetadata
+            sensor_readings: Optional dict for dynamic edge features
+            current_time: Optional timestamp for age calculation
         
         Returns:
             graph: PyG Data object
         
         Examples:
-            >>> graph = builder.build_graph(sensor_df, topology, metadata)
+            >>> # With dynamic edge features (new)
+            >>> graph = builder.build_graph(
+            ...     sensor_df,
+            ...     topology,
+            ...     metadata,
+            ...     sensor_readings={
+            ...         "pump_1": ComponentSensorReading(pressure_bar=150, ...),
+            ...         "valve_1": ComponentSensorReading(pressure_bar=148, ...)
+            ...     },
+            ...     current_time=datetime.now()
+            ... )
+            >>> graph.edge_attr.shape  # [E, 14]
             >>> 
-            >>> # Graph structure:
-            >>> graph.x          # [N, F] - node features
-            >>> graph.edge_index # [2, E] - connectivity
-            >>> graph.edge_attr  # [E, F_edge] - edge features
+            >>> # Without dynamic features (backward compatible)
+            >>> graph = builder.build_graph(sensor_df, topology, metadata)
+            >>> graph.edge_attr.shape  # [E, 14] (last 6 are zeros)
         """
         # 1. Build node features
         node_features_list = []
@@ -253,8 +420,12 @@ class GraphBuilder:
             # Add edge
             edge_index_list.append([source_idx, target_idx])
             
-            # Add edge features
-            edge_features = self.build_edge_features(edge_spec)
+            # Add edge features (14D: 8 static + 6 dynamic)
+            edge_features = self.build_edge_features(
+                edge_spec,
+                sensor_readings=sensor_readings,
+                current_time=current_time
+            )
             edge_attr_list.append(edge_features)
             
             # Add reverse edge if bidirectional
@@ -270,7 +441,7 @@ class GraphBuilder:
                 [[i, i] for i in range(len(node_features_list))],
                 dtype=torch.long
             ).t().contiguous()
-            edge_attr = torch.zeros(len(node_features_list), 8)
+            edge_attr = torch.zeros(len(node_features_list), 14)  # 14D features
         else:
             edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
             edge_attr = torch.stack(edge_attr_list)
@@ -300,6 +471,7 @@ class GraphBuilder:
         - Node features exist and have correct shape
         - Edge index valid (no out-of-bounds indices)
         - Edge attributes match edge count
+        - Edge features have correct dimension (14)
         - No NaN/inf values
         
         Args:
@@ -337,6 +509,14 @@ class GraphBuilder:
             if data.edge_attr.shape[0] != data.num_edges:
                 logger.error(
                     f"Edge attr count mismatch: {data.edge_attr.shape[0]} != {data.num_edges}"
+                )
+                return False
+            
+            # Check edge feature dimension (should be 14)
+            expected_edge_dim = 14
+            if data.edge_attr.shape[1] != expected_edge_dim:
+                logger.error(
+                    f"Edge feature dimension mismatch: {data.edge_attr.shape[1]} != {expected_edge_dim}"
                 )
                 return False
             
