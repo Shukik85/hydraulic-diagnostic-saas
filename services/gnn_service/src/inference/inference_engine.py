@@ -6,6 +6,7 @@ Features:
 - Dynamic batching
 - Request queueing
 - Preprocessing/postprocessing
+- Phase 3.1: Dynamic edge features + normalization
 
 Python 3.14 Features:
     - Deferred annotations
@@ -18,14 +19,19 @@ import torch
 import logging
 import asyncio
 import time
-from typing import Literal
+from typing import Literal, Union
 from dataclasses import dataclass
-import numpy as np
+from datetime import datetime
+from pathlib import Path
+import pandas as pd
 
 from torch_geometric.data import Data, Batch
 
 from src.inference.model_manager import ModelManager
 from src.data import FeatureEngineer, GraphBuilder, FeatureConfig
+from src.data.edge_features import EdgeFeatureComputer, create_edge_feature_computer
+from src.data.normalization import EdgeFeatureNormalizer, create_edge_feature_normalizer
+from src.services.topology_service import TopologyService, get_topology_service
 from src.schemas import (
     PredictionRequest,
     PredictionResponse,
@@ -34,6 +40,7 @@ from src.schemas import (
     AnomalyPrediction,
     GraphTopology
 )
+from src.schemas.requests import MinimalInferenceRequest, AdvancedInferenceRequest
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +56,8 @@ class InferenceConfig:
     max_wait_ms: float = 50.0  # Max latency tolerance
     use_dynamic_batching: bool = True
     pin_memory: bool = True
+    use_dynamic_features: bool = True  # Phase 3.1
+    topology_templates_path: Path | None = None  # Optional custom templates
     
 
 class InferenceEngine:
@@ -59,27 +68,25 @@ class InferenceEngine:
     - GPU optimization
     - Dynamic batching
     - Request queueing
+    - Phase 3.1: Dynamic edge features + normalization
     
     Examples:
         >>> engine = InferenceEngine(
         ...     config=InferenceConfig(
-        ...         model_path="models/best.ckpt",
+        ...         model_path="models/v2.0.0.ckpt",
         ...         device="cuda",
-        ...         batch_size=32
+        ...         batch_size=32,
+        ...         use_dynamic_features=True
         ...     )
         ... )
         >>> 
-        >>> # Single prediction
-        >>> response = await engine.predict(
-        ...     request=PredictionRequest(...),
-        ...     topology=topology
+        >>> # Single prediction (new API)
+        >>> response = await engine.predict_minimal(
+        ...     request=MinimalInferenceRequest(...)
         ... )
         >>> 
         >>> # Batch prediction
-        >>> responses = await engine.predict_batch(
-        ...     requests=[req1, req2, req3],
-        ...     topology=topology
-        ... )
+        >>> responses = await engine.predict_batch(...)
     """
     
     def __init__(
@@ -99,9 +106,27 @@ class InferenceEngine:
         # Initialize components
         self.model_manager = ModelManager()
         self.feature_engineer = FeatureEngineer(self.feature_config)
+        
+        # Phase 3.1: Edge feature components
+        self.edge_feature_computer = create_edge_feature_computer()
+        
+        # Load normalizer from checkpoint (if available)
+        self.edge_normalizer = self._load_normalizer_from_checkpoint(
+            config.model_path
+        )
+        
+        # Initialize graph builder with Phase 3.1 components
         self.graph_builder = GraphBuilder(
-            self.feature_engineer,
-            self.feature_config
+            feature_engineer=self.feature_engineer,
+            feature_config=self.feature_config,
+            edge_feature_computer=self.edge_feature_computer,
+            edge_normalizer=self.edge_normalizer,
+            use_dynamic_features=config.use_dynamic_features
+        )
+        
+        # Initialize topology service
+        self.topology_service = get_topology_service(
+            templates_path=config.topology_templates_path
         )
         
         # Load model
@@ -112,50 +137,101 @@ class InferenceEngine:
         )
         
         # Warmup
-        self.model_manager.warmup(config.model_path, batch_size=config.batch_size)
+        self.model_manager.warmup(
+            config.model_path,
+            batch_size=config.batch_size
+        )
         
         # Request queue (для dynamic batching)
-        self._request_queue: asyncio.Queue = asyncio.Queue(maxsize=config.max_queue_size)
+        self._request_queue: asyncio.Queue = asyncio.Queue(
+            maxsize=config.max_queue_size
+        )
         self._processing = False
         
-        logger.info(f"InferenceEngine initialized (device={config.device}, batch_size={config.batch_size})")
+        logger.info(
+            f"InferenceEngine initialized "
+            f"(device={config.device}, batch_size={config.batch_size}, "
+            f"dynamic_features={config.use_dynamic_features})"
+        )
     
-    async def predict(
+    def _load_normalizer_from_checkpoint(
         self,
-        request: PredictionRequest,
-        topology: GraphTopology
-    ) -> PredictionResponse:
-        """Single prediction.
+        checkpoint_path: str
+    ) -> EdgeFeatureNormalizer:
+        """Load normalizer stats from checkpoint.
         
         Args:
-            request: Prediction request
-            topology: Equipment topology
+            checkpoint_path: Path to model checkpoint
         
         Returns:
-            response: Prediction response
+            EdgeFeatureNormalizer with loaded stats
+        """
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location="cpu")
+            
+            # Check for normalizer stats in checkpoint
+            if "normalizer_stats" in checkpoint:
+                normalizer = create_edge_feature_normalizer()
+                normalizer.load_stats(checkpoint["normalizer_stats"])
+                logger.info("Loaded normalizer stats from checkpoint")
+                return normalizer
+            else:
+                logger.warning(
+                    "No normalizer stats in checkpoint, using defaults"
+                )
+                return create_edge_feature_normalizer()
+        
+        except Exception as e:
+            logger.error(f"Failed to load normalizer from checkpoint: {e}")
+            return create_edge_feature_normalizer()
+    
+    async def predict_minimal(
+        self,
+        request: MinimalInferenceRequest
+    ) -> PredictionResponse:
+        """Single prediction with minimal request (Phase 3.1 API).
+        
+        Args:
+            request: MinimalInferenceRequest
+        
+        Returns:
+            response: PredictionResponse
         
         Examples:
-            >>> response = await engine.predict(
-            ...     request=PredictionRequest(
-            ...         equipment_id="exc_001",
-            ...         sensor_data={...}
-            ...     ),
-            ...     topology=topology
+            >>> response = await engine.predict_minimal(
+            ...     MinimalInferenceRequest(
+            ...         equipment_id="pump_001",
+            ...         timestamp=datetime.now(),
+            ...         sensor_readings={
+            ...             "pump_1": ComponentSensorReading(...),
+            ...             "valve_1": ComponentSensorReading(...)
+            ...         },
+            ...         topology_id="standard_pump_system"
+            ...     )
             ... )
-            >>> print(response.health.score)
         """
         start_time = time.time()
         
         try:
-            # Preprocess
-            graph = self._preprocess(request, topology)
+            # Resolve topology
+            template = self.topology_service.get_template(request.topology_id)
+            if not template:
+                raise ValueError(f"Topology not found: {request.topology_id}")
+            
+            topology = template.to_graph_topology(request.equipment_id)
+            
+            # Preprocess with dynamic features
+            graph = self._preprocess_minimal(
+                request=request,
+                topology=topology
+            )
             
             # Inference
             health, degradation, anomaly = self._inference_single(graph)
             
             # Postprocess
             response = self._postprocess(
-                request=request,
+                equipment_id=request.equipment_id,
                 health=health,
                 degradation=degradation,
                 anomaly=anomaly,
@@ -173,41 +249,107 @@ class InferenceEngine:
             logger.error(f"Prediction failed for {request.equipment_id}: {e}")
             raise
     
+    async def predict(
+        self,
+        request: PredictionRequest,
+        topology: GraphTopology
+    ) -> PredictionResponse:
+        """Single prediction (legacy API - backward compatible).
+        
+        Args:
+            request: Prediction request
+            topology: Equipment topology
+        
+        Returns:
+            response: Prediction response
+        
+        Examples:
+            >>> response = await engine.predict(
+            ...     request=PredictionRequest(
+            ...         equipment_id="exc_001",
+            ...         sensor_data={...}
+            ...     ),
+            ...     topology=topology
+            ... )
+        """
+        start_time = time.time()
+        
+        try:
+            # Preprocess (legacy path - no dynamic features)
+            graph = self._preprocess_legacy(request, topology)
+            
+            # Inference
+            health, degradation, anomaly = self._inference_single(graph)
+            
+            # Postprocess
+            response = self._postprocess(
+                equipment_id=request.equipment_id,
+                health=health,
+                degradation=degradation,
+                anomaly=anomaly,
+                inference_time=time.time() - start_time
+            )
+            
+            logger.info(
+                f"Prediction complete (legacy): {request.equipment_id} "
+                f"(time={response.inference_time_ms:.1f}ms)"
+            )
+            
+            return response
+        
+        except Exception as e:
+            logger.error(f"Prediction failed for {request.equipment_id}: {e}")
+            raise
+    
     async def predict_batch(
         self,
-        requests: list[PredictionRequest],
-        topology: GraphTopology
+        requests: list[Union[PredictionRequest, MinimalInferenceRequest]],
+        topology: GraphTopology | None = None
     ) -> list[PredictionResponse]:
         """Batch prediction.
         
         Args:
-            requests: List of prediction requests
-            topology: Equipment topology
+            requests: List of prediction requests (legacy or new)
+            topology: Equipment topology (for legacy requests)
         
         Returns:
             responses: List of prediction responses
         
         Examples:
             >>> responses = await engine.predict_batch(
-            ...     requests=[req1, req2, req3],
-            ...     topology=topology
+            ...     requests=[req1, req2, req3]
             ... )
-            >>> for resp in responses:
-            ...     print(resp.equipment_id, resp.health.score)
         """
         start_time = time.time()
         
         try:
             # Preprocess all
-            graphs = [self._preprocess(req, topology) for req in requests]
+            graphs = []
+            for req in requests:
+                if isinstance(req, MinimalInferenceRequest):
+                    # Resolve topology for minimal request
+                    template = self.topology_service.get_template(req.topology_id)
+                    if not template:
+                        raise ValueError(f"Topology not found: {req.topology_id}")
+                    req_topology = template.to_graph_topology(req.equipment_id)
+                    graph = self._preprocess_minimal(req, req_topology)
+                else:
+                    # Legacy request
+                    if not topology:
+                        raise ValueError("Topology required for legacy requests")
+                    graph = self._preprocess_legacy(req, topology)
+                
+                graphs.append(graph)
             
             # Batch inference
-            health_batch, degradation_batch, anomaly_batch = self._inference_batch(graphs)
+            health_batch, degradation_batch, anomaly_batch = self._inference_batch(
+                graphs
+            )
             
             # Postprocess all
             responses = [
                 self._postprocess(
-                    request=req,
+                    equipment_id=req.equipment_id,
                     health=health_batch[i],
                     degradation=degradation_batch[i],
                     anomaly=anomaly_batch[i],
@@ -227,21 +369,50 @@ class InferenceEngine:
             logger.error(f"Batch prediction failed: {e}")
             raise
     
-    def _preprocess(
+    def _preprocess_minimal(
+        self,
+        request: MinimalInferenceRequest,
+        topology: GraphTopology
+    ) -> Data:
+        """Preprocess minimal request → graph (with dynamic features).
+        
+        Args:
+            request: MinimalInferenceRequest
+            topology: Equipment topology
+        
+        Returns:
+            graph: PyG Data object with 14D edges
+        """
+        # Convert sensor readings to DataFrame (for node features)
+        # TODO: Implement proper conversion
+        sensor_df = pd.DataFrame()  # Placeholder
+        
+        # Build graph with dynamic features
+        graph = self.graph_builder.build_graph(
+            sensor_data=sensor_df,
+            topology=topology,
+            metadata=None,
+            sensor_readings=request.sensor_readings,  # For dynamic edges
+            current_time=request.timestamp
+        )
+        
+        return graph
+    
+    def _preprocess_legacy(
         self,
         request: PredictionRequest,
         topology: GraphTopology
     ) -> Data:
-        """Preprocess request → graph.
+        """Preprocess legacy request → graph (no dynamic features).
         
         Args:
-            request: Prediction request
+            request: PredictionRequest
             topology: Equipment topology
         
         Returns:
-            graph: PyG Data object
+            graph: PyG Data object (14D edges with zeros)
         """
-        # Build graph from sensor data
+        # Build graph without dynamic features
         graph = self.graph_builder.build_graph(
             sensor_data=request.sensor_data,  # Should be DataFrame
             topology=topology,
@@ -250,7 +421,10 @@ class InferenceEngine:
         
         return graph
     
-    def _inference_single(self, graph: Data) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _inference_single(
+        self,
+        graph: Data
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Single graph inference.
         
         Args:
@@ -270,12 +444,19 @@ class InferenceEngine:
                 x=graph.x,
                 edge_index=graph.edge_index,
                 edge_attr=graph.edge_attr,
-                batch=torch.zeros(graph.x.shape[0], dtype=torch.long, device=device)  # Single graph
+                batch=torch.zeros(
+                    graph.x.shape[0],
+                    dtype=torch.long,
+                    device=device
+                )  # Single graph
             )
         
         return health, degradation, anomaly
     
-    def _inference_batch(self, graphs: list[Data]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def _inference_batch(
+        self,
+        graphs: list[Data]
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Batch inference.
         
         Args:
@@ -307,7 +488,7 @@ class InferenceEngine:
     
     def _postprocess(
         self,
-        request: PredictionRequest,
+        equipment_id: str,
         health: torch.Tensor,
         degradation: torch.Tensor,
         anomaly: torch.Tensor,
@@ -316,7 +497,7 @@ class InferenceEngine:
         """Postprocess outputs → response.
         
         Args:
-            request: Original request
+            equipment_id: Equipment identifier
             health: Health tensor [1, 1]
             degradation: Degradation tensor [1, 1]
             anomaly: Anomaly logits [1, 9]
@@ -354,7 +535,7 @@ class InferenceEngine:
         
         # Create response
         response = PredictionResponse(
-            equipment_id=request.equipment_id,
+            equipment_id=equipment_id,
             health=HealthPrediction(score=health_score),
             degradation=DegradationPrediction(rate=degradation_rate),
             anomaly=AnomalyPrediction(predictions=anomaly_predictions),
@@ -374,6 +555,7 @@ class InferenceEngine:
             >>> print(stats["model_device"])
         """
         model_info = self.model_manager.get_model_info(self.config.model_path)
+        topology_stats = self.topology_service.get_stats()
         
         return {
             "model_path": self.config.model_path,
@@ -382,5 +564,8 @@ class InferenceEngine:
             "model_device": model_info["device"] if model_info else None,
             "model_parameters": model_info["num_parameters"] if model_info else None,
             "queue_size": self._request_queue.qsize(),
-            "processing": self._processing
+            "processing": self._processing,
+            "use_dynamic_features": self.config.use_dynamic_features,
+            "topology_templates": topology_stats["cached_templates"],
+            "custom_topologies": topology_stats["custom_topologies"]
         }
