@@ -408,7 +408,8 @@ class ComponentSpec(BaseModel):
     
     @field_validator("sensors")
     @classmethod
-    def validate_unique_sensors(cls, v: List[str]) -> List[str]:"""Проверка уникальности sensor IDs."""
+    def validate_unique_sensors(cls, v: List[str]) -> List[str]:
+        """Проверка уникальности sensor IDs."""
         if len(v) != len(set(v)):
             raise ValueError("Sensor IDs must be unique")
         return v
