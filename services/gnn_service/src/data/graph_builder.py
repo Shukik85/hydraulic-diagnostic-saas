@@ -4,7 +4,7 @@ Builds PyTorch Geometric graphs:
 - Nodes: hydraulic components
 - Edges: connections (pipes, hoses)
 - Node features: sensor statistics
-- Edge features: 14D (8 static + 6 dynamic)
+- Edge features: variable dimension (8D, 14D, custom)
 
 Python 3.14 Features:
     - Deferred annotations
@@ -48,12 +48,12 @@ class GraphBuilder:
     1. Extract component-level features from sensor data
     2. Build node feature matrix [N, F]
     3. Construct edge_index from topology [2, E]
-    4. Compute edge features (14D: 8 static + 6 dynamic) [E, 14]
+    4. Compute edge features (dimension from config) [E, edge_in_dim]
     5. Normalize edge features
     6. Create PyG Data object
 
-    Edge Features (14D):
-        Static (8):
+    Edge Features (variable dimension):
+        8D (static only):
             - diameter_norm
             - length_norm
             - cross_section_area_norm
@@ -61,26 +61,38 @@ class GraphBuilder:
             - pressure_rating_norm
             - material_onehot (3D)
 
-        Dynamic (6):
-            - flow_rate_lpm (computed or measured)
-            - pressure_drop_bar
-            - temperature_delta_c
-            - vibration_level_g
-            - age_hours
-            - maintenance_score
+        14D (static + dynamic) - default:
+            Static (8) + Dynamic (6):
+                - flow_rate_lpm (computed or measured)
+                - pressure_drop_bar
+                - temperature_delta_c
+                - vibration_level_g
+                - age_hours
+                - maintenance_score
+
+        Custom: any dimension supported by model's edge_projection
 
     Args:
         feature_engineer: FeatureEngineer instance
-        feature_config: FeatureConfig instance
+        feature_config: FeatureConfig instance (includes edge_in_dim)
         edge_feature_computer: EdgeFeatureComputer for dynamic features
         edge_normalizer: EdgeFeatureNormalizer for normalization
         use_dynamic_features: Enable dynamic edge features (default: True)
 
     Examples:
+        >>> # 14D edge features (default)
+        >>> config = FeatureConfig(edge_in_dim=14)
         >>> builder = GraphBuilder(
         ...     feature_engineer,
-        ...     feature_config,
+        ...     feature_config=config,
         ...     use_dynamic_features=True
+        ... )
+        >>>
+        >>> # 8D edge features (static only)
+        >>> config = FeatureConfig(edge_in_dim=8)
+        >>> builder = GraphBuilder(
+        ...     feature_config=config,
+        ...     use_dynamic_features=False
         ... )
         >>>
         >>> graph = builder.build_graph(
@@ -93,7 +105,7 @@ class GraphBuilder:
         >>>
         >>> graph.x.shape  # [num_components, features]
         >>> graph.edge_index.shape  # [2, num_edges]
-        >>> graph.edge_attr.shape  # [num_edges, 14]
+        >>> graph.edge_attr.shape  # [num_edges, edge_in_dim]  # Variable!
     """
 
     def __init__(
@@ -104,8 +116,8 @@ class GraphBuilder:
         edge_normalizer: EdgeFeatureNormalizer | None = None,
         use_dynamic_features: bool = True,
     ):
-        self.feature_engineer = feature_engineer or FeatureEngineer(FeatureConfig())
         self.feature_config = feature_config or FeatureConfig()
+        self.feature_engineer = feature_engineer or FeatureEngineer(self.feature_config)
 
         # Phase 3.1: Dynamic edge features
         self.use_dynamic_features = use_dynamic_features
@@ -289,10 +301,12 @@ class GraphBuilder:
         sensor_readings: dict[str, ComponentSensorReading] | None = None,
         current_time: datetime | None = None,
     ) -> torch.Tensor:
-        """Построить complete edge features (14D).
+        """Построить complete edge features (variable dimension).
 
-        Combines static (8D) and dynamic (6D) features.
-        If dynamic features unavailable, fills with zeros (backward compatible).
+        Combines static (8D) and dynamic (6D) features based on feature_config.edge_in_dim:
+        - 8D: static only
+        - 14D: static + dynamic
+        - Custom: pads/truncates to match edge_in_dim
 
         Args:
             edge_spec: EdgeSpec with physical properties
@@ -300,10 +314,10 @@ class GraphBuilder:
             current_time: Optional timestamp for age calculation
 
         Returns:
-            features: Tensor [14]
+            features: Tensor [edge_in_dim]
 
         Examples:
-            >>> # With dynamic features
+            >>> # 14D: static + dynamic
             >>> features = builder.build_edge_features(
             ...     edge_spec,
             ...     sensor_readings={...},
@@ -311,9 +325,9 @@ class GraphBuilder:
             ... )
             >>> features.shape  # torch.Size([14])
             >>>
-            >>> # Without dynamic features (backward compatible)
+            >>> # 8D: static only
             >>> features = builder.build_edge_features(edge_spec)
-            >>> features.shape  # torch.Size([14]) - last 6 are zeros
+            >>> features.shape  # torch.Size([8])
         """
         # Static features (8D)
         static_features = self.build_edge_features_static(edge_spec)
@@ -333,6 +347,17 @@ class GraphBuilder:
 
         # Concatenate: [8 static] + [6 dynamic] = [14]
         all_features = np.concatenate([static_features, dynamic_features])
+
+        # Pad or truncate to match edge_in_dim
+        if len(all_features) < self.feature_config.edge_in_dim:
+            # Pad with zeros
+            padding = np.zeros(
+                self.feature_config.edge_in_dim - len(all_features), dtype=np.float32
+            )
+            all_features = np.concatenate([all_features, padding])
+        elif len(all_features) > self.feature_config.edge_in_dim:
+            # Truncate
+            all_features = all_features[: self.feature_config.edge_in_dim]
 
         return torch.from_numpy(all_features)
 
@@ -357,7 +382,7 @@ class GraphBuilder:
             graph: PyG Data object
 
         Examples:
-            >>> # With dynamic edge features (new)
+            >>> # With dynamic edge features (14D)
             >>> graph = builder.build_graph(
             ...     sensor_df,
             ...     topology,
@@ -370,9 +395,9 @@ class GraphBuilder:
             ... )
             >>> graph.edge_attr.shape  # [E, 14]
             >>>
-            >>> # Without dynamic features (backward compatible)
+            >>> # Without dynamic features (8D)
             >>> graph = builder.build_graph(sensor_df, topology, metadata)
-            >>> graph.edge_attr.shape  # [E, 14] (last 6 are zeros)
+            >>> graph.edge_attr.shape  # [E, 8]
         """
         # 1. Build node features
         node_features_list = []
@@ -408,7 +433,7 @@ class GraphBuilder:
             # Add edge
             edge_index_list.append([source_idx, target_idx])
 
-            # Add edge features (14D: 8 static + 6 dynamic)
+            # Add edge features (variable dimension from config)
             edge_features = self.build_edge_features(
                 edge_spec, sensor_readings=sensor_readings, current_time=current_time
             )
@@ -428,7 +453,9 @@ class GraphBuilder:
                 .t()
                 .contiguous()
             )
-            edge_attr = torch.zeros(len(node_features_list), 14)  # 14D features
+            edge_attr = torch.zeros(
+                len(node_features_list), self.feature_config.edge_in_dim
+            )  # Variable dim!
         else:
             edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
             edge_attr = torch.stack(edge_attr_list)
@@ -455,7 +482,7 @@ class GraphBuilder:
         - Node features exist and have correct shape
         - Edge index valid (no out-of-bounds indices)
         - Edge attributes match edge count
-        - Edge features have correct dimension (14)
+        - Edge features have correct dimension (from config)
         - No NaN/inf values
 
         Args:
@@ -496,8 +523,8 @@ class GraphBuilder:
                 )
                 return False
 
-            # Check edge feature dimension (should be 14)
-            expected_edge_dim = 14
+            # Check edge feature dimension (should match config.edge_in_dim)
+            expected_edge_dim = self.feature_config.edge_in_dim
             if data.edge_attr.shape[1] != expected_edge_dim:
                 logger.error(
                     f"Edge feature dimension mismatch: {data.edge_attr.shape[1]} != {expected_edge_dim}"
