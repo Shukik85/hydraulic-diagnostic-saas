@@ -3,7 +3,7 @@
 **Tracking Issue:** [#124](https://github.com/Shukik85/hydraulic-diagnostic-saas/issues/124)  
 **Branch:** `feature/gnn-service-production-ready`  
 **Started:** 2025-12-04  
-**Updated:** 2025-12-04 23:55 MSK
+**Updated:** 2025-12-05 00:35 MSK
 
 ---
 
@@ -20,7 +20,7 @@
 
 **Status:** ✅ Merged  
 **Duration:** 2025-12-04 (3 hours)  
-**Commits:** 3
+**Commits:** 4
 
 ### Changes
 
@@ -72,6 +72,7 @@
 1. ✅ `27c35b3` - feat(model): make UniversalTemporalGNN edge-feature-dimension agnostic
 2. ✅ `202c11f` - docs: add MODEL_CONTRACT.md - universal GNN input/output specification
 3. ✅ `be0774a` - docs(readme): update with Universal GNN v2.0.1
+4. ✅ `bad32df` - docs: add UNIVERSAL_GNN_PROGRESS.md - tracking #124
 
 ### Tests
 
@@ -82,76 +83,147 @@
 
 ---
 
-## 🟡 Phase 2: Data Pipeline (TODO)
+## 🟡 Phase 2: Data Pipeline (IN PROGRESS)
 
-**Status:** 🟡 Planned  
-**Estimated Duration:** 8-12 hours  
-**Dependencies:** Phase 1 ✅
+**Status:** 🟡 20% Complete  
+**Started:** 2025-12-05  
+**Estimated Duration:** 8-12 hours
 
 ### Objectives
 
-1. **PyTorch Geometric DataLoader**
-   - [ ] Dataset для временных графов
-   - [ ] Sliding window support
-   - [ ] Поддержка графов разного размера
-   - [ ] LightningModule integration
+1. **Configuration & Graph Building** ✅
+   - [x] Add edge_in_dim to FeatureConfig
+   - [x] Update GraphBuilder validation (remove hardcoded 14)
+   - [x] Support 8D (static) and 14D (static+dynamic)
+   - [x] Padding/truncation for custom dimensions
 
-2. **Graph Construction**
-   - [ ] Динамическое построение графа из таймсерий
-   - [ ] Топология из конфига
-   - [ ] Missing sensor handling
+2. **Dataset Integration** 🟡
+   - [ ] Update HydraulicGraphDataset for variable edge_in_dim
+   - [ ] Real graph building (replace dummy data)
+   - [ ] Cache invalidation with edge_in_dim hash
+   - [ ] Unit tests
 
-3. **Testing**
-   - [ ] Unit tests: variable graph sizes
-   - [ ] Integration: DataLoader + Model
-   - [ ] Edge cases: 1 node, 0 edges, None edge_attr
+3. **DataLoader & Batching** 🔴
+   - [ ] Variable size batching validation
+   - [ ] Integration tests (different edge dimensions)
+   - [ ] LightningModule compatibility
+
+### Completed Work
+
+#### 1. FeatureConfig Update ✅
+**File:** `src/data/feature_config.py`
+**Commit:** `d45de33`
+
+```python
+@dataclass(slots=True, frozen=True)
+class FeatureConfig:
+    # Edge features (Universal GNN support)
+    edge_in_dim: int = 14  # 8 static + 6 dynamic (default)
+    
+    @property
+    def static_edge_features_count(self) -> int:
+        return 8
+    
+    @property
+    def dynamic_edge_features_count(self) -> int:
+        return 6
+    
+    @property
+    def has_dynamic_edge_features(self) -> bool:
+        return self.edge_in_dim >= 14
+```
+
+**Features:**
+- ✅ edge_in_dim parameter (default=14)
+- ✅ Validation (__post_init__)
+- ✅ Helper properties (static/dynamic counts)
+- ✅ Warning for non-standard dimensions
+
+#### 2. GraphBuilder Update ✅
+**File:** `src/data/graph_builder.py`
+**Commit:** `16827e6`
+
+```python
+class GraphBuilder:
+    def __init__(
+        self,
+        feature_config: FeatureConfig | None = None,
+        ...
+    ):
+        self.feature_config = feature_config or FeatureConfig()
+        
+    def build_edge_features(self, ...) -> torch.Tensor:
+        # Static (8D) + Dynamic (6D) = 14D
+        all_features = np.concatenate([static_features, dynamic_features])
+        
+        # Pad or truncate to match edge_in_dim
+        if len(all_features) < self.feature_config.edge_in_dim:
+            padding = np.zeros(
+                self.feature_config.edge_in_dim - len(all_features),
+                dtype=np.float32
+            )
+            all_features = np.concatenate([all_features, padding])
+        elif len(all_features) > self.feature_config.edge_in_dim:
+            all_features = all_features[:self.feature_config.edge_in_dim]
+            
+        return torch.from_numpy(all_features)
+```
+
+**Features:**
+- ✅ Uses feature_config.edge_in_dim
+- ✅ Padding for edge_in_dim > 14
+- ✅ Truncation for edge_in_dim < 14
+- ✅ Updated validation (checks config.edge_in_dim)
+- ✅ Variable dimension docstrings
+
+### Next Steps
+
+#### Immediate (Next 2-3 hours)
+1. Update HydraulicGraphDataset:
+   - Pass feature_config to GraphBuilder
+   - Include edge_in_dim in cache hash
+   - Replace dummy graph building
+   
+2. Add unit tests:
+   - Test 8D edge features
+   - Test 14D edge features  
+   - Test custom dimensions (e.g., 20D)
+   - Test padding/truncation
+
+#### Short-term (This Session)
+1. Integration tests:
+   - Dataset + DataLoader + Model
+   - Variable edge dimensions
+   - Batch graphs with different N, E
+
+2. Documentation:
+   - Update data pipeline docs
+   - Add examples for different edge_in_dim
 
 ### Files to Create/Modify
 
 ```
 src/data/
-  ├── temporal_dataset.py      # NEW: TemporalGraphDataset
-  ├── variable_batch_loader.py # NEW: Variable size batching
-  └── graph_builder.py         # MODIFY: Dynamic construction
-
-src/training/
-  └── lightning_module.py      # MODIFY: Variable batch handling
+  ├── feature_config.py         # ✅ DONE
+  ├── graph_builder.py         # ✅ DONE
+  ├── dataset.py               # 🟡 TODO: update _build_graph_for_equipment
+  └── loader.py                # ✅ Already supports variable sizes (PyG Batch)
 
 tests/unit/
-  ├── test_temporal_dataset.py
-  └── test_variable_batching.py
+  ├── test_feature_config.py   # 🔴 TODO: new tests
+  ├── test_graph_builder.py    # 🔴 TODO: edge_in_dim tests
+  └── test_dataset.py          # 🔴 TODO: variable edge tests
 
 tests/integration/
-  └── test_dataloader_model.py
-```
-
-### Key Implementation Points
-
-```python
-# TemporalGraphDataset
-class TemporalGraphDataset(Dataset):
-    def __getitem__(self, idx) -> Data:
-        # Return Data with arbitrary N, E
-        # Use edge_in_dim from config
-        return Data(
-            x=...,  # [N_i, 34]
-            edge_index=...,  # [2, E_i]
-            edge_attr=...,  # [E_i, edge_in_dim]
-            y=...
-        )
-
-# Variable size batching
-def collate_fn(batch: list[Data]) -> Batch:
-    # PyG handles variable sizes automatically
-    return Batch.from_data_list(batch)
+  └── test_universal_dataloader.py  # 🔴 TODO: new integration test
 ```
 
 ---
 
-## 🟡 Phase 3: Inference Integration (TODO)
+## 🔴 Phase 3: Inference Integration (TODO)
 
-**Status:** 🟡 Planned  
-**Estimated Duration:** 6-8 hours  
+**Status:** 🔴 Planned  
+**Estimated Duration:** 6-9 hours  
 **Dependencies:** Phase 2 ✅
 
 ### Objectives
@@ -197,12 +269,14 @@ tests/integration/
 - [x] Backward compatibility preserved
 - [x] README updated
 
-### Phase 2 (Target)
-- [ ] Dataset supports variable N, E
+### Phase 2 (Current - 20% Complete)
+- [x] edge_in_dim in FeatureConfig
+- [x] GraphBuilder uses config.edge_in_dim
+- [x] Padding/truncation implemented
+- [ ] Dataset supports variable edge_in_dim
 - [ ] DataLoader batches correctly
-- [ ] LightningModule integrated
 - [ ] Tests: 90%+ coverage
-- [ ] No hardcoded graph sizes
+- [ ] No hardcoded dimensions
 
 ### Phase 3 (Target)
 - [ ] InferenceEngine: universal graph builder
@@ -223,12 +297,12 @@ tests/integration/
 
 ## 📝 Next Steps
 
-### Immediate (Next Session)
-1. Начать Phase 2: TemporalGraphDataset
-2. Реализовать variable size batching
-3. Добавить unit tests
+### Immediate (This Session)
+1. Обновить HydraulicGraphDataset
+2. Добавить unit tests для edge_in_dim
+3. Integration test: variable edge dimensions
 
-### Short-term (This Week)
+### Short-term (Next Session)
 1. Завершить Phase 2
 2. Начать Phase 3: InferenceEngine update
 3. End-to-end integration test
@@ -240,6 +314,6 @@ tests/integration/
 
 ---
 
-**Last Updated:** 2025-12-04 23:55 MSK  
-**Progress:** Phase 1 ✅ | Phase 2 🟡 | Phase 3 🟡  
-**Overall:** 33% Complete
+**Last Updated:** 2025-12-05 00:35 MSK  
+**Progress:** Phase 1 ✅ | Phase 2 🟡 (20%) | Phase 3 🔴  
+**Overall:** 40% Complete
