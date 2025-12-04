@@ -4,6 +4,7 @@ Configuration classes для:
 - Feature extraction parameters
 - DataLoader settings
 - Normalization methods
+- Edge feature dimensions (universal GNN support)
 
 Python 3.14 Features:
     - Deferred annotations
@@ -31,14 +32,27 @@ class FeatureConfig:
         normalization: Метод нормализации (standardize, minmax, robust)
         handle_missing: Метод обработки пропусков (ffill, bfill, interpolate, drop)
         outlier_threshold: Threshold для outlier detection (в стандартных отклонениях)
+        edge_in_dim: Edge feature dimension (8=static only, 14=static+dynamic, custom)
+
+    Edge Features (edge_in_dim):
+        - 8D: Static only (diameter, length, area, loss_coeff, rating, material[3])
+        - 14D: Static (8) + Dynamic (6) [flow, pressure_drop, temp_delta, vibration, age, maintenance]
+        - Custom: Any dimension supported by model's edge_projection layer
 
     Examples:
+        >>> # Static edge features only (8D)
+        >>> config = FeatureConfig(edge_in_dim=8)
+        >>>
+        >>> # Full edge features (14D) - default
+        >>> config = FeatureConfig(edge_in_dim=14)
+        >>>
+        >>> # Node features
         >>> config = FeatureConfig(
         ...     use_statistical=True,
         ...     percentiles=[5, 25, 50, 75, 95],
         ...     num_frequencies=10
         ... )
-        >>> config.total_features_per_sensor
+        >>> config.total_features_per_sensor  # Node feature dimension
         42  # Statistical(8) + Frequency(10) + Temporal(20) + Hydraulic(4)
     """
 
@@ -61,6 +75,57 @@ class FeatureConfig:
     normalization: Literal["standardize", "minmax", "robust", "none"] = "standardize"
     handle_missing: Literal["ffill", "bfill", "interpolate", "drop"] = "ffill"
     outlier_threshold: float = 3.0  # Standard deviations
+
+    # Edge features (Universal GNN support)
+    edge_in_dim: int = 14  # 8 static + 6 dynamic (default for backward compat)
+
+    def __post_init__(self) -> None:
+        """Validate configuration parameters.
+
+        Raises:
+            ValueError: If edge_in_dim invalid
+        """
+        # Validate edge_in_dim
+        if self.edge_in_dim < 1:
+            msg = f"edge_in_dim must be >= 1, got {self.edge_in_dim}"
+            raise ValueError(msg)
+
+        # Warn if using non-standard dimension
+        if self.edge_in_dim not in (8, 14):
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"Using custom edge_in_dim={self.edge_in_dim}. "
+                "Standard values: 8 (static only) or 14 (static+dynamic)."
+            )
+
+    @property
+    def static_edge_features_count(self) -> int:
+        """Количество static edge features.
+
+        Returns:
+            count: diameter(1) + length(1) + area(1) + loss_coeff(1) + rating(1) + material(3) = 8
+        """
+        return 8
+
+    @property
+    def dynamic_edge_features_count(self) -> int:
+        """Количество dynamic edge features.
+
+        Returns:
+            count: flow(1) + pressure_drop(1) + temp_delta(1) + vibration(1) + age(1) + maintenance(1) = 6
+        """
+        return 6
+
+    @property
+    def has_dynamic_edge_features(self) -> bool:
+        """Check if edge_in_dim includes dynamic features.
+
+        Returns:
+            has_dynamic: True if edge_in_dim >= 14 (includes dynamic)
+        """
+        return self.edge_in_dim >= 14
 
     @property
     def statistical_features_count(self) -> int:
@@ -108,7 +173,7 @@ class FeatureConfig:
 
     @property
     def total_features_per_sensor(self) -> int:
-        """Общее количество features per sensor.
+        """Общее количество node features per sensor.
 
         Returns:
             count: Statistical + Frequency + Temporal + Hydraulic
