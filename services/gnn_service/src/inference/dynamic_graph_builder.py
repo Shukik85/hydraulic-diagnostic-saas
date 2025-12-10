@@ -183,8 +183,9 @@ class DynamicGraphBuilder:
 
         for sensor_id in expected_sensors:
             if sensor_id in sensor_data.columns:
-                # Extract sensor time series as pandas Series (not numpy array)
-                sensor_ts = sensor_data[sensor_id]  # pandas Series with .isna() support
+                # Extract sensor time series as DataFrame (not Series)
+                # Use double brackets to keep it as DataFrame with single column
+                sensor_ts = sensor_data[[sensor_id]]  # DataFrame with .columns attribute
 
                 # Engineer features from time series
                 features = self.feature_engineer.extract_all_features(sensor_ts)
