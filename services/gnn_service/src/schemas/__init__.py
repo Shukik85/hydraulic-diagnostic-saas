@@ -26,6 +26,7 @@ from .requests import (
     ComponentSensorReading,
     InferenceRequest,
     MinimalInferenceRequest,
+    PredictionRequest,
 )
 
 # Responses
@@ -66,6 +67,7 @@ __all__ = [
     "ComponentSensorReading",
     "InferenceRequest",
     "MinimalInferenceRequest",
+    "PredictionRequest",
     # Metadata
     "EquipmentMetadata",
     "SensorConfig",
