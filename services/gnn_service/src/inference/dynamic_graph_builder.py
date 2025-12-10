@@ -188,7 +188,10 @@ class DynamicGraphBuilder:
                 sensor_ts = sensor_data[[sensor_id]]  # DataFrame with .columns attribute
 
                 # Engineer features from time series
-                features = self.feature_engineer.extract_all_features(sensor_ts)
+                features_np = self.feature_engineer.extract_all_features(sensor_ts)
+
+                # Convert numpy array to torch.Tensor
+                features = torch.from_numpy(features_np).float()
 
                 x_list.append(features)
             else:
