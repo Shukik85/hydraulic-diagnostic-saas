@@ -15,6 +15,48 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class HealthPrediction(BaseModel):
+    """Health score prediction.
+
+    Attributes:
+        score: Health score [0, 1] (1=perfect, 0=critical)
+    """
+
+    model_config = ConfigDict(frozen=False)
+
+    score: float = Field(
+        ..., ge=0.0, le=1.0, description="Health score (1.0=perfect, 0.0=critical)"
+    )
+
+
+class DegradationPrediction(BaseModel):
+    """Degradation rate prediction.
+
+    Attributes:
+        rate: Degradation rate [0, 1] (0=stable, 1=rapid degradation)
+    """
+
+    model_config = ConfigDict(frozen=False)
+
+    rate: float = Field(
+        ..., ge=0.0, le=1.0, description="Degradation rate (0.0=stable, 1.0=rapid)"
+    )
+
+
+class AnomalyPrediction(BaseModel):
+    """Anomaly predictions.
+
+    Attributes:
+        predictions: Dictionary mapping anomaly type to probability [0, 1]
+    """
+
+    model_config = ConfigDict(frozen=False)
+
+    predictions: dict[str, float] = Field(
+        default_factory=dict, description="Anomaly type to probability mapping"
+    )
+
+
 class ComponentPrediction(BaseModel):
     """Component-level (per-node) predictions.
 
@@ -109,38 +151,25 @@ class PredictionResponse(BaseModel):
         request_id: Unique request identifier
         equipment_id: Equipment identifier
         timestamp: Prediction timestamp
-        component: Component-level predictions
-        graph: Graph-level predictions
+        health: Health prediction
+        degradation: Degradation prediction
+        anomaly: Anomaly predictions
+        component: Component-level predictions (optional)
+        graph: Graph-level predictions (optional)
         model_version: Model version used
         inference_time_ms: Inference latency
 
     Examples:
         >>> response = PredictionResponse(
-        ...     request_id="req_123",
         ...     equipment_id="excavator_42",
-        ...     timestamp=datetime.now(),
-        ...     component=[
-        ...         ComponentPrediction(
-        ...             component_id="pump_01",
-        ...             component_type="pump",
-        ...             health=0.85,
-        ...             anomalies={"cavitation": 0.12}
-        ...         )
-        ...     ],
-        ...     graph=GraphPrediction(
-        ...         health=0.78,
-        ...         degradation=0.22,
-        ...         rul_hours=450.5,
-        ...         anomalies={"pressure_drop": 0.15}
-        ...     ),
-        ...     model_version="v2.0.0",
+        ...     health=HealthPrediction(score=0.78),
+        ...     degradation=DegradationPrediction(rate=0.22),
+        ...     anomaly=AnomalyPrediction(predictions={"pressure_drop": 0.15}),
         ...     inference_time_ms=120.5
         ... )
     """
 
     model_config = ConfigDict(frozen=False)
-
-    request_id: str = Field(..., description="Unique request identifier")
 
     equipment_id: str = Field(..., description="Equipment identifier")
 
@@ -148,19 +177,27 @@ class PredictionResponse(BaseModel):
         default_factory=datetime.utcnow, description="Prediction timestamp (UTC)"
     )
 
+    health: HealthPrediction = Field(..., description="Health prediction")
+
+    degradation: DegradationPrediction = Field(..., description="Degradation prediction")
+
+    anomaly: AnomalyPrediction = Field(..., description="Anomaly predictions")
+
+    inference_time_ms: float = Field(..., ge=0.0, description="Inference latency in milliseconds")
+
+    # Optional fields for backward compatibility
+    request_id: str | None = Field(default=None, description="Unique request identifier")
+
     component: list[ComponentPrediction] = Field(
         default_factory=list, description="Component-level predictions (per-node)"
     )
 
-    graph: GraphPrediction = Field(..., description="Graph-level predictions (entire equipment)")
+    graph: GraphPrediction | None = Field(default=None, description="Graph-level predictions")
 
-    model_version: str = Field(
-        ..., description="Model version used for inference", examples=["v2.0.0", "v2.1.0"]
+    model_version: str | None = Field(
+        default=None, description="Model version used for inference", examples=["v2.0.0"]
     )
 
-    inference_time_ms: float = Field(..., ge=0.0, description="Inference latency in milliseconds")
-
-    # Optional metadata
     confidence: float | None = Field(
         default=None, ge=0.0, le=1.0, description="Overall prediction confidence"
     )
