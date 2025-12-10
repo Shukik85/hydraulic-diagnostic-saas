@@ -3,7 +3,7 @@
 **Tracking Issue:** [#124](https://github.com/Shukik85/hydraulic-diagnostic-saas/issues/124)  
 **Branch:** `feature/gnn-service-production-ready`  
 **Started:** 2025-12-04  
-**Updated:** 2025-12-05 00:35 MSK
+**Updated:** 2025-12-10 19:30 MSK
 
 ---
 
@@ -11,246 +11,120 @@
 
 Сделать `UniversalTemporalGNN` **полностью универсальной**:
 - ✅ **Edge Feature Dimension** - произвольная размерность edge-фич
-- 🟡 **Node/Edge Count** - графы разного размера (N, E)
-- 🟡 **Batch Size** - произвольный батч-размер (B)
+- ✅ **Node/Edge Count** - графы разного размера (N, E)
+- ✅ **Batch Size** - произвольный батч-размер (B)
 
 ---
 
-## 🟢 Phase 1: Model Architecture ✅ COMPLETE
+## ✅ Phase 1: Model Architecture - COMPLETE
 
 **Status:** ✅ Merged  
 **Duration:** 2025-12-04 (3 hours)  
 **Commits:** 4
 
-### Changes
+### Completed
 
-#### 1. Edge Feature Projection Layer
-**File:** `src/models/universal_temporal_gnn.py`
-
-```diff
-+ edge_in_dim: int = 8  # Configurable edge feature dimension
-
-+ self.edge_projection = nn.Sequential(
-+     nn.Linear(edge_in_dim, edge_hidden_dim),
-+     nn.LayerNorm(edge_hidden_dim),
-+     nn.ReLU(),
-+     nn.Dropout(dropout),
-+ )
-
-+ if edge_attr is not None:
-+     edge_emb = self.edge_projection(edge_attr)
-+ else:
-+     edge_emb = None
-```
-
-**Benefits:**
-- ✅ Поддержка 8D, 14D, 20D edge-фич
-- ✅ Нелинейное преобразование
-- ✅ edge_attr=None support
-- ✅ Backward compatible (default=8)
-
-#### 2. Documentation
-**File:** `docs/MODEL_CONTRACT.md` (NEW)
-
-- Полная спецификация входов/выходов
-- Примеры для графов разного размера
-- PyTorch Geometric batching guide
-- Backward compatibility инструкции
-- FAQ и best practices
-
-#### 3. README Update
-**File:** `README.md`
-
-- v2.0.1 release notes
-- Universal GNN обзор
-- Примеры variable graph sizes
-- Ссылка на MODEL_CONTRACT.md
-- Roadmap update
-
-### Commits
-
-1. ✅ `27c35b3` - feat(model): make UniversalTemporalGNN edge-feature-dimension agnostic
-2. ✅ `202c11f` - docs: add MODEL_CONTRACT.md - universal GNN input/output specification
-3. ✅ `be0774a` - docs(readme): update with Universal GNN v2.0.1
-4. ✅ `bad32df` - docs: add UNIVERSAL_GNN_PROGRESS.md - tracking #124
-
-### Tests
-
-- ✅ Model loads with edge_in_dim=8 (backward compat)
-- ✅ Model loads with edge_in_dim=14 (new)
-- ✅ Forward pass with edge_attr=None
-- ✅ get_model_info() includes edge_in_dim
+- ✅ edge_projection layer в UniversalTemporalGNN
+- ✅ edge_in_dim parameter (default=8)
+- ✅ MODEL_CONTRACT.md документация
+- ✅ README.md с v2.0.1 features
+- ✅ Backward compatibility preserved
 
 ---
 
-## 🟡 Phase 2: Data Pipeline (IN PROGRESS)
+## ✅ Phase 2: Data Pipeline - COMPLETE (100%)
 
-**Status:** 🟡 20% Complete  
-**Started:** 2025-12-05  
-**Estimated Duration:** 8-12 hours
+**Status:** ✅ COMPLETE  
+**Duration:** 2025-12-05 → 2025-12-10 (6 hours)  
+**Commits:** 9
 
-### Objectives
+### Part 1: Configuration & Graph Building ✅
 
-1. **Configuration & Graph Building** ✅
-   - [x] Add edge_in_dim to FeatureConfig
-   - [x] Update GraphBuilder validation (remove hardcoded 14)
-   - [x] Support 8D (static) and 14D (static+dynamic)
-   - [x] Padding/truncation for custom dimensions
+**Completed (04.12):**
+- FeatureConfig.edge_in_dim (default=14, backward compat)
+- GraphBuilder variable edge dimension support
+- Padding/truncation for custom dimensions
+- Documentation updates
 
-2. **Dataset Integration** 🟡
-   - [ ] Update HydraulicGraphDataset for variable edge_in_dim
-   - [ ] Real graph building (replace dummy data)
-   - [ ] Cache invalidation with edge_in_dim hash
-   - [ ] Unit tests
+**Commits:**
+- `d45de33` - feat(data): add edge_in_dim to FeatureConfig
+- `16827e6` - feat(data): make GraphBuilder edge-dimension agnostic
+- `788bfe4` - docs: update UNIVERSAL_GNN_PROGRESS.md
+- `b4f438d` - feat(scripts): add inspect_dataset.py
 
-3. **DataLoader & Batching** 🔴
-   - [ ] Variable size batching validation
-   - [ ] Integration tests (different edge dimensions)
-   - [ ] LightningModule compatibility
+### Part 2: Dataset Implementation ✅
 
-### Completed Work
+**Completed (10.12):**
+- HydraulicGraphDataset with edge_in_dim support
+- TemporalGraphDataset для pre-built .pt файлов
+- Cache invalidation with edge_in_dim hash
+- get_statistics() для анализа данных
+- Module exports updated
 
-#### 1. FeatureConfig Update ✅
-**File:** `src/data/feature_config.py`
-**Commit:** `d45de33`
+**Commits:**
+- `fd5d16d` - feat(data): update HydraulicGraphDataset for edge_in_dim support
+- `3ff6655` - feat(data): add TemporalGraphDataset to module exports
 
-```python
-@dataclass(slots=True, frozen=True)
-class FeatureConfig:
-    # Edge features (Universal GNN support)
-    edge_in_dim: int = 14  # 8 static + 6 dynamic (default)
-    
-    @property
-    def static_edge_features_count(self) -> int:
-        return 8
-    
-    @property
-    def dynamic_edge_features_count(self) -> int:
-        return 6
-    
-    @property
-    def has_dynamic_edge_features(self) -> bool:
-        return self.edge_in_dim >= 14
-```
+### Part 3: Testing ✅
 
-**Features:**
-- ✅ edge_in_dim parameter (default=14)
-- ✅ Validation (__post_init__)
-- ✅ Helper properties (static/dynamic counts)
-- ✅ Warning for non-standard dimensions
+**Completed (10.12):**
+- FeatureConfig validation tests
+- GraphBuilder edge dimension tests (8D, 14D, 20D)
+- Padding/truncation logic tests
+- TemporalGraphDataset tests
+- Integration tests: Dataset → DataLoader → Model
+- Edge projection tests
+- Backward pass / training readiness tests
+- Variable graph size batching tests
 
-#### 2. GraphBuilder Update ✅
-**File:** `src/data/graph_builder.py`
-**Commit:** `16827e6`
+**Commits:**
+- `544c516` - test(data): add comprehensive tests for edge_in_dim
+- `a9a035a` - test(integration): add end-to-end pipeline tests
 
-```python
-class GraphBuilder:
-    def __init__(
-        self,
-        feature_config: FeatureConfig | None = None,
-        ...
-    ):
-        self.feature_config = feature_config or FeatureConfig()
-        
-    def build_edge_features(self, ...) -> torch.Tensor:
-        # Static (8D) + Dynamic (6D) = 14D
-        all_features = np.concatenate([static_features, dynamic_features])
-        
-        # Pad or truncate to match edge_in_dim
-        if len(all_features) < self.feature_config.edge_in_dim:
-            padding = np.zeros(
-                self.feature_config.edge_in_dim - len(all_features),
-                dtype=np.float32
-            )
-            all_features = np.concatenate([all_features, padding])
-        elif len(all_features) > self.feature_config.edge_in_dim:
-            all_features = all_features[:self.feature_config.edge_in_dim]
-            
-        return torch.from_numpy(all_features)
-```
+### Phase 2 Summary
 
-**Features:**
-- ✅ Uses feature_config.edge_in_dim
-- ✅ Padding for edge_in_dim > 14
-- ✅ Truncation for edge_in_dim < 14
-- ✅ Updated validation (checks config.edge_in_dim)
-- ✅ Variable dimension docstrings
-
-### Next Steps
-
-#### Immediate (Next 2-3 hours)
-1. Update HydraulicGraphDataset:
-   - Pass feature_config to GraphBuilder
-   - Include edge_in_dim in cache hash
-   - Replace dummy graph building
-   
-2. Add unit tests:
-   - Test 8D edge features
-   - Test 14D edge features  
-   - Test custom dimensions (e.g., 20D)
-   - Test padding/truncation
-
-#### Short-term (This Session)
-1. Integration tests:
-   - Dataset + DataLoader + Model
-   - Variable edge dimensions
-   - Batch graphs with different N, E
-
-2. Documentation:
-   - Update data pipeline docs
-   - Add examples for different edge_in_dim
-
-### Files to Create/Modify
-
-```
-src/data/
-  ├── feature_config.py         # ✅ DONE
-  ├── graph_builder.py         # ✅ DONE
-  ├── dataset.py               # 🟡 TODO: update _build_graph_for_equipment
-  └── loader.py                # ✅ Already supports variable sizes (PyG Batch)
-
-tests/unit/
-  ├── test_feature_config.py   # 🔴 TODO: new tests
-  ├── test_graph_builder.py    # 🔴 TODO: edge_in_dim tests
-  └── test_dataset.py          # 🔴 TODO: variable edge tests
-
-tests/integration/
-  └── test_universal_dataloader.py  # 🔴 TODO: new integration test
-```
+| Component | Status | Lines | Tests |
+|-----------|--------|-------|-------|
+| HydraulicGraphDataset | ✅ Updated | +50 | 2 |
+| TemporalGraphDataset | ✅ New | +200 | 5 |
+| Unit Tests | ✅ Complete | +350 | 15 |
+| Integration Tests | ✅ Complete | +400 | 6 |
+| Documentation | ✅ Updated | - | - |
+| **Total** | **✅ 100%** | **~1000** | **28** |
 
 ---
 
-## 🔴 Phase 3: Inference Integration (TODO)
+## 🟡 Phase 3: Inference Integration - PLANNED
 
-**Status:** 🔴 Planned  
+**Status:** 🟡 Planned  
 **Estimated Duration:** 6-9 hours  
 **Dependencies:** Phase 2 ✅
 
 ### Objectives
 
-1. **TimescaleDB → Graph Builder**
-   - [ ] Чтение произвольного числа сенсоров
-   - [ ] Построение Data/Batch без N/E assumptions
+1. **Dynamic Graph Builder** (3-4h)
+   - [ ] Чтение произвольного числа сенсоров из TimescaleDB
+   - [ ] Построение Data/Batch без hardcoded N/E
 
-2. **InferenceEngine Update**
+2. **InferenceEngine Update** (2-3h)
    - [ ] Поддержка разных топологий
    - [ ] Batch inference optimization
 
-3. **FastAPI Endpoints**
-   - [ ] Validation: shape checks
+3. **FastAPI Validation** (1-2h)
+   - [ ] Shape checks
    - [ ] Error handling
 
 ### Files to Modify
 
 ```
 src/inference/
-  └── inference_engine.py     # MODIFY: Variable graph support
+  └── inference_engine.py      # MODIFY: Variable graph support
 
 src/data/
-  └── graph_builder.py         # MODIFY: TimescaleDB integration
+  └── graph_builder.py        # MODIFY: TimescaleDB integration
 
 api/
-  └── routes.py                # MODIFY: Validation
+  └── routes.py               # MODIFY: Validation
 
 tests/integration/
   └── test_inference_pipeline.py
@@ -258,62 +132,61 @@ tests/integration/
 
 ---
 
-## 📊 Success Metrics
+## 📊 Overall Progress
 
-### Phase 1 ✅
-- [x] edge_in_dim parameter added
-- [x] edge_projection layer implemented
-- [x] forward() updated (edge_attr | None)
-- [x] Docstrings updated
-- [x] MODEL_CONTRACT.md created
-- [x] Backward compatibility preserved
-- [x] README updated
-
-### Phase 2 (Current - 20% Complete)
-- [x] edge_in_dim in FeatureConfig
-- [x] GraphBuilder uses config.edge_in_dim
-- [x] Padding/truncation implemented
-- [ ] Dataset supports variable edge_in_dim
-- [ ] DataLoader batches correctly
-- [ ] Tests: 90%+ coverage
-- [ ] No hardcoded dimensions
-
-### Phase 3 (Target)
-- [ ] InferenceEngine: universal graph builder
-- [ ] FastAPI: validation & error handling
-- [ ] TimescaleDB integration tested
-- [ ] End-to-end: different system sizes
+| Phase | Objective | Progress | Time | Status |
+|-------|-----------|----------|------|--------|
+| **1** | Model Architecture | 100% | 3h | ✅ |
+| **2** | Data Pipeline | **100%** | 6h | **✅** |
+| **3** | Inference Integration | 0% | 6-9h | 🟡 |
+| **Total** | Universal GNN | **60%** | 15-18h | 🞯 |
 
 ---
 
-## 🔗 Documentation
+## 🔗 Documentation Links
 
-- [MODEL_CONTRACT.md](docs/MODEL_CONTRACT.md) - Полная спецификация
-- [README.md](README.md) - Общий обзор + v2.0.1 features
-- [STRUCTURE.md](STRUCTURE.md) - Архитектура сервиса
-- [CHANGELOG.md](CHANGELOG.md) - История изменений
-
----
-
-## 📝 Next Steps
-
-### Immediate (This Session)
-1. Обновить HydraulicGraphDataset
-2. Добавить unit tests для edge_in_dim
-3. Integration test: variable edge dimensions
-
-### Short-term (Next Session)
-1. Завершить Phase 2
-2. Начать Phase 3: InferenceEngine update
-3. End-to-end integration test
-
-### Medium-term (Next Week)
-1. Production deployment v2.0.1
-2. Model retraining with new edge_projection
-3. Performance benchmarking
+- [MODEL_CONTRACT.md](docs/MODEL_CONTRACT.md) - Model I/O specification
+- [README.md](README.md) - GNN Service overview
+- [STRUCTURE.md](STRUCTURE.md) - Project architecture
+- [CHANGELOG.md](CHANGELOG.md) - Version history
 
 ---
 
-**Last Updated:** 2025-12-05 00:35 MSK  
-**Progress:** Phase 1 ✅ | Phase 2 🟡 (20%) | Phase 3 🔴  
-**Overall:** 40% Complete
+## 📝 Latest Commits (Phase 2)
+
+1. `fd5d16d` - feat(data): HydraulicGraphDataset + TemporalGraphDataset
+2. `3ff6655` - feat(data): module exports
+3. `544c516` - test(data): edge_in_dim unit tests
+4. `a9a035a` - test(integration): DataLoader + Model tests
+
+---
+
+## 🌟 Key Achievements Phase 2
+
+✅ **Data Pipeline Production Ready:**
+- ✅ Pre-built dataset support (.pt graphs)
+- ✅ Variable edge feature dimensions (8D, 14D, custom)
+- ✅ Efficient caching with edge_in_dim invalidation
+- ✅ Comprehensive testing (28 tests)
+- ✅ Full backward compatibility
+
+✅ **Integration Tested:**
+- ✅ Dataset → DataLoader → Model pipeline
+- ✅ Edge projection with variable dimensions
+- ✅ Mixed graph size batching
+- ✅ Training readiness (backward pass)
+
+---
+
+## 🔜 Ready for Phase 3
+
+✅ All Phase 2 objectives complete  
+✅ Data pipeline production-ready  
+✅ Tests passing  
+✅ Next: Inference Engine integration
+
+---
+
+**Last Updated:** 2025-12-10 19:30 MSK  
+**Status:** Phase 1 ✅ | Phase 2 ✅ | Phase 3 🟡  
+**Overall Progress:** **60% Complete**
