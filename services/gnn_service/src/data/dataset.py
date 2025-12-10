@@ -1,11 +1,12 @@
 """Hydraulic Graph Dataset для PyTorch.
 
 PyTorch Dataset interface:
-- Lazy loading (fetch from TimescaleDB on-demand)
+- Lazy loading (fetch from TimescaleDB on-demand or load from .pt)
 - Intelligent caching (disk-based, persistent)
 - Optional preloading
 - Transform support
 - Multi-worker safe
+- Edge feature dimension flexibility (8D, 14D, custom)
 
 Python 3.14 Features:
     - Deferred annotations
@@ -19,8 +20,9 @@ import json
 import logging
 import pickle
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
+import numpy as np
 import torch
 from torch.utils.data import Dataset
 from torch_geometric.data import Data
@@ -28,6 +30,7 @@ from torch_geometric.data import Data
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from src.data.feature_config import FeatureConfig
     from src.data.feature_engineer import FeatureEngineer
     from src.data.graph_builder import GraphBuilder
     from src.data.timescale_connector import TimescaleConnector
@@ -40,37 +43,44 @@ class HydraulicGraphDataset(Dataset):
     """PyTorch Dataset для hydraulic graphs.
 
     Features:
-    - Lazy loading: graphs built on-demand
-    - Caching: disk-based with invalidation
+    - Lazy loading: graphs built on-demand from TimescaleDB
+    - Caching: disk-based with invalidation (includes edge_in_dim)
     - Preloading: optional for faster training
     - Transforms: data augmentation support
     - Multi-worker safe: file locking
+    - Edge feature flexibility: supports 8D, 14D, custom dimensions
 
     Args:
         data_path: Path to equipment list JSON file
         timescale_connector: TimescaleConnector instance
         feature_engineer: FeatureEngineer instance
         graph_builder: GraphBuilder instance
+        feature_config: FeatureConfig with edge_in_dim setting
         sequence_length: Number of time steps per graph
         transform: Optional transform function
         cache_dir: Directory для caching (None = no caching)
         preload: Preload all data to RAM
 
     Examples:
-        >>> connector = TimescaleConnector(db_url=DB_URL)
-        >>> await connector.connect()
+        >>> from src.data.feature_config import FeatureConfig
+        >>>
+        >>> # 14D edge features (static + dynamic)
+        >>> config = FeatureConfig(edge_in_dim=14)
         >>>
         >>> dataset = HydraulicGraphDataset(
         ...     data_path="data/equipment_list.json",
         ...     timescale_connector=connector,
         ...     feature_engineer=FeatureEngineer(),
-        ...     graph_builder=GraphBuilder(),
+        ...     graph_builder=GraphBuilder(feature_config=config),
+        ...     feature_config=config,
         ...     sequence_length=10,
-        ...     cache_dir="data/cache"
+        ...     cache_dir="data/cache",
+        ...     preload=False
         ... )
         >>>
         >>> len(dataset)  # Number of equipment
         >>> graph = dataset[0]  # Load first graph
+        >>> graph.edge_attr.shape  # [E, 14]
     """
 
     def __init__(
@@ -79,6 +89,7 @@ class HydraulicGraphDataset(Dataset):
         timescale_connector: TimescaleConnector,
         feature_engineer: FeatureEngineer,
         graph_builder: GraphBuilder,
+        feature_config: FeatureConfig,
         sequence_length: int = 10,
         transform: Callable[[Data], Data] | None = None,
         cache_dir: Path | str | None = None,
@@ -88,6 +99,7 @@ class HydraulicGraphDataset(Dataset):
         self.connector = timescale_connector
         self.feature_engineer = feature_engineer
         self.graph_builder = graph_builder
+        self.feature_config = feature_config
         self.sequence_length = sequence_length
         self.transform = transform
         self.cache_dir = Path(cache_dir) if cache_dir else None
@@ -107,6 +119,7 @@ class HydraulicGraphDataset(Dataset):
 
         logger.info(
             f"HydraulicGraphDataset initialized: {len(self)} equipment, "
+            f"edge_in_dim={self.feature_config.edge_in_dim}, "
             f"cache={'enabled' if self.cache_dir else 'disabled'}, "
             f"preload={self.preload}"
         )
@@ -131,7 +144,7 @@ class HydraulicGraphDataset(Dataset):
         return equipment_list
 
     def _get_cache_path(self, equipment_id: str, topology_hash: str) -> Path:
-        """Получить cache file path.
+        """Получить cache file path с учётом edge_in_dim.
 
         Args:
             equipment_id: Equipment identifier
@@ -144,8 +157,8 @@ class HydraulicGraphDataset(Dataset):
             msg = "Cache directory not configured"
             raise RuntimeError(msg)
 
-        # Include topology hash для cache invalidation
-        cache_filename = f"{equipment_id}_{topology_hash[:8]}.pkl"
+        # Include edge_in_dim в cache filename для invalidation
+        cache_filename = f"{equipment_id}_{topology_hash[:8]}_e{self.feature_config.edge_in_dim}.pkl"
         return self.cache_dir / cache_filename
 
     def _compute_topology_hash(self, topology: GraphTopology) -> str:
@@ -201,7 +214,7 @@ class HydraulicGraphDataset(Dataset):
             logger.warning(f"Failed to save cache {cache_path}: {e}")
 
     def _build_graph_for_equipment(self, equipment_item: dict[str, Any]) -> Data:
-        """Построить graph для equipment.
+        """Построить graph для equipment из TimescaleDB.
 
         Args:
             equipment_item: Equipment metadata dict
@@ -211,14 +224,18 @@ class HydraulicGraphDataset(Dataset):
         """
         equipment_id = equipment_item["equipment_id"]
 
-        # TODO: Parse real schemas when ready
-        # For now, create dummy graph
-        logger.warning(f"Building dummy graph for {equipment_id} (schema integration pending)")
+        # TODO: Implement real schema parsing when ready
+        logger.warning(
+            f"Building graph for {equipment_id}: real schema integration pending. "
+            f"Use TemporalGraphDataset for prepared .pt graphs."
+        )
 
-        # Dummy graph: 5 nodes, 6 edges
-        x = torch.randn(5, self.feature_engineer.config.total_features_per_sensor)
-        edge_index = torch.tensor([[0, 1, 1, 2, 2, 3], [1, 0, 2, 1, 3, 2]], dtype=torch.long)
-        edge_attr = torch.randn(6, 8)
+        # Fallback: create minimal graph
+        x = torch.randn(5, self.feature_config.total_features_per_sensor)
+        edge_index = torch.tensor(
+            [[0, 1, 1, 2, 2, 3], [1, 0, 2, 1, 3, 2]], dtype=torch.long
+        )
+        edge_attr = torch.randn(6, self.feature_config.edge_in_dim)
 
         return Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
 
@@ -250,11 +267,12 @@ class HydraulicGraphDataset(Dataset):
             idx: Index в equipment list
 
         Returns:
-            graph: PyG Data object
+            graph: PyG Data object with edge_attr of shape [E, edge_in_dim]
 
         Examples:
             >>> graph = dataset[0]
-            >>> graph.x.shape  # [N, F]
+            >>> graph.x.shape  # [N, node_features]
+            >>> graph.edge_attr.shape  # [E, edge_in_dim]
         """
         equipment_item = self.equipment_list[idx]
         equipment_id = equipment_item["equipment_id"]
@@ -266,8 +284,7 @@ class HydraulicGraphDataset(Dataset):
             # 2. Try cache
             graph = None
             if self.cache_dir:
-                # TODO: Compute topology hash when schema ready
-                topology_hash = "dummy_hash"
+                topology_hash = "default_hash"  # TODO: compute when schema ready
                 cache_path = self._get_cache_path(equipment_id, topology_hash)
                 graph = self._load_from_cache(cache_path)
 
@@ -280,7 +297,15 @@ class HydraulicGraphDataset(Dataset):
                     cache_path = self._get_cache_path(equipment_id, topology_hash)
                     self._save_to_cache(cache_path, graph)
 
-        # 4. Apply transform
+        # 4. Validate edge_in_dim
+        if graph.edge_attr is not None and graph.edge_attr.shape[1] != self.feature_config.edge_in_dim:
+            logger.warning(
+                f"Edge feature mismatch for {equipment_id}: "
+                f"loaded {graph.edge_attr.shape[1]}D, expected {self.feature_config.edge_in_dim}D. "
+                f"edge_projection will handle conversion."
+            )
+
+        # 5. Apply transform
         if self.transform is not None:
             graph = self.transform(graph)
 
@@ -307,21 +332,185 @@ class HydraulicGraphDataset(Dataset):
         Examples:
             >>> stats = dataset.get_statistics()
             >>> print(f"Average nodes: {stats['avg_num_nodes']}")
-            >>> print(f"Average edges: {stats['avg_num_edges']}")
+            >>> print(f"Edge feature dimension: {stats['edge_in_dim']}")
         """
         # Sample a few graphs
         sample_size = min(10, len(self))
         graphs = [self[i] for i in range(sample_size)]
+
+        edge_features = []
+        for g in graphs:
+            if g.edge_attr is not None:
+                edge_features.append(g.edge_attr.shape[1])
 
         return {
             "dataset_size": len(self),
             "sample_size": sample_size,
             "avg_num_nodes": np.mean([g.num_nodes for g in graphs]),
             "avg_num_edges": np.mean([g.num_edges for g in graphs]),
-            "avg_node_features": graphs[0].x.shape[1] if graphs else 0,
-            "avg_edge_features": graphs[0].edge_attr.shape[1]
-            if graphs and graphs[0].edge_attr is not None
-            else 0,
+            "node_features": graphs[0].x.shape[1] if graphs else 0,
+            "edge_features_actual": edge_features[0] if edge_features else 0,
+            "edge_in_dim_configured": self.feature_config.edge_in_dim,
             "cache_enabled": self.cache_dir is not None,
             "preloaded": self.preload,
+        }
+
+
+class TemporalGraphDataset(Dataset):
+    """Dataset для загрузки готовых PyG графов из .pt файлов.
+
+    Используется для работы с pre-built датасетами вроде gnn_graphs_multilabel.pt.
+    Поддерживает variable edge_in_dim и трансформации.
+
+    Args:
+        data_path: Path to .pt file containing graphs
+        feature_config: FeatureConfig with edge_in_dim
+        transform: Optional transform function
+        split: Dataset split (train/val/test) - not enforced, just for logging
+        weights_only: Use weights_only=False for PyG compatibility (PyTorch 2.6+)
+
+    Examples:
+        >>> from src.data.feature_config import FeatureConfig
+        >>>
+        >>> config = FeatureConfig(edge_in_dim=14)  # Model expects 14D
+        >>>
+        >>> # Load pre-built graphs (they may have 8D edge_attr)
+        >>> dataset = TemporalGraphDataset(
+        ...     data_path="data/gnn_graphs_multilabel.pt",
+        ...     feature_config=config,
+        ...     split="train"
+        ... )
+        >>>
+        >>> len(dataset)  # Number of graphs
+        >>> graph = dataset[0]  # Load first graph
+        >>> graph.edge_attr.shape  # [E, 8] - will be projected to 14D by model
+    """
+
+    def __init__(
+        self,
+        data_path: str | Path,
+        feature_config: FeatureConfig,
+        transform: Callable[[Data], Data] | None = None,
+        split: Literal["train", "val", "test"] = "train",
+        weights_only: bool = False,
+    ):
+        self.data_path = Path(data_path)
+        self.feature_config = feature_config
+        self.transform = transform
+        self.split = split
+        self.weights_only = weights_only
+
+        # Load graphs from .pt file
+        self.graphs = self._load_graphs()
+
+        logger.info(
+            f"TemporalGraphDataset initialized: {len(self)} graphs, "
+            f"split={self.split}, edge_in_dim={self.feature_config.edge_in_dim}"
+        )
+
+    def _load_graphs(self) -> list[Data]:
+        """Загрузить графы из .pt файла.
+
+        Returns:
+            graphs: List of PyG Data objects
+
+        Raises:
+            FileNotFoundError: Если файл не существует
+        """
+        if not self.data_path.exists():
+            msg = f"Dataset not found: {self.data_path}"
+            raise FileNotFoundError(msg)
+
+        logger.info(f"Loading dataset from {self.data_path}...")
+
+        try:
+            # PyTorch 2.6+ требует weights_only=False для PyG Data objects
+            data = torch.load(self.data_path, weights_only=self.weights_only)
+        except Exception as e:
+            logger.error(f"Failed to load dataset: {e}")
+            raise
+
+        # Extract graphs depending on structure
+        if isinstance(data, dict):
+            # Structure: {"graphs": [...], "metadata": {...}}
+            if "graphs" in data:
+                graphs = data["graphs"]
+            else:
+                msg = f"Unknown dict structure: keys={list(data.keys())}"
+                raise ValueError(msg)
+        elif isinstance(data, list):
+            graphs = data
+        else:
+            msg = f"Unknown data structure: {type(data)}"
+            raise ValueError(msg)
+
+        logger.info(f"Loaded {len(graphs)} graphs from {self.data_path.name}")
+
+        return graphs
+
+    def __len__(self) -> int:
+        """Dataset size.
+
+        Returns:
+            size: Number of graphs
+        """
+        return len(self.graphs)
+
+    def __getitem__(self, idx: int) -> Data:
+        """Get graph by index.
+
+        Args:
+            idx: Index in graphs list
+
+        Returns:
+            graph: PyG Data object
+
+        Examples:
+            >>> graph = dataset[0]
+            >>> graph.x.shape  # [N, node_features]
+            >>> graph.edge_attr.shape  # [E, actual_edge_dim]
+        """
+        graph = self.graphs[idx]
+
+        # Apply transform if provided
+        if self.transform is not None:
+            graph = self.transform(graph)
+
+        return graph
+
+    def get_statistics(self) -> dict[str, Any]:
+        """Получить dataset statistics.
+
+        Returns:
+            stats: Dictionary с статистикой
+
+        Examples:
+            >>> stats = dataset.get_statistics()
+            >>> print(f"Total graphs: {stats['dataset_size']}")
+            >>> print(f"Edge dimensions: {stats['edge_feature_dims']}")
+        """
+        sample_size = min(10, len(self))
+        sample_graphs = self.graphs[:sample_size]
+
+        edge_dims = set()
+        for g in sample_graphs:
+            if hasattr(g, "edge_attr") and g.edge_attr is not None:
+                edge_dims.add(g.edge_attr.shape[1])
+
+        num_nodes = [g.num_nodes for g in sample_graphs]
+        num_edges = [g.num_edges for g in sample_graphs]
+
+        return {
+            "dataset_size": len(self),
+            "split": self.split,
+            "sample_size": sample_size,
+            "avg_num_nodes": np.mean(num_nodes) if num_nodes else 0,
+            "min_num_nodes": min(num_nodes) if num_nodes else 0,
+            "max_num_nodes": max(num_nodes) if num_nodes else 0,
+            "avg_num_edges": np.mean(num_edges) if num_edges else 0,
+            "min_num_edges": min(num_edges) if num_edges else 0,
+            "max_num_edges": max(num_edges) if num_edges else 0,
+            "node_features": sample_graphs[0].x.shape[1] if sample_graphs else 0,
+            "edge_feature_dims": sorted(list(edge_dims)),
+            "edge_in_dim_configured": self.feature_config.edge_in_dim,
         }
