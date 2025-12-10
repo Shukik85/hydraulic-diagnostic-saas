@@ -455,6 +455,9 @@ TOPOLOGY_TEMPLATES: dict[str, TopologyTemplate] = {
     ),
 }
 
+# Alias for backward compatibility
+BUILTIN_TEMPLATES = TOPOLOGY_TEMPLATES
+
 
 def get_template(template_id: str) -> TopologyTemplate:
     """Get built-in topology template.
@@ -477,6 +480,30 @@ def get_template(template_id: str) -> TopologyTemplate:
         msg = f"Template '{template_id}' not found. Available templates: {available}"
         raise KeyError(msg)
     return TOPOLOGY_TEMPLATES[template_id]
+
+
+def get_builtin_template(template_id: str) -> TopologyTemplate:
+    """Get built-in topology template.
+
+    Alias for get_template() for backward compatibility.
+
+    Args:
+        template_id: Template identifier
+
+    Returns:
+        Topology template
+
+    Raises:
+        ValueError: If template not found
+
+    Example:
+        >>> template = get_builtin_template("standard_pump_system")
+        >>> config = TopologyConfig.from_template(template, "my_system_01")
+    """
+    try:
+        return get_template(template_id)
+    except KeyError as e:
+        raise ValueError(str(e)) from e
 
 
 def list_templates(category: str | None = None) -> list[TopologyTemplate]:
