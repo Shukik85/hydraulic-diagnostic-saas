@@ -30,8 +30,11 @@ from .requests import (
 
 # Responses
 from .responses import (
+    AnomalyPrediction,
     ComponentPrediction,
+    DegradationPrediction,
     GraphPrediction,
+    HealthPrediction,
     HealthResponse,
     ModelInfo,
     PredictionResponse,
@@ -43,28 +46,31 @@ from .topology import (
 )
 
 __all__ = [
+    # Responses (NEW: prediction schemas)
+    "AnomalyPrediction",
     "ComponentPrediction",
-    "ComponentSensorReading",
+    "DegradationPrediction",
+    "GraphPrediction",
+    "HealthPrediction",
+    "HealthResponse",
+    "ModelInfo",
+    "PredictionResponse",
+    # Graph
     "ComponentSpec",
     "ComponentType",
     "EdgeMaterial",
     "EdgeSpec",
     "EdgeType",
-    "EquipmentMetadata",
-    "GraphPrediction",
-    # Graph (no ComponentRole)
     "GraphTopology",
-    "HealthResponse",
     # Requests
+    "ComponentSensorReading",
     "InferenceRequest",
     "MinimalInferenceRequest",
-    "ModelInfo",
-    # Responses
-    "PredictionResponse",
+    # Metadata
+    "EquipmentMetadata",
     "SensorConfig",
     "SensorType",
     "SystemConfig",
-    # Metadata
     "TimeWindow",
     # Topology
     "TopologyTemplate",
