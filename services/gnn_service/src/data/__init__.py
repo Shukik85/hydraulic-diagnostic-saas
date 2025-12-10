@@ -4,7 +4,8 @@ Components:
 - TimescaleConnector - async database access
 - FeatureEngineer - feature extraction pipeline
 - GraphBuilder - sensor data → PyG graphs
-- HydraulicGraphDataset - PyTorch Dataset
+- HydraulicGraphDataset - PyTorch Dataset (dynamic building)
+- TemporalGraphDataset - PyTorch Dataset (pre-built .pt graphs)
 - DataLoader factory - efficient batching
 
 Python 3.14 Features:
@@ -14,7 +15,7 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from src.data.dataset import HydraulicGraphDataset
+from src.data.dataset import HydraulicGraphDataset, TemporalGraphDataset
 
 # Configuration
 from src.data.feature_config import DataLoaderConfig, FeatureConfig
@@ -37,7 +38,8 @@ __all__ = [
     "FeatureEngineer",
     "GraphBuilder",
     "HydraulicGraphDataset",
-    # Components
+    "TemporalGraphDataset",
+    # Components & Datasets
     "TimescaleConnector",
     "create_dataloader",
     "create_train_val_loaders",
