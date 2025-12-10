@@ -6,7 +6,8 @@ Features:
 - Dynamic batching
 - Request queueing
 - Preprocessing/postprocessing
-- Phase 3.1: Dynamic edge features + normalization
+- Phase 3: Dynamic graph builder + variable topologies
+- Phase 3: Support arbitrary sensor counts
 
 Python 3.14 Features:
     - Deferred annotations
@@ -28,6 +29,7 @@ from torch_geometric.data import Batch, Data
 from src.data import FeatureConfig, FeatureEngineer, GraphBuilder
 from src.data.edge_features import create_edge_feature_computer
 from src.data.normalization import EdgeFeatureNormalizer, create_edge_feature_normalizer
+from src.inference.dynamic_graph_builder import DynamicGraphBuilder
 from src.inference.model_manager import ModelManager
 from src.schemas import (
     AnomalyPrediction,
@@ -42,6 +44,8 @@ from src.services.topology_service import get_topology_service
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from src.data.timescale_connector import TimescaleConnector
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,7 @@ class InferenceConfig:
     use_dynamic_batching: bool = True
     pin_memory: bool = True
     use_dynamic_features: bool = True  # Phase 3.1
+    use_dynamic_builder: bool = True  # Phase 3: Use DynamicGraphBuilder
     topology_templates_path: Path | None = None  # Optional custom templates
 
 
@@ -69,7 +74,9 @@ class InferenceEngine:
     - GPU optimization
     - Dynamic batching
     - Request queueing
-    - Phase 3.1: Dynamic edge features + normalization
+    - Phase 3: Dynamic graph builder (variable topologies)
+    - Phase 3: Arbitrary sensor counts
+    - Phase 3: Graceful missing sensor handling
 
     Examples:
         >>> engine = InferenceEngine(
@@ -77,11 +84,12 @@ class InferenceEngine:
         ...         model_path="models/v2.0.0.ckpt",
         ...         device="cuda",
         ...         batch_size=32,
-        ...         use_dynamic_features=True
-        ...     )
+        ...         use_dynamic_builder=True
+        ...     ),
+        ...     timescale_connector=connector
         ... )
         >>>
-        >>> # Single prediction (new API)
+        >>> # Single prediction from TimescaleDB
         >>> response = await engine.predict_minimal(
         ...     request=MinimalInferenceRequest(...)
         ... )
@@ -90,19 +98,36 @@ class InferenceEngine:
         >>> responses = await engine.predict_batch(...)
     """
 
-    def __init__(self, config: InferenceConfig, feature_config: FeatureConfig | None = None):
+    def __init__(
+        self,
+        config: InferenceConfig,
+        timescale_connector: TimescaleConnector | None = None,
+        feature_config: FeatureConfig | None = None,
+    ):
         """Initialize engine.
 
         Args:
             config: Inference configuration
+            timescale_connector: Database connector (for DynamicGraphBuilder)
             feature_config: Feature engineering config
         """
         self.config = config
         self.feature_config = feature_config or FeatureConfig()
+        self.timescale_connector = timescale_connector
 
         # Initialize components
         self.model_manager = ModelManager()
         self.feature_engineer = FeatureEngineer(self.feature_config)
+
+        # Phase 3: Dynamic graph builder (if connector provided)
+        self.dynamic_builder = None
+        if config.use_dynamic_builder and timescale_connector:
+            self.dynamic_builder = DynamicGraphBuilder(
+                timescale_connector=timescale_connector,
+                feature_engineer=self.feature_engineer,
+                feature_config=self.feature_config,
+            )
+            logger.info("DynamicGraphBuilder enabled for variable topologies")
 
         # Phase 3.1: Edge feature components
         self.edge_feature_computer = create_edge_feature_computer()
@@ -110,7 +135,7 @@ class InferenceEngine:
         # Load normalizer from checkpoint (if available)
         self.edge_normalizer = self._load_normalizer_from_checkpoint(config.model_path)
 
-        # Initialize graph builder with Phase 3.1 components
+        # Initialize legacy graph builder (backward compatibility)
         self.graph_builder = GraphBuilder(
             feature_engineer=self.feature_engineer,
             feature_config=self.feature_config,
@@ -137,6 +162,7 @@ class InferenceEngine:
         logger.info(
             f"InferenceEngine initialized "
             f"(device={config.device}, batch_size={config.batch_size}, "
+            f"dynamic_builder={config.use_dynamic_builder}, "
             f"dynamic_features={config.use_dynamic_features})"
         )
 
@@ -166,7 +192,9 @@ class InferenceEngine:
             return create_edge_feature_normalizer()
 
     async def predict_minimal(self, request: MinimalInferenceRequest) -> PredictionResponse:
-        """Single prediction with minimal request (Phase 3.1 API).
+        """Single prediction with minimal request (Phase 3 API).
+
+        Uses DynamicGraphBuilder to read arbitrary sensors from TimescaleDB.
 
         Args:
             request: MinimalInferenceRequest
@@ -179,10 +207,6 @@ class InferenceEngine:
             ...     MinimalInferenceRequest(
             ...         equipment_id="pump_001",
             ...         timestamp=datetime.now(),
-            ...         sensor_readings={
-            ...             "pump_1": ComponentSensorReading(...),
-            ...             "valve_1": ComponentSensorReading(...)
-            ...         },
             ...         topology_id="standard_pump_system"
             ...     )
             ... )
@@ -198,8 +222,21 @@ class InferenceEngine:
 
             topology = template.to_graph_topology(request.equipment_id)
 
-            # Preprocess with dynamic features
-            graph = self._preprocess_minimal(request=request, topology=topology)
+            # Phase 3: Use DynamicGraphBuilder if available
+            if self.config.use_dynamic_builder and self.dynamic_builder:
+                graph = await self.dynamic_builder.build_from_timescale(
+                    equipment_id=request.equipment_id,
+                    topology=topology,
+                    lookback_minutes=10,  # TODO: Make configurable
+                )
+                logger.debug(
+                    f"Built dynamic graph: {graph.x.shape[0]} nodes, "
+                    f"{graph.edge_attr.shape[0]} edges"
+                )
+            else:
+                # Fallback: legacy path (sensor_readings provided in request)
+                graph = self._preprocess_minimal(request=request, topology=topology)
+                logger.debug("Built legacy graph from request")
 
             # Inference
             health, degradation, anomaly = self._inference_single(graph)
@@ -215,7 +252,8 @@ class InferenceEngine:
 
             logger.info(
                 f"Prediction complete: {request.equipment_id} "
-                f"(time={response.inference_time_ms:.1f}ms)"
+                f"({graph.x.shape[0]} nodes, "
+                f"time={response.inference_time_ms:.1f}ms)"
             )
 
             return response
@@ -238,10 +276,7 @@ class InferenceEngine:
 
         Examples:
             >>> response = await engine.predict(
-            ...     request=PredictionRequest(
-            ...         equipment_id="exc_001",
-            ...         sensor_data={...}
-            ...     ),
+            ...     request=PredictionRequest(...),
             ...     topology=topology
             ... )
         """
@@ -306,7 +341,16 @@ class InferenceEngine:
                         msg = f"Topology not found: {req.topology_id}"
                         raise ValueError(msg)
                     req_topology = template.to_graph_topology(req.equipment_id)
-                    graph = self._preprocess_minimal(req, req_topology)
+
+                    # Use DynamicGraphBuilder if available
+                    if self.config.use_dynamic_builder and self.dynamic_builder:
+                        graph = await self.dynamic_builder.build_from_timescale(
+                            equipment_id=req.equipment_id,
+                            topology=req_topology,
+                            lookback_minutes=10,
+                        )
+                    else:
+                        graph = self._preprocess_minimal(req, req_topology)
                 else:
                     # Legacy request
                     if not topology:
@@ -345,7 +389,7 @@ class InferenceEngine:
     def _preprocess_minimal(
         self, request: MinimalInferenceRequest, topology: GraphTopology
     ) -> Data:
-        """Preprocess minimal request → graph (with dynamic features).
+        """Preprocess minimal request → graph (legacy path, no dynamic builder).
 
         Args:
             request: MinimalInferenceRequest
@@ -388,7 +432,7 @@ class InferenceEngine:
         """Single graph inference.
 
         Args:
-            graph: PyG Data object
+            graph: PyG Data object (variable N/E)
 
         Returns:
             outputs: (health, degradation, anomaly) tensors
@@ -398,15 +442,16 @@ class InferenceEngine:
         # Move to device
         graph = graph.to(device)
 
+        # Create batch tensor for single graph
+        batch = torch.zeros(graph.x.shape[0], dtype=torch.long, device=device)
+
         # Inference
         with torch.inference_mode():
             health, degradation, anomaly = self.model(
                 x=graph.x,
                 edge_index=graph.edge_index,
                 edge_attr=graph.edge_attr,
-                batch=torch.zeros(
-                    graph.x.shape[0], dtype=torch.long, device=device
-                ),  # Single graph
+                batch=batch,
             )
 
         return health, degradation, anomaly
@@ -414,17 +459,17 @@ class InferenceEngine:
     def _inference_batch(
         self, graphs: list[Data]
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Batch inference.
+        """Batch inference with variable-sized graphs.
 
         Args:
-            graphs: List of PyG Data objects
+            graphs: List of PyG Data objects (variable N/E each)
 
         Returns:
             outputs: (health_batch, degradation_batch, anomaly_batch)
         """
         device = next(self.model.parameters()).device
 
-        # Create PyG Batch
+        # Create PyG Batch (handles variable-sized graphs)
         batch = Batch.from_data_list(graphs)
 
         # Move to device
@@ -435,7 +480,10 @@ class InferenceEngine:
         # Inference
         with torch.inference_mode():
             health, degradation, anomaly = self.model(
-                x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
+                x=batch.x,
+                edge_index=batch.edge_index,
+                edge_attr=batch.edge_attr,
+                batch=batch.batch,
             )
 
         return health, degradation, anomaly
@@ -517,6 +565,8 @@ class InferenceEngine:
             "model_parameters": model_info["num_parameters"] if model_info else None,
             "queue_size": self._request_queue.qsize(),
             "processing": self._processing,
+            "use_dynamic_builder": self.config.use_dynamic_builder,
+            "dynamic_builder_available": self.dynamic_builder is not None,
             "use_dynamic_features": self.config.use_dynamic_features,
             "topology_templates": topology_stats["cached_templates"],
             "custom_topologies": topology_stats["custom_topologies"],
