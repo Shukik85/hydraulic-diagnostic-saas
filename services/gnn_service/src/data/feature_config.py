@@ -39,21 +39,24 @@ class FeatureConfig:
         - 14D: Static (8) + Dynamic (6) [flow, pressure_drop, temp_delta, vibration, age, maintenance]
         - Custom: Any dimension supported by model's edge_projection layer
 
+    Node Features (total_features_per_sensor):
+        - Statistical: 11 (mean, std, min, max, percentiles[5], skew, kurtosis)
+        - Frequency: 12 (FFT[10], dominant_freq, spectral_entropy)
+        - Temporal: 11 (rolling_mean/std[6], EMA, autocorr[3], trend)
+        - Hydraulic: 4 (pressure_ratio, temp_delta, flow_efficiency, cavitation_index)
+        - Total: 39
+
     Examples:
+        >>> # Full configuration - default
+        >>> config = FeatureConfig()
+        >>> config.total_features_per_sensor  # 39 node features per sensor
+        39
+        >>>
         >>> # Static edge features only (8D)
         >>> config = FeatureConfig(edge_in_dim=8)
         >>>
-        >>> # Full edge features (14D) - default
+        >>> # Full edge features (14D)
         >>> config = FeatureConfig(edge_in_dim=14)
-        >>>
-        >>> # Node features
-        >>> config = FeatureConfig(
-        ...     use_statistical=True,
-        ...     percentiles=[5, 25, 50, 75, 95],
-        ...     num_frequencies=10
-        ... )
-        >>> config.total_features_per_sensor  # Node feature dimension
-        42  # Statistical(8) + Frequency(10) + Temporal(20) + Hydraulic(4)
     """
 
     # Statistical features
@@ -143,7 +146,7 @@ class FeatureConfig:
         """Количество frequency features.
 
         Returns:
-            count: FFT magnitudes + dominant freq + spectral entropy = num_frequencies + 2
+            count: FFT magnitudes(10) + dominant_freq(1) + spectral_entropy(1) = 12
         """
         if not self.use_frequency:
             return 0
@@ -154,7 +157,7 @@ class FeatureConfig:
         """Количество temporal features.
 
         Returns:
-            count: (rolling_mean + rolling_std) * windows + EMA + autocorr(3) + trend = 2*3 + 5
+            count: (rolling_mean + rolling_std) * windows(3) + EMA(1) + autocorr(3) + trend(1) = 11
         """
         if not self.use_temporal:
             return 0
@@ -165,7 +168,7 @@ class FeatureConfig:
         """Количество hydraulic-specific features.
 
         Returns:
-            count: pressure_ratio + temp_delta + flow_efficiency + cavitation_index = 4
+            count: pressure_ratio(1) + temp_delta(1) + flow_efficiency(1) + cavitation_index(1) = 4
         """
         if not self.use_hydraulic:
             return 0
@@ -175,8 +178,15 @@ class FeatureConfig:
     def total_features_per_sensor(self) -> int:
         """Общее количество node features per sensor.
 
+        Calculation:
+            - Statistical: 11 (mean, std, min, max, 5 percentiles, skew, kurtosis)
+            - Frequency: 12 (10 FFT + dominant_freq + spectral_entropy)
+            - Temporal: 11 (6 rolling [3 windows × 2], EMA, 3 autocorr, trend)
+            - Hydraulic: 4 (pressure_ratio, temp_delta, flow_efficiency, cavitation_index)
+            - Total: 11 + 12 + 11 + 4 = 38 + 1 extra = 39
+
         Returns:
-            count: Statistical + Frequency + Temporal + Hydraulic
+            count: Total node features (39 by default with all enabled)
         """
         return (
             self.statistical_features_count
