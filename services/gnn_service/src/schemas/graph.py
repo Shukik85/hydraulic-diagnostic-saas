@@ -488,6 +488,50 @@ class GraphTopology(BaseModel):
                     raise ValueError(msg)
         return v
 
+    # ========================================================================
+    # HELPER PROPERTIES (for DynamicGraphBuilder compatibility)
+    # ========================================================================
+
+    @property
+    def sensor_ids(self) -> list[str]:
+        """Get list of all sensor/component IDs.
+
+        Returns list of component IDs to use as node IDs.
+        Enables DynamicGraphBuilder compatibility.
+
+        Returns:
+            List of component IDs ["pump_1", "pump_2", ...]
+        """
+        return list(self.components.keys())
+
+    @property
+    def topology_id(self) -> str:
+        """Get topology ID (alias for equipment_id).
+
+        Returns:
+            Equipment ID
+        """
+        return self.equipment_id
+
+    @property
+    def connections(self) -> list[dict[str, str]]:
+        """Get edge connections in legacy format.
+
+        Converts EdgeSpec list to legacy format expected by DynamicGraphBuilder.
+        Format: [{"from": source_id, "to": target_id, "type": edge_type}, ...]
+
+        Returns:
+            List of connection dicts
+        """
+        return [
+            {
+                "from": edge.source_id,
+                "to": edge.target_id,
+                "type": edge.edge_type.value if hasattr(edge.edge_type, 'value') else str(edge.edge_type),
+            }
+            for edge in self.edges
+        ]
+
     def validate_connectivity(self) -> bool:
         """Проверка связности графа (все компоненты достижимы).
 
