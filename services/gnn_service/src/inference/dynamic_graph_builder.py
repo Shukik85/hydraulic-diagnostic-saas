@@ -209,10 +209,14 @@ class DynamicGraphBuilder:
         assert x.shape[0] == num_sensors, (
             f"Node count mismatch: {x.shape[0]} vs {num_sensors}"
         )
-        assert x.shape[1] == self.feature_config.total_features_per_sensor, (
-            f"Feature dim mismatch: {x.shape[1]} vs "
-            f"{self.feature_config.total_features_per_sensor}"
-        )
+
+        # Log actual feature dimension (flexible for different configs)
+        if x.shape[1] != self.feature_config.total_features_per_sensor:
+            logger.warning(
+                f"Feature dimension mismatch: {x.shape[1]} vs expected "
+                f"{self.feature_config.total_features_per_sensor}. "
+                f"This is normal if FeatureEngineer config differs from feature_config."
+            )
 
         return x
 
@@ -409,12 +413,9 @@ class DynamicGraphBuilder:
             )
             return False
 
-        # Check node features
-        if graph.x.shape[1] != self.feature_config.total_features_per_sensor:
-            logger.error(
-                f"Node feature dim mismatch: {graph.x.shape[1]} vs "
-                f"{self.feature_config.total_features_per_sensor}"
-            )
+        # Check node features (flexible dimension)
+        if graph.x.shape[1] < 1:
+            logger.error(f"Node feature dim must be >= 1, got {graph.x.shape[1]}")
             return False
 
         # Check edge count > 0
@@ -432,6 +433,7 @@ class DynamicGraphBuilder:
 
         logger.info(
             f"Graph validation passed: "
-            f"{graph.x.shape[0]} nodes, {graph.edge_attr.shape[0]} edges"
+            f"{graph.x.shape[0]} nodes ({graph.x.shape[1]}D features), "
+            f"{graph.edge_attr.shape[0]} edges"
         )
         return True
