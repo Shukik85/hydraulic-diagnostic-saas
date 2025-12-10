@@ -1,157 +1,208 @@
-import type { Config } from 'tailwindcss'
-
-/**
- * HYDRAULIC DIAGNOSTIC SAAS - TAILWIND CONFIG
- * Metallic Industrial Theme v1.0
- *
- * Unified design system synchronized with Django Admin
- * Features: Brushed metal textures, inset shadows, industrial gradients
- */
+import type { Config } from 'tailwindcss';
 
 export default {
   content: [
-    './components/**/*.{js,vue,ts}',
+    './components/**/*.{vue,js,ts}',
     './layouts/**/*.vue',
     './pages/**/*.vue',
+    './composables/**/*.{js,ts}',
     './plugins/**/*.{js,ts}',
     './app.vue',
     './error.vue',
-    './stores/**/*.{js,ts}',
-    './composables/**/*.{js,ts}',
-    './styles/**/*.css',
   ],
+
   darkMode: 'class',
+
   theme: {
     extend: {
       colors: {
-        // Metallic base colors - промышленные металлические тона
-        metal: {
-          dark: '#1a1d23',
-          medium: '#2d3139',
-          light: '#4a4f5c',
-          highlight: '#6b7280',
-        },
-
-        // Steel accents - стальные акценты
-        steel: {
-          dark: '#374151',
-          medium: '#4b5563',
-          light: '#6b7280',
-          shine: '#9ca3af',
-        },
-
-        // Primary - Индиго (промышленный, приглушенный)
+        // Primary teal palette
         primary: {
-          50: '#e0e7ff',
-          100: '#c7d2fe',
-          200: '#a5b4fc',
-          300: '#818cf8',
-          400: '#6366f1',
-          500: '#4f46e5', // Changed from #3b82f6 - more industrial
-          600: '#4338ca',
-          700: '#3730a3',
-          800: '#312e81',
-          900: '#1e1b4b',
-          950: '#1e1b4b',
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
+          950: '#042f2e',
         },
 
-        // Status colors - приглушенные промышленные
-        status: {
-          success: {
-            DEFAULT: '#047857', // Darker green
-            light: '#6ee7b7',
-            dark: '#065f46',
-          },
-          warning: {
-            DEFAULT: '#b45309', // Darker amber
-            light: '#fcd34d',
-            dark: '#92400e',
-          },
-          error: {
-            DEFAULT: '#991b1b', // Darker red
-            light: '#fca5a5',
-            dark: '#7f1d1d',
-          },
-          info: {
-            DEFAULT: '#075985', // Darker sky
-            light: '#7dd3fc',
-            dark: '#0c4a6e',
-          },
+        // Semantic colors
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
+        card: {
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
         },
-
-        // Background semantic colors
-        background: {
-          primary: '#0f1115',
-          secondary: '#2d3139',
-          tertiary: '#374151',
-          elevated: '#1c1f2e',
-          hover: '#4b5563',
+        popover: {
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
         },
-      },
+        muted: {
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
+        },
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
 
-      // Metallic gradients
-      backgroundImage: {
-        'gradient-metal': 'linear-gradient(135deg, #2d3139 0%, #3a3f4d 25%, #2d3139 50%, #252830 75%, #1a1d23 100%)',
-        'gradient-steel': 'linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(0, 0, 0, 0.1) 100%)',
-        'gradient-primary': 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)',
-        'gradient-header': 'linear-gradient(135deg, #2d3139 0%, #1e1b4b 100%)',
-      },
-
-      // Metallic box shadows
-      boxShadow: {
-        'inset-metal': 'inset 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 -1px 0 rgba(255, 255, 255, 0.05)',
-        'sm': '0 1px 2px 0 rgba(0, 0, 0, 0.4)',
-        'DEFAULT': '0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 2px 0 rgba(0, 0, 0, 0.3)',
-        'md': '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
-        'lg': '0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.3)',
-        'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-        'metal': '0 4px 6px -1px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.3)',
+        // Status colors
+        success: {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+        },
+        warning: {
+          50: '#fffbeb',
+          100: '#fef3c7',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+        },
+        error: {
+          50: '#fef2f2',
+          100: '#fee2e2',
+          500: '#ef4444',
+          600: '#dc2626',
+          700: '#b91c1c',
+        },
+        info: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+        },
       },
 
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Monaco', 'Menlo', 'monospace'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
 
-      // Premium animations
-      animation: {
-        'fade-in': 'fade-in 0.4s ease-out',
-        'slide-in': 'slide-in 0.4s ease-out',
-        'slide-up': 'slide-up 0.3s ease-out',
-        'scale-in': 'scale-in 0.2s ease-out',
-        'shine': 'shine 8s linear infinite',
+      fontSize: {
+        xs: ['0.75rem', { lineHeight: '1rem' }],
+        sm: ['0.875rem', { lineHeight: '1.25rem' }],
+        base: ['1rem', { lineHeight: '1.5rem' }],
+        lg: ['1.125rem', { lineHeight: '1.75rem' }],
+        xl: ['1.25rem', { lineHeight: '1.75rem' }],
+        '2xl': ['1.5rem', { lineHeight: '2rem' }],
+        '3xl': ['1.875rem', { lineHeight: '2.25rem' }],
+        '4xl': ['2.25rem', { lineHeight: '2.5rem' }],
+        '5xl': ['3rem', { lineHeight: '1' }],
+      },
+
+      spacing: {
+        18: '4.5rem',
+        88: '22rem',
+        112: '28rem',
+        128: '32rem',
+      },
+
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
 
       keyframes: {
+        'accordion-down': {
+          from: { height: '0' },
+          to: { height: 'var(--radix-accordion-content-height)' },
+        },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
+          to: { height: '0' },
+        },
         'fade-in': {
-          '0%': { opacity: '0', transform: 'translateY(5px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'fade-out': {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
         },
         'slide-in': {
-          '0%': { opacity: '0', transform: 'translateX(-10px)' },
-          '100%': { opacity: '1', transform: 'translateX(0)' },
+          '0%': { transform: 'translateY(-10px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
         },
-        'slide-up': {
-          '0%': { opacity: '0', transform: 'translateY(10px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
+        'slide-out': {
+          '0%': { transform: 'translateY(0)', opacity: '1' },
+          '100%': { transform: 'translateY(-10px)', opacity: '0' },
         },
-        'scale-in': {
-          '0%': { opacity: '0', transform: 'scale(0.98)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
+        spin: {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
         },
-        'shine': {
-          '0%, 100%': { left: '-100%' },
-          '50%': { left: '200%' },
+        pulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
         },
       },
 
-      // Transitions
+      animation: {
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in': 'fade-in 0.3s ease-out',
+        'fade-out': 'fade-out 0.3s ease-in',
+        'slide-in': 'slide-in 0.3s ease-out',
+        'slide-out': 'slide-out 0.3s ease-in',
+        spin: 'spin 1s linear infinite',
+        pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+
+      boxShadow: {
+        sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+        md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+        xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+        '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+        inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
+      },
+
+      transitionProperty: {
+        height: 'height',
+        spacing: 'margin, padding',
+      },
+
       transitionDuration: {
-        fast: '150ms',
-        base: '200ms',
-        slow: '400ms',
+        '0': '0ms',
+        '2000': '2000ms',
       },
     },
   },
-  plugins: [],
-} satisfies Config
+
+  plugins: [
+    // Custom utilities for accessibility
+    function ({ addUtilities }: { addUtilities: (utilities: Record<string, any>) => void }) {
+      addUtilities({
+        '.focus-ring': {
+          '@apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-background': {},
+        },
+        '.focus-visible-ring': {
+          '@apply outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2':
+            {},
+        },
+        '.skip-link': {
+          '@apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary-600 focus:text-white focus:rounded-md':
+            {},
+        },
+      });
+    },
+  ],
+} satisfies Config;

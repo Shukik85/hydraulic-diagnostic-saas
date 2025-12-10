@@ -1,142 +1,160 @@
 /**
- * useApi.ts - Typed API client composable
- * Предоставляет SSR-safe методы для работы с API
+ * API Composable
+ * Type-safe API client with retry logic and error handling
  */
 
-import type { UseFetchOptions } from '#app'
+import type { ApiResponse, ApiError, RequestConfig } from '~/types';
 
-/**
- * Интерфейс для API клиента
- */
-export interface ApiClient {
-  /**
-   * GET запрос
-   * @param url - Относительный путь API
-   * @param options - Дополнительные опции fetch
-   */
-  get<T = any>(url: string, options?: UseFetchOptions<T>): Promise<T>
-  
-  /**
-   * POST запрос
-   * @param url - Относительный путь API
-   * @param data - Данные для отправки
-   * @param options - Дополнительные опции fetch
-   */
-  post<T = any>(url: string, data?: any, options?: UseFetchOptions<T>): Promise<T>
-  
-  /**
-   * PUT запрос
-   * @param url - Относительный путь API
-   * @param data - Данные для обновления
-   * @param options - Дополнительные опции fetch
-   */
-  put<T = any>(url: string, data?: any, options?: UseFetchOptions<T>): Promise<T>
-  
-  /**
-   * PATCH запрос
-   * @param url - Относительный путь API
-   * @param data - Данные для частичного обновления
-   * @param options - Дополнительные опции fetch
-   */
-  patch<T = any>(url: string, data?: any, options?: UseFetchOptions<T>): Promise<T>
-  
-  /**
-   * DELETE запрос
-   * @param url - Относительный путь API
-   * @param options - Дополнительные опции fetch
-   */
-  delete<T = any>(url: string, options?: UseFetchOptions<T>): Promise<T>
+interface RetryConfig {
+  maxRetries: number;
+  initialDelay: number;
+  maxDelay: number;
+  factor: number;
 }
 
+const defaultRetryConfig: RetryConfig = {
+  maxRetries: 3,
+  initialDelay: 1000,
+  maxDelay: 10000,
+  factor: 2,
+};
+
 /**
- * API клиент composable
- * Использует $fetch для client-side запросов
- * Для SSR-safe запросов используйте useFetch напрямую
- * 
- * @example
- * ```typescript
- * const api = useApi()
- * 
- * // Client-side запрос
- * const data = await api.get<SystemResponse>('/systems')
- * 
- * // SSR-safe запрос (используйте useFetch)
- * const { data: systems } = await useFetch('/api/systems')
- * ```
+ * Sleep utility for retry delays
  */
-export const useApi = (): ApiClient => {
-  const config = useRuntimeConfig()
-  const baseURL = config.public.apiBase as string
-  
-  return {
-    get: async <T = any>(url: string, options?: UseFetchOptions<T>): Promise<T> => {
-      return await $fetch<T>(url, { 
-        baseURL, 
-        method: 'GET',
-        ...options 
-      })
-    },
-    
-    post: async <T = any>(url: string, data?: any, options?: UseFetchOptions<T>): Promise<T> => {
-      return await $fetch<T>(url, { 
-        baseURL, 
-        method: 'POST', 
-        body: data,
-        ...options 
-      })
-    },
-    
-    put: async <T = any>(url: string, data?: any, options?: UseFetchOptions<T>): Promise<T> => {
-      return await $fetch<T>(url, { 
-        baseURL, 
-        method: 'PUT', 
-        body: data,
-        ...options 
-      })
-    },
-    
-    patch: async <T = any>(url: string, data?: any, options?: UseFetchOptions<T>): Promise<T> => {
-      return await $fetch<T>(url, { 
-        baseURL, 
-        method: 'PATCH', 
-        body: data,
-        ...options 
-      })
-    },
-    
-    delete: async <T = any>(url: string, options?: UseFetchOptions<T>): Promise<T> => {
-      return await $fetch<T>(url, { 
-        baseURL, 
-        method: 'DELETE',
-        ...options 
-      })
-    },
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Calculate exponential backoff delay
+ */
+const getRetryDelay = (attempt: number, config: RetryConfig): number => {
+  const delay = config.initialDelay * Math.pow(config.factor, attempt);
+  return Math.min(delay, config.maxDelay);
+};
+
+/**
+ * Check if error is retriable
+ */
+const isRetriableError = (error: unknown): boolean => {
+  if (error instanceof Error) {
+    // Network errors
+    if (error.message.includes('fetch') || error.message.includes('network')) {
+      return true;
+    }
   }
-}
-
-/**
- * Helper для создания SSR-safe запросов с автоматическим кэшированием
- * 
- * @example
- * ```typescript
- * const { data, pending, error, refresh } = await useApiFetch<System[]>('/systems', {
- *   key: 'systems-list'
- * })
- * ```
- */
-export const useApiFetch = <T = any>(
-  url: string, 
-  options?: UseFetchOptions<T>
-) => {
-  const config = useRuntimeConfig()
-  const baseURL = config.public.apiBase as string
   
-  return useFetch<T>(url, {
-    baseURL,
-    getCachedData: (key) => useNuxtApp().payload.data[key as any],
-    lazy: true,
-    retry: 3,
-    retryDelay: 1000,
-    ...options
-  })
+  // HTTP 5xx errors are retriable
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const status = (error as { status: number }).status;
+    return status >= 500 && status < 600;
+  }
+  
+  return false;
+};
+
+export function useApi() {
+  const config = useRuntimeConfig();
+  const baseURL = config.public.apiBase || 'http://localhost:8000';
+
+  /**
+   * Make API request with retry logic
+   */
+  async function request<T>(
+    endpoint: string,
+    options: RequestConfig = {},
+    retryConfig: Partial<RetryConfig> = {}
+  ): Promise<ApiResponse<T>> {
+    const retry = { ...defaultRetryConfig, ...retryConfig };
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt <= retry.maxRetries; attempt++) {
+      try {
+        const response = await $fetch<ApiResponse<T>>(endpoint, {
+          baseURL,
+          method: options.method || 'GET',
+          headers: options.headers,
+          params: options.params,
+          body: options.body,
+          timeout: options.timeout || 30000,
+          retry: false, // We handle retry ourselves
+        });
+
+        return response;
+      } catch (error) {
+        lastError = error;
+
+        // Don't retry if not retriable or last attempt
+        if (!isRetriableError(error) || attempt === retry.maxRetries) {
+          throw error;
+        }
+
+        // Wait before retry with exponential backoff
+        const delay = getRetryDelay(attempt, retry);
+        console.warn(
+          `API request failed (attempt ${attempt + 1}/${retry.maxRetries + 1}), retrying in ${delay}ms...`
+        );
+        await sleep(delay);
+      }
+    }
+
+    // This should never be reached, but TypeScript needs it
+    throw lastError;
+  }
+
+  /**
+   * GET request
+   */
+  async function get<T>(
+    endpoint: string,
+    params?: Record<string, string | number | boolean>
+  ): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'GET', params });
+  }
+
+  /**
+   * POST request
+   */
+  async function post<T>(
+    endpoint: string,
+    body: unknown
+  ): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'POST', body });
+  }
+
+  /**
+   * PUT request
+   */
+  async function put<T>(
+    endpoint: string,
+    body: unknown
+  ): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'PUT', body });
+  }
+
+  /**
+   * PATCH request
+   */
+  async function patch<T>(
+    endpoint: string,
+    body: unknown
+  ): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'PATCH', body });
+  }
+
+  /**
+   * DELETE request
+   */
+  async function del<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return request<T>(endpoint, { method: 'DELETE' });
+  }
+
+  return {
+    request,
+    get,
+    post,
+    put,
+    patch,
+    delete: del,
+  };
 }

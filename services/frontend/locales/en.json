@@ -1,0 +1,225 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "submit": "Submit",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Copy failed",
+    "send": "Send"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "signUp": "Sign up",
+    "signIn": "Sign in to your account",
+    "welcomeBack": "Welcome back!"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "systems": "Systems",
+    "sensors": "Sensors",
+    "anomalies": "Anomalies",
+    "reports": "Reports",
+    "settings": "Settings",
+    "tenants": "Tenants",
+    "users": "Users",
+    "metrics": "Metrics"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Welcome back! Here's what's happening with your systems",
+    "welcome": "Welcome",
+    "overview": "Overview",
+    "stats": {
+      "activeSystems": "Active Systems",
+      "activeSystemsDesc": "All systems operational",
+      "allOk": "All OK",
+      "activeAlerts": "Active Alerts",
+      "activeAlertsDesc": "Requires attention",
+      "systemUptime": "System Uptime",
+      "systemUptimeDesc": "Last 30 days"
+    },
+    "quickActions": {
+      "title": "Quick Actions",
+      "startDiagnosis": "Start Diagnosis",
+      "startDiagnosisDesc": "Run system analysis",
+      "manageSystems": "Manage Systems",
+      "manageSystemsDesc": "Configure devices",
+      "viewReports": "View Reports",
+      "viewReportsDesc": "Analysis history",
+      "settings": "Settings",
+      "settingsDesc": "Preferences"
+    },
+    "recentActivity": {
+      "title": "Recent Activity",
+      "systemDiagnosed": "System #A24 diagnosed",
+      "alertPressure": "Alert: Pressure drop",
+      "reportGenerated": "Report generated",
+      "systemAdded": "New system added",
+      "viewAll": "View All Activity",
+      "minutesAgo": "{count} minutes ago",
+      "hoursAgo": "{count} hours ago"
+    }
+  },
+  "wizard": {
+    "pageTitle": "Metadata Wizard",
+    "pageDescription": "Create complete hydraulic system metadata in 5 steps",
+    "progress": "Progress",
+    "level": "Level",
+    "previous": "Previous",
+    "next": "Next",
+    "finish": "Finish",
+    "completeStep": "Complete current step",
+    "completed": "Wizard completed successfully!",
+    "info": {
+      "step1": "Steps 1-2",
+      "step1Desc": "Upload schema and place sensors",
+      "step2": "Steps 3-4",
+      "step2Desc": "Define values and operating modes",
+      "step3": "Step 5",
+      "step3Desc": "Assess AI readiness"
+    },
+    "level1": {
+      "title": "P&ID Schema",
+      "description": "Upload hydraulic system schema (P&ID diagram)",
+      "selectFormat": "Select schema format",
+      "uploadSchema": "Upload schema file"
+    },
+    "level2": {
+      "title": "Sensor Placement",
+      "description": "Add sensors and specify their types",
+      "sensors": "Sensors",
+      "addSensor": "Add Sensor",
+      "sensorName": "Sensor name"
+    },
+    "level3": {
+      "title": "Nominal Values",
+      "description": "Define ranges and nominal values for each sensor",
+      "min": "Min",
+      "nominal": "Nominal",
+      "max": "Max"
+    },
+    "level4": {
+      "title": "Operating Modes",
+      "description": "Specify different system operating modes",
+      "modes": "Modes",
+      "addMode": "Add Mode",
+      "addModePrompt": "Enter operating mode name"
+    },
+    "level5": {
+      "title": "AI Readiness Assessment",
+      "description": "Check system readiness for intelligent analysis",
+      "excellent": "Excellent! System fully ready",
+      "good": "Good! Ready for analysis",
+      "needsWork": "Needs additional configuration",
+      "schemaUploaded": "Schema uploaded",
+      "sensorsConfigured": "Sensors configured",
+      "nominalValuesDefined": "Nominal values defined",
+      "operatingModes": "Operating modes"
+    }
+  },
+  "diagnosis": {
+    "title": "System Diagnosis",
+    "subtitle": "Real-time monitoring and AI analysis",
+    "description": "Hydraulic systems diagnostics",
+    "anomalyDetails": "Anomaly Details",
+    "recommendedAction": "Recommended Actions",
+    "chat": {
+      "title": "AI Assistant",
+      "subtitle": "Ask about the system",
+      "welcome": "Hello! I'm an AI assistant for hydraulic system diagnostics. How can I help?",
+      "placeholder": "Ask a question...",
+      "inputLabel": "Message input",
+      "error": "Error getting response"
+    },
+    "sensors": {
+      "title": "Sensors",
+      "count": "sensors",
+      "noData": "No data",
+      "threshold": "Threshold"
+    },
+    "anomalies": {
+      "title": "Anomaly Timeline",
+      "noAnomalies": "No anomalies detected",
+      "confidence": "Confidence",
+      "unacknowledged": "Unacknowledged",
+      "resolved": "Resolved"
+    },
+    "topology": {
+      "title": "System Topology",
+      "normal": "Normal",
+      "anomaly": "Anomaly",
+      "info": "Click on component for details",
+      "pump": "Pump",
+      "valve": "Valve",
+      "sensor": "Sensor",
+      "tank": "Tank"
+    }
+  },
+  "admin": {
+    "revenueChart": "Revenue Chart",
+    "systemHealth": "System Health",
+    "topTenants": "Top Tenants",
+    "criticalAlerts": "Critical Alerts",
+    "noAlerts": "No active alerts",
+    "tenantName": "Name",
+    "plan": "Plan",
+    "sensors": "Sensors",
+    "apiCalls": "API Calls",
+    "storage": "Storage"
+  },
+  "kpi": {
+    "mrr": "Monthly Recurring Revenue",
+    "tenants": "Tenants",
+    "users": "Users",
+    "uptime": "Uptime",
+    "vsLastMonth": "vs last month",
+    "last30Days": "last 30 days",
+    "last7Days": "last 7 days"
+  },
+  "anomalyType": {
+    "pressure_spike": "Pressure Spike",
+    "temperature_high": "High Temperature",
+    "flow_anomaly": "Flow Anomaly",
+    "vibration_excessive": "Excessive Vibration",
+    "leak_detected": "Leak Detected",
+    "performance_degradation": "Performance Degradation"
+  },
+  "sensors": {
+    "pressure": "Pressure",
+    "temperature": "Temperature",
+    "flow": "Flow",
+    "vibration": "Vibration",
+    "position": "Position"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "error": "Error",
+    "active": "Active",
+    "inactive": "Inactive",
+    "healthy": "Healthy",
+    "degraded": "Degraded",
+    "critical": "Critical"
+  },
+  "severity": {
+    "all": "All",
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  }
+}

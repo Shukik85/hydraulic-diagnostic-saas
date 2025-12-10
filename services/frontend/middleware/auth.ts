@@ -1,19 +1,28 @@
-// Authentication middleware with dev stub
-export default defineNuxtRouteMiddleware(to => {
-  // DEV MODE: Skip auth check for easier testing
-  if (process.dev) {
-    console.log('🔓 Auth middleware: DEV mode - skipping auth check for', to.path)
-    return
-  }
+/**
+ * Auth Middleware
+ * Protects routes requiring authentication
+ * 
+ * DEV MODE: Set NUXT_PUBLIC_DEV_SKIP_AUTH=true in .env to bypass auth in development
+ */
+
+export default defineNuxtRouteMiddleware((to, from) => {
+  const authStore = useAuthStore();
+  const config = useRuntimeConfig();
+
+  // DEV MODE: Skip auth check if explicitly enabled
+  const skipAuth = config.public.devSkipAuth === 'true' || config.public.devSkipAuth === true;
   
-  // PRODUCTION: Proper auth check
-  const { $router } = useNuxtApp()
-  const api = useApi()
+  if (skipAuth && import.meta.dev) {
+    console.warn('[DEV MODE] Auth middleware bypassed - NUXT_PUBLIC_DEV_SKIP_AUTH is enabled');
+    return;
+  }
 
   // Check if user is authenticated
-  if (!api.isAuthenticated.value) {
-    // Redirect to login page, preserving the intended destination
-    const redirectTo = to.fullPath !== '/auth/login' ? to.fullPath : '/'
-    return navigateTo(`/auth/login?redirect=${encodeURIComponent(redirectTo)}`)
+  if (!authStore.isAuthenticated) {
+    // Redirect to login with return URL
+    return navigateTo({
+      path: '/login',
+      query: { redirect: to.fullPath },
+    });
   }
-})
+});
