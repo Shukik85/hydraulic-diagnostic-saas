@@ -28,7 +28,7 @@ import torch
 from src.data.feature_config import FeatureConfig
 from src.data.feature_engineer import FeatureEngineer
 from src.inference.dynamic_graph_builder import DynamicGraphBuilder
-from src.schemas import GraphTopology
+from src.schemas import GraphTopology, ComponentSpec, EdgeSpec, ComponentType, EdgeType, EdgeMaterial
 
 # Configure logging
 logging.basicConfig(
@@ -122,18 +122,104 @@ def create_pump_topology() -> GraphTopology:
     """Create pump equipment topology.
 
     Returns:
-        GraphTopology for standard pump system
+        GraphTopology for standard pump system (5 sensors)
     """
     return GraphTopology(
-        topology_id="pump_standard_v1",
-        equipment_type="pump",
-        sensor_ids=["pump_1", "pump_2", "pump_3", "pump_4", "pump_5"],
-        connections=[
-            {"from": "pump_1", "to": "pump_2", "type": "flow"},
-            {"from": "pump_2", "to": "pump_3", "type": "flow"},
-            {"from": "pump_3", "to": "pump_4", "type": "flow"},
-            {"from": "pump_4", "to": "pump_5", "type": "feedback"},
-            {"from": "pump_5", "to": "pump_1", "type": "feedback"},
+        equipment_id="pump_001",
+        components={
+            "pump_1": ComponentSpec(
+                component_id="pump_1",
+                component_type=ComponentType.PUMP,
+                sensors=["pump_1"],
+                feature_dim=12,
+                nominal_pressure_bar=250,
+                nominal_flow_lpm=120,
+                rated_power_kw=45.0,
+            ),
+            "pump_2": ComponentSpec(
+                component_id="pump_2",
+                component_type=ComponentType.PUMP,
+                sensors=["pump_2"],
+                feature_dim=12,
+                nominal_pressure_bar=250,
+                nominal_flow_lpm=120,
+                rated_power_kw=45.0,
+            ),
+            "pump_3": ComponentSpec(
+                component_id="pump_3",
+                component_type=ComponentType.PUMP,
+                sensors=["pump_3"],
+                feature_dim=12,
+                nominal_pressure_bar=250,
+                nominal_flow_lpm=120,
+                rated_power_kw=45.0,
+            ),
+            "pump_4": ComponentSpec(
+                component_id="pump_4",
+                component_type=ComponentType.PUMP,
+                sensors=["pump_4"],
+                feature_dim=12,
+                nominal_pressure_bar=250,
+                nominal_flow_lpm=120,
+                rated_power_kw=45.0,
+            ),
+            "pump_5": ComponentSpec(
+                component_id="pump_5",
+                component_type=ComponentType.PUMP,
+                sensors=["pump_5"],
+                feature_dim=12,
+                nominal_pressure_bar=250,
+                nominal_flow_lpm=120,
+                rated_power_kw=45.0,
+            ),
+        },
+        edges=[
+            EdgeSpec(
+                source_id="pump_1",
+                target_id="pump_2",
+                edge_type=EdgeType.HYDRAULIC_LINE,
+                diameter_mm=25.0,
+                length_m=5.0,
+                pressure_rating_bar=250.0,
+                material=EdgeMaterial.STEEL,
+            ),
+            EdgeSpec(
+                source_id="pump_2",
+                target_id="pump_3",
+                edge_type=EdgeType.HYDRAULIC_LINE,
+                diameter_mm=25.0,
+                length_m=5.0,
+                pressure_rating_bar=250.0,
+                material=EdgeMaterial.STEEL,
+            ),
+            EdgeSpec(
+                source_id="pump_3",
+                target_id="pump_4",
+                edge_type=EdgeType.HYDRAULIC_LINE,
+                diameter_mm=25.0,
+                length_m=5.0,
+                pressure_rating_bar=250.0,
+                material=EdgeMaterial.STEEL,
+            ),
+            EdgeSpec(
+                source_id="pump_4",
+                target_id="pump_5",
+                edge_type=EdgeType.HYDRAULIC_LINE,
+                diameter_mm=25.0,
+                length_m=5.0,
+                pressure_rating_bar=250.0,
+                material=EdgeMaterial.STEEL,
+            ),
+            EdgeSpec(
+                source_id="pump_5",
+                target_id="pump_1",
+                edge_type=EdgeType.LOW_PRESSURE_RETURN,
+                diameter_mm=25.0,
+                length_m=5.0,
+                pressure_rating_bar=100.0,
+                material=EdgeMaterial.STEEL,
+                flow_direction="bidirectional",
+            ),
         ],
     )
 
@@ -142,20 +228,33 @@ def create_compressor_topology() -> GraphTopology:
     """Create compressor equipment topology.
 
     Returns:
-        GraphTopology for standard compressor system
+        GraphTopology for standard compressor system (7 sensors)
     """
     return GraphTopology(
-        topology_id="compressor_standard_v1",
-        equipment_type="compressor",
-        sensor_ids=["comp_1", "comp_2", "comp_3", "comp_4", "comp_5", "comp_6", "comp_7"],
-        connections=[
-            {"from": "comp_1", "to": "comp_2", "type": "flow"},
-            {"from": "comp_2", "to": "comp_3", "type": "flow"},
-            {"from": "comp_3", "to": "comp_4", "type": "flow"},
-            {"from": "comp_4", "to": "comp_5", "type": "flow"},
-            {"from": "comp_5", "to": "comp_6", "type": "flow"},
-            {"from": "comp_6", "to": "comp_7", "type": "feedback"},
-            {"from": "comp_7", "to": "comp_1", "type": "feedback"},
+        equipment_id="compressor_001",
+        components={
+            f"comp_{i}": ComponentSpec(
+                component_id=f"comp_{i}",
+                component_type=ComponentType.PUMP,
+                sensors=[f"comp_{i}"],
+                feature_dim=12,
+                nominal_pressure_bar=250,
+                nominal_flow_lpm=120,
+                rated_power_kw=45.0,
+            )
+            for i in range(1, 8)
+        },
+        edges=[
+            EdgeSpec(
+                source_id=f"comp_{i}",
+                target_id=f"comp_{i+1}" if i < 7 else "comp_1",
+                edge_type=EdgeType.HYDRAULIC_LINE,
+                diameter_mm=25.0,
+                length_m=5.0,
+                pressure_rating_bar=250.0,
+                material=EdgeMaterial.STEEL,
+            )
+            for i in range(1, 8)
         ],
     )
 
@@ -186,14 +285,14 @@ async def test_pump_inference() -> None:
     topology = create_pump_topology()
 
     # Build graph
-    logger.info(f"Building graph for pump_001 with topology {topology.topology_id}")
+    logger.info(f"Building graph for pump_001")
     graph = await builder.build_from_timescale(
         equipment_id="pump_001", topology=topology, lookback_minutes=10
     )
 
     # Validate
     logger.info(f"Graph built successfully!")
-    logger.info(f"  - Nodes: {graph.x.shape[0]} (expected: {len(topology.sensor_ids)})")
+    logger.info(f"  - Nodes: {graph.x.shape[0]} (expected: {topology.num_components})")
     logger.info(f"  - Node features: {graph.x.shape[1]}")
     logger.info(f"  - Edges: {graph.edge_index.shape[1]}")
     logger.info(f"  - Edge features: {graph.edge_attr.shape[1]} (edge_in_dim={config.edge_in_dim})")
@@ -235,14 +334,14 @@ async def test_compressor_inference() -> None:
     topology = create_compressor_topology()
 
     # Build graph
-    logger.info(f"Building graph for compressor_001 with topology {topology.topology_id}")
+    logger.info(f"Building graph for compressor_001")
     graph = await builder.build_from_timescale(
         equipment_id="compressor_001", topology=topology, lookback_minutes=10
     )
 
     # Validate
     logger.info(f"Graph built successfully!")
-    logger.info(f"  - Nodes: {graph.x.shape[0]} (expected: {len(topology.sensor_ids)})")
+    logger.info(f"  - Nodes: {graph.x.shape[0]} (expected: {topology.num_components})")
     logger.info(f"  - Node features: {graph.x.shape[1]}")
     logger.info(f"  - Edges: {graph.edge_index.shape[1]}")
     logger.info(f"  - Edge features: {graph.edge_attr.shape[1]} (edge_in_dim={config.edge_in_dim})")
@@ -329,6 +428,8 @@ async def test_batch_inference() -> None:
 
     graphs = []
     for equipment_id, topology in test_cases:
+        # Override equipment_id in topology
+        topology.equipment_id = equipment_id
         graph = await builder.build_from_timescale(
             equipment_id=equipment_id, topology=topology, lookback_minutes=10
         )
