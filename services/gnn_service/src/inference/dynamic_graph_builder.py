@@ -187,9 +187,7 @@ class DynamicGraphBuilder:
                 sensor_ts = sensor_data[sensor_id].values  # (T,)
 
                 # Engineer features from time series
-                features = self.feature_engineer.extract_all_features(
-                    time_series=sensor_ts
-                )
+                features = self.feature_engineer.extract_all_features(sensor_ts)
 
                 x_list.append(features)
             else:
