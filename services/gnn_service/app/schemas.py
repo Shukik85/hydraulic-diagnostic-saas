@@ -13,10 +13,7 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import List, Dict, Optional
 from pydantic import BaseModel, Field
-
 
 # ============================================================================
 # REQUEST SCHEMAS
@@ -42,7 +39,7 @@ class SensorData(BaseModel):
         ...     lookback_minutes=10
         ... )
     """
-    
+
     equipment_id: str = Field(
         ...,
         min_length=1,
@@ -50,8 +47,8 @@ class SensorData(BaseModel):
         description="Equipment identifier",
         example="pump_001"
     )
-    
-    sensor_readings: Dict[str, List[float]] = Field(
+
+    sensor_readings: dict[str, list[float]] = Field(
         ...,
         description="Sensor time series data",
         example={
@@ -60,13 +57,13 @@ class SensorData(BaseModel):
             "FS1": [8.5, 8.6, 8.5]
         }
     )
-    
-    topology_id: Optional[str] = Field(
+
+    topology_id: str | None = Field(
         None,
         description="Equipment topology identifier",
         example="pump_5sensor_v1"
     )
-    
+
     lookback_minutes: int = Field(
         10,
         ge=1,
@@ -74,7 +71,7 @@ class SensorData(BaseModel):
         description="Time window for analysis",
         example=10
     )
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -112,13 +109,13 @@ class ComponentPrediction(BaseModel):
         ...     contributing_sensors=["PS1", "FS1"]
         ... )
     """
-    
+
     component_name: str = Field(
         ...,
         description="Component name",
         example="pump"
     )
-    
+
     health_score: float = Field(
         ...,
         ge=0.0,
@@ -126,13 +123,13 @@ class ComponentPrediction(BaseModel):
         description="Health score (0=failure, 1=optimal)",
         example=0.85
     )
-    
+
     severity_grade: str = Field(
         ...,
         description="Severity grade",
         example="optimal"
     )
-    
+
     confidence: float = Field(
         ...,
         ge=0.0,
@@ -140,8 +137,8 @@ class ComponentPrediction(BaseModel):
         description="Prediction confidence",
         example=0.92
     )
-    
-    contributing_sensors: List[str] = Field(
+
+    contributing_sensors: list[str] = Field(
         default_factory=list,
         description="Top contributing sensors",
         example=["PS1", "FS1"]
@@ -171,19 +168,19 @@ class DiagnosticResponse(BaseModel):
         ...     inference_time_ms=52.34
         ... )
     """
-    
+
     equipment_id: str = Field(
         ...,
         description="Equipment identifier",
         example="pump_001"
     )
-    
+
     timestamp: str = Field(
         ...,
         description="Prediction timestamp (ISO 8601)",
         example="2025-12-12T12:00:00Z"
     )
-    
+
     overall_health: float = Field(
         ...,
         ge=0.0,
@@ -191,25 +188,25 @@ class DiagnosticResponse(BaseModel):
         description="Overall health score",
         example=0.85
     )
-    
-    components: List[ComponentPrediction] = Field(
+
+    components: list[ComponentPrediction] = Field(
         ...,
         description="Per-component predictions",
         min_items=1
     )
-    
-    recommendations: List[str] = Field(
+
+    recommendations: list[str] = Field(
         default_factory=list,
         description="Maintenance recommendations",
         example=["✅ All components operating optimally"]
     )
-    
+
     model_version: str = Field(
         ...,
         description="Model version used",
         example="mock-v0.1.0"
     )
-    
+
     inference_time_ms: float = Field(
         ...,
         ge=0,
@@ -227,25 +224,25 @@ class HealthResponse(BaseModel):
         cuda_available: Whether CUDA/GPU is available
         version: Service version
     """
-    
+
     status: str = Field(
         ...,
         description="Service status",
         example="healthy"
     )
-    
+
     model_loaded: bool = Field(
         ...,
         description="Model loaded status",
         example=True
     )
-    
+
     cuda_available: bool = Field(
         ...,
         description="CUDA availability",
         example=False
     )
-    
+
     version: str = Field(
         ...,
         description="Service version",

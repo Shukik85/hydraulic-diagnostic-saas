@@ -11,10 +11,10 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-import uuid
 import logging
 import time
-from typing import Callable
+import uuid
+from collections.abc import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -38,7 +38,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
             X-Request-ID: client-provided-id
             -> X-Request-ID: client-provided-id (same)
     """
-    
+
     async def dispatch(
         self,
         request: Request,
@@ -55,26 +55,26 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         """
         # Get or generate request ID
         request_id = request.headers.get("X-Request-ID")
-        
+
         if not request_id:
             request_id = str(uuid.uuid4())
-        
+
         # Add to request state
         request.state.request_id = request_id
-        
+
         # Log request start
         start_time = time.time()
         logger.info(
             f"[{request_id}] {request.method} {request.url.path} - Start",
             extra={"request_id": request_id, "method": request.method, "path": request.url.path}
         )
-        
+
         # Process request
         response = await call_next(request)
-        
+
         # Add request ID to response headers
         response.headers["X-Request-ID"] = request_id
-        
+
         # Log request completion
         duration_ms = (time.time() - start_time) * 1000
         logger.info(
@@ -88,5 +88,5 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
                 "duration_ms": duration_ms
             }
         )
-        
+
         return response

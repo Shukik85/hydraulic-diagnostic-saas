@@ -14,12 +14,10 @@ Python 3.14 Features:
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime
 from typing import Any
 
 import pytest
 import torch
-from torch_geometric.data import Data
 
 from src.data.feature_config import FeatureConfig
 from src.data.feature_engineer import FeatureEngineer
@@ -40,20 +38,19 @@ class MockTimescaleConnector:
             for i in range(5):
                 data[f"pump_{i+1}"] = torch.randn(100).numpy()
             return pd.DataFrame(data)
-        elif equipment_id.startswith("compressor"):
+        if equipment_id.startswith("compressor"):
             # Compressor: 7 sensors
             import pandas as pd
             data = {}
             for i in range(7):
                 data[f"comp_{i+1}"] = torch.randn(100).numpy()
             return pd.DataFrame(data)
-        else:
-            # Generic: 4 sensors
-            import pandas as pd
-            data = {}
-            for i in range(4):
-                data[f"sensor_{i+1}"] = torch.randn(100).numpy()
-            return pd.DataFrame(data)
+        # Generic: 4 sensors
+        import pandas as pd
+        data = {}
+        for i in range(4):
+            data[f"sensor_{i+1}"] = torch.randn(100).numpy()
+        return pd.DataFrame(data)
 
 
 class TestDynamicGraphBuilder:
@@ -268,7 +265,6 @@ class TestInferencePhase3:
         """Test InferenceEngine.get_stats() includes dynamic builder."""
         # Note: This is a minimal test without full model setup
         # Real integration would require proper model loading
-        pass
 
 
 if __name__ == "__main__":

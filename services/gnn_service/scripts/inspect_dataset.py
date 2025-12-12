@@ -42,7 +42,7 @@ def inspect_dataset(data_path: str | Path) -> None:
         return
 
     # Check structure
-    print(f"📊 Dataset Structure:")
+    print("📊 Dataset Structure:")
     print(f"   Type: {type(data)}")
 
     if isinstance(data, dict):
@@ -71,7 +71,7 @@ def inspect_dataset(data_path: str | Path) -> None:
 
                     # If list of Data objects
                     if hasattr(value[0], "x"):
-                        print(f"\n   📊 Graph Statistics (first 5):")
+                        print("\n   📊 Graph Statistics (first 5):")
                         for i, graph in enumerate(value[:5]):
                             print(f"\n   Graph {i}:")
                             print(f"      Nodes: {graph.num_nodes}")
@@ -83,7 +83,7 @@ def inspect_dataset(data_path: str | Path) -> None:
                             if hasattr(graph, "edge_attr") and graph.edge_attr is not None:
                                 print(f"      Edge features: {graph.edge_attr.shape[1]} ⭐")
                             else:
-                                print(f"      Edge features: None")
+                                print("      Edge features: None")
 
                             # Check for labels
                             if hasattr(graph, "y"):
@@ -107,12 +107,12 @@ def inspect_dataset(data_path: str | Path) -> None:
 
                         if edge_attr_dims:
                             unique_dims = set(edge_attr_dims)
-                            print(f"\n      ⭐ Edge Feature Dimensions:")
+                            print("\n      ⭐ Edge Feature Dimensions:")
                             print(f"         Unique dimensions: {unique_dims}")
                             if len(unique_dims) == 1:
                                 print(f"         ✅ All graphs have same edge_in_dim: {list(unique_dims)[0]}")
                             else:
-                                print(f"         ⚠️  Mixed edge dimensions detected!")
+                                print("         ⚠️  Mixed edge dimensions detected!")
                                 for dim in unique_dims:
                                     count = edge_attr_dims.count(dim)
                                     print(f"            {dim}D: {count} graphs")
@@ -121,7 +121,7 @@ def inspect_dataset(data_path: str | Path) -> None:
         print(f"   Length: {len(data)}\n")
         if len(data) > 0 and hasattr(data[0], "x"):
             # List of Data objects
-            print(f"📊 Graph List Statistics:")
+            print("📊 Graph List Statistics:")
             for i, graph in enumerate(data[:5]):
                 print(f"\nGraph {i}:")
                 print(f"   Nodes: {graph.num_nodes}")
@@ -136,7 +136,7 @@ def inspect_dataset(data_path: str | Path) -> None:
     else:
         print(f"   Unknown structure: {type(data)}")
 
-    print(f"\n✅ Inspection complete!")
+    print("\n✅ Inspection complete!")
 
 
 if __name__ == "__main__":

@@ -23,8 +23,8 @@ from torch_geometric.data import Data
 if TYPE_CHECKING:
     from src.data.feature_config import FeatureConfig
     from src.data.feature_engineer import FeatureEngineer
-    from src.schemas import GraphTopology
     from src.data.timescale_connector import TimescaleConnector
+    from src.schemas import GraphTopology
 
 logger = logging.getLogger(__name__)
 

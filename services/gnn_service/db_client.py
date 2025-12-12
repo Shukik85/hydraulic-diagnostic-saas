@@ -2,10 +2,11 @@
 """
 TimescaleDB async client supporting multi-component and multi-system dynamic queries.
 """
-import asyncpg
 import logging
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any
+
+import asyncpg
 from config import db_config
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class TimescaleDBClient:
         if self.pool:
             await self.pool.close()
             logger.info("TimescaleDB connection closed")
-    async def query_sensor_data(self, system_id: str, start: datetime, end: datetime, timestep: int = 5) -> Dict[str, Any]:
+    async def query_sensor_data(self, system_id: str, start: datetime, end: datetime, timestep: int = 5) -> dict[str, Any]:
         query = """
         SELECT time_bucket($1, timestamp) AS bucket, component_id, sensor_type, AVG(value) AS avg_val
         FROM sensor_readings

@@ -527,7 +527,7 @@ class GraphTopology(BaseModel):
             {
                 "from": edge.source_id,
                 "to": edge.target_id,
-                "type": edge.edge_type.value if hasattr(edge.edge_type, 'value') else str(edge.edge_type),
+                "type": edge.edge_type.value if hasattr(edge.edge_type, "value") else str(edge.edge_type),
             }
             for edge in self.edges
         ]

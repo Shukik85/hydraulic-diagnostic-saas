@@ -3,9 +3,10 @@
 Shared fixtures для всех tests.
 """
 
-import pytest
-from pathlib import Path
 import sys
+from pathlib import Path
+
+import pytest
 
 # Add src to path
 project_root = Path(__file__).parent.parent

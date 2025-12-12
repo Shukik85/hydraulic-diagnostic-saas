@@ -20,7 +20,6 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
 
 import pandas as pd
 import torch
@@ -28,7 +27,14 @@ import torch
 from src.data.feature_config import FeatureConfig
 from src.data.feature_engineer import FeatureEngineer
 from src.inference.dynamic_graph_builder import DynamicGraphBuilder
-from src.schemas import GraphTopology, ComponentSpec, EdgeSpec, ComponentType, EdgeType, EdgeMaterial
+from src.schemas import (
+    ComponentSpec,
+    ComponentType,
+    EdgeMaterial,
+    EdgeSpec,
+    EdgeType,
+    GraphTopology,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -285,13 +291,13 @@ async def test_pump_inference() -> None:
     topology = create_pump_topology()
 
     # Build graph
-    logger.info(f"Building graph for pump_001")
+    logger.info("Building graph for pump_001")
     graph = await builder.build_from_timescale(
         equipment_id="pump_001", topology=topology, lookback_minutes=10
     )
 
     # Validate
-    logger.info(f"Graph built successfully!")
+    logger.info("Graph built successfully!")
     logger.info(f"  - Nodes: {graph.x.shape[0]} (expected: {topology.num_components})")
     logger.info(f"  - Node features: {graph.x.shape[1]}")
     logger.info(f"  - Edges: {graph.edge_index.shape[1]}")
@@ -301,7 +307,7 @@ async def test_pump_inference() -> None:
     logger.info(f"  - Validation: {'✅ PASS' if is_valid else '❌ FAIL'}")
 
     # Statistics
-    logger.info(f"\nGraph Statistics:")
+    logger.info("\nGraph Statistics:")
     logger.info(f"  - Min node features: {graph.x.min().item():.4f}")
     logger.info(f"  - Max node features: {graph.x.max().item():.4f}")
     logger.info(f"  - Min edge features: {graph.edge_attr.min().item():.4f}")
@@ -334,13 +340,13 @@ async def test_compressor_inference() -> None:
     topology = create_compressor_topology()
 
     # Build graph
-    logger.info(f"Building graph for compressor_001")
+    logger.info("Building graph for compressor_001")
     graph = await builder.build_from_timescale(
         equipment_id="compressor_001", topology=topology, lookback_minutes=10
     )
 
     # Validate
-    logger.info(f"Graph built successfully!")
+    logger.info("Graph built successfully!")
     logger.info(f"  - Nodes: {graph.x.shape[0]} (expected: {topology.num_components})")
     logger.info(f"  - Node features: {graph.x.shape[1]}")
     logger.info(f"  - Edges: {graph.edge_index.shape[1]}")
@@ -350,9 +356,9 @@ async def test_compressor_inference() -> None:
     logger.info(f"  - Validation: {'✅ PASS' if is_valid else '❌ FAIL'}")
 
     # Compare with pump
-    logger.info(f"\nComparison with Pump:")
-    logger.info(f"  - Pump nodes: 5, Compressor nodes: 7 (Different topologies ✅)")
-    logger.info(f"  - Both edge_in_dim=14 (Consistent ✅)")
+    logger.info("\nComparison with Pump:")
+    logger.info("  - Pump nodes: 5, Compressor nodes: 7 (Different topologies ✅)")
+    logger.info("  - Both edge_in_dim=14 (Consistent ✅)")
 
 
 async def test_variable_edge_dims() -> None:
@@ -436,13 +442,13 @@ async def test_batch_inference() -> None:
         graphs.append(graph)
 
     # Statistics
-    logger.info(f"\nBatch Statistics:")
+    logger.info("\nBatch Statistics:")
     logger.info(f"  - Total graphs: {len(graphs)}")
     logger.info(f"  - Total nodes: {sum(g.x.shape[0] for g in graphs)}")
     logger.info(f"  - Total edges: {sum(g.edge_index.shape[1] for g in graphs)}")
     logger.info(f"  - Node count per graph: {[g.x.shape[0] for g in graphs]}")
-    logger.info(f"  - Pump graphs: 3, Compressor graphs: 1")
-    logger.info(f"  - Variable-sized batch: ✅ SUPPORTED")
+    logger.info("  - Pump graphs: 3, Compressor graphs: 1")
+    logger.info("  - Variable-sized batch: ✅ SUPPORTED")
 
 
 async def main() -> None:
@@ -452,8 +458,8 @@ async def main() -> None:
     logger.info("Universal GNN - Example Inference Pipeline")
     logger.info("🚀 " * 20)
 
-    logger.info(f"\nConfiguration:")
-    logger.info(f"  - Python: 3.14+")
+    logger.info("\nConfiguration:")
+    logger.info("  - Python: 3.14+")
     logger.info(f"  - PyTorch: {torch.__version__}")
     logger.info(f"  - Time: {datetime.now().isoformat()}")
 

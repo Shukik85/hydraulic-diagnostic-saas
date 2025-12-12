@@ -24,25 +24,19 @@ Python: 3.14+
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 from contextlib import asynccontextmanager
-from typing import List
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from src.inference.inference_engine import InferenceEngine, InferenceConfig
-from src.services.topology_service import TopologyService, get_topology_service
-from src.schemas import (
-    PredictionRequest,
-    PredictionResponse,
-    BatchPredictionRequest,
-    GraphTopology
-)
+from src.inference.inference_engine import InferenceConfig, InferenceEngine
+from src.schemas import BatchPredictionRequest, GraphTopology, PredictionRequest, PredictionResponse
 from src.schemas.requests import MinimalInferenceRequest
+from src.services.topology_service import TopologyService, get_topology_service
 
 # Configure logging
 logging.basicConfig(
@@ -66,14 +60,14 @@ async def lifespan(app: FastAPI):
     - Model loading
     """
     global engine, topology_service
-    
+
     logger.info("Starting GNN Service...")
-    
+
     # Load configuration
     model_path = os.getenv("MODEL_PATH", "models/v2.0.0.ckpt")
     device = os.getenv("DEVICE", "auto")
     batch_size = int(os.getenv("BATCH_SIZE", "32"))
-    
+
     # Initialize inference engine
     try:
         config = InferenceConfig(
@@ -82,13 +76,13 @@ async def lifespan(app: FastAPI):
             batch_size=batch_size,
             use_dynamic_features=True  # Phase 3.1
         )
-        
+
         engine = InferenceEngine(config=config)
         logger.info(f"InferenceEngine initialized (device={device})")
     except Exception as e:
         logger.error(f"Failed to initialize InferenceEngine: {e}")
         raise
-    
+
     # Initialize topology service
     try:
         topology_service = get_topology_service()
@@ -96,11 +90,11 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize TopologyService: {e}")
         raise
-    
+
     logger.info("GNN Service started successfully")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down GNN Service...")
     engine = None
@@ -158,7 +152,7 @@ async def readiness_check():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Service not ready"
         )
-    
+
     return {
         "status": "ready",
         "model_loaded": engine is not None,
@@ -218,11 +212,11 @@ async def predict_minimal(request: MinimalInferenceRequest) -> PredictionRespons
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Inference engine not ready"
         )
-    
+
     try:
         response = await engine.predict_minimal(request)
         return response
-    
+
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -266,11 +260,11 @@ async def list_topologies():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Topology service not ready"
         )
-    
+
     try:
         templates = topology_service.list_templates()
         return {"templates": templates}
-    
+
     except Exception as e:
         logger.error(f"Failed to list templates: {e}")
         raise HTTPException(
@@ -300,18 +294,18 @@ async def get_topology(topology_id: str):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Topology service not ready"
         )
-    
+
     try:
         template = topology_service.get_template(topology_id)
-        
+
         if template is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Topology not found: {topology_id}"
             )
-        
+
         return template.model_dump()
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -354,17 +348,17 @@ async def validate_topology(topology: GraphTopology):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Topology service not ready"
         )
-    
+
     try:
         is_valid, errors = topology_service.validate_topology(topology)
-        
+
         return {
             "is_valid": is_valid,
             "errors": errors,
             "num_components": len(topology.components),
             "num_edges": len(topology.edges)
         }
-    
+
     except Exception as e:
         logger.error(f"Validation failed: {e}")
         raise HTTPException(
@@ -402,11 +396,11 @@ async def predict_legacy(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Inference engine not ready"
         )
-    
+
     try:
         response = await engine.predict(request, topology)
         return response
-    
+
     except Exception as e:
         logger.error(f"Prediction failed: {e}")
         raise HTTPException(
@@ -417,13 +411,13 @@ async def predict_legacy(
 
 @app.post(
     "/api/v1/batch/predict",
-    response_model=List[PredictionResponse],
+    response_model=list[PredictionResponse],
     tags=["Inference v1 (Legacy)"]
 )
 async def predict_batch_legacy(
     batch_request: BatchPredictionRequest,
     topology: GraphTopology
-) -> List[PredictionResponse]:
+) -> list[PredictionResponse]:
     """Legacy batch prediction endpoint.
     
     Backward compatible with v1 API.
@@ -440,14 +434,14 @@ async def predict_batch_legacy(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Inference engine not ready"
         )
-    
+
     try:
         responses = await engine.predict_batch(
             requests=batch_request.requests,
             topology=topology
         )
         return responses
-    
+
     except Exception as e:
         logger.error(f"Batch prediction failed: {e}")
         raise HTTPException(
@@ -491,7 +485,7 @@ async def global_exception_handler(request, exc: Exception):
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",

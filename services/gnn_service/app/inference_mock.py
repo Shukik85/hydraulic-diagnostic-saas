@@ -23,8 +23,8 @@ from __future__ import annotations
 
 import asyncio
 import random
+
 import numpy as np
-from typing import Dict, List, Optional
 
 
 class MockInferenceEngine:
@@ -45,7 +45,7 @@ class MockInferenceEngine:
         ...     sensor_readings={"PS1": [100.5, 101.2], ...}
         ... )
     """
-    
+
     def __init__(self):
         """Initialize mock engine."""
         self.model_version = "mock-v0.1.0"
@@ -55,13 +55,13 @@ class MockInferenceEngine:
             "degraded": (0.70, 0.85),
             "optimal": (0.85, 1.0)
         }
-    
+
     async def predict(
         self,
         equipment_id: str,
-        sensor_readings: Dict[str, List[float]],
-        topology_id: Optional[str] = None
-    ) -> Dict:
+        sensor_readings: dict[str, list[float]],
+        topology_id: str | None = None
+    ) -> dict:
         """Generate mock predictions for equipment.
         
         Args:
@@ -74,20 +74,20 @@ class MockInferenceEngine:
         """
         # Simulate processing delay (50-100ms)
         await asyncio.sleep(random.uniform(0.05, 0.10))
-        
+
         # Generate predictions
         components = []
         health_scores = []
-        
+
         for component in self.components:
             # Generate realistic health score
             # Slightly biased toward healthier systems
             health_score = random.gauss(0.82, 0.12)  # μ=0.82, σ=0.12
             health_score = max(0.0, min(1.0, health_score))  # Clamp to [0, 1]
-            
+
             # Determine severity grade
             severity_grade = self._get_severity_grade(health_score)
-            
+
             # Confidence (slightly higher for degraded/failure states)
             if severity_grade == "failure":
                 confidence = random.uniform(0.85, 0.98)
@@ -95,7 +95,7 @@ class MockInferenceEngine:
                 confidence = random.uniform(0.80, 0.95)
             else:
                 confidence = random.uniform(0.75, 0.90)
-            
+
             # Contributing sensors (top 1-3 that influenced prediction)
             num_contributors = random.randint(1, 3)
             all_sensors = list(sensor_readings.keys())
@@ -103,7 +103,7 @@ class MockInferenceEngine:
                 all_sensors,
                 min(num_contributors, len(all_sensors))
             ) if all_sensors else []
-            
+
             components.append({
                 "component_name": component,
                 "health_score": round(health_score, 3),
@@ -111,21 +111,21 @@ class MockInferenceEngine:
                 "confidence": round(confidence, 3),
                 "contributing_sensors": sorted(contributors)
             })
-            
+
             health_scores.append(health_score)
-        
+
         # Overall health (weighted average)
         overall_health = float(np.mean(health_scores))
-        
+
         # Generate recommendations
         recommendations = self._generate_recommendations(components)
-        
+
         return {
             "overall_health": round(overall_health, 3),
             "components": components,
             "recommendations": recommendations
         }
-    
+
     def _get_severity_grade(self, health_score: float) -> str:
         """Determine severity grade from health score.
         
@@ -139,8 +139,8 @@ class MockInferenceEngine:
             if min_score <= health_score <= max_score:
                 return grade
         return "optimal"  # Default
-    
-    def _generate_recommendations(self, components: List[Dict]) -> List[str]:
+
+    def _generate_recommendations(self, components: list[dict]) -> list[str]:
         """Generate maintenance recommendations from predictions.
         
         Args:
@@ -150,7 +150,7 @@ class MockInferenceEngine:
             List of maintenance recommendations
         """
         recommendations = []
-        
+
         # Check for critical failures
         failures = [c for c in components if c["severity_grade"] == "failure"]
         if failures:
@@ -158,7 +158,7 @@ class MockInferenceEngine:
                 recommendations.append(
                     f"🔴 CRITICAL: {comp['component_name']} requires immediate maintenance"
                 )
-        
+
         # Check for degraded components
         degraded = [c for c in components if c["severity_grade"] == "degraded"]
         if degraded:
@@ -166,14 +166,14 @@ class MockInferenceEngine:
                 recommendations.append(
                     f"⚠️ WARNING: {comp['component_name']} - schedule maintenance within 7 days"
                 )
-        
+
         # If all optimal
         if not failures and not degraded:
             recommendations.append("✅ All components operating optimally - no action needed")
-        
+
         return recommendations
-    
-    def get_stats(self) -> Dict:
+
+    def get_stats(self) -> dict:
         """Get inference engine statistics.
         
         Returns:

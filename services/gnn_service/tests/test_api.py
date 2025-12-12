@@ -12,39 +12,38 @@ Run with:
 """
 
 import pytest
-from fastapi.testclient import TestClient
-
 from app.main import app
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
 
 class TestHealthCheck:
     """Tests for GET /api/v1/health endpoint."""
-    
+
     def test_health_check_success(self):
         """Health check returns healthy status."""
         response = client.get("/api/v1/health")
-        
+
         assert response.status_code == 200
         data = response.json()
-        
+
         assert "status" in data
         assert data["status"] in ["healthy", "unhealthy", "degraded"]
         assert "model_loaded" in data
         assert "version" in data
-    
+
     def test_health_check_model_loaded(self):
         """Health check indicates model is loaded."""
         response = client.get("/api/v1/health")
         data = response.json()
-        
+
         assert data["model_loaded"] is True
 
 
 class TestDiagnosticsPredict:
     """Tests for POST /api/v1/diagnostics/predict endpoint."""
-    
+
     def test_predict_valid_data(self):
         """Valid prediction request returns diagnostics."""
         payload = {
@@ -56,12 +55,12 @@ class TestDiagnosticsPredict:
             },
             "lookback_minutes": 10
         }
-        
+
         response = client.post("/api/v1/diagnostics/predict", json=payload)
-        
+
         assert response.status_code == 200
         data = response.json()
-        
+
         # Verify response structure
         assert "equipment_id" in data
         assert data["equipment_id"] == "pump_001"
@@ -70,10 +69,10 @@ class TestDiagnosticsPredict:
         assert "recommendations" in data
         assert "model_version" in data
         assert "inference_time_ms" in data
-        
+
         # Verify health score range
         assert 0 <= data["overall_health"] <= 1
-        
+
         # Verify components
         assert len(data["components"]) > 0
         for comp in data["components"]:
@@ -83,17 +82,17 @@ class TestDiagnosticsPredict:
             assert "confidence" in comp
             assert 0 <= comp["health_score"] <= 1
             assert 0 <= comp["confidence"] <= 1
-    
+
     def test_predict_invalid_empty_sensors(self):
         """Empty sensor_readings returns 400 error."""
         payload = {
             "equipment_id": "pump_001",
             "sensor_readings": {}
         }
-        
+
         response = client.post("/api/v1/diagnostics/predict", json=payload)
         assert response.status_code == 400
-    
+
     def test_predict_mismatched_sensor_lengths(self):
         """Sensors with different sample counts return 400 error."""
         payload = {
@@ -103,10 +102,10 @@ class TestDiagnosticsPredict:
                 "TS1": [45.3, 45.5, 45.4]      # 3 samples - MISMATCH
             }
         }
-        
+
         response = client.post("/api/v1/diagnostics/predict", json=payload)
         assert response.status_code == 400
-    
+
     def test_predict_minimal_valid(self):
         """Minimal valid request works."""
         payload = {
@@ -115,10 +114,10 @@ class TestDiagnosticsPredict:
                 "PS1": [100.0]
             }
         }
-        
+
         response = client.post("/api/v1/diagnostics/predict", json=payload)
         assert response.status_code == 200
-    
+
     def test_predict_lookback_minutes_range(self):
         """lookback_minutes validation."""
         # Valid: 1-60
@@ -129,7 +128,7 @@ class TestDiagnosticsPredict:
         }
         response = client.post("/api/v1/diagnostics/predict", json=payload_valid)
         assert response.status_code == 200
-        
+
         # Invalid: 0 (< 1)
         payload_low = {
             "equipment_id": "pump_001",
@@ -138,7 +137,7 @@ class TestDiagnosticsPredict:
         }
         response = client.post("/api/v1/diagnostics/predict", json=payload_low)
         assert response.status_code == 422  # Validation error
-        
+
         # Invalid: 61 (> 60)
         payload_high = {
             "equipment_id": "pump_001",
@@ -151,17 +150,17 @@ class TestDiagnosticsPredict:
 
 class TestResponseValidation:
     """Tests for response schema validation."""
-    
+
     def test_response_component_structure(self):
         """Component response has correct structure."""
         payload = {
             "equipment_id": "pump_001",
             "sensor_readings": {"PS1": [100.0]}
         }
-        
+
         response = client.post("/api/v1/diagnostics/predict", json=payload)
         data = response.json()
-        
+
         # Verify each component has required fields
         for comp in data["components"]:
             assert "component_name" in comp
@@ -170,17 +169,17 @@ class TestResponseValidation:
             assert "confidence" in comp
             assert "contributing_sensors" in comp
             assert isinstance(comp["contributing_sensors"], list)
-    
+
     def test_response_recommendations_type(self):
         """Recommendations is list of strings."""
         payload = {
             "equipment_id": "pump_001",
             "sensor_readings": {"PS1": [100.0]}
         }
-        
+
         response = client.post("/api/v1/diagnostics/predict", json=payload)
         data = response.json()
-        
+
         assert isinstance(data["recommendations"], list)
         for rec in data["recommendations"]:
             assert isinstance(rec, str)
@@ -188,13 +187,13 @@ class TestResponseValidation:
 
 class TestIntegration:
     """Integration tests."""
-    
+
     def test_full_workflow(self):
         """Full prediction workflow."""
         # 1. Check health
         health = client.get("/api/v1/health").json()
         assert health["status"] == "healthy"
-        
+
         # 2. Make prediction
         payload = {
             "equipment_id": "pump_test_123",
@@ -206,7 +205,7 @@ class TestIntegration:
         }
         response = client.post("/api/v1/diagnostics/predict", json=payload)
         assert response.status_code == 200
-        
+
         # 3. Verify response
         data = response.json()
         assert data["equipment_id"] == "pump_test_123"

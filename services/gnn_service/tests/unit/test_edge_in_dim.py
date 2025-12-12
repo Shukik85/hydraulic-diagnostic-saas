@@ -19,9 +19,8 @@ import pytest
 import torch
 from torch_geometric.data import Data
 
-from src.data.dataset import HydraulicGraphDataset, TemporalGraphDataset
+from src.data.dataset import TemporalGraphDataset
 from src.data.feature_config import FeatureConfig
-from src.data.feature_engineer import FeatureEngineer
 from src.data.graph_builder import GraphBuilder
 
 

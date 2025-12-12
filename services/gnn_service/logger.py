@@ -6,6 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
+
 def setup_logging(log_dir="logs", log_level="INFO", log_format="json"):
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     logger = logging.getLogger()
@@ -13,8 +14,8 @@ def setup_logging(log_dir="logs", log_level="INFO", log_format="json"):
     logger.handlers.clear()
     stream = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(
-        fmt='%(asctime)s %(levelname)s %(name)s %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S')
+        fmt="%(asctime)s %(levelname)s %(name)s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S")
     stream.setFormatter(formatter)
     logger.addHandler(stream)
     # (file handler etc. можно добавить по необходимости)

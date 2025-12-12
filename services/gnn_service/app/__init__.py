@@ -27,4 +27,4 @@ Usage:
 
 __version__ = "0.1.0"
 __author__ = "ML Engineering Team"
-__all__ = ["app", "__version__"]
+__all__ = ["__version__", "app"]

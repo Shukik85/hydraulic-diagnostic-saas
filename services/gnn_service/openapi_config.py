@@ -12,7 +12,7 @@ def custom_openapi(app: FastAPI):
     """
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title="GNN Service API",
         version="1.0.0",
@@ -46,7 +46,7 @@ Authorization: Bearer <token>
             {"url": "http://localhost:8002", "description": "Development"}
         ]
     )
-    
+
     # Security
     openapi_schema["components"]["securitySchemes"] = {
         "bearerAuth": {
@@ -56,13 +56,13 @@ Authorization: Bearer <token>
         }
     }
     openapi_schema["security"] = [{"bearerAuth": []}]
-    
+
     # Tags
     openapi_schema["tags"] = [
         {"name": "Inference", "description": "ML inference operations"},
         {"name": "Admin", "description": "Model deployment and training (admin-only)"},
         {"name": "Monitoring", "description": "Health and metrics"}
     ]
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema

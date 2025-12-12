@@ -1,18 +1,19 @@
 import argparse
 import json
-import torch
 import os
-from pathlib import Path
-from tqdm import tqdm
-from torch_geometric.data import Data
+
+import torch
 
 # Предполагаем, что EdgeSpec и EdgeType доступны.
 # Если нет, нужно проверить импорты под твой проект.
 # Обычно это выглядит так:
-from gnn_service.data.edge_spec import EdgeSpec, EdgeType, EdgeMaterial
+from gnn_service.data.edge_spec import EdgeSpec
+from torch_geometric.data import Data
+from tqdm import tqdm
+
 
 def load_edge_specifications(specs_path):
-    with open(specs_path, 'r') as f:
+    with open(specs_path) as f:
         data = json.load(f)
 
     # Convert list of dicts to dict by key (source_id, target_id)
@@ -23,7 +24,7 @@ def load_edge_specifications(specs_path):
         key = f"{item['source_id']}->{item['target_id']}"
         specs_map[key] = EdgeSpec(**item)
 
-        if item.get('flow_direction') == 'bidirectional':
+        if item.get("flow_direction") == "bidirectional":
             rev_key = f"{item['target_id']}->{item['source_id']}"
             specs_map[rev_key] = EdgeSpec(**item)
 
@@ -35,12 +36,12 @@ def get_mock_dynamic_features():
     В реальной жизни это берется из TimeSeries данных.
     """
     return {
-        'flow_rate_lpm': 50.0,
-        'pressure_drop_bar': 10.0,
-        'temperature_delta_c': 5.0,
-        'vibration_level_g': 0.1,
-        'age_hours': 1000.0,
-        'maintenance_score': 0.9
+        "flow_rate_lpm": 50.0,
+        "pressure_drop_bar": 10.0,
+        "temperature_delta_c": 5.0,
+        "vibration_level_g": 0.1,
+        "age_hours": 1000.0,
+        "maintenance_score": 0.9
     }
 
 def convert_graph_to_14d(graph, edge_specs_map, component_ids, current_time=0.0):
@@ -90,19 +91,19 @@ def convert_graph_to_14d(graph, edge_specs_map, component_ids, current_time=0.0)
             float(edge_spec.get_age_hours(current_time)),
             float(edge_spec.cross_section_area_mm2),
             float(edge_spec.pressure_loss_coefficient),
-            1.0 if edge_spec.material == 'steel' else 0.0, # Пример маппинга
-            1.0 if edge_spec.edge_type == 'high_pressure_hose' else 0.0
+            1.0 if edge_spec.material == "steel" else 0.0, # Пример маппинга
+            1.0 if edge_spec.edge_type == "high_pressure_hose" else 0.0
         ], dtype=torch.float32)
 
         # 4. Формируем 6D Dynamic Features (Mock)
         dyn = get_mock_dynamic_features()
         dynamic_tensor = torch.tensor([
-            dyn['flow_rate_lpm'],
-            dyn['pressure_drop_bar'],
-            dyn['temperature_delta_c'],
-            dyn['vibration_level_g'],
-            dyn['age_hours'],
-            dyn['maintenance_score']
+            dyn["flow_rate_lpm"],
+            dyn["pressure_drop_bar"],
+            dyn["temperature_delta_c"],
+            dyn["vibration_level_g"],
+            dyn["age_hours"],
+            dyn["maintenance_score"]
         ], dtype=torch.float32)
 
         # 5. Объединяем в 14D
@@ -132,20 +133,20 @@ def convert_graph_to_14d(graph, edge_specs_map, component_ids, current_time=0.0)
     return new_graph
 
 def main():
-    parser = argparse.ArgumentParser(description='Convert graphs to 14D edge features')
-    parser.add_argument('--input', type=str, required=True, help='Input .pt file')
-    parser.add_argument('--edge-specs', type=str, required=True, help='Edge specs JSON')
-    parser.add_argument('--output', type=str, required=True, help='Output .pt file')
-    parser.add_argument('--max-samples', type=int, default=None)
+    parser = argparse.ArgumentParser(description="Convert graphs to 14D edge features")
+    parser.add_argument("--input", type=str, required=True, help="Input .pt file")
+    parser.add_argument("--edge-specs", type=str, required=True, help="Edge specs JSON")
+    parser.add_argument("--output", type=str, required=True, help="Output .pt file")
+    parser.add_argument("--max-samples", type=int, default=None)
     # Обновленный default для нашего графа из 7 узлов
-    parser.add_argument('--component-ids', type=str,
-                        default='valve_main,pump_main_1,pump_main_2,cylinder_boom,cylinder_arm,cylinder_bucket,motor_swing',
-                        help='Comma-separated component IDs')
+    parser.add_argument("--component-ids", type=str,
+                        default="valve_main,pump_main_1,pump_main_2,cylinder_boom,cylinder_arm,cylinder_bucket,motor_swing",
+                        help="Comma-separated component IDs")
 
     args = parser.parse_args()
 
     # Parse IDs
-    component_ids = [cid.strip() for cid in args.component_ids.split(',')]
+    component_ids = [cid.strip() for cid in args.component_ids.split(",")]
     print(f"Target Component IDs ({len(component_ids)}): {component_ids}")
 
     # Load Data
