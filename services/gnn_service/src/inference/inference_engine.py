@@ -389,27 +389,86 @@ class InferenceEngine:
     def _preprocess_minimal(
         self, request: MinimalInferenceRequest, topology: GraphTopology
     ) -> Data:
-        """Preprocess minimal request → graph (legacy path, no dynamic builder).
+        """Preprocess minimal request → graph (Phase 3.1 API).
+
+        Converts sensor readings from request to graph with dynamic edge features.
 
         Args:
             request: MinimalInferenceRequest
-            topology: Equipment topology
+                - sensor_readings: Dict[component_id, Dict[sensor_name, float]]
+                - timestamp: Current measurement time
+            topology: Equipment topology (components and connections)
 
         Returns:
             graph: PyG Data object with 14D edges
-        """
-        # Convert sensor readings to DataFrame (for node features)
-        # TODO: Implement proper conversion
-        sensor_df = pd.DataFrame()  # Placeholder
 
-        # Build graph with dynamic features
-        return self.graph_builder.build_graph(
-            sensor_data=sensor_df,
-            topology=topology,
-            metadata=None,
-            sensor_readings=request.sensor_readings,  # For dynamic edges
-            current_time=request.timestamp,
-        )
+        Raises:
+            ValueError: If sensor data is invalid or components missing
+        """
+        try:
+            # Validate request has sensor data
+            if not request.sensor_readings:
+                msg = f"No sensor readings provided for {request.equipment_id}"
+                raise ValueError(msg)
+
+            # Convert sensor readings to DataFrame format for graph builder
+            # Structure: component_id, sensor_name, value
+            sensor_records = []
+            for component_id, sensors in request.sensor_readings.items():
+                if not isinstance(sensors, dict):
+                    logger.warning(
+                        f"Invalid sensor format for {component_id}: "
+                        f"expected dict, got {type(sensors)}"
+                    )
+                    continue
+
+                for sensor_name, value in sensors.items():
+                    if value is None:
+                        logger.warning(
+                            f"Missing sensor {sensor_name} for {component_id}"
+                        )
+                        continue
+
+                    sensor_records.append({
+                        "component_id": component_id,
+                        "sensor_name": sensor_name,
+                        "value": float(value),
+                        "timestamp": request.timestamp,
+                    })
+
+            if not sensor_records:
+                msg = f"No valid sensor readings for {request.equipment_id}"
+                raise ValueError(msg)
+
+            sensor_df = pd.DataFrame(sensor_records)
+            logger.debug(
+                f"Converted {len(sensor_records)} sensor readings "
+                f"from {len(request.sensor_readings)} components"
+            )
+
+            # Build graph with dynamic features
+            # sensor_readings passed for edge feature computation
+            graph = self.graph_builder.build_graph(
+                sensor_data=sensor_df,
+                topology=topology,
+                metadata=None,
+                sensor_readings=request.sensor_readings,  # For 14D dynamic edges
+                current_time=request.timestamp,
+            )
+
+            logger.debug(
+                f"Built graph: {graph.x.shape[0]} nodes, "
+                f"{graph.edge_index.shape[1]} edges, "
+                f"edge_attr shape: {graph.edge_attr.shape if graph.edge_attr is not None else 'None'}"
+            )
+
+            return graph
+
+        except Exception as e:
+            logger.error(
+                f"Failed to preprocess minimal request for {request.equipment_id}: {e}"
+            )
+            raise
 
     def _preprocess_legacy(self, request: PredictionRequest, topology: GraphTopology) -> Data:
         """Preprocess legacy request → graph (no dynamic features).
