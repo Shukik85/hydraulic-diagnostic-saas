@@ -1,0 +1,38 @@
+{
+  "static_edge_features": {
+    "status": "manual_input",
+    "note": "Diameter, length, material from edge_specifications.json"
+  },
+  "dynamic_edge_features": {
+    "pressure_drop_bar": {
+      "status": "\u2705 AVAILABLE",
+      "sensor_required": "pressure",
+      "can_compute": true
+    },
+    "flow_rate_lpm": {
+      "status": "\u274c MISSING (use synthetic)",
+      "sensor_required": "flow",
+      "can_compute": false
+    },
+    "temperature_delta_c": {
+      "status": "\u2705 AVAILABLE",
+      "sensor_required": "temperature",
+      "can_compute": false
+    },
+    "vibration_level_g": {
+      "status": "\u2705 AVAILABLE",
+      "sensor_required": "vibration",
+      "can_compute": false
+    },
+    "age_hours": {
+      "status": "\u26a0\ufe0f FROM METADATA (install_date, maintenance logs)",
+      "sensor_required": null,
+      "can_compute": false
+    },
+    "maintenance_score": {
+      "status": "\u26a0\ufe0f FROM METADATA (install_date, maintenance logs)",
+      "sensor_required": null,
+      "can_compute": false
+    }
+  }
+}

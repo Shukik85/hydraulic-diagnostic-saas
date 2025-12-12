@@ -1,275 +1,495 @@
-# services/gnn_service/main.py
+"""GNN Service FastAPI Application.
+
+Production-ready API for hydraulic system diagnostics using GNN.
+
+Endpoints:
+    v2 (Phase 3.1):
+        - POST /api/v2/inference/minimal
+        - GET /api/v2/topologies
+        - GET /api/v2/topologies/{topology_id}
+        - POST /api/v2/topologies/validate
+    
+    v1 (Legacy):
+        - POST /api/v1/predict
+        - POST /api/v1/batch/predict
+    
+    Health:
+        - GET /health
+        - GET /healthz
+        - GET /ready
+
+Author: GNN Service Team
+Python: 3.14+
 """
-GNN Service - Complete implementation.
-Graph Neural Network inference, model management, training.
-"""
-import os
+
+from __future__ import annotations
+
 import logging
-from typing import Dict, List, Optional
-from datetime import datetime
+import os
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-import uvicorn
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
-from openapi_config import custom_openapi
-from admin_endpoints import router as admin_router
+from src.inference.inference_engine import InferenceConfig, InferenceEngine
+from src.schemas import BatchPredictionRequest, GraphTopology, PredictionRequest, PredictionResponse
+from src.schemas.requests import MinimalInferenceRequest
+from src.services.topology_service import TopologyService, get_topology_service
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
+# Global instances (initialized in lifespan)
+engine: InferenceEngine | None = None
+topology_service: TopologyService | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown.
+    
+    Initializes:
+    - InferenceEngine
+    - TopologyService
+    - Model loading
+    """
+    global engine, topology_service
+
+    logger.info("Starting GNN Service...")
+
+    # Load configuration
+    model_path = os.getenv("MODEL_PATH", "models/v2.0.0.ckpt")
+    device = os.getenv("DEVICE", "auto")
+    batch_size = int(os.getenv("BATCH_SIZE", "32"))
+
+    # Initialize inference engine
+    try:
+        config = InferenceConfig(
+            model_path=model_path,
+            device=device,
+            batch_size=batch_size,
+            use_dynamic_features=True  # Phase 3.1
+        )
+
+        engine = InferenceEngine(config=config)
+        logger.info(f"InferenceEngine initialized (device={device})")
+    except Exception as e:
+        logger.error(f"Failed to initialize InferenceEngine: {e}")
+        raise
+
+    # Initialize topology service
+    try:
+        topology_service = get_topology_service()
+        logger.info("TopologyService initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize TopologyService: {e}")
+        raise
+
+    logger.info("GNN Service started successfully")
+
+    yield
+
+    # Shutdown
+    logger.info("Shutting down GNN Service...")
+    engine = None
+    topology_service = None
+
 
 # Create FastAPI app
 app = FastAPI(
-    title="GNN Service API",
-    version="1.0.0",
-    description="Graph Neural Network inference and model management",
-    openapi_version="3.1.0",
+    title="GNN Hydraulic Diagnostics Service",
+    description="Production GNN service for hydraulic system diagnostics",
+    version="2.0.0",
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
-# CORS
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Configure in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include admin router
-app.include_router(admin_router)
 
-# Apply custom OpenAPI
-app.openapi = lambda: custom_openapi(app)
+# ============================================================================
+# Health Check Endpoints
+# ============================================================================
 
-
-# === Request/Response Models ===
-
-class InferenceRequest(BaseModel):
-    """Single inference request."""
-    equipment_id: str = Field(..., description="Equipment ID")
-    time_window: Dict = Field(..., description="Time range for data")
-    sensor_data: Optional[Dict] = Field(None, description="Pre-fetched sensor data")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "equipment_id": "exc_001",
-                "time_window": {
-                    "start_time": "2025-11-01T00:00:00Z",
-                    "end_time": "2025-11-13T00:00:00Z"
-                }
-            }
-        }
-
-
-class ComponentHealth(BaseModel):
-    """Component health status."""
-    component_id: str
-    component_type: str
-    health_score: float = Field(..., ge=0.0, le=1.0)
-    degradation_rate: float
-    confidence: float = Field(..., ge=0.0, le=1.0)
-
-
-class Anomaly(BaseModel):
-    """Detected anomaly."""
-    anomaly_type: str
-    severity: str  # "low" | "medium" | "high" | "critical"
-    confidence: float
-    affected_components: List[str]
-    description: str
-
-
-class InferenceResponse(BaseModel):
-    """GNN inference result."""
-    request_id: str
-    overall_health_score: float = Field(..., ge=0.0, le=1.0)
-    component_health: List[ComponentHealth]
-    anomalies: List[Anomaly]
-    recommendations: List[str]
-    inference_time_ms: float
-    timestamp: str
-    model_version: str
-
-
-class BatchInferenceRequest(BaseModel):
-    """Batch inference request."""
-    requests: List[InferenceRequest] = Field(..., max_length=100)
-
-
-class ModelInfoResponse(BaseModel):
-    """Model information."""
-    model_version: str
-    model_type: str
-    input_shape: List[int]
-    output_classes: int
-    framework: str
-    deployed_at: str
-
-
-# === Monitoring Endpoints ===
-
-@app.get("/health", tags=["Monitoring"])
+@app.get("/health", tags=["Health"])
+@app.get("/healthz", tags=["Health"])
 async def health_check():
-    """
-    Service health check.
+    """Basic health check.
     
-    Checks:
-    - Service is running
-    - Model is loaded
-    - GPU available (if configured)
+    Returns:
+        Status: healthy if service is running
     """
-    try:
-        # Check model loaded
-        # model = get_model()
-        
-        return {
-            "service": "gnn-service",
-            "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
-            "checks": {
-                "model": "loaded",
-                "gpu": "available"  # TODO: actual check
-            }
-        }
-    except Exception as e:
-        return {
-            "service": "gnn-service",
-            "status": "unhealthy",
-            "error": str(e)
-        }
-
-
-@app.get("/ready", tags=["Monitoring"])
-async def readiness_check():
-    """Readiness probe for Kubernetes."""
-    return {"status": "ready"}
-
-
-@app.get("/metrics", tags=["Monitoring"])
-async def metrics():
-    """
-    Prometheus metrics endpoint.
-    """
-    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-    from fastapi import Response
-    
-    return Response(
-        content=generate_latest(),
-        media_type=CONTENT_TYPE_LATEST
-    )
-
-
-# === Inference Endpoints ===
-
-@app.post("/inference", response_model=InferenceResponse, tags=["Inference"])
-async def run_inference(request: InferenceRequest):
-    """
-    Run GNN inference on equipment data.
-    
-    **Process**:
-    1. Fetch sensor data from TimescaleDB
-    2. Build graph structure
-    3. Run GNN model
-    4. Post-process results
-    5. Generate recommendations
-    
-    **Returns**: Health scores, anomalies, recommendations
-    
-    **Latency**: ~500ms typical
-    """
-    try:
-        import time
-        from inference_dynamic import run_dynamic_inference
-        
-        start_time = time.time()
-        request_id = f"req_{int(start_time * 1000)}"
-        
-        logger.info(f"Running inference for {request.equipment_id}")
-        
-        # Run inference
-        result = await run_dynamic_inference(
-            equipment_id=request.equipment_id,
-            time_window=request.time_window,
-            sensor_data=request.sensor_data
-        )
-        
-        inference_time = (time.time() - start_time) * 1000
-        
-        return InferenceResponse(
-            request_id=request_id,
-            overall_health_score=result["overall_health_score"],
-            component_health=result["component_health"],
-            anomalies=result["anomalies"],
-            recommendations=result["recommendations"],
-            inference_time_ms=inference_time,
-            timestamp=datetime.utcnow().isoformat(),
-            model_version="1.0.0"
-        )
-        
-    except Exception as e:
-        logger.error(f"Inference failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Inference failed: {str(e)}")
-
-
-@app.post("/batch-inference", tags=["Inference"])
-async def batch_inference(request: BatchInferenceRequest):
-    """
-    Batch inference for multiple equipment.
-    
-    **Max**: 100 requests per batch
-    **Latency**: ~50ms per request
-    """
-    try:
-        results = []
-        
-        for req in request.requests:
-            result = await run_inference(req)
-            results.append(result)
-        
-        return {
-            "batch_size": len(results),
-            "results": results,
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        
-    except Exception as e:
-        logger.error(f"Batch inference failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/model-info", response_model=ModelInfoResponse, tags=["Inference"])
-async def get_model_info():
-    """
-    Get current production model information.
-    
-    **Public endpoint** - no auth required.
-    """
-    return ModelInfoResponse(
-        model_version="1.0.0",
-        model_type="Universal Temporal GNN (GAT + LSTM)",
-        input_shape=[1, 10, 32],
-        output_classes=3,
-        framework="ONNX",
-        deployed_at="2025-11-13T00:00:00Z"
-    )
-
-
-@app.get("/", tags=["Info"])
-async def root():
-    """Root endpoint."""
     return {
-        "service": "GNN Service",
-        "version": "1.0.0",
-        "status": "operational",
-        "docs": "/docs",
-        "health": "/health"
+        "status": "healthy",
+        "service": "gnn-service",
+        "version": "2.0.0"
     }
 
 
+@app.get("/ready", tags=["Health"])
+async def readiness_check():
+    """Readiness check (model loaded, services ready).
+    
+    Returns:
+        Status: ready if all components initialized
+    """
+    if engine is None or topology_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service not ready"
+        )
+
+    return {
+        "status": "ready",
+        "model_loaded": engine is not None,
+        "topology_service_ready": topology_service is not None,
+        "stats": engine.get_stats() if engine else {}
+    }
+
+
+# ============================================================================
+# v2 API Endpoints (Phase 3.1)
+# ============================================================================
+
+@app.post(
+    "/api/v2/inference/minimal",
+    response_model=PredictionResponse,
+    tags=["Inference v2"]
+)
+async def predict_minimal(request: MinimalInferenceRequest) -> PredictionResponse:
+    """Minimal inference endpoint (Phase 3.1).
+    
+    Simplest API - only requires:
+    - equipment_id
+    - timestamp
+    - sensor_readings (per component)
+    - topology_id (template name)
+    
+    Dynamic edge features are auto-computed from sensor readings.
+    
+    Args:
+        request: MinimalInferenceRequest
+    
+    Returns:
+        PredictionResponse with health, degradation, anomaly predictions
+    
+    Example:
+        ```json
+        {
+          "equipment_id": "pump_system_01",
+          "timestamp": "2025-12-03T23:00:00Z",
+          "sensor_readings": {
+            "pump_1": {
+              "pressure_bar": 150.0,
+              "temperature_c": 65.0,
+              "vibration_g": 0.8
+            },
+            "valve_1": {
+              "pressure_bar": 148.0,
+              "temperature_c": 64.0
+            }
+          },
+          "topology_id": "standard_pump_system"
+        }
+        ```
+    """
+    if engine is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Inference engine not ready"
+        )
+
+    try:
+        response = await engine.predict_minimal(request)
+        return response
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Prediction failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Prediction failed"
+        )
+
+
+@app.get(
+    "/api/v2/topologies",
+    tags=["Topology v2"]
+)
+async def list_topologies():
+    """List all available topology templates.
+    
+    Returns:
+        List of template metadata (id, name, description, components, edges)
+    
+    Example response:
+        ```json
+        {
+          "templates": [
+            {
+              "template_id": "standard_pump_system",
+              "name": "Standard Pump System",
+              "description": "...",
+              "num_components": 4,
+              "num_edges": 3
+            }
+          ]
+        }
+        ```
+    """
+    if topology_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Topology service not ready"
+        )
+
+    try:
+        templates = topology_service.list_templates()
+        return {"templates": templates}
+
+    except Exception as e:
+        logger.error(f"Failed to list templates: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list templates"
+        )
+
+
+@app.get(
+    "/api/v2/topologies/{topology_id}",
+    tags=["Topology v2"]
+)
+async def get_topology(topology_id: str):
+    """Get topology template by ID.
+    
+    Args:
+        topology_id: Template identifier
+    
+    Returns:
+        Template details (components, edges, metadata)
+    
+    Raises:
+        404: Template not found
+    """
+    if topology_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Topology service not ready"
+        )
+
+    try:
+        template = topology_service.get_template(topology_id)
+
+        if template is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Topology not found: {topology_id}"
+            )
+
+        return template.model_dump()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get template {topology_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get template"
+        )
+
+
+@app.post(
+    "/api/v2/topologies/validate",
+    tags=["Topology v2"]
+)
+async def validate_topology(topology: GraphTopology):
+    """Validate custom topology.
+    
+    Checks:
+    - All edges reference existing components
+    - No duplicate component IDs
+    - Edge properties are valid
+    
+    Args:
+        topology: Custom GraphTopology
+    
+    Returns:
+        Validation result (is_valid, errors)
+    
+    Example:
+        ```json
+        {
+          "equipment_id": "custom_system",
+          "components": {...},
+          "edges": [...]
+        }
+        ```
+    """
+    if topology_service is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Topology service not ready"
+        )
+
+    try:
+        is_valid, errors = topology_service.validate_topology(topology)
+
+        return {
+            "is_valid": is_valid,
+            "errors": errors,
+            "num_components": len(topology.components),
+            "num_edges": len(topology.edges)
+        }
+
+    except Exception as e:
+        logger.error(f"Validation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Validation failed"
+        )
+
+
+# ============================================================================
+# v1 API Endpoints (Legacy - Backward Compatible)
+# ============================================================================
+
+@app.post(
+    "/api/v1/predict",
+    response_model=PredictionResponse,
+    tags=["Inference v1 (Legacy)"]
+)
+async def predict_legacy(
+    request: PredictionRequest,
+    topology: GraphTopology
+) -> PredictionResponse:
+    """Legacy single prediction endpoint.
+    
+    Backward compatible with v1 API.
+    
+    Args:
+        request: PredictionRequest
+        topology: GraphTopology
+    
+    Returns:
+        PredictionResponse
+    """
+    if engine is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Inference engine not ready"
+        )
+
+    try:
+        response = await engine.predict(request, topology)
+        return response
+
+    except Exception as e:
+        logger.error(f"Prediction failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Prediction failed"
+        )
+
+
+@app.post(
+    "/api/v1/batch/predict",
+    response_model=list[PredictionResponse],
+    tags=["Inference v1 (Legacy)"]
+)
+async def predict_batch_legacy(
+    batch_request: BatchPredictionRequest,
+    topology: GraphTopology
+) -> list[PredictionResponse]:
+    """Legacy batch prediction endpoint.
+    
+    Backward compatible with v1 API.
+    
+    Args:
+        batch_request: BatchPredictionRequest
+        topology: GraphTopology
+    
+    Returns:
+        List of PredictionResponse
+    """
+    if engine is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Inference engine not ready"
+        )
+
+    try:
+        responses = await engine.predict_batch(
+            requests=batch_request.requests,
+            topology=topology
+        )
+        return responses
+
+    except Exception as e:
+        logger.error(f"Batch prediction failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Batch prediction failed"
+        )
+
+
+# ============================================================================
+# Error Handlers
+# ============================================================================
+
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request, exc: ValidationError):
+    """Handle Pydantic validation errors."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": "Validation error",
+            "errors": exc.errors()
+        }
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc: Exception):
+    """Handle unexpected errors."""
+    logger.error(f"Unexpected error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "detail": "Internal server error",
+            "error": str(exc)
+        }
+    )
+
+
+# ============================================================================
+# Main Entry Point
+# ============================================================================
+
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8002"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    import uvicorn
+
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=False,  # Set True for development
+        log_level="info"
+    )

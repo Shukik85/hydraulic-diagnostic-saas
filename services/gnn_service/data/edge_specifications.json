@@ -1,0 +1,182 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Shukik85/hydraulic-diagnostic-saas/edge-specifications.schema.json",
+  "title": "Edge Specifications for EXC-PROD-001",
+  "description": "Hydraulic line specifications with realistic assumptions for 30-ton excavator",
+  "version": "1.0.0-assumptions",
+  "note": "These are ASSUMED values based on typical excavator specs. Replace with real measurements for production.",
+  "equipment_id": "EXC-PROD-001",
+  "edges": [
+    {
+      "source_id": "pump_main_1",
+      "target_id": "valve_main",
+      "edge_type": "pipe",
+      "diameter_mm": 25.0,
+      "length_m": 2.0,
+      "material": "steel",
+      "pressure_rating_bar": 350.0,
+      "temperature_rating_c": 100.0,
+      "install_date": "2020-01-15T00:00:00Z",
+      "notes": "Main pressure line from pump 1 to control valve",
+      "assumptions": {
+        "diameter": "Typical for main pressure line on 30-ton excavator",
+        "length": "Estimated from typical cab-to-valve routing",
+        "material": "Standard for high-pressure lines",
+        "pressure_rating": "350 bar standard for main lines"
+      }
+    },
+    {
+      "source_id": "pump_main_2",
+      "target_id": "valve_main",
+      "edge_type": "pipe",
+      "diameter_mm": 25.0,
+      "length_m": 2.0,
+      "material": "steel",
+      "pressure_rating_bar": 350.0,
+      "temperature_rating_c": 100.0,
+      "install_date": "2020-01-15T00:00:00Z",
+      "notes": "Main pressure line from pump 2 to control valve (redundant)",
+      "assumptions": {
+        "diameter": "Same as pump 1 line",
+        "length": "Similar routing as pump 1"
+      }
+    },
+    {
+      "source_id": "valve_main",
+      "target_id": "cylinder_boom",
+      "edge_type": "hose",
+      "diameter_mm": 20.0,
+      "length_m": 3.0,
+      "material": "rubber",
+      "pressure_rating_bar": 320.0,
+      "temperature_rating_c": 80.0,
+      "install_date": "2021-06-10T00:00:00Z",
+      "notes": "Boom cylinder actuation line (largest cylinder, needs bigger line)",
+      "assumptions": {
+        "diameter": "20mm for large cylinder (120mm bore)",
+        "length": "Longer reach to boom base",
+        "material": "Rubber hose for flexibility",
+        "pressure_rating": "320 bar for actuator lines"
+      }
+    },
+    {
+      "source_id": "valve_main",
+      "target_id": "cylinder_arm",
+      "edge_type": "hose",
+      "diameter_mm": 18.0,
+      "length_m": 2.5,
+      "material": "rubber",
+      "pressure_rating_bar": 300.0,
+      "temperature_rating_c": 80.0,
+      "install_date": "2021-06-10T00:00:00Z",
+      "notes": "Arm cylinder actuation line",
+      "assumptions": {
+        "diameter": "18mm for medium cylinder (110mm bore)",
+        "length": "Medium reach to arm"
+      }
+    },
+    {
+      "source_id": "valve_main",
+      "target_id": "cylinder_bucket",
+      "edge_type": "hose",
+      "diameter_mm": 16.0,
+      "length_m": 2.0,
+      "material": "rubber",
+      "pressure_rating_bar": 300.0,
+      "temperature_rating_c": 80.0,
+      "install_date": "2021-06-10T00:00:00Z",
+      "notes": "Bucket cylinder actuation line (smallest cylinder)",
+      "assumptions": {
+        "diameter": "16mm for smaller cylinder (100mm bore)",
+        "length": "Shorter reach to bucket linkage"
+      }
+    },
+    {
+      "source_id": "valve_main",
+      "target_id": "motor_swing",
+      "edge_type": "hose",
+      "diameter_mm": 18.0,
+      "length_m": 1.5,
+      "material": "rubber",
+      "pressure_rating_bar": 300.0,
+      "temperature_rating_c": 80.0,
+      "install_date": "2021-03-20T00:00:00Z",
+      "notes": "Swing motor line (central location)",
+      "assumptions": {
+        "diameter": "18mm for hydraulic motor",
+        "length": "Short run, central mounting"
+      }
+    },
+    {
+      "source_id": "valve_main",
+      "target_id": "motor_travel_left",
+      "edge_type": "hose",
+      "diameter_mm": 16.0,
+      "length_m": 2.5,
+      "material": "rubber",
+      "pressure_rating_bar": 300.0,
+      "temperature_rating_c": 80.0,
+      "install_date": "2020-09-15T00:00:00Z",
+      "notes": "Left track motor line",
+      "assumptions": {
+        "diameter": "16mm for travel motor",
+        "length": "Run to left track"
+      }
+    },
+    {
+      "source_id": "valve_main",
+      "target_id": "motor_travel_right",
+      "edge_type": "hose",
+      "diameter_mm": 16.0,
+      "length_m": 2.5,
+      "material": "rubber",
+      "pressure_rating_bar": 300.0,
+      "temperature_rating_c": 80.0,
+      "install_date": "2020-09-15T00:00:00Z",
+      "notes": "Right track motor line (symmetric with left)",
+      "assumptions": {
+        "diameter": "16mm for travel motor",
+        "length": "Run to right track"
+      }
+    }
+  ],
+  "metadata": {
+    "source": "assumptions",
+    "created_by": "GNN Service Team",
+    "created_at": "2025-12-03T23:50:00Z",
+    "validation_status": "test_only",
+    "notes": "Based on typical 30-ton excavator hydraulic systems (Caterpillar 330, Komatsu PC300 class). For production, replace with actual CAD measurements or field measurements."
+  },
+  "assumptions_summary": {
+    "main_lines": {
+      "diameter_range": "25mm",
+      "length_range": "2m",
+      "material": "steel (rigid pipes)",
+      "pressure_rating": "350 bar"
+    },
+    "actuator_lines": {
+      "diameter_range": "16-20mm (scaled by cylinder bore)",
+      "length_range": "1.5-3m (by reach distance)",
+      "material": "rubber (flexible hoses)",
+      "pressure_rating": "300-320 bar"
+    },
+    "install_dates": {
+      "main_system": "2020-01-15 (assumed commissioning)",
+      "actuator_hoses": "2021 (assumed replacement cycle)"
+    }
+  },
+  "validation_checklist": {
+    "physics_check": {
+      "flow_rates": "Should be 50-150 L/min based on Darcy-Weisbach",
+      "pressure_drops": "Should be 2-10 bar for these diameters/lengths",
+      "reynolds_number": "Should be turbulent (Re > 4000) for typical flows"
+    },
+    "replacement_needed": [
+      "Measure actual pipe diameters with calipers",
+      "Measure actual lengths with tape measure",
+      "Check material from part numbers",
+      "Get install dates from maintenance logs",
+      "Verify pressure ratings from datasheets"
+    ]
+  }
+}

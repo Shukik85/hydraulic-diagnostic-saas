@@ -1,0 +1,98 @@
+name: GNN Service CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+    paths:
+      - 'services/gnn_service/**'
+      - '.github/workflows/gnn-service-ci.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'services/gnn_service/**'
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        working-directory: services/gnn_service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov pytest-asyncio
+      
+      - name: Run unit tests
+        working-directory: services/gnn_service
+        run: |
+          pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=term-missing
+      
+      - name: Run integration tests
+        working-directory: services/gnn_service
+        run: |
+          pytest tests/integration/ -v --cov=src --cov-append --cov-report=xml --cov-report=term-missing
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: matrix.python-version == '3.12'
+        with:
+          file: ./services/gnn_service/coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install linting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black mypy
+      
+      - name: Run ruff
+        working-directory: services/gnn_service
+        run: |
+          ruff check src/ tests/ --output-format=github
+      
+      - name: Run black
+        working-directory: services/gnn_service
+        run: |
+          black --check src/ tests/
+      
+      - name: Run mypy
+        working-directory: services/gnn_service
+        continue-on-error: true
+        run: |
+          mypy src/ --ignore-missing-imports

@@ -1,0 +1,311 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Shukik85/hydraulic-diagnostic-saas/topology-templates.schema.json",
+  "title": "Hydraulic Topology Templates",
+  "description": "Built-in templates for common hydraulic system configurations",
+  "version": "2.0.0",
+  "templates": [
+    {
+      "template_id": "standard_pump_system",
+      "name": "Standard Pump System",
+      "description": "Single pump configuration with filter, valve, and cylinder. Typical for excavators, loaders, and standard hydraulic equipment.",
+      "version": "1.0.0",
+      "category": "mobile_hydraulics",
+      "components": [
+        {
+          "component_id": "pump_main",
+          "component_type": "pump",
+          "name": "Main Hydraulic Pump",
+          "manufacturer": "Bosch Rexroth",
+          "model": "A10VSO",
+          "rated_pressure_bar": 350,
+          "rated_flow_lpm": 120
+        },
+        {
+          "component_id": "filter_main",
+          "component_type": "filter",
+          "name": "Main Filter",
+          "manufacturer": "HYDAC",
+          "model": "DFBN/HC",
+          "filtration_rating_microns": 10
+        },
+        {
+          "component_id": "valve_control",
+          "component_type": "valve",
+          "name": "Control Valve",
+          "manufacturer": "Parker",
+          "model": "D1VW",
+          "valve_type": "directional"
+        },
+        {
+          "component_id": "cylinder_1",
+          "component_type": "cylinder",
+          "name": "Actuator Cylinder",
+          "manufacturer": "SMC",
+          "model": "CY1S",
+          "bore_mm": 100,
+          "stroke_mm": 500
+        }
+      ],
+      "edges": [
+        {
+          "source_id": "pump_main",
+          "target_id": "filter_main",
+          "edge_type": "pipe",
+          "diameter_mm": 25.0,
+          "length_m": 2.0,
+          "material": "steel",
+          "pressure_rating_bar": 350.0,
+          "temperature_rating_c": 100.0
+        },
+        {
+          "source_id": "filter_main",
+          "target_id": "valve_control",
+          "edge_type": "pipe",
+          "diameter_mm": 20.0,
+          "length_m": 1.5,
+          "material": "steel",
+          "pressure_rating_bar": 350.0,
+          "temperature_rating_c": 100.0
+        },
+        {
+          "source_id": "valve_control",
+          "target_id": "cylinder_1",
+          "edge_type": "hose",
+          "diameter_mm": 16.0,
+          "length_m": 3.0,
+          "material": "rubber",
+          "pressure_rating_bar": 250.0,
+          "temperature_rating_c": 80.0
+        }
+      ]
+    },
+    {
+      "template_id": "dual_pump_system",
+      "name": "Dual Pump System",
+      "description": "Redundant pump configuration for high-reliability applications. Two pumps with separate filters and valves provide backup capability.",
+      "version": "1.0.0",
+      "category": "industrial_hydraulics",
+      "components": [
+        {
+          "component_id": "pump_1",
+          "component_type": "pump",
+          "name": "Primary Pump",
+          "manufacturer": "Bosch Rexroth",
+          "model": "A10VSO",
+          "rated_pressure_bar": 350,
+          "rated_flow_lpm": 100
+        },
+        {
+          "component_id": "pump_2",
+          "component_type": "pump",
+          "name": "Secondary Pump",
+          "manufacturer": "Bosch Rexroth",
+          "model": "A10VSO",
+          "rated_pressure_bar": 350,
+          "rated_flow_lpm": 100
+        },
+        {
+          "component_id": "filter_1",
+          "component_type": "filter",
+          "name": "Primary Filter",
+          "manufacturer": "HYDAC",
+          "model": "DFBN/HC",
+          "filtration_rating_microns": 10
+        },
+        {
+          "component_id": "filter_2",
+          "component_type": "filter",
+          "name": "Secondary Filter",
+          "manufacturer": "HYDAC",
+          "model": "DFBN/HC",
+          "filtration_rating_microns": 10
+        },
+        {
+          "component_id": "valve_1",
+          "component_type": "valve",
+          "name": "Primary Control Valve",
+          "manufacturer": "Parker",
+          "model": "D1VW",
+          "valve_type": "directional"
+        },
+        {
+          "component_id": "valve_2",
+          "component_type": "valve",
+          "name": "Secondary Control Valve",
+          "manufacturer": "Parker",
+          "model": "D1VW",
+          "valve_type": "directional"
+        },
+        {
+          "component_id": "manifold",
+          "component_type": "valve",
+          "name": "Manifold",
+          "manufacturer": "Parker",
+          "model": "Custom",
+          "valve_type": "manifold"
+        }
+      ],
+      "edges": [
+        {
+          "source_id": "pump_1",
+          "target_id": "filter_1",
+          "edge_type": "pipe",
+          "diameter_mm": 25.0,
+          "length_m": 2.0,
+          "material": "steel",
+          "pressure_rating_bar": 350.0
+        },
+        {
+          "source_id": "pump_2",
+          "target_id": "filter_2",
+          "edge_type": "pipe",
+          "diameter_mm": 25.0,
+          "length_m": 2.0,
+          "material": "steel",
+          "pressure_rating_bar": 350.0
+        },
+        {
+          "source_id": "filter_1",
+          "target_id": "valve_1",
+          "edge_type": "pipe",
+          "diameter_mm": 20.0,
+          "length_m": 1.5,
+          "material": "steel",
+          "pressure_rating_bar": 350.0
+        },
+        {
+          "source_id": "filter_2",
+          "target_id": "valve_2",
+          "edge_type": "pipe",
+          "diameter_mm": 20.0,
+          "length_m": 1.5,
+          "material": "steel",
+          "pressure_rating_bar": 350.0
+        },
+        {
+          "source_id": "valve_1",
+          "target_id": "manifold",
+          "edge_type": "pipe",
+          "diameter_mm": 20.0,
+          "length_m": 1.0,
+          "material": "steel",
+          "pressure_rating_bar": 350.0
+        },
+        {
+          "source_id": "valve_2",
+          "target_id": "manifold",
+          "edge_type": "pipe",
+          "diameter_mm": 20.0,
+          "length_m": 1.0,
+          "material": "steel",
+          "pressure_rating_bar": 350.0
+        }
+      ]
+    },
+    {
+      "template_id": "hydraulic_circuit_type_a",
+      "name": "Hydraulic Circuit Type A",
+      "description": "Standard industrial hydraulic circuit with cooling system. Includes pump, filter, cooler, valve, and reservoir for temperature-controlled operations.",
+      "version": "1.0.0",
+      "category": "industrial_hydraulics",
+      "components": [
+        {
+          "component_id": "pump_main",
+          "component_type": "pump",
+          "name": "Main Pump",
+          "manufacturer": "Bosch Rexroth",
+          "model": "A10VSO",
+          "rated_pressure_bar": 350,
+          "rated_flow_lpm": 150
+        },
+        {
+          "component_id": "filter_suction",
+          "component_type": "filter",
+          "name": "Suction Filter",
+          "manufacturer": "HYDAC",
+          "model": "LFBN/HC",
+          "filtration_rating_microns": 25
+        },
+        {
+          "component_id": "cooler_main",
+          "component_type": "cooler",
+          "name": "Oil Cooler",
+          "manufacturer": "HYDAC",
+          "model": "OK-EL",
+          "cooling_capacity_kw": 50
+        },
+        {
+          "component_id": "valve_relief",
+          "component_type": "valve",
+          "name": "Relief Valve",
+          "manufacturer": "Parker",
+          "model": "RV06",
+          "valve_type": "relief",
+          "set_pressure_bar": 320
+        },
+        {
+          "component_id": "reservoir",
+          "component_type": "reservoir",
+          "name": "Hydraulic Tank",
+          "manufacturer": "Generic",
+          "model": "Tank-500L",
+          "capacity_liters": 500
+        }
+      ],
+      "edges": [
+        {
+          "source_id": "reservoir",
+          "target_id": "filter_suction",
+          "edge_type": "pipe",
+          "diameter_mm": 50.0,
+          "length_m": 1.0,
+          "material": "steel",
+          "pressure_rating_bar": 10.0
+        },
+        {
+          "source_id": "filter_suction",
+          "target_id": "pump_main",
+          "edge_type": "pipe",
+          "diameter_mm": 40.0,
+          "length_m": 1.5,
+          "material": "steel",
+          "pressure_rating_bar": 10.0
+        },
+        {
+          "source_id": "pump_main",
+          "target_id": "cooler_main",
+          "edge_type": "pipe",
+          "diameter_mm": 25.0,
+          "length_m": 3.0,
+          "material": "steel",
+          "pressure_rating_bar": 350.0
+        },
+        {
+          "source_id": "cooler_main",
+          "target_id": "valve_relief",
+          "edge_type": "pipe",
+          "diameter_mm": 25.0,
+          "length_m": 2.0,
+          "material": "steel",
+          "pressure_rating_bar": 350.0
+        },
+        {
+          "source_id": "valve_relief",
+          "target_id": "reservoir",
+          "edge_type": "pipe",
+          "diameter_mm": 32.0,
+          "length_m": 2.5,
+          "material": "steel",
+          "pressure_rating_bar": 10.0
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "author": "GNN Service Team",
+    "created": "2025-12-03",
+    "description": "Built-in topology templates for common hydraulic system configurations",
+    "phase": "3.2"
+  }
+}
