@@ -13,6 +13,7 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
+import warnings
 import pytest
 import torch
 from torch_geometric.data import Data, Batch
@@ -388,6 +389,7 @@ def test_rul_metrics_custom_horizons():
 
 # ===== MultiLevelMetrics Tests =====
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_multilevel_metrics_integration(batch_data):
     """Test complete multi-level metrics integration."""
     config = MetricConfig(num_anomaly_classes=9)
@@ -428,6 +430,7 @@ def test_multilevel_metrics_integration(batch_data):
     assert all(k.startswith("val/") for k in result.keys())
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_multilevel_metrics_reset(batch_data):
     """Test multi-level metrics reset."""
     metrics = MultiLevelMetrics(stage="train")
@@ -474,6 +477,7 @@ def test_multilevel_metrics_reset(batch_data):
     assert result1[component_mae_key] != result2[component_mae_key]
 
 
+@pytest.mark.filterwarnings("ignore::UserWarning")
 def test_multilevel_metrics_log_dict(batch_data):
     """Test conversion to float dict for Lightning logging."""
     metrics = MultiLevelMetrics(stage="val")
