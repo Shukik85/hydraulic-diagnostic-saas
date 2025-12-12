@@ -3,9 +3,11 @@
 ################################################################################
 #                         🧪 SMOKE TEST SCRIPT v2.0.0                         #
 #                      Quick validation (5 minutes)                           #
+#                   FIXED FOR WINDOWS/MINGW (uses virtualenv)                #
 ################################################################################
 
-set -e  # Exit on any error
+# Don't exit on first error - handle gracefully instead
+set +e
 
 echo ""
 echo "╔════════════════════════════════════════════════════════════════╗"
@@ -22,6 +24,25 @@ NC='\033[0m' # No Color
 
 PASSED=0
 FAILED=0
+
+# Find Python executable (Windows virtualenv or system)
+if [ -f ".venv/Scripts/python.exe" ]; then
+    PYTHON=".venv/Scripts/python.exe"
+elif [ -f ".venv/Scripts/python" ]; then
+    PYTHON=".venv/Scripts/python"
+elif command -v python &> /dev/null; then
+    PYTHON="python"
+elif command -v python3 &> /dev/null; then
+    PYTHON="python3"
+else
+    echo -e "${RED}❌ ERROR: Python not found${NC}"
+    echo "Please ensure virtualenv is activated: source .venv/bin/activate"
+    exit 1
+fi
+
+echo "Using Python: $PYTHON"
+$PYTHON --version
+echo ""
 
 test_result() {
     if [ $1 -eq 0 ]; then
@@ -43,23 +64,23 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Test 1a: InferenceEngine
-python3 -c "from src.inference.inference_engine import InferenceEngine; print('OK')" > /dev/null 2>&1
+$PYTHON -c "from src.inference.inference_engine import InferenceEngine; print('OK')" > /dev/null 2>&1
 test_result $? "InferenceEngine imports"
 
 # Test 1b: FeatureEngineer
-python3 -c "from src.data import FeatureEngineer; print('OK')" > /dev/null 2>&1
+$PYTHON -c "from src.data import FeatureEngineer; print('OK')" > /dev/null 2>&1
 test_result $? "FeatureEngineer imports"
 
 # Test 1c: TopologyService
-python3 -c "from src.services.topology_service import get_topology_service; print('OK')" > /dev/null 2>&1
+$PYTHON -c "from src.services.topology_service import get_topology_service; print('OK')" > /dev/null 2>&1
 test_result $? "TopologyService imports"
 
 # Test 1d: GraphBuilder
-python3 -c "from src.data import GraphBuilder; print('OK')" > /dev/null 2>&1
+$PYTHON -c "from src.data import GraphBuilder; print('OK')" > /dev/null 2>&1
 test_result $? "GraphBuilder imports"
 
 # Test 1e: Schemas
-python3 -c "from src.schemas import PredictionResponse; print('OK')" > /dev/null 2>&1
+$PYTHON -c "from src.schemas import PredictionResponse; print('OK')" > /dev/null 2>&1
 test_result $? "Schemas imports"
 
 echo ""
@@ -72,7 +93,7 @@ echo "2️⃣  _preprocess_minimal() IMPLEMENTATION"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-python3 << 'PYEOF'
+$PYTHON << 'PYEOF'
 import sys
 import inspect
 from src.inference.inference_engine import InferenceEngine
@@ -123,6 +144,8 @@ try:
 
 except Exception as e:
     print(f"ERROR: {e}")
+    import traceback
+    traceback.print_exc()
     sys.exit(1)
 PYEOF
 
@@ -139,11 +162,11 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Test 3a: InferenceConfig initializes
-python3 -c "from src.inference.inference_engine import InferenceConfig; InferenceConfig(model_path='test.ckpt'); print('OK')" > /dev/null 2>&1
+$PYTHON -c "from src.inference.inference_engine import InferenceConfig; InferenceConfig(model_path='test.ckpt'); print('OK')" > /dev/null 2>&1
 test_result $? "InferenceConfig initializes"
 
 # Test 3b: Can load configs directory
-python3 -c "from pathlib import Path; p = Path('configs'); print('EXISTS') if p.exists() else print('MISSING')" | grep -q EXISTS
+$PYTHON -c "from pathlib import Path; p = Path('configs'); print('EXISTS') if p.exists() else print('MISSING')" | grep -q EXISTS
 test_result $? "configs/ directory exists"
 
 echo ""
@@ -156,7 +179,8 @@ echo "4️⃣  TYPE HINTS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-python3 << 'PYEOF'
+$PYTHON << 'PYEOF'
+import sys
 import inspect
 from src.inference.inference_engine import InferenceEngine
 
@@ -175,11 +199,8 @@ try:
         print("ERROR: Missing 'topology' parameter")
         exit(1)
     
-    # Check return type annotation
-    if sig.return_annotation == inspect.Signature.empty:
-        print("WARNING: No return type annotation")
-    
-    print(f"OK\nParameters: {params}")
+    print(f"OK")
+    print(f"Parameters: {params}")
     exit(0)
 except Exception as e:
     print(f"ERROR: {e}")
@@ -199,13 +220,13 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 # Compile Python files to check for syntax errors
-python3 -m py_compile src/inference/inference_engine.py > /dev/null 2>&1
+$PYTHON -m py_compile src/inference/inference_engine.py > /dev/null 2>&1
 test_result $? "inference_engine.py syntax"
 
-python3 -m py_compile main.py > /dev/null 2>&1
+$PYTHON -m py_compile main.py > /dev/null 2>&1
 test_result $? "main.py syntax"
 
-python3 -m py_compile src/data/__init__.py > /dev/null 2>&1
+$PYTHON -m py_compile src/data/__init__.py > /dev/null 2>&1
 test_result $? "src/data/__init__.py syntax"
 
 echo ""
@@ -214,7 +235,7 @@ echo ""
 # SUMMARY
 ################################################################################
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📊 SMOKE TEST RESULTS"
+echo "📋 SMOKE TEST RESULTS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo -e "${GREEN}✅ PASSED: $PASSED${NC}"
