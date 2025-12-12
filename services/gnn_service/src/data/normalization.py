@@ -210,7 +210,7 @@ class EdgeFeatureNormalizer:
         return dt_norm * self.stats.temp_delta_std + self.stats.temp_delta_mean
 
     # ========================================================================
-    # Vibration (Min-Max [0, 1])
+    # Vibration
     # ========================================================================
 
     def normalize_vibration(self, vib_g: float) -> float:
@@ -244,7 +244,7 @@ class EdgeFeatureNormalizer:
         return vib_norm * self.stats.vibration_max
 
     # ========================================================================
-    # Age (Min-Max [0, 1])
+    # Age
     # ========================================================================
 
     def normalize_age(self, age_hours: float) -> float:
@@ -364,10 +364,10 @@ class EdgeFeatureNormalizer:
         self.stats.temp_delta_mean = float(np.mean(temps))
         self.stats.temp_delta_std = float(np.std(temps) + 1e-6)
 
-        # Vibration: max
+        # Vibration max
         self.stats.vibration_max = float(np.percentile(vibrations, 99))  # 99th percentile (robust)
 
-        # Age: max
+        # Age max
         self.stats.age_max = float(np.percentile(ages, 99))  # 99th percentile (robust)
 
     # ========================================================================

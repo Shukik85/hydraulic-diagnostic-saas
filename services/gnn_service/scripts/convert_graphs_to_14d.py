@@ -30,6 +30,7 @@ def load_edge_specifications(specs_path):
 
     return specs_map
 
+
 def get_mock_dynamic_features():
     """
     Возвращает заглушки динамических данных для генерации 14D вектора.
@@ -41,8 +42,9 @@ def get_mock_dynamic_features():
         "temperature_delta_c": 5.0,
         "vibration_level_g": 0.1,
         "age_hours": 1000.0,
-        "maintenance_score": 0.9
+        "maintenance_score": 0.9,
     }
+
 
 def convert_graph_to_14d(graph, edge_specs_map, component_ids, current_time=0.0):
     """
@@ -52,7 +54,9 @@ def convert_graph_to_14d(graph, edge_specs_map, component_ids, current_time=0.0)
     # 1. Проверяем соответствие узлов
     num_nodes = graph.x.shape[0]
     if len(component_ids) != num_nodes:
-        print(f"SKIP: Graph has {num_nodes} nodes, but {len(component_ids)} component_ids provided.")
+        print(
+            f"SKIP: Graph has {num_nodes} nodes, but {len(component_ids)} component_ids provided."
+        )
         return None
 
     edge_index = graph.edge_index
@@ -76,35 +80,39 @@ def convert_graph_to_14d(graph, edge_specs_map, component_ids, current_time=0.0)
             # Для чистоты данных лучше пропустить, но это изменит топологию
             # В данном фиксе мы просто пометим как 'valid=False' и потом отфильтруем
             # Или выбросим ошибку, если строгая валидация
-            # print(f"Warning: No spec for edge {key}")
             valid_mask.append(False)
             continue
 
         edge_spec = edge_specs_map[key]
 
         # 3. Формируем 8D Static Features
-        # [diameter, length, pressure_rating, age, area, loss_coeff, is_steel, is_high_pressure]
-        static_tensor = torch.tensor([
-            float(edge_spec.diameter_mm),
-            float(edge_spec.length_m),
-            float(edge_spec.pressure_rating_bar),
-            float(edge_spec.get_age_hours(current_time)),
-            float(edge_spec.cross_section_area_mm2),
-            float(edge_spec.pressure_loss_coefficient),
-            1.0 if edge_spec.material == "steel" else 0.0, # Пример маппинга
-            1.0 if edge_spec.edge_type == "high_pressure_hose" else 0.0
-        ], dtype=torch.float32)
+        static_tensor = torch.tensor(
+            [
+                float(edge_spec.diameter_mm),
+                float(edge_spec.length_m),
+                float(edge_spec.pressure_rating_bar),
+                float(edge_spec.get_age_hours(current_time)),
+                float(edge_spec.cross_section_area_mm2),
+                float(edge_spec.pressure_loss_coefficient),
+                1.0 if edge_spec.material == "steel" else 0.0,  # Пример маппинга
+                1.0 if edge_spec.edge_type == "high_pressure_hose" else 0.0,
+            ],
+            dtype=torch.float32,
+        )
 
         # 4. Формируем 6D Dynamic Features (Mock)
         dyn = get_mock_dynamic_features()
-        dynamic_tensor = torch.tensor([
-            dyn["flow_rate_lpm"],
-            dyn["pressure_drop_bar"],
-            dyn["temperature_delta_c"],
-            dyn["vibration_level_g"],
-            dyn["age_hours"],
-            dyn["maintenance_score"]
-        ], dtype=torch.float32)
+        dynamic_tensor = torch.tensor(
+            [
+                dyn["flow_rate_lpm"],
+                dyn["pressure_drop_bar"],
+                dyn["temperature_delta_c"],
+                dyn["vibration_level_g"],
+                dyn["age_hours"],
+                dyn["maintenance_score"],
+            ],
+            dtype=torch.float32,
+        )
 
         # 5. Объединяем в 14D
         edge_attr_14d = torch.cat([static_tensor, dynamic_tensor])
@@ -123,14 +131,10 @@ def convert_graph_to_14d(graph, edge_specs_map, component_ids, current_time=0.0)
     new_edge_index = edge_index[:, valid_mask]
 
     # Создаем объект Data
-    new_graph = Data(
-        x=graph.x,
-        edge_index=new_edge_index,
-        edge_attr=new_edge_attr,
-        y=graph.y
-    )
+    new_graph = Data(x=graph.x, edge_index=new_edge_index, edge_attr=new_edge_attr, y=graph.y)
 
     return new_graph
+
 
 def main():
     parser = argparse.ArgumentParser(description="Convert graphs to 14D edge features")
@@ -139,9 +143,12 @@ def main():
     parser.add_argument("--output", type=str, required=True, help="Output .pt file")
     parser.add_argument("--max-samples", type=int, default=None)
     # Обновленный default для нашего графа из 7 узлов
-    parser.add_argument("--component-ids", type=str,
-                        default="valve_main,pump_main_1,pump_main_2,cylinder_boom,cylinder_arm,cylinder_bucket,motor_swing",
-                        help="Comma-separated component IDs")
+    parser.add_argument(
+        "--component-ids",
+        type=str,
+        default="valve_main,pump_main_1,pump_main_2,cylinder_boom,cylinder_arm,cylinder_bucket,motor_swing",
+        help="Comma-separated component IDs",
+    )
 
     args = parser.parse_args()
 
@@ -161,7 +168,7 @@ def main():
     print(f"Total graphs found: {len(graphs)}")
 
     if args.max_samples:
-        graphs = graphs[:args.max_samples]
+        graphs = graphs[: args.max_samples]
         print(f"Processing subset: {len(graphs)}")
 
     converted_graphs = []
@@ -176,13 +183,15 @@ def main():
             continue
 
     # Statistics
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("STATISTICS")
-    print("="*60)
+    print("=" * 60)
 
     if not converted_graphs:
         print("⚠️  WARNING: No graphs were successfully converted!")
-        print(f"Check if component_ids match the graph nodes ({len(component_ids)} vs graph.num_nodes)")
+        print(
+            f"Check if component_ids match the graph nodes ({len(component_ids)} vs graph.num_nodes)"
+        )
         return
 
     avg_nodes = sum(g.num_nodes for g in converted_graphs) / len(converted_graphs)
@@ -197,6 +206,7 @@ def main():
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
     torch.save(converted_graphs, args.output)
     print(f"\n✅ Saved to {args.output}")
+
 
 if __name__ == "__main__":
     main()

@@ -15,7 +15,7 @@ from __future__ import annotations
 import torch
 import torch.nn.functional as F
 from torch import nn
-from torch_geometric.nn import GATv2Conv
+from torch_geometric.nn import GATv2Conv, global_mean_pool
 from torch_geometric.utils import softmax
 
 

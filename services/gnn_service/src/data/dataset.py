@@ -158,7 +158,9 @@ class HydraulicGraphDataset(Dataset):
             raise RuntimeError(msg)
 
         # Include edge_in_dim в cache filename для invalidation
-        cache_filename = f"{equipment_id}_{topology_hash[:8]}_e{self.feature_config.edge_in_dim}.pkl"
+        cache_filename = (
+            f"{equipment_id}_{topology_hash[:8]}_e{self.feature_config.edge_in_dim}.pkl"
+        )
         return self.cache_dir / cache_filename
 
     def _compute_topology_hash(self, topology: GraphTopology) -> str:
@@ -232,9 +234,7 @@ class HydraulicGraphDataset(Dataset):
 
         # Fallback: create minimal graph
         x = torch.randn(5, self.feature_config.total_features_per_sensor)
-        edge_index = torch.tensor(
-            [[0, 1, 1, 2, 2, 3], [1, 0, 2, 1, 3, 2]], dtype=torch.long
-        )
+        edge_index = torch.tensor([[0, 1, 1, 2, 2, 3], [1, 0, 2, 1, 3, 2]], dtype=torch.long)
         edge_attr = torch.randn(6, self.feature_config.edge_in_dim)
 
         return Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
@@ -298,7 +298,10 @@ class HydraulicGraphDataset(Dataset):
                     self._save_to_cache(cache_path, graph)
 
         # 4. Validate edge_in_dim
-        if graph.edge_attr is not None and graph.edge_attr.shape[1] != self.feature_config.edge_in_dim:
+        if (
+            graph.edge_attr is not None
+            and graph.edge_attr.shape[1] != self.feature_config.edge_in_dim
+        ):
             logger.warning(
                 f"Edge feature mismatch for {equipment_id}: "
                 f"loaded {graph.edge_attr.shape[1]}D, expected {self.feature_config.edge_in_dim}D. "
@@ -432,7 +435,6 @@ class TemporalGraphDataset(Dataset):
 
         # Extract graphs depending on structure
         if isinstance(data, dict):
-            # Structure: {"graphs": [...], "metadata": {...}}
             if "graphs" in data:
                 graphs = data["graphs"]
             else:

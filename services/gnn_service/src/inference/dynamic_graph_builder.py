@@ -72,10 +72,7 @@ class DynamicGraphBuilder:
         self.feature_engineer = feature_engineer
         self.feature_config = feature_config
 
-        logger.info(
-            f"DynamicGraphBuilder initialized "
-            f"(edge_in_dim={feature_config.edge_in_dim})"
-        )
+        logger.info(f"DynamicGraphBuilder initialized (edge_in_dim={feature_config.edge_in_dim})")
 
     async def build_from_timescale(
         self,
@@ -115,15 +112,11 @@ class DynamicGraphBuilder:
 
         if missing:
             logger.warning(
-                f"Missing sensors for {equipment_id}: {missing}. "
-                f"Will use zeros for padding."
+                f"Missing sensors for {equipment_id}: {missing}. Will use zeros for padding."
             )
 
         if extra:
-            logger.warning(
-                f"Extra sensors for {equipment_id}: {extra}. "
-                f"Will ignore them."
-            )
+            logger.warning(f"Extra sensors for {equipment_id}: {extra}. Will ignore them.")
 
         # 3. Create node features (one per sensor)
         x = self._create_node_features(
@@ -196,19 +189,14 @@ class DynamicGraphBuilder:
                 x_list.append(features)
             else:
                 # Sensor missing - use zeros
-                logger.warning(
-                    f"Sensor {sensor_id} missing for {equipment_id}, "
-                    f"using zeros"
-                )
+                logger.warning(f"Sensor {sensor_id} missing for {equipment_id}, using zeros")
                 features = torch.zeros(self.feature_config.total_features_per_sensor)
                 x_list.append(features)
 
         # Stack all node features
         x = torch.stack(x_list, dim=0)  # (N, in_channels)
 
-        assert x.shape[0] == num_sensors, (
-            f"Node count mismatch: {x.shape[0]} vs {num_sensors}"
-        )
+        assert x.shape[0] == num_sensors, f"Node count mismatch: {x.shape[0]} vs {num_sensors}"
 
         # Log actual feature dimension (flexible for different configs)
         if x.shape[1] != self.feature_config.total_features_per_sensor:
@@ -247,7 +235,7 @@ class DynamicGraphBuilder:
         edge_list = []
 
         for connection in topology.connections:
-            # connection: {"from": "sensor_1", "to": "sensor_2"}
+            # connection: "from": "sensor_1", "to": "sensor_2"
             from_sensor = connection.get("from") or connection.get("source")
             to_sensor = connection.get("to") or connection.get("target")
 
@@ -260,8 +248,7 @@ class DynamicGraphBuilder:
                 edge_list.append([to_idx, from_idx])
             else:
                 logger.warning(
-                    f"Connection {from_sensor} <-> {to_sensor} "
-                    f"references unknown sensors, skipping"
+                    f"Connection {from_sensor} <-> {to_sensor} references unknown sensors, skipping"
                 )
 
         if not edge_list:
@@ -289,7 +276,7 @@ class DynamicGraphBuilder:
         Returns:
             edge_attr: Edge features (E, edge_in_dim)
         """
-        sensor_to_node = {sid: i for i, sid in enumerate(topology.sensor_ids)}
+        _sensor_to_node = {sid: i for i, sid in enumerate(topology.sensor_ids)}
         num_edges = edge_index.shape[1]
 
         edge_attr_list = []
@@ -318,8 +305,7 @@ class DynamicGraphBuilder:
             f"Edge count mismatch: {edge_attr.shape[0]} vs {num_edges}"
         )
         assert edge_attr.shape[1] == self.feature_config.edge_in_dim, (
-            f"Edge feature dim mismatch: {edge_attr.shape[1]} vs "
-            f"{self.feature_config.edge_in_dim}"
+            f"Edge feature dim mismatch: {edge_attr.shape[1]} vs {self.feature_config.edge_in_dim}"
         )
 
         return edge_attr
@@ -363,9 +349,7 @@ class DynamicGraphBuilder:
         if self.feature_config.edge_in_dim >= 14:
             # 9. Correlation
             if from_sensor in sensor_data.columns and to_sensor in sensor_data.columns:
-                corr = float(
-                    sensor_data[from_sensor].corr(sensor_data[to_sensor])
-                )
+                corr = float(sensor_data[from_sensor].corr(sensor_data[to_sensor]))
             else:
                 corr = 0.0
             features.append(corr)
@@ -407,10 +391,7 @@ class DynamicGraphBuilder:
         """
         # Check node count
         if graph.x.shape[0] != len(topology.sensor_ids):
-            logger.error(
-                f"Node count mismatch: {graph.x.shape[0]} vs "
-                f"{len(topology.sensor_ids)}"
-            )
+            logger.error(f"Node count mismatch: {graph.x.shape[0]} vs {len(topology.sensor_ids)}")
             return False
 
         # Check node features (flexible dimension)
