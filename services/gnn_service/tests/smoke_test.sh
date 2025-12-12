@@ -9,6 +9,9 @@
 # Don't exit on first error - handle gracefully instead
 set +e
 
+# Fix Unicode encoding on Windows
+export PYTHONIOENCODING=utf-8
+
 echo ""
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║               🧪 GNN SERVICE v2.0.0 SMOKE TEST                ║"
@@ -35,7 +38,7 @@ elif command -v python &> /dev/null; then
 elif command -v python3 &> /dev/null; then
     PYTHON="python3"
 else
-    echo -e "${RED}❌ ERROR: Python not found${NC}"
+    echo -e "${RED}ERROR: Python not found${NC}"
     echo "Please ensure virtualenv is activated: source .venv/bin/activate"
     exit 1
 fi
@@ -46,10 +49,10 @@ echo ""
 
 test_result() {
     if [ $1 -eq 0 ]; then
-        echo -e "${GREEN}✅ PASS${NC}: $2"
+        echo -e "${GREEN}[OK] PASS${NC}: $2"
         ((PASSED++))
     else
-        echo -e "${RED}❌ FAIL${NC}: $2"
+        echo -e "${RED}[FAIL]${NC}: $2"
         ((FAILED++))
         return 1
     fi
@@ -136,10 +139,10 @@ try:
     # SUCCESS
     print("OK")
     print(f"Details: {len(lines)} lines of code")
-    print(f"  ✓ Sensor data conversion")
-    print(f"  ✓ DataFrame handling")
-    print(f"  ✓ Graph building")
-    print(f"  ✓ Error handling")
+    print(f"  [*] Sensor data conversion")
+    print(f"  [*] DataFrame handling")
+    print(f"  [*] Graph building")
+    print(f"  [*] Error handling")
     sys.exit(0)
 
 except Exception as e:
@@ -235,28 +238,28 @@ echo ""
 # SUMMARY
 ################################################################################
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📋 SMOKE TEST RESULTS"
+echo "SMOKE TEST RESULTS"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo -e "${GREEN}✅ PASSED: $PASSED${NC}"
-echo -e "${RED}❌ FAILED: $FAILED${NC}"
+echo -e "${GREEN}[OK] PASSED: $PASSED${NC}"
+echo -e "${RED}[FAIL] FAILED: $FAILED${NC}"
 echo ""
 
 if [ $FAILED -eq 0 ]; then
     echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║                  ✅ ALL SMOKE TESTS PASSED!                   ║"
+    echo "║                  [OK] ALL SMOKE TESTS PASSED!                   ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo ""
     echo "Next steps:"
     echo "  1. Run: pytest tests/unit/ -v --cov=src"
     echo "  2. Run: ruff check . --exclude _deprecated,_legacy"
     echo "  3. Run: mypy src/ --strict"
-    echo "  4. Then we create PR! 🚀"
+    echo "  4. Then we create PR! [GO]"
     echo ""
     exit 0
 else
     echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║               ❌ SMOKE TEST FAILED - FIX ISSUES                ║"
+    echo "║               [FAIL] SMOKE TEST FAILED - FIX ISSUES             ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo ""
     exit 1
