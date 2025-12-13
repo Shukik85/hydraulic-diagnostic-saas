@@ -73,13 +73,14 @@ select = [
 ]
 
 ignore = [
-    "E501",    # Line too long (handled by formatter)
+    "E501",    # Line too long (we have long type hints - ignore this)
     "COM812",  # Trailing comma (formatter conflict)
     "ISC001",  # Implicit string concat (formatter conflict)
     "S101",    # Use of assert (OK in tests)
     "PLR2004", # Magic value (acceptable in ML configs)
     "FBT001",  # Boolean positional arg (Pydantic fields)
     "FBT002",  # Boolean default arg (Pydantic fields)
+    "RUF100",  # Unused noqa comment (Russian text causes false positives)
 ]
 
 # Allow autofix for specific rules
@@ -91,6 +92,11 @@ unfixable = []
     "S101",    # asserts allowed in tests
     "ARG",     # unused arguments in fixtures
     "PLR2004", # magic values in test data
+]
+
+"src/schemas/*.py" = [
+    "E501",    # Russian docstrings are long
+    "RUF100",  # Russian text in docstrings
 ]
 
 [lint.isort]
