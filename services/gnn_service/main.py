@@ -27,6 +27,7 @@ from __future__ import annotations
 import logging
 import os
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator, Any
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,7 +52,7 @@ topology_service: TopologyService | None = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for startup/shutdown.
     
     Initializes:
@@ -127,7 +128,7 @@ app.add_middleware(
 
 @app.get("/health", tags=["Health"])
 @app.get("/healthz", tags=["Health"])
-async def health_check():
+async def health_check() -> dict[str, str]:
     """Basic health check.
     
     Returns:
@@ -141,7 +142,7 @@ async def health_check():
 
 
 @app.get("/ready", tags=["Health"])
-async def readiness_check():
+async def readiness_check() -> dict[str, Any]:
     """Readiness check (model loaded, services ready).
     
     Returns:
@@ -234,7 +235,7 @@ async def predict_minimal(request: MinimalInferenceRequest) -> PredictionRespons
     "/api/v2/topologies",
     tags=["Topology v2"]
 )
-async def list_topologies():
+async def list_topologies() -> dict[str, list[dict[str, Any]]]:
     """List all available topology templates.
     
     Returns:
@@ -277,7 +278,7 @@ async def list_topologies():
     "/api/v2/topologies/{topology_id}",
     tags=["Topology v2"]
 )
-async def get_topology(topology_id: str):
+async def get_topology(topology_id: str) -> dict[str, Any]:
     """Get topology template by ID.
     
     Args:
@@ -320,7 +321,7 @@ async def get_topology(topology_id: str):
     "/api/v2/topologies/validate",
     tags=["Topology v2"]
 )
-async def validate_topology(topology: GraphTopology):
+async def validate_topology(topology: GraphTopology) -> dict[str, Any]:
     """Validate custom topology.
     
     Checks:
@@ -455,7 +456,7 @@ async def predict_batch_legacy(
 # ============================================================================
 
 @app.exception_handler(ValidationError)
-async def validation_exception_handler(request, exc: ValidationError):
+async def validation_exception_handler(request: Any, exc: ValidationError) -> JSONResponse:
     """Handle Pydantic validation errors."""
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -467,7 +468,7 @@ async def validation_exception_handler(request, exc: ValidationError):
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc: Exception):
+async def global_exception_handler(request: Any, exc: Exception) -> JSONResponse:
     """Handle unexpected errors."""
     logger.error(f"Unexpected error: {exc}", exc_info=True)
     return JSONResponse(
