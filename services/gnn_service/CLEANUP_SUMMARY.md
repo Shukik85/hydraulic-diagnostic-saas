@@ -57,7 +57,7 @@
 ```
 src/
 ├── api/
-│   └── main.py          # NEW LOCATION - Single, clean API
+│   └── main.py          # ENTRY POINT - Start here with: uvicorn src.api.main:app
 ├── schemas/             # Pydantic v2 - Type-safe
 ├── data/                # Data pipeline & loaders
 ├── models/              # GNN implementations
@@ -74,6 +74,43 @@ tests/
 
 ---
 
+## 🚀 ENTRY POINT INFORMATION
+
+### Production API Launch
+```bash
+# From services/gnn_service/ directory:
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
+# OR with reload for development:
+uvicorn src.api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+### Docker Launch
+```bash
+# Build and run with docker-compose:
+docker-compose up
+
+# OR build Dockerfile directly:
+docker build -t gnn-service .
+docker run -p 8000:8000 gnn-service
+```
+
+### Development Launch
+```bash
+# Install dependencies:
+pip install -r requirements.txt
+
+# Run with development settings:
+uvicorn src.api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+### API Documentation
+Once running, access Swagger UI at:
+- **http://localhost:8000/docs** (Swagger)
+- **http://localhost:8000/redoc** (ReDoc)
+
+---
+
 ## 📊 Statistics
 
 | Metric | Value |
@@ -84,6 +121,7 @@ tests/
 | Total commits (session) | 23 |
 | Code consolidation | 100% in src/ |
 | API versions | 1 (production-ready) |
+| Entry point | src/api/main.py (NEW) |
 
 ---
 
@@ -96,6 +134,10 @@ tests/
 ### ✅ **One API Version**
 - **Before**: Multiple versions and configs
 - **After**: Single, production-ready src/api/main.py
+
+### ✅ **Clear Entry Point**
+- **Before**: Ambiguous starting location
+- **After**: Clear entry point at `src/api/main.py`
 
 ### ✅ **Clean Root Directory**
 - **Before**: 10+ legacy files in root
@@ -126,11 +168,19 @@ chmod +x TEST_DRIVE.sh
 - 12+ tests should succeed
 - 0 failures expected
 
-### 3. Sign Off
+### 3. Verify Entry Point
+```bash
+# Test the API entry point
+uvicorn src.api.main:app --host 127.0.0.1 --port 8000
+# Should start without errors
+# Visit http://localhost:8000/docs
+```
+
+### 4. Sign Off
 - Complete VALIDATION_CHECKLIST.md
 - Document any findings
 
-### 4. Create PR
+### 5. Create PR
 - Use PR_TEMPLATE.md as content
 - Link to this cleanup summary
 - Ready for merge to master
@@ -148,6 +198,7 @@ Before running tests:
 - [x] Type fixes applied (commits 1-7)
 - [x] Test infrastructure ready (commits 9-10)
 - [x] Documentation complete (commits 8, 11-12)
+- [x] Entry point clearly defined
 - [x] Ready for validation
 
 ---
@@ -209,7 +260,7 @@ Before running tests:
 
 ### Code Organization
 - ✅ All code in src/
-- ✅ Single API entry point
+- ✅ Single API entry point (src/api/main.py)
 - ✅ Clean dependencies
 - ✅ No circular imports
 
@@ -217,6 +268,7 @@ Before running tests:
 - ✅ Production-focused docs
 - ✅ Clear migration guide
 - ✅ Test procedures documented
+- ✅ Entry point clearly defined
 - ✅ Ready for stakeholders
 
 ---
@@ -228,6 +280,7 @@ Before running tests:
 - ✅ **Organized** - Single code location (src/)
 - ✅ **Type-Safe** - 100% MyPy compliant
 - ✅ **Production-Ready** - One API version
+- ✅ **Clear Entry Point** - src/api/main.py
 - ✅ **Well-Documented** - Modern, focused docs
 - ✅ **Ready for Testing** - TEST_DRIVE.sh is ready
 
@@ -235,7 +288,12 @@ Before running tests:
 
 **Status**: 🟢 **READY FOR TEST-DRIVE!**
 
-Next command:
+Entry point for production:
+```bash
+cd services/gnn_service && uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+```
+
+Entry point for testing:
 ```bash
 cd services/gnn_service && ./TEST_DRIVE.sh
 ```
