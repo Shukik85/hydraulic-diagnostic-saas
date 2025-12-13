@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, ValidationInfo
 
 
 class TimeWindow(BaseModel):
@@ -42,7 +42,7 @@ class TimeWindow(BaseModel):
 
     @field_validator("end_time")
     @classmethod
-    def validate_end_after_start(cls, v: datetime, info) -> datetime:
+    def validate_end_after_start(cls, v: datetime, info: ValidationInfo) -> datetime:
         """Validate end_time > start_time."""
         if "start_time" in info.data and v <= info.data["start_time"]:
             msg = "end_time must be greater than start_time"
@@ -173,7 +173,7 @@ class SensorConfig(BaseModel):
 
     @field_validator("range_min", "range_max")
     @classmethod
-    def validate_range(cls, v: float, info) -> float:
+    def validate_range(cls, v: float, info: ValidationInfo) -> float:
         """Валидация корректности диапазона."""
         if info.field_name == "range_max" and "range_min" in info.data:
             if v <= info.data["range_min"]:
@@ -436,7 +436,7 @@ class SystemConfig(BaseModel):
 
     @field_validator("health_threshold_critical")
     @classmethod
-    def validate_critical_less_than_warning(cls, v: float, info) -> float:
+    def validate_critical_less_than_warning(cls, v: float, info: ValidationInfo) -> float:
         """Critical threshold должен быть ниже warning."""
         if "health_threshold_warning" in info.data:
             if v >= info.data["health_threshold_warning"]:
