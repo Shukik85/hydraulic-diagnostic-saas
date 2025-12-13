@@ -72,7 +72,6 @@ select = [
     "RET",    # flake8-return
     "SLF",    # flake8-self (private attribute access)
     "ISC",    # flake8-implicit-str-concat
-    "PIE",    # flake8-pie
     "G",      # flake8-logging-format
 ]
 
@@ -245,21 +244,28 @@ log-level = "debug"  # Logging detail level
 
 [format]
 # Quote style
-quote-style = "double"           # Use double quotes
-skip-magic-trailing-comma = false  # Respect trailing comma for multi-line
+quote-style = "double"              # Use double quotes
+skip-magic-trailing-comma = false   # Respect trailing comma for multi-line
 
 # Indentation
-indent-style = "space"           # Use spaces for indentation
-line-length = 100                # Format lines to 100 chars
+indent-style = "space"              # Use spaces for indentation
 
 # Line endings
-line-ending = "auto"             # Auto-detect line endings (LF on Unix, CRLF on Windows)
+line-ending = "auto"                # Auto-detect line endings (LF on Unix, CRLF on Windows)
 
 # Docstring formatting
-docstring-code-format = false    # Don't format code blocks in docstrings
+docstring-code-format = false        # Don't format code blocks in docstrings
+docstring-code-line-length = "dynamic"  # Docstring code line length
 
 # Preview/experimental features (Ruff 0.8+)
 preview = false  # Don't use experimental features yet
+
+# ============================================================================
+# TOOL ROOT SETTINGS (applies to both lint and format)
+# ============================================================================
+
+# Line length applies to both linting and formatting
+line-length = 100
 
 # ============================================================================
 # NOTEBOOK SETTINGS (For Jupyter notebooks)
@@ -267,10 +273,3 @@ preview = false  # Don't use experimental features yet
 
 [notebook]
 line-length = 100
-
-# ============================================================================
-# TOOL-SPECIFIC SETTINGS
-# ============================================================================
-
-[tool]
-ruff = { version = ">=0.8.0" }  # Minimum Ruff version required
