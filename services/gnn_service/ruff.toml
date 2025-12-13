@@ -4,11 +4,16 @@
 # Python 3.14+ target
 
 # ============================================================================
-# BUILD SETTINGS
+# TOP-LEVEL SETTINGS (applies globally)
 # ============================================================================
 
-[build]
-include = ["*.py", "*.pyi"]
+# Line length for both linting and formatting
+line-length = 100
+
+# Python version target
+target-version = "py314"
+
+# Paths to exclude
 exclude = [
     ".git",
     "__pycache__",
@@ -24,7 +29,6 @@ exclude = [
     ".ruff_cache",
     "node_modules",
 ]
-target-version = "py314"
 
 # ============================================================================
 # LINT SETTINGS (Primary configuration)
@@ -138,12 +142,10 @@ ignore = [
 # ============================================================================
 
 [lint.isort]
-profile = "black"  # Black-compatible import order
 known-first-party = ["src"]
 known-third-party = [
     "torch",
     "torch_geometric",
-    "torch.nn",
     "numpy",
     "pandas",
     "scipy",
@@ -154,9 +156,7 @@ known-third-party = [
     "sqlalchemy",
     "sqlmodel",
     "lightning",
-    "timm",
 ]
-line-length = 100
 
 # ============================================================================
 # FLAKE8 CONFIGURATION (Various plugins)
@@ -173,32 +173,9 @@ extend-immutable-calls = [
     "torch.nn.Parameter",
 ]
 
-[lint.flake8-comprehensions]
-# Simplify list/dict/set comprehensions
-allow-dict-calls-with-keyword-arguments = false
-
-[lint.flake8-logging-format]
-# Standard logging format checking
-log-comma-arity = 2
-
-[lint.flake8-pytest-style]
-fixture-parentheses = true
-mark-parentheses = true
-parametriaze-values-type = "csv"
-parametriaze-values-row-type = "tuple"
-
-[lint.flake8-self]
-ignore-names = [
-    "_.*",  # private attributes
-    "test_.*",  # test methods
-]
-
 [lint.flake8-type-checking]
-# Move runtime-expensive imports under TYPE_CHECKING
 quote-annotations = false
-runtime-evaluated-base-classes = [
-    "pydantic.BaseModel",
-]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
 runtime-evaluated-decorators = [
     "pydantic.field_validator",
     "pydantic.model_validator",
@@ -209,67 +186,35 @@ runtime-evaluated-decorators = [
 # ============================================================================
 
 [lint.pylint]
-max-args = 10              # Max function arguments
-max-branches = 15          # Max if/else branches
-max-returns = 8            # Max return statements
-max-statements = 80        # Max statements per function
-max-nested-blocks = 6      # Max nesting depth
-allow-magic-value-types = ["int", "str", "bytes"]  # Magic values allowed for these types
+max-args = 10
+max-branches = 15
+max-returns = 8
+max-statements = 80
+allow-magic-value-types = ["int", "str", "bytes"]
 
 # ============================================================================
 # MCCABE CONFIGURATION (Cyclomatic complexity)
 # ============================================================================
 
 [lint.mccabe]
-max-complexity = 10  # Max cyclomatic complexity
+max-complexity = 10
 
 # ============================================================================
 # PYDOCSTYLE CONFIGURATION (Docstring style)
 # ============================================================================
 
 [lint.pydocstyle]
-convention = "google"  # Google-style docstrings
-
-# ============================================================================
-# RUFF-SPECIFIC RULES
-# ============================================================================
-
-[lint.ruff]
-# Ruff-specific rule configuration
-log-level = "debug"  # Logging detail level
+convention = "google"
 
 # ============================================================================
 # FORMAT SETTINGS (Code formatting - Ruff formatter)
 # ============================================================================
 
 [format]
-# Quote style
-quote-style = "double"              # Use double quotes
-skip-magic-trailing-comma = false   # Respect trailing comma for multi-line
-
-# Indentation
-indent-style = "space"              # Use spaces for indentation
-
-# Line endings
-line-ending = "auto"                # Auto-detect line endings (LF on Unix, CRLF on Windows)
-
-# Docstring formatting
-docstring-code-format = false        # Don't format code blocks in docstrings
-docstring-code-line-length = "dynamic"  # Docstring code line length
-
-# Preview/experimental features (Ruff 0.8+)
-preview = false  # Don't use experimental features yet
-
-# ============================================================================
-# TOOL ROOT SETTINGS (applies to both lint and format)
-# ============================================================================
-
-# Line length applies to both linting and formatting
-line-length = 100
-
-# ============================================================================
-# NOTEBOOK SETTINGS (For Jupyter notebooks)
-# ============================================================================
-
-[notebook]
-line-length = 100
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+skip-magic-trailing-comma = false
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
+preview = false
