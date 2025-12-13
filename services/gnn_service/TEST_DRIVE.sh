@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # 🧪 FULL TEST DRIVE SCRIPT FOR GNN SERVICE
-# CRITICAL: Proper error handling + Ruff linting
-# Author: ML Engineer (FINAL)
+# CRITICAL: Proper error handling + Ruff linting with summary only
+# Author: ML Engineer (FINAL with Ruff summary)
 # Date: December 14, 2025
 
 echo ""
@@ -37,23 +37,24 @@ test_fail() {
 }
 
 # ============================================================================
-# PHASE 0: RUFF LINTING (QUICK CODE QUALITY CHECK)
+# PHASE 0: RUFF LINTING (QUICK CODE QUALITY CHECK WITH SUMMARY)
 # ============================================================================
 
-test_step "Phase 0: Ruff Linting (Quick code quality)"
+test_step "Phase 0: Ruff Linting (Code quality summary)"
 
 if python -m ruff --version &> /dev/null; then
     test_pass "Ruff is installed"
     
-    # Run Ruff - show only first 15 errors
-    RUFF_OUTPUT=$(python -m ruff check src/ 2>&1)
+    # Run Ruff with quiet output - shows only counts
+    RUFF_OUTPUT=$(python -m ruff check src/ --quiet 2>&1)
     RUFF_EXIT=$?
     
     if [ $RUFF_EXIT -eq 0 ]; then
-        test_pass "Ruff: NO LINTING ERRORS ✅"
+        test_pass "Ruff: NO LINTING ISSUES ✅"
     else
-        echo "${YELLOW}Ruff findings (first 15):${NC}"
-        echo "$RUFF_OUTPUT" | head -15
+        # Show summary by error code - NOT all errors
+        echo "${YELLOW}Ruff Error Summary (by code):${NC}"
+        python -m ruff check src/ 2>&1 | grep -E "^src/" | cut -d: -f3- | sort | uniq -c | sort -rn | head -10
         test_fail "Ruff: LINTING ISSUES FOUND"
     fi
 else
@@ -98,9 +99,9 @@ if python -m mypy --version &> /dev/null; then
     if [ $MYPY_EXIT -eq 0 ]; then
         test_pass "MyPy: ZERO ERRORS ✅"
     else
-        # Show errors
-        echo "${RED}MyPy errors found:${NC}"
-        echo "$MYPY_OUTPUT" | head -8
+        # Show summary - error count by file
+        echo "${RED}MyPy errors (by file):${NC}"
+        echo "$MYPY_OUTPUT" | grep -E "error:" | cut -d: -f1 | sort | uniq -c | sort -rn
         test_fail "MyPy: TYPE ERRORS FOUND"
     fi
 else
@@ -135,7 +136,8 @@ try:
     
     # Check what REALLY exists in responses.py
     from schemas import responses
-    print(f"✅ responses.py: Available classes = {[x for x in dir(responses) if not x.startswith('_')]}")
+    real_classes = [x for x in dir(responses) if not x.startswith('_') and x[0].isupper()]
+    print(f"✅ responses.py: Available classes = {real_classes}")
     
     from data.feature_config import FeatureConfig, DataLoaderConfig
     print("✅ feature_config.py: FeatureConfig, DataLoaderConfig - OK")
@@ -364,15 +366,15 @@ else
     echo "${RED}❌ TESTS FAILED - ISSUES TO FIX:${NC}"
     echo ""
     echo "Summary of failures:"
-    echo "  • MyPy: Module name conflict (src.schemas vs schemas)"
+    echo "  • Ruff: Linting issues (see summary above)"
+    echo "  • MyPy: Type checking errors (see summary above)"
     echo "  • Imports: Some expected classes don't exist"
-    echo "  • Pydantic: FeatureConfig missing methods or attributes"
+    echo "  • Pydantic: Schema validation issues"
     echo ""
     echo "Next steps:"
-    echo "  1. Check what classes REALLY exist in responses.py"
-    echo "  2. Fix import statements in test"
-    echo "  3. Verify FeatureConfig has get_loader_kwargs method"
-    echo "  4. Run again: ./TEST_DRIVE.sh"
+    echo "  1. Review Ruff/MyPy summaries above"
+    echo "  2. Fix critical issues only (ignore long lines, Russian text)"
+    echo "  3. Run again: ./TEST_DRIVE.sh"
     echo ""
     exit 1
 fi
