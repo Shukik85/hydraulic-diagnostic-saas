@@ -15,7 +15,7 @@ from enum import Enum
 from typing import Annotated, Literal
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, ValidationInfo
 
 
 class ComponentType(str, Enum):
@@ -351,7 +351,7 @@ class ComponentSpec(BaseModel):
     )
 
     nominal_flow_lpm: Annotated[float, Field(gt=0, le=1000)] = Field(
-        ..., description="Номинальный расход жидкости (литры/мин)"
+        ..., description="u041dоминальный расход жидкости (литры/мин)"
     )
 
     rated_power_kw: Annotated[float, Field(ge=0, le=500)] = Field(
@@ -365,7 +365,7 @@ class ComponentSpec(BaseModel):
 
     @field_validator("sensors")
     @classmethod
-    def validate_unique_sensors(cls, v: list[str]) -> list[str]:
+    def validate_unique_sensors(cls, v: list[str], info: ValidationInfo) -> list[str]:
         """Проверка уникальности sensor IDs."""
         if len(v) != len(set(v)):
             msg = "Sensor IDs must be unique"
@@ -385,7 +385,7 @@ class GraphTopology(BaseModel):
     """Топология гидравлического графа.
 
     Определяет структуру графа: компоненты (nodes), соединения (edges)
-    и их характеристики. Используется для построения PyTorch Geometric Data.
+    и их характеристики. Оспользуется для построения PyTorch Geometric Data.
 
     Attributes:
         equipment_id: ID оборудования
@@ -465,7 +465,7 @@ class GraphTopology(BaseModel):
 
     @field_validator("components")
     @classmethod
-    def validate_component_ids_match(cls, v: dict[str, ComponentSpec]) -> dict[str, ComponentSpec]:
+    def validate_component_ids_match(cls, v: dict[str, ComponentSpec], info: ValidationInfo) -> dict[str, ComponentSpec]:
         """Проверка соответствия ключей и component_id."""
         for key, component in v.items():
             if key != component.component_id:
@@ -475,7 +475,7 @@ class GraphTopology(BaseModel):
 
     @field_validator("edges")
     @classmethod
-    def validate_edges_reference_components(cls, v: list[EdgeSpec], info) -> list[EdgeSpec]:
+    def validate_edges_reference_components(cls, v: list[EdgeSpec], info: ValidationInfo) -> list[EdgeSpec]:
         """Проверка, что все edges ссылаются на существующие компоненты."""
         if "components" in info.data:
             component_ids = set(info.data["components"].keys())
