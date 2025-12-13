@@ -9,12 +9,13 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
 
 if TYPE_CHECKING:
-    from datetime import datetime
+    pass
 
 
 class TimeWindow(BaseModel):
@@ -52,7 +53,7 @@ class TimeWindow(BaseModel):
 
     @field_validator("end_time")
     @classmethod
-    def validate_end_after_start(cls, v: datetime, info) -> datetime:
+    def validate_end_after_start(cls, v: datetime, info: ValidationInfo) -> datetime:
         """Проверка корректности временного окна."""
         if "start_time" in info.data:
             if v <= info.data["start_time"]:
@@ -280,7 +281,7 @@ class AdvancedInferenceRequest(MinimalInferenceRequest):
         default=None, description="Optional edge feature overrides {edge_id: override}"
     )
 
-    custom_topology: dict | None = Field(
+    custom_topology: dict[str, Any] | None = Field(
         default=None, description="Optional custom topology (for testing/advanced use)"
     )
 
@@ -413,7 +414,9 @@ class InferenceRequest(BaseModel):
         ..., min_length=1, max_length=100, description="Уникальный ID оборудования"
     )
 
-    time_window: TimeWindow = Field(..., description="Временное окно для анализа данных сенсоров")
+    time_window: TimeWindow = Field(
+        ..., description="Временное окно для анализа данных сенсоров"
+    )
 
     include_attention_weights: bool = Field(
         default=False,
@@ -491,7 +494,7 @@ class BatchInferenceRequest(BaseModel):
 
     @field_validator("requests")
     @classmethod
-    def validate_unique_equipment_ids(cls, v: list[InferenceRequest]) -> list[InferenceRequest]:
+    def validate_unique_equipment_ids(cls, v: list[InferenceRequest], info: ValidationInfo) -> list[InferenceRequest]:
         """Проверка уникальности equipment_id в batch."""
         equipment_ids = [req.equipment_id for req in v]
         if len(equipment_ids) != len(set(equipment_ids)):
@@ -535,7 +538,7 @@ class TrainingRequest(BaseModel):
 
     @field_validator("pretrained_model_path")
     @classmethod
-    def validate_pretrained_path(cls, v: str | None, info) -> str | None:
+    def validate_pretrained_path(cls, v: str | None, info: ValidationInfo) -> str | None:
         """Проверка наличия пути при use_pretrained=True."""
         if info.data.get("use_pretrained") and not v:
             msg = "pretrained_model_path required when use_pretrained=True"
