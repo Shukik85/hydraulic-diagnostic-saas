@@ -15,12 +15,12 @@ from fastapi.responses import JSONResponse
 
 try:
     from src.schemas.requests import MinimalInferenceRequest, PredictionRequest
-    from src.schemas.metadata import DiagnosisResult
+    from src.schemas.metadata import EquipmentMetadata
     from src.inference.inference_engine import InferenceEngine, InferenceConfig
 except ImportError:
     # Fallback for development
     from schemas.requests import MinimalInferenceRequest, PredictionRequest
-    from schemas.metadata import DiagnosisResult
+    from schemas.metadata import EquipmentMetadata
     from inference.inference_engine import InferenceEngine, InferenceConfig
 
 
