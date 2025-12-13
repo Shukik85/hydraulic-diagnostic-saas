@@ -4,6 +4,7 @@
 # Validates all MyPy fixes before merging to master
 # Author: ML Engineer
 # Date: December 14, 2025
+# Updated for Windows 11 Pro: python3 -> python, pip3 -> pip
 
 set -e  # Exit on error
 
@@ -44,18 +45,18 @@ test_fail() {
 
 test_step "Phase 1: Environment & Dependencies"
 
-if command -v python3 &> /dev/null; then
-    PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
-    test_pass "Python 3 found: $PYTHON_VERSION"
+if command -v python &> /dev/null; then
+    PYTHON_VERSION=$(python --version 2>&1 | awk '{print $2}')
+    test_pass "Python found: $PYTHON_VERSION"
 else
-    test_fail "Python 3 not found"
+    test_fail "Python not found"
     exit 1
 fi
 
-if command -v pip3 &> /dev/null; then
-    test_pass "pip3 found"
+if command -v pip &> /dev/null; then
+    test_pass "pip found"
 else
-    test_fail "pip3 not found"
+    test_fail "pip not found"
     exit 1
 fi
 
@@ -69,12 +70,12 @@ if command -v mypy &> /dev/null; then
     test_pass "MyPy is installed"
     
     # Run MyPy on src directory
-    if mypy services/gnn_service/src/ --strict --ignore-missing-imports 2>&1 | grep -q "Success"; then
+    if mypy src/ --strict --ignore-missing-imports 2>&1 | grep -q "Success"; then
         test_pass "MyPy strict mode: ALL TYPE CHECKS PASSED"
     else
         test_fail "MyPy found type errors"
         echo "${YELLOW}Running full MyPy output:${NC}"
-        mypy services/gnn_service/src/ --strict --ignore-missing-imports || true
+        mypy src/ --strict --ignore-missing-imports || true
     fi
 else
     echo "${YELLOW}⚠️  MyPy not installed. Skipping type check.${NC}"
@@ -89,9 +90,9 @@ test_step "Phase 3: Python Imports Validation"
 
 echo "${YELLOW}Testing imports from fixed files...${NC}"
 
-python3 << 'EOF'
+python << 'EOF'
 import sys
-sys.path.insert(0, 'services/gnn_service/src')
+sys.path.insert(0, 'src')
 
 try:
     # Test Pydantic v2 imports
@@ -112,6 +113,9 @@ try:
     
     from services.topology_service import TopologyService, get_topology_service
     print("✅ topology_service.py imports OK")
+    
+    from api.main import app
+    print("✅ api.main imports OK (ENTRY POINT)")
     
     print("\n✅ ALL IMPORTS SUCCESSFUL")
     
@@ -134,9 +138,9 @@ fi
 
 test_step "Phase 4: Pydantic v2 Validation"
 
-python3 << 'EOF'
+python << 'EOF'
 import sys
-sys.path.insert(0, 'services/gnn_service/src')
+sys.path.insert(0, 'src')
 
 try:
     from typing import Any
@@ -200,9 +204,9 @@ fi
 
 test_step "Phase 5: Type Hints Validation"
 
-python3 << 'EOF'
+python << 'EOF'
 import sys
-sys.path.insert(0, 'services/gnn_service/src')
+sys.path.insert(0, 'src')
 import inspect
 from typing import get_type_hints, Any
 
@@ -250,9 +254,9 @@ fi
 
 test_step "Phase 6: FastAPI Endpoint Type Validation"
 
-python3 << 'EOF'
+python << 'EOF'
 import sys
-sys.path.insert(0, 'services/gnn_service/src')
+sys.path.insert(0, 'src')
 import inspect
 from typing import get_type_hints
 
