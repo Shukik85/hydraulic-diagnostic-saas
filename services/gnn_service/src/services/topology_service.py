@@ -19,7 +19,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from threading import Lock
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.schemas.topology import (
     BUILTIN_TEMPLATES,
@@ -209,7 +209,7 @@ class TopologyService:
         logger.warning(f"Template not found: {template_id}")
         return None
 
-    def list_templates(self) -> list[dict[str, str]]:
+    def list_templates(self) -> list[dict[str, Any]]:
         """List all available templates.
 
         Returns:
@@ -354,7 +354,7 @@ class TopologyService:
         self._cache_timestamps.clear()
         logger.info("Topology cache cleared")
 
-    def get_stats(self) -> dict[str, int]:
+    def get_stats(self) -> dict[str, Any]:
         """Get service statistics.
 
         Returns:
