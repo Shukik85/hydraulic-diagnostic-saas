@@ -1,15 +1,14 @@
 #!/bin/bash
 
 # 🧪 FULL TEST DRIVE SCRIPT FOR GNN SERVICE
-# Validates all MyPy fixes before merging to master
-# CRITICAL: Test only REAL existing classes, not imaginary ones
-# Author: ML Engineer (CORRECTED)
+# CRITICAL: Properly track ALL test failures
+# Author: ML Engineer (FIXED - proper error handling)
 # Date: December 14, 2025
 
 echo ""
-echo "════════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════════"
 echo "🧪 GNN SERVICE - FULL TEST DRIVE"
-echo "════════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════════"
 echo ""
 
 # Colors
@@ -48,6 +47,7 @@ if command -v python &> /dev/null; then
     test_pass "Python found: $PYTHON_VERSION"
 else
     test_fail "Python not found"
+    ((TESTS_FAILED++))
     exit 1
 fi
 
@@ -65,9 +65,18 @@ test_step "Phase 2: MyPy Type Checking (Strict Mode)"
 
 if python -m mypy --version &> /dev/null; then
     test_pass "MyPy is installed"
-    # Run MyPy but allow warnings
-    python -m mypy src/ --strict --ignore-missing-imports 2>&1 | head -5 || true
-    test_pass "MyPy check completed (warnings allowed for legacy)"
+    # Run MyPy and CAPTURE errors
+    MYPY_OUTPUT=$(python -m mypy src/ --strict --ignore-missing-imports 2>&1)
+    MYPY_EXIT=$?
+    
+    if [ $MYPY_EXIT -eq 0 ]; then
+        test_pass "MyPy: ZERO ERRORS ✅"
+    else
+        # Show errors
+        echo "${RED}MyPy errors found:${NC}"
+        echo "$MYPY_OUTPUT" | head -10
+        test_fail "MyPy: TYPE ERRORS FOUND"
+    fi
 else
     echo "${YELLOW}⚠️  MyPy not installed (optional)${NC}"
     test_pass "MyPy skipped (optional)"
@@ -81,20 +90,22 @@ test_step "Phase 3: Python Imports Validation (Real classes)"
 
 echo "${YELLOW}Testing imports with REAL existing classes...${NC}"
 
-python << 'EOF' || PHASE3_FAILED=1
+python << 'EOF'
 import sys
 sys.path.insert(0, 'src')
 
 try:
     # Test schemas - REAL classes that exist
-    from schemas.metadata import EquipmentMetadata, SensorConfig, SystemConfig, TimeWindow
-    print("✅ metadata.py: EquipmentMetadata, SensorConfig, SystemConfig, TimeWindow - OK")
+    from schemas.metadata import EquipmentMetadata, SensorConfig, SystemConfig, TimeWindow, SensorType
+    print("✅ metadata.py: EquipmentMetadata, SensorConfig, SystemConfig, TimeWindow, SensorType - OK")
     
     from schemas.requests import MinimalInferenceRequest, PredictionRequest
     print("✅ requests.py: MinimalInferenceRequest, PredictionRequest - OK")
     
-    from schemas.graph import GraphTopology, NodeSpec, EdgeSpec
-    print("✅ graph.py: GraphTopology, NodeSpec, EdgeSpec - OK")
+    # Check what REALLY exists in graph.py
+    from schemas.graph import GraphTopology, EdgeSpec
+    print("✅ graph.py: GraphTopology, EdgeSpec - OK")
+    print("   (Note: NodeSpec does NOT exist in graph.py)")
     
     from schemas.responses import DiagnosisResponse, PredictionResponse
     print("✅ responses.py: DiagnosisResponse, PredictionResponse - OK")
@@ -112,6 +123,7 @@ try:
     print("✅ api.main: FastAPI app - OK (ENTRY POINT)")
     
     print("\n✅ ALL IMPORTS SUCCESSFUL")
+    sys.exit(0)
     
 except Exception as e:
     print(f"\n❌ Import failed: {e}")
@@ -120,11 +132,11 @@ except Exception as e:
     sys.exit(1)
 EOF
 
-if [ $? -eq 0 ]; then
+PHASE3_EXIT=$?
+if [ $PHASE3_EXIT -eq 0 ]; then
     test_pass "All imports validated successfully"
 else
-    test_fail "Import validation failed"
-    TESTS_FAILED=$((TESTS_FAILED+1))
+    test_fail "Import validation FAILED"
 fi
 
 # ============================================================================
@@ -133,22 +145,22 @@ fi
 
 test_step "Phase 4: Pydantic v2 Validation (Real schemas)"
 
-python << 'EOF' || PHASE4_FAILED=1
+python << 'EOF'
 import sys
 sys.path.insert(0, 'src')
 
 try:
     from typing import Any
-    from schemas.metadata import EquipmentMetadata, SensorConfig
+    from schemas.metadata import EquipmentMetadata, SensorConfig, SensorType
     from schemas.requests import MinimalInferenceRequest
     from data.feature_config import FeatureConfig
     from datetime import datetime
     
-    # Test 1: SensorConfig (real schema)
+    # Test 1: SensorConfig with CORRECT enum (not string!)
     print("Test 1: SensorConfig instantiation...")
     sensor = SensorConfig(
         sensor_id="pressure_001",
-        sensor_type="pressure",
+        sensor_type=SensorType.PRESSURE,  # Use enum, not string!
         component_id="pump_001",
         unit="bar",
         sampling_rate_hz=100.0,
@@ -197,19 +209,20 @@ try:
     print(f"  ✅ MinimalInferenceRequest created: {request.equipment_id}")
     
     print("\n✅ PYDANTIC V2 VALIDATION PASSED")
+    sys.exit(0)
     
 except Exception as e:
-    print(f"\n❌ Pydantic validation failed: {e}")
+    print(f"\n❌ Pydantic validation FAILED: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
 EOF
 
-if [ $? -eq 0 ]; then
+PHASE4_EXIT=$?
+if [ $PHASE4_EXIT -eq 0 ]; then
     test_pass "Pydantic v2 validation successful"
 else
-    test_fail "Pydantic v2 validation failed"
-    TESTS_FAILED=$((TESTS_FAILED+1))
+    test_fail "Pydantic v2 validation FAILED"
 fi
 
 # ============================================================================
@@ -218,7 +231,7 @@ fi
 
 test_step "Phase 5: Type Hints Validation (Return types)"
 
-python << 'EOF' || PHASE5_FAILED=1
+python << 'EOF'
 import sys
 sys.path.insert(0, 'src')
 from typing import get_type_hints
@@ -241,19 +254,20 @@ try:
     print("  ✅ TopologyService.get_stats returns: dict[str, Any]")
     
     print("\n✅ TYPE HINTS VALIDATION PASSED")
+    sys.exit(0)
     
 except Exception as e:
-    print(f"\n❌ Type hints validation failed: {e}")
+    print(f"\n❌ Type hints validation FAILED: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
 EOF
 
-if [ $? -eq 0 ]; then
+PHASE5_EXIT=$?
+if [ $PHASE5_EXIT -eq 0 ]; then
     test_pass "Type hints validation successful"
 else
-    test_fail "Type hints validation failed"
-    TESTS_FAILED=$((TESTS_FAILED+1))
+    test_fail "Type hints validation FAILED"
 fi
 
 # ============================================================================
@@ -262,7 +276,7 @@ fi
 
 test_step "Phase 6: FastAPI Endpoint Validation (App loads)"
 
-python << 'EOF' || PHASE6_FAILED=1
+python << 'EOF'
 import sys
 sys.path.insert(0, 'src')
 
@@ -287,29 +301,30 @@ try:
         print(f"  ✅ Sample routes: {', '.join(route_names[:3])}")
     
     print("\n✅ FASTAPI VALIDATION PASSED")
+    sys.exit(0)
     
 except Exception as e:
-    print(f"\n❌ FastAPI validation failed: {e}")
+    print(f"\n❌ FastAPI validation FAILED: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
 EOF
 
-if [ $? -eq 0 ]; then
+PHASE6_EXIT=$?
+if [ $PHASE6_EXIT -eq 0 ]; then
     test_pass "FastAPI endpoint validation successful"
 else
-    test_fail "FastAPI endpoint validation failed"
-    TESTS_FAILED=$((TESTS_FAILED+1))
+    test_fail "FastAPI endpoint validation FAILED"
 fi
 
 # ============================================================================
-# FINAL REPORT
+# FINAL REPORT - HONEST COUNTING
 # ============================================================================
 
 echo ""
-echo "════════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════════"
 echo "📊 TEST DRIVE RESULTS"
-echo "════════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════════"
 echo ""
 echo "${GREEN}✅ Tests Passed: $TESTS_PASSED${NC}"
 echo "${RED}❌ Tests Failed: $TESTS_FAILED${NC}"
@@ -323,7 +338,14 @@ if [ $TESTS_FAILED -eq 0 ]; then
     echo ""
     exit 0
 else
-    echo "${RED}❌ SOME TESTS FAILED - FIX ISSUES AND RETRY${NC}"
+    echo "${RED}❌ TESTS FAILED - ISSUES TO FIX:${NC}"
+    echo ""
+    echo "Known issues:"
+    echo "  1. NodeSpec does NOT exist in schemas.graph (only EdgeSpec, GraphTopology)"
+    echo "  2. SensorType must be used as ENUM, not string"
+    echo "  3. MyPy module name conflict (src.schemas vs schemas)"
+    echo ""
+    echo "Fix these issues and run again."
     echo ""
     exit 1
 fi
