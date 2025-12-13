@@ -14,12 +14,12 @@ Python 3.14 Features:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, Any
 
 
 @dataclass(slots=True, frozen=True)
 class FeatureConfig:
-    """Configuration для feature engineering.
+    """Конфигурация для feature engineering.
 
     Attributes:
         use_statistical: Использовать statistical features (mean, std, etc.)
@@ -198,7 +198,7 @@ class FeatureConfig:
 
 @dataclass(slots=True, frozen=True)
 class DataLoaderConfig:
-    """Configuration для PyTorch DataLoader.
+    """Конфигурация для PyTorch DataLoader.
 
     Attributes:
         batch_size: Размер batch (количество graphs)
@@ -236,7 +236,7 @@ class DataLoaderConfig:
     drop_last_val: bool = False
     drop_last_test: bool = False
 
-    def get_loader_kwargs(self, split: Literal["train", "val", "test"]) -> dict:
+    def get_loader_kwargs(self, split: Literal["train", "val", "test"]) -> dict[str, Any]:
         """Получить kwargs для DataLoader в зависимости от split.
 
         Args:
