@@ -20,7 +20,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Any
 
 import pandas as pd
 import torch
@@ -603,7 +603,7 @@ class InferenceEngine:
             inference_time_ms=inference_time * 1000,
         )
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """Get inference statistics.
 
         Returns:
