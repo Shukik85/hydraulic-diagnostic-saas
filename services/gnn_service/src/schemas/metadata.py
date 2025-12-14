@@ -50,7 +50,7 @@ class TimeWindow(BaseModel):
             raise ValueError(msg)
         return v
 
-    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
+    @computed_field
     def duration_minutes(self) -> float:
         """Duration in minutes."""
         delta = self.end_time - self.start_time
@@ -181,15 +181,17 @@ class SensorConfig(BaseModel):
                 raise ValueError(msg)
         return v
 
-    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
+    @computed_field
     def measurement_range(self) -> float:
         """Ширина измерительного диапазона."""
         return self.range_max - self.range_min
 
-    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
+    @computed_field
     def absolute_accuracy(self) -> float:
         """Абсолютная точность в единицах измерения."""
-        return (self.accuracy_percent / 100.0) * self.measurement_range
+        # ✅ Calculate directly from range_max/min instead of calling measurement_range
+        measurement_range = self.range_max - self.range_min
+        return (self.accuracy_percent / 100.0) * measurement_range
 
 
 class EquipmentMetadata(BaseModel):
@@ -293,14 +295,14 @@ class EquipmentMetadata(BaseModel):
         default_factory=dict, description="Дополнительные пользовательские поля"
     )
 
-    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
+    @computed_field
     def age_years(self) -> float:
         """Возраст оборудования (лет)."""
         now = datetime.now()
         delta = now - self.installation_date
         return delta.days / 365.25
 
-    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
+    @computed_field
     def hours_since_maintenance(self) -> float | None:
         """Часы с последнего ТО."""
         if self.last_maintenance_date is None:
