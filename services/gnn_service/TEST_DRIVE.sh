@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # 🧪 FULL TEST DRIVE SCRIPT FOR GNN SERVICE
-# CRITICAL: Proper error handling + Ruff linting with summary only
-# Author: ML Engineer (FINAL - clean output)
+# CRITICAL: Proper error handling + Ruff autofix + better parsing
+# Author: ML Engineer (FINAL - with autofix)
 # Date: December 14, 2025
 
 echo ""
@@ -31,35 +31,48 @@ test_fail() {
 }
 
 # ============================================================================
-# PHASE 0: RUFF LINTING (QUICK CODE QUALITY CHECK WITH SUMMARY)
+# PHASE 0: RUFF LINTING (AUTOFIX + CHECK)
 # ============================================================================
 
-test_step "Phase 0: Ruff Linting (Code quality summary)"
+test_step "Phase 0: Ruff Linting (autofix + check src/ and tests/)"
 
 if python -m ruff --version &> /dev/null; then
     test_pass "Ruff is installed"
     
-    # Run Ruff - capture full output
-    RUFF_OUTPUT=$(python -m ruff check src/ 2>&1)
+    # Step 1: Autofix safe issues
+    echo "🔧 Running Ruff autofix (safe fixes only)..."
+    python -m ruff check src/ tests/ --fix --exit-zero 2>&1 | head -5
+    
+    # Step 2: Check remaining issues
+    RUFF_OUTPUT=$(python -m ruff check src/ tests/ 2>&1)
     RUFF_EXIT=$?
     
     if [ $RUFF_EXIT -eq 0 ]; then
-        test_pass "Ruff: NO LINTING ISSUES ✅"
+        test_pass "Ruff: NO LINTING ISSUES REMAINING ✅"
     else
-        # Count total errors (lines starting with src/)
-        TOTAL_ERRORS=$(echo "$RUFF_OUTPUT" | grep -c "^src/")
+        # Count errors by code using simple parsing
+        echo ""
+        echo "📄 Ruff Error Summary:"
         
-        if [ $TOTAL_ERRORS -eq 0 ]; then
-            # No errors found, might be a different format
-            echo "📄 Ruff output (first 10 lines):"
-            echo "$RUFF_OUTPUT" | head -10
-        else
-            echo "📄 Ruff Error Summary (top 10 by code):"
-            # Extract error codes like [F401], [E402], etc.
-            echo "$RUFF_OUTPUT" | grep -oE '\[[A-Z][A-Z0-9]+\]' | tr -d '[]' | sort | uniq -c | sort -rn | head -10 | awk '{printf "    %3d × %s\n", $1, $2}'
-            echo "📈 Total errors: $TOTAL_ERRORS"
+        # Parse format: "path:line:col: CODE message"
+        # Extract CODE part and count
+        echo "$RUFF_OUTPUT" | grep -E '^[a-zA-Z]' | grep -oE '[A-Z][0-9]{3}' | sort | uniq -c | sort -rn | head -10 | while read count code; do
+            printf "    %3d × %s\n" "$count" "$code"
+        done
+        
+        # Count total
+        TOTAL_ERRORS=$(echo "$RUFF_OUTPUT" | grep -cE '^[a-zA-Z].*:[0-9]+:[0-9]+:')
+        if [ $TOTAL_ERRORS -gt 0 ]; then
+            echo ""
+            echo "📈 Total issues: $TOTAL_ERRORS"
         fi
-        test_fail "Ruff: LINTING ISSUES FOUND"
+        
+        # Show first 3 actual errors
+        echo ""
+        echo "🔍 First 3 issues:"
+        echo "$RUFF_OUTPUT" | grep -E '^[a-zA-Z].*:[0-9]+:[0-9]+:' | head -3
+        
+        test_fail "Ruff: LINTING ISSUES FOUND (run 'ruff check --fix src/' to autofix)"
     fi
 else
     echo "⚠️  Ruff not installed (optional)"
@@ -103,8 +116,13 @@ if python -m mypy --version &> /dev/null; then
         test_pass "MyPy: ZERO ERRORS ✅"
     else
         # Show summary - error count by file
-        echo "📄 MyPy errors (by file):"
-        echo "$MYPY_OUTPUT" | grep -E "error:" | cut -d: -f1 | sed 's/\\/\//g' | sort | uniq -c | sort -rn | awk '{printf "    %3d × %s\n", $1, $2}'
+        echo "📄 MyPy errors (by file, top 15):"
+        echo "$MYPY_OUTPUT" | grep -E "error:" | cut -d: -f1 | sed 's/\\/\//g' | sort | uniq -c | sort -rn | head -15 | awk '{printf "    %3d × %s\n", $1, $2}'
+        
+        # Count total
+        TOTAL_MYPY=$(echo "$MYPY_OUTPUT" | grep -cE "error:")
+        echo ""
+        echo "📈 Total MyPy errors: $TOTAL_MYPY"
         
         # Show first 5 actual errors
         echo ""
@@ -377,21 +395,16 @@ if [ $TESTS_FAILED -eq 0 ]; then
 else
     echo "❌ TESTS FAILED - ISSUES TO FIX:"
     echo ""
-    if [ $TESTS_FAILED -eq 2 ]; then
-        echo "Only 2 failures remaining:"
-        echo "  1. Ruff: Likely no real errors (parsing issue)"
-        echo "  2. MyPy: 'Source file found twice' - fix PYTHONPATH or __init__.py"
-    else
-        echo "Summary of failures:"
-        echo "  • Check Ruff/MyPy summaries above for details"
-    fi
+    echo "Top issues:"
+    echo "  1. MyPy errors (~120+): Focus on prop-decorator issues in metadata.py"
+    echo "  2. Ruff linting: Run 'ruff check --fix src/' to autofix imports"
     echo ""
-    echo "Next steps:"
-    echo "  1. Fix MyPy 'Source file found twice' error:"
-    echo "     - Add __init__.py to src/schemas/ if missing"
-    echo "     - Or use: mypy --explicit-package-bases src/"
-    echo "  2. Check Ruff output manually: python -m ruff check src/"
-    echo "  3. Run again: ./TEST_DRIVE.sh"
+    echo "Quick fixes:"
+    echo "  • Ruff: python -m ruff check src/ tests/ --fix"
+    echo "  • MyPy prop-decorator: Use @property without Pydantic decorators"
+    echo "  • Or add: # type: ignore[prop-decorator] to affected lines"
+    echo ""
+    echo "Run again: ./TEST_DRIVE.sh"
     echo ""
     exit 1
 fi
