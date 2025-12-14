@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from .graph import ComponentType, EdgeMaterial
 
@@ -72,7 +72,7 @@ class EdgeConfiguration(BaseModel):
 
     @field_validator("last_maintenance_date")
     @classmethod
-    def validate_maintenance_after_install(cls, v: date | None, info) -> date | None:
+    def validate_maintenance_after_install(cls, v: date | None, info: ValidationInfo) -> date | None:
         """Ensure maintenance date is after installation."""
         if v and info.data.get("install_date") and v < info.data["install_date"]:
             msg = f"Maintenance date {v} cannot be before install date {info.data['install_date']}"
@@ -202,7 +202,7 @@ class TopologyConfig(BaseModel):
     @field_validator("edges")
     @classmethod
     def validate_edges_reference_components(
-        cls, v: list[EdgeConfiguration], info
+        cls, v: list[EdgeConfiguration], info: ValidationInfo
     ) -> list[EdgeConfiguration]:
         """Ensure all edges reference existing components."""
         components = info.data.get("components", [])
@@ -295,8 +295,8 @@ class TopologyTemplate(BaseModel):
                     "name": "Standard Pump System",
                     "description": "Single pump with valve and filter",
                     "category": "pump_systems",
-                    "components": [...],
-                    "edges": [...],
+                    "components": [],
+                    "edges": [],
                 }
             ]
         }
