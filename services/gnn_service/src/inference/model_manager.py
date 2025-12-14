@@ -37,7 +37,7 @@ class ModelConfig:
     use_compile: bool = True
     compile_mode: str = "reduce-overhead"
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate paths."""
         if isinstance(self.model_path, str):
             self.model_path = Path(self.model_path)
@@ -76,7 +76,7 @@ class ModelManager:
     _instance: ModelManager | None = None
     _lock = threading.Lock()
 
-    def __new__(cls):
+    def __new__(cls) -> ModelManager:
         """Singleton pattern."""
         if cls._instance is None:
             with cls._lock:
@@ -84,7 +84,7 @@ class ModelManager:
                     cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize manager."""
         if not hasattr(self, "_initialized"):
             self._models: dict[str, torch.nn.Module] = {}
@@ -122,15 +122,16 @@ class ModelManager:
             ...     use_compile=True
             ... )
         """
-        model_path = Path(model_path)
-        model_key = str(model_path.resolve())
+        # Convert to Path if string
+        path_obj = Path(model_path) if isinstance(model_path, str) else model_path
+        model_key = str(path_obj.resolve())
 
         # Check cache
         if not force_reload and model_key in self._models:
-            logger.info(f"Using cached model: {model_path.name}")
+            logger.info(f"Using cached model: {path_obj.name}")
             return self._models[model_key]
 
-        logger.info(f"Loading model from {model_path}")
+        logger.info(f"Loading model from {path_obj}")
 
         with self._lock:
             # Double-check after acquiring lock
@@ -139,7 +140,7 @@ class ModelManager:
 
             # Validate config
             config = ModelConfig(
-                model_path=model_path,
+                model_path=path_obj,
                 device=device,
                 use_compile=use_compile,
                 compile_mode=compile_mode,
@@ -155,7 +156,7 @@ class ModelManager:
 
             # Load checkpoint
             try:
-                checkpoint = load_checkpoint(str(model_path))
+                checkpoint = load_checkpoint(str(path_obj))
 
                 # Extract model config
                 model_config = checkpoint.get("model_config", {})
@@ -180,7 +181,7 @@ class ModelManager:
                 # Set to eval mode
                 model.eval()
 
-                # Compile if requested
+                # Compile if requested and device is CUDA
                 if use_compile and device_str == "cuda":
                     logger.info(f"Compiling model with mode: {compile_mode}")
                     model = torch.compile(model, mode=compile_mode)
@@ -193,14 +194,14 @@ class ModelManager:
                 self._configs[model_key] = config
 
                 logger.info(
-                    f"Model loaded successfully: {model_path.name} "
-                    f"(device={device_str}, compile={use_compile})"
+                    f"Model loaded successfully: {path_obj.name} "
+                    f"(device={device_str}, compile={use_compile and device_str == 'cuda'})"
                 )
 
                 return model
 
             except Exception as e:
-                logger.exception(f"Failed to load model from {model_path}: {e}")
+                logger.exception(f"Failed to load model from {path_obj}: {e}")
                 raise
 
     def get_model(self, model_path: str | Path) -> torch.nn.Module | None:
@@ -218,10 +219,11 @@ class ModelManager:
             >>> if model is None:
             ...     model = manager.load_model("models/best.ckpt")
         """
-        model_key = str(Path(model_path).resolve())
+        path_obj = Path(model_path) if isinstance(model_path, str) else model_path
+        model_key = str(path_obj.resolve())
         return self._models.get(model_key)
 
-    def clear_cache(self, model_path: str | Path | None = None):
+    def clear_cache(self, model_path: str | Path | None = None) -> None:
         """Clear model cache.
 
         Args:
@@ -245,11 +247,12 @@ class ModelManager:
                 logger.info(f"Cleared {count} models from cache")
             else:
                 # Clear specific
-                model_key = str(Path(model_path).resolve())
+                path_obj = Path(model_path) if isinstance(model_path, str) else model_path
+                model_key = str(path_obj.resolve())
                 if model_key in self._models:
                     del self._models[model_key]
                     del self._configs[model_key]
-                    logger.info(f"Cleared model from cache: {Path(model_path).name}")
+                    logger.info(f"Cleared model from cache: {path_obj.name}")
 
     def list_cached_models(self) -> list[str]:
         """List cached models.
@@ -264,7 +267,7 @@ class ModelManager:
         """
         return list(self._models.keys())
 
-    def get_model_info(self, model_path: str | Path) -> dict | None:
+    def get_model_info(self, model_path: str | Path) -> dict[str, str | int | bool] | None:
         """Get model information.
 
         Args:
@@ -278,7 +281,8 @@ class ModelManager:
             >>> info = manager.get_model_info("models/best.ckpt")
             >>> print(info["device"])
         """
-        model_key = str(Path(model_path).resolve())
+        path_obj = Path(model_path) if isinstance(model_path, str) else model_path
+        model_key = str(path_obj.resolve())
 
         if model_key not in self._models:
             return None
@@ -291,10 +295,10 @@ class ModelManager:
             "device": next(model.parameters()).device.type,
             "num_parameters": sum(p.numel() for p in model.parameters()),
             "compiled": config.use_compile,
-            "mode": model.training,
+            "training_mode": model.training,
         }
 
-    def _validate_model(self, model: torch.nn.Module):
+    def _validate_model(self, model: torch.nn.Module) -> None:
         """Validate loaded model.
 
         Args:
@@ -320,7 +324,7 @@ class ModelManager:
 
         logger.debug("Model validation passed")
 
-    def warmup(self, model_path: str | Path, batch_size: int = 1):
+    def warmup(self, model_path: str | Path, batch_size: int = 1) -> None:
         """Warmup model (JIT compilation, cache warming).
 
         Args:
@@ -337,7 +341,8 @@ class ModelManager:
             msg = f"Model not loaded: {model_path}"
             raise ValueError(msg)
 
-        logger.info(f"Warming up model: {Path(model_path).name}")
+        path_obj = Path(model_path) if isinstance(model_path, str) else model_path
+        logger.info(f"Warming up model: {path_obj.name}")
 
         # Create dummy input
         device = next(model.parameters()).device
