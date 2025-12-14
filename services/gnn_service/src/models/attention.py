@@ -187,6 +187,7 @@ class CrossTaskAttention(nn.Module):
 
         # Cross-task attention
         # Each task attends to other tasks
+        task_repr_attended: torch.Tensor
         task_repr_attended, _attn_weights = self.task_interaction(
             query=task_repr, key=task_repr, value=task_repr
         )  # [num_tasks, B, H]
