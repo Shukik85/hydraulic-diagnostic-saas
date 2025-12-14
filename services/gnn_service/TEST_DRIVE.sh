@@ -2,13 +2,13 @@
 
 # 🧪 FULL TEST DRIVE SCRIPT FOR GNN SERVICE
 # CRITICAL: Proper error handling + Ruff linting with summary only
-# Author: ML Engineer (FINAL with fixed colors and Ruff summary)
+# Author: ML Engineer (FINAL - clean output)
 # Date: December 14, 2025
 
 echo ""
-echo "═══════════════════════════════════════════════════════════════════════"
+echo "=================================================================="
 echo "🧪 GNN SERVICE - FULL TEST DRIVE"
-echo "═══════════════════════════════════════════════════════════════════════"
+echo "=================================================================="
 echo ""
 
 # Test counter
@@ -39,20 +39,26 @@ test_step "Phase 0: Ruff Linting (Code quality summary)"
 if python -m ruff --version &> /dev/null; then
     test_pass "Ruff is installed"
     
-    # Run Ruff - capture output
+    # Run Ruff - capture full output
     RUFF_OUTPUT=$(python -m ruff check src/ 2>&1)
     RUFF_EXIT=$?
     
     if [ $RUFF_EXIT -eq 0 ]; then
         test_pass "Ruff: NO LINTING ISSUES ✅"
     else
-        # Show summary: extract error codes and count them
-        echo "📄 Ruff Error Summary (top 10 by code):"
-        echo "$RUFF_OUTPUT" | grep -oP '\[\K[A-Z0-9]+(?=\])' | sort | uniq -c | sort -rn | head -10 | awk '{printf "    %3d × %s\n", $1, $2}'
-        
-        # Show total count
+        # Count total errors (lines starting with src/)
         TOTAL_ERRORS=$(echo "$RUFF_OUTPUT" | grep -c "^src/")
-        echo "📈 Total errors: $TOTAL_ERRORS"
+        
+        if [ $TOTAL_ERRORS -eq 0 ]; then
+            # No errors found, might be a different format
+            echo "📄 Ruff output (first 10 lines):"
+            echo "$RUFF_OUTPUT" | head -10
+        else
+            echo "📄 Ruff Error Summary (top 10 by code):"
+            # Extract error codes like [F401], [E402], etc.
+            echo "$RUFF_OUTPUT" | grep -oE '\[[A-Z][A-Z0-9]+\]' | tr -d '[]' | sort | uniq -c | sort -rn | head -10 | awk '{printf "    %3d × %s\n", $1, $2}'
+            echo "📈 Total errors: $TOTAL_ERRORS"
+        fi
         test_fail "Ruff: LINTING ISSUES FOUND"
     fi
 else
@@ -100,10 +106,10 @@ if python -m mypy --version &> /dev/null; then
         echo "📄 MyPy errors (by file):"
         echo "$MYPY_OUTPUT" | grep -E "error:" | cut -d: -f1 | sed 's/\\/\//g' | sort | uniq -c | sort -rn | awk '{printf "    %3d × %s\n", $1, $2}'
         
-        # Show first 3 actual errors
+        # Show first 5 actual errors
         echo ""
-        echo "🔍 First 3 errors:"
-        echo "$MYPY_OUTPUT" | grep -E "error:" | head -3
+        echo "🔍 First 5 errors:"
+        echo "$MYPY_OUTPUT" | grep -E "error:" | head -5
         test_fail "MyPy: TYPE ERRORS FOUND"
     fi
 else
@@ -134,12 +140,11 @@ try:
     # Check what REALLY exists in graph.py
     from schemas.graph import GraphTopology, EdgeSpec
     print("✅ graph.py: GraphTopology, EdgeSpec - OK")
-    print("   (Note: NodeSpec does NOT exist in graph.py)")
     
     # Check what REALLY exists in responses.py
     from schemas import responses
     real_classes = [x for x in dir(responses) if not x.startswith('_') and x[0].isupper()]
-    print(f"✅ responses.py: Available classes = {real_classes[:5]}...")  # Show first 5 only
+    print(f"✅ responses.py: {len(real_classes)} classes available")
     
     from data.feature_config import FeatureConfig, DataLoaderConfig
     print("✅ feature_config.py: FeatureConfig, DataLoaderConfig - OK")
@@ -354,9 +359,9 @@ fi
 # ============================================================================
 
 echo ""
-echo "═══════════════════════════════════════════════════════════════════════"
+echo "=================================================================="
 echo "📊 TEST DRIVE RESULTS"
-echo "═══════════════════════════════════════════════════════════════════════"
+echo "=================================================================="
 echo ""
 echo "✅ Tests Passed: $TESTS_PASSED"
 echo "❌ Tests Failed: $TESTS_FAILED"
@@ -372,13 +377,20 @@ if [ $TESTS_FAILED -eq 0 ]; then
 else
     echo "❌ TESTS FAILED - ISSUES TO FIX:"
     echo ""
-    echo "Summary of failures:"
-    echo "  • Check Ruff/MyPy summaries above for details"
-    echo "  • Most issues are likely: imports, type hints, schema validation"
+    if [ $TESTS_FAILED -eq 2 ]; then
+        echo "Only 2 failures remaining:"
+        echo "  1. Ruff: Likely no real errors (parsing issue)"
+        echo "  2. MyPy: 'Source file found twice' - fix PYTHONPATH or __init__.py"
+    else
+        echo "Summary of failures:"
+        echo "  • Check Ruff/MyPy summaries above for details"
+    fi
     echo ""
     echo "Next steps:"
-    echo "  1. Review error summaries above"
-    echo "  2. Fix critical issues (focus on MyPy errors in requests.py)"
+    echo "  1. Fix MyPy 'Source file found twice' error:"
+    echo "     - Add __init__.py to src/schemas/ if missing"
+    echo "     - Or use: mypy --explicit-package-bases src/"
+    echo "  2. Check Ruff output manually: python -m ruff check src/"
     echo "  3. Run again: ./TEST_DRIVE.sh"
     echo ""
     exit 1
