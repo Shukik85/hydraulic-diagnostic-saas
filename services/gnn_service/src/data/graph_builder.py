@@ -127,7 +127,7 @@ class GraphBuilder:
     def build_component_features(
         self, component_id: str, sensor_data: pd.DataFrame, component_spec: ComponentSpec
     ) -> torch.Tensor:
-        """Построить features для одного component.
+        """Construir features для одного component.
 
         Args:
             component_id: Component identifier
@@ -167,7 +167,7 @@ class GraphBuilder:
         return torch.from_numpy(features)
 
     def build_edge_features_static(self, edge_spec: EdgeSpec) -> np.ndarray:
-        """Построить static edge features (8D).
+        """Construir static edge features (8D).
 
         Features:
         - diameter_mm (normalized)
@@ -234,7 +234,7 @@ class GraphBuilder:
         sensor_readings: dict[str, ComponentSensorReading],
         current_time: datetime,
     ) -> np.ndarray:
-        """Построить dynamic edge features (6D).
+        """Construir dynamic edge features (6D).
 
         Features (auto-computed if not in edge_spec):
         - flow_rate_lpm (from Darcy-Weisbach or edge_spec)
@@ -301,7 +301,7 @@ class GraphBuilder:
         sensor_readings: dict[str, ComponentSensorReading] | None = None,
         current_time: datetime | None = None,
     ) -> torch.Tensor:
-        """Построить complete edge features (variable dimension).
+        """Construir complete edge features (variable dimension).
 
         Combines static (8D) and dynamic (6D) features based on feature_config.edge_in_dim:
         - 8D: static only
@@ -369,7 +369,7 @@ class GraphBuilder:
         sensor_readings: dict[str, ComponentSensorReading] | None = None,
         current_time: datetime | None = None,
     ) -> Data:
-        """Построить complete PyG graph.
+        """Construir complete PyG graph.
 
         Args:
             sensor_data: DataFrame с sensor readings [T, sensors]
@@ -440,7 +440,7 @@ class GraphBuilder:
             edge_attr_list.append(edge_features)
 
             # Add reverse edge if bidirectional
-            if edge_spec.is_bidirectional:
+            if edge_spec.flow_direction == "bidirectional":
                 edge_index_list.append([target_idx, source_idx])
                 edge_attr_list.append(edge_features)  # Same features
 
@@ -476,7 +476,7 @@ class GraphBuilder:
         return graph
 
     def validate_graph(self, data: Data) -> bool:
-        """Валидировать PyG graph structure.
+        """Validare PyG graph structure.
 
         Checks:
         - Node features exist and have correct shape
@@ -540,7 +540,7 @@ class GraphBuilder:
     def get_component_sensor_columns(
         self, component_id: str, sensor_data: pd.DataFrame
     ) -> list[str]:
-        """Найти sensor columns для component.
+        """Naiti sensor columns для component.
 
         Convention: sensor columns named as "{sensor_type}_{component_id}"
         Example: "pressure_pump_main", "temperature_valve_01"
@@ -550,7 +550,7 @@ class GraphBuilder:
             sensor_data: DataFrame с sensor columns
 
         Returns:
-            columns: Список column names
+            columns: Описание column names
 
         Examples:
             >>> cols = builder.get_component_sensor_columns("pump_main", sensor_df)
