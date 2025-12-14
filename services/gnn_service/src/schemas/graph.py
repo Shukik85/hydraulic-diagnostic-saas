@@ -222,7 +222,11 @@ class EdgeSpec(BaseModel):
         """
         material_factors = {"steel": 1.0, "rubber": 1.2, "composite": 1.1, "thermoplastic": 1.15}
         factor = material_factors.get(self.material, 1.0)
-        return factor * self.length_m / (self.diameter_mm**4)
+        # Compute area inline to avoid @computed_field property access issues
+        area_mm2 = np.pi * (self.diameter_mm / 2) ** 2
+        if area_mm2 > 0:
+            return factor * self.length_m / (self.diameter_mm**4)
+        return 0.0
 
     # ========================================================================
     # DYNAMIC METHODS
