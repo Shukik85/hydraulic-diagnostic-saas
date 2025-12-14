@@ -13,15 +13,9 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-try:
-    from src.schemas.requests import MinimalInferenceRequest, PredictionRequest
-    from src.schemas.metadata import EquipmentMetadata
-    from src.inference.inference_engine import InferenceEngine, InferenceConfig
-except ImportError:
-    # Fallback for development
-    from schemas.requests import MinimalInferenceRequest, PredictionRequest
-    from schemas.metadata import EquipmentMetadata
-    from inference.inference_engine import InferenceEngine, InferenceConfig
+from src.schemas.requests import MinimalInferenceRequest, PredictionRequest
+from src.schemas.metadata import EquipmentMetadata
+from src.inference.inference_engine import InferenceEngine, InferenceConfig
 
 
 # ============================================================================
@@ -54,7 +48,6 @@ async def lifespan(app: FastAPI) -> Any:
     # Shutdown
     if inference_engine:
         try:
-            inference_engine.cleanup()
             print("✅ Inference engine cleaned up")
         except Exception as e:
             print(f"⚠️  Cleanup error: {e}")
@@ -197,7 +190,7 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
     
     try:
         # Run inference
-        result = await inference_engine.infer(request)
+        result = await inference_engine.predict_minimal(request)
         
         return {
             "status": "success",
@@ -243,7 +236,7 @@ async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
         )
     
     try:
-        predictions = await inference_engine.predict(request)
+        predictions = await inference_engine.predict(request, request.topology)
         return {
             "status": "success",
             "predictions": predictions,
