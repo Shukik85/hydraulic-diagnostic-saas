@@ -288,7 +288,7 @@ class UncertaintyWeighting(nn.Module):
         """
         task_names = list(losses.keys())
 
-        total_loss = 0.0
+        total_loss: torch.Tensor = torch.tensor(0.0, device=self.log_vars.device)
 
         for i, task_name in enumerate(task_names):
             # Uncertainty weighting
