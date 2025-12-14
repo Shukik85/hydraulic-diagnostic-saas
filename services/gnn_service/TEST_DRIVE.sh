@@ -2,7 +2,7 @@
 
 # 🧪 FULL TEST DRIVE SCRIPT FOR GNN SERVICE
 # CRITICAL: Proper error handling + Ruff autofix + better parsing
-# Author: ML Engineer (FINAL - with autofix)
+# Author: ML Engineer (FINAL - with Windows path support)
 # Date: December 14, 2025
 
 echo ""
@@ -50,27 +50,26 @@ if python -m ruff --version &> /dev/null; then
     if [ $RUFF_EXIT -eq 0 ]; then
         test_pass "Ruff: NO LINTING ISSUES REMAINING ✅"
     else
-        # Count errors by code using simple parsing
+        # Count errors by code - SIMPLE approach
         echo ""
         echo "📄 Ruff Error Summary:"
         
-        # Parse format: "path:line:col: CODE message"
-        # Extract CODE part and count
-        echo "$RUFF_OUTPUT" | grep -E '^[a-zA-Z]' | grep -oE '[A-Z][0-9]{3}' | sort | uniq -c | sort -rn | head -10 | while read count code; do
+        # Extract error codes (I001, E402, etc.) and count them
+        echo "$RUFF_OUTPUT" | grep -oE '[A-Z][A-Z]?[0-9]{3}' | sort | uniq -c | sort -rn | head -10 | while read count code; do
             printf "    %3d × %s\n" "$count" "$code"
         done
         
-        # Count total
-        TOTAL_ERRORS=$(echo "$RUFF_OUTPUT" | grep -cE '^[a-zA-Z].*:[0-9]+:[0-9]+:')
+        # Count total lines that look like errors (contain "src" or "tests")
+        TOTAL_ERRORS=$(echo "$RUFF_OUTPUT" | grep -E '(src|tests)' | grep -cE ':[0-9]+:[0-9]+')
         if [ $TOTAL_ERRORS -gt 0 ]; then
             echo ""
             echo "📈 Total issues: $TOTAL_ERRORS"
         fi
         
-        # Show first 3 actual errors
+        # Show first 5 actual error lines
         echo ""
-        echo "🔍 First 3 issues:"
-        echo "$RUFF_OUTPUT" | grep -E '^[a-zA-Z].*:[0-9]+:[0-9]+:' | head -3
+        echo "🔍 First 5 issues:"
+        echo "$RUFF_OUTPUT" | grep -E '(src|tests)' | grep -E ':[0-9]+:[0-9]+:' | head -5
         
         test_fail "Ruff: LINTING ISSUES FOUND (run 'ruff check --fix src/' to autofix)"
     fi
@@ -128,6 +127,14 @@ if python -m mypy --version &> /dev/null; then
         echo ""
         echo "🔍 First 5 errors:"
         echo "$MYPY_OUTPUT" | grep -E "error:" | head -5
+        
+        # Check for specific error types
+        PROP_ERRORS=$(echo "$MYPY_OUTPUT" | grep -c "prop-decorator")
+        if [ $PROP_ERRORS -gt 0 ]; then
+            echo ""
+            echo "⚠️  Main issue: $PROP_ERRORS × prop-decorator errors (Pydantic @property + validators)"
+        fi
+        
         test_fail "MyPy: TYPE ERRORS FOUND"
     fi
 else
@@ -397,12 +404,12 @@ else
     echo ""
     echo "Top issues:"
     echo "  1. MyPy errors (~120+): Focus on prop-decorator issues in metadata.py"
-    echo "  2. Ruff linting: Run 'ruff check --fix src/' to autofix imports"
+    echo "  2. Ruff linting: Import sorting (I001) - run autofix"
     echo ""
     echo "Quick fixes:"
     echo "  • Ruff: python -m ruff check src/ tests/ --fix"
-    echo "  • MyPy prop-decorator: Use @property without Pydantic decorators"
-    echo "  • Or add: # type: ignore[prop-decorator] to affected lines"
+    echo "  • MyPy prop-decorator: Use @property OR Pydantic validators, not both"
+    echo "  • Or add: # type: ignore[prop-decorator] to affected @property lines"
     echo ""
     echo "Run again: ./TEST_DRIVE.sh"
     echo ""
