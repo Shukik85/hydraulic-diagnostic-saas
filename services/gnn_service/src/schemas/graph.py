@@ -210,13 +210,11 @@ class EdgeSpec(BaseModel):
     # ========================================================================
 
     @computed_field
-    @property
     def cross_section_area_mm2(self) -> float:
         """Площадь поперечного сечения (мм²)."""
         return np.pi * (self.diameter_mm / 2) ** 2
 
     @computed_field
-    @property
     def pressure_loss_coefficient(self) -> float:
         """Упрощённый коэффициент потерь давления.
 
@@ -351,7 +349,7 @@ class ComponentSpec(BaseModel):
     )
 
     nominal_flow_lpm: Annotated[float, Field(gt=0, le=1000)] = Field(
-        ..., description="u041dоминальный расход жидкости (литры/мин)"
+        ..., description="Номинальный расход жидкости (литры/мин)"
     )
 
     rated_power_kw: Annotated[float, Field(ge=0, le=500)] = Field(
@@ -373,7 +371,6 @@ class ComponentSpec(BaseModel):
         return v
 
     @computed_field
-    @property
     def power_density(self) -> float:
         """Плотность мощности (кВт на л/мин)."""
         if self.nominal_flow_lpm > 0:
@@ -385,7 +382,7 @@ class GraphTopology(BaseModel):
     """Топология гидравлического графа.
 
     Определяет структуру графа: компоненты (nodes), соединения (edges)
-    и их характеристики. Оспользуется для построения PyTorch Geometric Data.
+    и их характеристики. Используется для построения PyTorch Geometric Data.
 
     Attributes:
         equipment_id: ID оборудования
@@ -562,19 +559,16 @@ class GraphTopology(BaseModel):
         return len(visited) == len(self.components)
 
     @computed_field
-    @property
     def num_components(self) -> int:
         """Количество компонентов в графе."""
         return len(self.components)
 
     @computed_field
-    @property
     def num_edges(self) -> int:
         """Количество соединений в графе."""
         return len(self.edges)
 
     @computed_field
-    @property
     def avg_degree(self) -> float:
         """Средняя степень узлов графа."""
         if self.num_components == 0:
