@@ -122,7 +122,7 @@ class EdgeFeatureNormalizer:
         flow_norm = (flow_log - self.stats.flow_log_mean) / self.stats.flow_log_std
 
         # Clip outliers to [-5, 5] standard deviations
-        return np.clip(flow_norm, -5.0, 5.0)
+        return float(np.clip(flow_norm, -5.0, 5.0))
 
     def denormalize_flow(self, flow_norm: float) -> float:
         """Denormalize flow rate back to L/min.
@@ -139,7 +139,7 @@ class EdgeFeatureNormalizer:
         # Reverse log transform
         flow_lpm = np.expm1(flow_log)  # exp(x) - 1
 
-        return max(0.0, flow_lpm)  # Ensure non-negative
+        return float(max(0.0, flow_lpm))  # Ensure non-negative
 
     # ========================================================================
     # Pressure Drop (Z-score)
@@ -162,7 +162,7 @@ class EdgeFeatureNormalizer:
             0.1
         """
         dp_norm = (dp_bar - self.stats.pressure_drop_mean) / self.stats.pressure_drop_std
-        return np.clip(dp_norm, -5.0, 5.0)
+        return float(np.clip(dp_norm, -5.0, 5.0))
 
     def denormalize_pressure_drop(self, dp_norm: float) -> float:
         """Denormalize pressure drop back to bar.
@@ -173,7 +173,7 @@ class EdgeFeatureNormalizer:
         Returns:
             Pressure drop in bar
         """
-        return dp_norm * self.stats.pressure_drop_std + self.stats.pressure_drop_mean
+        return float(dp_norm * self.stats.pressure_drop_std + self.stats.pressure_drop_mean)
 
     # ========================================================================
     # Temperature Delta (Z-score)
@@ -196,7 +196,7 @@ class EdgeFeatureNormalizer:
             -1.167
         """
         dt_norm = (dt_c - self.stats.temp_delta_mean) / self.stats.temp_delta_std
-        return np.clip(dt_norm, -5.0, 5.0)
+        return float(np.clip(dt_norm, -5.0, 5.0))
 
     def denormalize_temp_delta(self, dt_norm: float) -> float:
         """Denormalize temperature delta back to °C.
@@ -207,7 +207,7 @@ class EdgeFeatureNormalizer:
         Returns:
             Temperature delta in °C
         """
-        return dt_norm * self.stats.temp_delta_std + self.stats.temp_delta_mean
+        return float(dt_norm * self.stats.temp_delta_std + self.stats.temp_delta_mean)
 
     # ========================================================================
     # Vibration
@@ -230,7 +230,7 @@ class EdgeFeatureNormalizer:
             0.03
         """
         vib_norm = vib_g / self.stats.vibration_max
-        return np.clip(vib_norm, 0.0, 1.0)
+        return float(np.clip(vib_norm, 0.0, 1.0))
 
     def denormalize_vibration(self, vib_norm: float) -> float:
         """Denormalize vibration level back to g.
@@ -241,7 +241,7 @@ class EdgeFeatureNormalizer:
         Returns:
             Vibration level in g
         """
-        return vib_norm * self.stats.vibration_max
+        return float(vib_norm * self.stats.vibration_max)
 
     # ========================================================================
     # Age
@@ -264,7 +264,7 @@ class EdgeFeatureNormalizer:
             0.125
         """
         age_norm = age_hours / self.stats.age_max
-        return np.clip(age_norm, 0.0, 1.0)
+        return float(np.clip(age_norm, 0.0, 1.0))
 
     def denormalize_age(self, age_norm: float) -> float:
         """Denormalize age back to hours.
@@ -275,7 +275,7 @@ class EdgeFeatureNormalizer:
         Returns:
             Age in hours
         """
-        return age_norm * self.stats.age_max
+        return float(age_norm * self.stats.age_max)
 
     # ========================================================================
     # Maintenance Score (No normalization - already [0, 1])
@@ -290,7 +290,7 @@ class EdgeFeatureNormalizer:
         Returns:
             Same score (pass-through)
         """
-        return np.clip(score, 0.0, 1.0)
+        return float(np.clip(score, 0.0, 1.0))
 
     # ========================================================================
     # Batch Operations
@@ -410,21 +410,21 @@ class EdgeFeatureNormalizer:
         stats = NormalizationStatistics(**stats_dict)
         return cls(stats=stats)
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, float]:
         """Get statistics as dictionary (for checkpoint saving).
 
         Returns:
             Statistics dictionary
         """
-        return self.stats.model_dump()
+        return self.stats.model_dump()  # type: ignore
 
-    def load_stats(self, stats_dict: dict) -> None:
+    def load_stats(self, stats_dict: dict[str, float]) -> None:
         """Load statistics from dictionary.
 
         Args:
             stats_dict: Statistics dictionary from checkpoint
         """
-        self.stats = NormalizationStatistics(**stats_dict)
+        self.stats = NormalizationStatistics(**stats_dict)  # type: ignore
 
 
 # ============================================================================
