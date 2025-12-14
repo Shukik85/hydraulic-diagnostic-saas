@@ -18,7 +18,12 @@ import logging
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
-import asyncpg
+try:
+    import asyncpg
+except ImportError:
+    # asyncpg will be available at runtime
+    asyncpg = None  # type: ignore[assignment]
+
 import pandas as pd
 
 if TYPE_CHECKING:
@@ -67,14 +72,14 @@ class TimescaleConnector:
         pool_max_size: int = 10,
         command_timeout: float = 30.0,
         max_retries: int = 3,
-    ):
+    ) -> None:
         self.db_url = db_url
         self.pool_min_size = pool_min_size
         self.pool_max_size = pool_max_size
         self.command_timeout = command_timeout
         self.max_retries = max_retries
 
-        self.pool: asyncpg.Pool | None = None
+        self.pool: Any = None  # asyncpg.Pool or None
         self._connected = False
 
     async def connect(self) -> None:
@@ -83,6 +88,10 @@ class TimescaleConnector:
         Raises:
             ConnectionError: Если не удалось подключиться
         """
+        if asyncpg is None:
+            msg = "asyncpg not installed. Install with: pip install asyncpg"
+            raise ImportError(msg)
+
         try:
             self.pool = await asyncpg.create_pool(
                 self.db_url,
@@ -107,7 +116,7 @@ class TimescaleConnector:
             logger.info("TimescaleDB connection closed")
 
     @asynccontextmanager
-    async def get_connection(self):
+    async def get_connection(self) -> Any:
         """Получить connection из pool (context manager).
 
         Yields:
@@ -123,12 +132,15 @@ class TimescaleConnector:
         async with self.pool.acquire() as conn:
             yield conn
 
-    async def _execute_with_retry(self, query_func, *args, **kwargs) -> Any:
+    async def _execute_with_retry(
+        self, query_func: Any, *args: Any, **kwargs: Any
+    ) -> Any:
         """Выполнить query с retry logic.
 
         Args:
             query_func: Async function для выполнения
-            *args, **kwargs: Arguments для query_func
+            *args: Positional arguments для query_func
+            **kwargs: Keyword arguments для query_func
 
         Returns:
             result: Query result
@@ -138,8 +150,9 @@ class TimescaleConnector:
         """
         for attempt in range(self.max_retries):
             try:
-                return await query_func(*args, **kwargs)
-            except (TimeoutError, asyncpg.PostgresError) as e:
+                result = await query_func(*args, **kwargs)
+                return result
+            except (TimeoutError, Exception) as e:  # asyncpg.PostgresError if available
                 if attempt == self.max_retries - 1:
                     logger.exception(f"Query failed after {self.max_retries} attempts: {e}")
                     raise
@@ -147,7 +160,8 @@ class TimescaleConnector:
                 # Exponential backoff
                 wait_time = 2**attempt
                 logger.warning(
-                    f"Query failed (attempt {attempt + 1}/{self.max_retries}), retrying in {wait_time}s: {e}"
+                    f"Query failed (attempt {attempt + 1}/{self.max_retries}), "
+                    f"retrying in {wait_time}s: {e}"
                 )
                 await asyncio.sleep(wait_time)
 
@@ -186,7 +200,7 @@ class TimescaleConnector:
             msg = "Sensors list cannot be empty"
             raise ValueError(msg)
 
-        async def _fetch():
+        async def _fetch() -> pd.DataFrame:
             query = """
                 SELECT
                     timestamp,
@@ -205,7 +219,9 @@ class TimescaleConnector:
 
             # Convert to DataFrame
             if not rows:
-                logger.warning(f"No data found for {equipment_id} in time window {time_window}")
+                logger.warning(
+                    f"No data found for {equipment_id} in time window {time_window}"
+                )
                 return pd.DataFrame(columns=["timestamp", *sensors])
 
             df = pd.DataFrame(rows, columns=["timestamp", *sensors])
@@ -213,7 +229,11 @@ class TimescaleConnector:
 
             return df
 
-        return await self._execute_with_retry(_fetch)
+        result = await self._execute_with_retry(_fetch)
+        if not isinstance(result, pd.DataFrame):
+            msg = f"Expected DataFrame, got {type(result)}"
+            raise TypeError(msg)
+        return result
 
     async def fetch_batch_sensor_data(
         self, requests: list[tuple[str, TimeWindow, list[str]]]
@@ -234,13 +254,15 @@ class TimescaleConnector:
             >>> results = await connector.fetch_batch_sensor_data(requests)
             >>> results["exc_001"].shape
         """
-        tasks = [self.fetch_sensor_data(eq_id, tw, sensors) for eq_id, tw, sensors in requests]
+        tasks = [
+            self.fetch_sensor_data(eq_id, tw, sensors) for eq_id, tw, sensors in requests
+        ]
 
         # Execute concurrently
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Build result dict
-        result_dict = {}
+        result_dict: dict[str, pd.DataFrame] = {}
         for (eq_id, _, _), result in zip(requests, results, strict=False):
             if isinstance(result, Exception):
                 logger.error(f"Failed to fetch data for {eq_id}: {result}")
@@ -250,24 +272,24 @@ class TimescaleConnector:
 
         return result_dict
 
-    async def get_equipment_metadata(self, equipment_id: str) -> EquipmentMetadata:
+    async def get_equipment_metadata(self, equipment_id: str) -> Any:
         """Получить equipment metadata.
 
         Args:
             equipment_id: Equipment identifier
 
         Returns:
-            metadata: EquipmentMetadata instance
+            metadata: Equipment metadata (parsed to EquipmentMetadata when schema ready)
 
         Raises:
             ValueError: Если equipment не найден
 
         Examples:
             >>> metadata = await connector.get_equipment_metadata("exc_001")
-            >>> print(metadata.equipment_type)  # "excavator"
+            >>> print(metadata["equipment_type"])  # "excavator"
         """
 
-        async def _fetch():
+        async def _fetch() -> Any:
             query = """
                 SELECT
                     equipment_id,
@@ -288,16 +310,14 @@ class TimescaleConnector:
                 msg = f"Equipment not found: {equipment_id}"
                 raise ValueError(msg)
 
-            # Parse to EquipmentMetadata
-            # TODO: Full parsing когда schema ready
             logger.info(f"Fetched metadata for {equipment_id}")
-
             return row
 
-        return await self._execute_with_retry(_fetch)
-
-        # Convert to EquipmentMetadata
-        # For now, return raw data (will integrate with schema later)
+        result = await self._execute_with_retry(_fetch)
+        if result is None:
+            msg = f"Equipment not found: {equipment_id}"
+            raise ValueError(msg)
+        return result
 
     async def health_check(self) -> bool:
         """Проверить database connection health.
@@ -327,14 +347,18 @@ class TimescaleConnector:
             count: Количество equipment records
         """
 
-        async def _fetch():
+        async def _fetch() -> Any:
             query = "SELECT COUNT(*) FROM equipment_metadata"
             async with self.get_connection() as conn:
                 return await conn.fetchval(query)
 
-        return await self._execute_with_retry(_fetch)
+        result = await self._execute_with_retry(_fetch)
+        if not isinstance(result, int):
+            msg = f"Expected int, got {type(result)}"
+            raise TypeError(msg)
+        return result
 
-    async def get_time_range(self, equipment_id: str) -> tuple[datetime, datetime]:
+    async def get_time_range(self, equipment_id: str) -> tuple[Any, Any]:
         """Получить time range доступных данных.
 
         Args:
@@ -348,7 +372,7 @@ class TimescaleConnector:
             >>> print(f"Data available: {start} to {end}")
         """
 
-        async def _fetch():
+        async def _fetch() -> tuple[Any, Any]:
             query = """
                 SELECT
                     MIN(timestamp) as min_time,
@@ -366,7 +390,8 @@ class TimescaleConnector:
 
             return (row["min_time"], row["max_time"])
 
-        return await self._execute_with_retry(_fetch)
+        result = await self._execute_with_retry(_fetch)
+        return result
 
     def __repr__(self) -> str:
         status = "connected" if self._connected else "disconnected"
