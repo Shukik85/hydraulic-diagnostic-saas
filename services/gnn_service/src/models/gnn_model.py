@@ -132,6 +132,7 @@ class UniversalTemporalGNN(nn.Module):
         self.use_edge_features = use_edge_features
         self.edge_feature_dim = edge_feature_dim  # Store for checkpoint
         self.use_compile = use_compile
+        self._compile_mode = compile_mode  # Store for later reference
 
         # Input projection
         self.input_projection = nn.Linear(in_channels, hidden_channels)
@@ -203,7 +204,9 @@ class UniversalTemporalGNN(nn.Module):
 
         # Apply torch.compile (PyTorch 2.8)
         if use_compile:
-            self._apply_torch_compile(compile_mode)
+            self._compiled_forward = self._create_compiled_forward(compile_mode)
+        else:
+            self._compiled_forward = None
 
     def _initialize_weights(self) -> None:
         """Инициализация весов модели.
@@ -224,23 +227,32 @@ class UniversalTemporalGNN(nn.Module):
                     elif "bias" in name:
                         nn.init.zeros_(param)
 
-    def _apply_torch_compile(self, mode: str) -> None:
-        """Применить torch.compile к forward pass (PyTorch 2.8).
+    def _create_compiled_forward(
+        self, mode: str
+    ) -> torch.jit.ScriptFunction | None:
+        """Create compiled forward function (PyTorch 2.8).
 
         Args:
             mode: "default", "reduce-overhead", или "max-autotune"
+
+        Returns:
+            Compiled forward function or None if compilation failed
 
         Note:
             Компиляция выполняется при первом forward pass.
             Expect ~30s warmup, затем 1.5x speedup.
         """
-        # Compile forward method
-        self.forward = torch.compile(
-            self.forward,
-            mode=mode,
-            fullgraph=False,  # Allow graph breaks
-            dynamic=True,  # Support variable batch sizes
-        )
+        try:
+            compiled_fn = torch.compile(
+                self._forward_impl,
+                mode=mode,
+                fullgraph=False,  # Allow graph breaks
+                dynamic=True,  # Support variable batch sizes
+            )
+            return compiled_fn
+        except Exception as e:
+            print(f"⚠️  torch.compile failed: {e}. Falling back to eager execution.")
+            return None
 
     def forward(
         self,
@@ -273,7 +285,36 @@ class UniversalTemporalGNN(nn.Module):
             - Output: health [B, 1], degradation [B, 1], anomaly [B, 9]
             где N = total nodes, E = total edges, B = batch size
         """
-        attention_weights = []
+        # Use compiled version if available, otherwise use eager
+        if self._compiled_forward is not None and not return_attention:
+            return self._compiled_forward(x, edge_index, edge_attr, batch)
+        else:
+            return self._forward_impl(x, edge_index, edge_attr, batch, return_attention)
+
+    def _forward_impl(
+        self,
+        x: torch.Tensor,
+        edge_index: torch.Tensor,
+        edge_attr: torch.Tensor | None = None,
+        batch: torch.Tensor | None = None,
+        return_attention: bool = False,
+    ) -> (
+        tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+        | tuple[torch.Tensor, torch.Tensor, torch.Tensor, list[torch.Tensor]]
+    ):
+        """Implementation of forward pass (for torch.compile wrapping).
+
+        Args:
+            x: Node features [N, F_in]
+            edge_index: Edge connectivity [2, E]
+            edge_attr: Edge features [E, 14]
+            batch: Batch assignment [N]
+            return_attention: Return attention weights
+
+        Returns:
+            Tuple of (health, degradation, anomaly) or with attention
+        """
+        attention_weights: list[torch.Tensor] = []
 
         # 1. Input projection
         x = self.input_projection(x)  # [N, F_in] -> [N, H]
@@ -287,9 +328,10 @@ class UniversalTemporalGNN(nn.Module):
         for i, (gat_layer, norm) in enumerate(zip(self.gat_layers, self.gat_norms, strict=False)):
             # GATv2 с edge conditioning
             if return_attention:
-                x_new, attn = gat_layer(
+                result = gat_layer(
                     x, edge_index, edge_attr=edge_attr, return_attention_weights=True
                 )
+                x_new, attn = result[0], result[1]
                 attention_weights.append(attn)
             else:
                 x_new = gat_layer(x, edge_index, edge_attr=edge_attr)
@@ -318,7 +360,7 @@ class UniversalTemporalGNN(nn.Module):
         x_temporal = x_pooled.unsqueeze(1)  # [B, 1, H]
 
         # ARMA-Attention LSTM
-        _lstm_out, (h_n, _c_n) = self.temporal_lstm(x_temporal)  # lstm_out: [B, 1, lstm_hidden]
+        lstm_out, (h_n, _c_n) = self.temporal_lstm(x_temporal)  # lstm_out: [B, 1, lstm_hidden]
 
         # Use final hidden state
         final_hidden = h_n[-1]  # [B, lstm_hidden]
