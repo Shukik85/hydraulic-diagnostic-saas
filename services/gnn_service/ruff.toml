@@ -103,8 +103,7 @@ ignore = [
     # Russian text handling
     "RUF100",   # Unused noqa (Russian text causes false positives)
     
-    # False positives
-    "PT004",    # Pytest fixture without underscore prefix (by design)
+    # REMOVED PT004 - deprecated rule in Ruff v0.8+
 ]
 
 # Per-file ignores - more specific rules for specific files
