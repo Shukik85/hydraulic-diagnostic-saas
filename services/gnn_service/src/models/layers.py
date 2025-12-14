@@ -213,7 +213,7 @@ class ARMAAttentionLSTM(nn.Module):
             lstm_out: LSTM output [B, T, H]
 
         Returns:
-            attention: Attention weights [B, T, 1]
+            attention: Attention weights [B, T, T]
         """
         _B, T, H = lstm_out.shape
 
