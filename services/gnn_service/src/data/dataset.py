@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class HydraulicGraphDataset(Dataset):
+class HydraulicGraphDataset(Dataset[Data]):
     """PyTorch Dataset для hydraulic graphs.
 
     Features:
@@ -94,7 +94,7 @@ class HydraulicGraphDataset(Dataset):
         transform: Callable[[Data], Data] | None = None,
         cache_dir: Path | str | None = None,
         preload: bool = False,
-    ):
+    ) -> None:
         self.data_path = Path(data_path)
         self.connector = timescale_connector
         self.feature_engineer = feature_engineer
@@ -125,7 +125,7 @@ class HydraulicGraphDataset(Dataset):
         )
 
     def _load_equipment_list(self) -> list[dict[str, Any]]:
-        """Загрузить equipment list из JSON.
+        """Загружить equipment list из JSON.
 
         Returns:
             equipment_list: List of equipment metadata dicts
@@ -181,7 +181,7 @@ class HydraulicGraphDataset(Dataset):
         return hash_obj.hexdigest()
 
     def _load_from_cache(self, cache_path: Path) -> Data | None:
-        """Загрузить graph from cache.
+        """Загружить graph from cache.
 
         Args:
             cache_path: Path to cache file
@@ -240,7 +240,7 @@ class HydraulicGraphDataset(Dataset):
         return Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
 
     def _preload_all(self) -> None:
-        """Предзагрузить все graphs в RAM."""
+        """Предзагружить все graphs в RAM."""
         logger.info(f"Preloading {len(self)} graphs...")
 
         for idx in range(len(self)):
@@ -253,7 +253,8 @@ class HydraulicGraphDataset(Dataset):
         logger.info(f"Preloaded {len(self.preloaded_data)} graphs to RAM")
 
     def __len__(self) -> int:
-        """Dataset size.
+        """
+        Dataset size.
 
         Returns:
             size: Количество equipment
@@ -349,8 +350,8 @@ class HydraulicGraphDataset(Dataset):
         return {
             "dataset_size": len(self),
             "sample_size": sample_size,
-            "avg_num_nodes": np.mean([g.num_nodes for g in graphs]),
-            "avg_num_edges": np.mean([g.num_edges for g in graphs]),
+            "avg_num_nodes": float(np.mean([g.num_nodes for g in graphs])),
+            "avg_num_edges": float(np.mean([g.num_edges for g in graphs])),
             "node_features": graphs[0].x.shape[1] if graphs else 0,
             "edge_features_actual": edge_features[0] if edge_features else 0,
             "edge_in_dim_configured": self.feature_config.edge_in_dim,
@@ -359,8 +360,8 @@ class HydraulicGraphDataset(Dataset):
         }
 
 
-class TemporalGraphDataset(Dataset):
-    """Dataset для загрузки готовых PyG графов из .pt файлов.
+class TemporalGraphDataset(Dataset[Data]):
+    """Dataset для загружки готовых PyG графов из .pt файлов.
 
     Используется для работы с pre-built датасетами вроде gnn_graphs_multilabel.pt.
     Поддерживает variable edge_in_dim и трансформации.
@@ -396,7 +397,7 @@ class TemporalGraphDataset(Dataset):
         transform: Callable[[Data], Data] | None = None,
         split: Literal["train", "val", "test"] = "train",
         weights_only: bool = False,
-    ):
+    ) -> None:
         self.data_path = Path(data_path)
         self.feature_config = feature_config
         self.transform = transform
@@ -412,7 +413,7 @@ class TemporalGraphDataset(Dataset):
         )
 
     def _load_graphs(self) -> list[Data]:
-        """Загрузить графы из .pt файла.
+        """Загружить графы из .pt файла.
 
         Returns:
             graphs: List of PyG Data objects
@@ -506,12 +507,12 @@ class TemporalGraphDataset(Dataset):
             "dataset_size": len(self),
             "split": self.split,
             "sample_size": sample_size,
-            "avg_num_nodes": np.mean(num_nodes) if num_nodes else 0,
-            "min_num_nodes": min(num_nodes) if num_nodes else 0,
-            "max_num_nodes": max(num_nodes) if num_nodes else 0,
-            "avg_num_edges": np.mean(num_edges) if num_edges else 0,
-            "min_num_edges": min(num_edges) if num_edges else 0,
-            "max_num_edges": max(num_edges) if num_edges else 0,
+            "avg_num_nodes": float(np.mean(num_nodes)) if num_nodes else 0.0,
+            "min_num_nodes": int(min(num_nodes)) if num_nodes else 0,
+            "max_num_nodes": int(max(num_nodes)) if num_nodes else 0,
+            "avg_num_edges": float(np.mean(num_edges)) if num_edges else 0.0,
+            "min_num_edges": int(min(num_edges)) if num_edges else 0,
+            "max_num_edges": int(max(num_edges)) if num_edges else 0,
             "node_features": sample_graphs[0].x.shape[1] if sample_graphs else 0,
             "edge_feature_dims": sorted(list(edge_dims)),
             "edge_in_dim_configured": self.feature_config.edge_in_dim,
