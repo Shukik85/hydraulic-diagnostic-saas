@@ -2,7 +2,7 @@
 
 # 🧪 FULL TEST DRIVE SCRIPT FOR GNN SERVICE
 # CRITICAL: Proper error handling + Ruff autofix + better parsing
-# Author: ML Engineer (FINAL - with Windows path support)
+# Author: ML Engineer (FINAL - with --no-incremental for MyPy)
 # Date: December 14, 2025
 
 echo ""
@@ -100,15 +100,17 @@ else
 fi
 
 # ============================================================================
-# PHASE 2: MYPY TYPE CHECKING (STRICT MODE)
+# PHASE 2: MYPY TYPE CHECKING (STRICT MODE + NO CACHE)
 # ============================================================================
 
 test_step "Phase 2: MyPy Type Checking (Strict Mode)"
 
 if python -m mypy --version &> /dev/null; then
     test_pass "MyPy is installed"
-    # Run MyPy and CAPTURE errors
-    MYPY_OUTPUT=$(python -m mypy src/ --strict --ignore-missing-imports 2>&1)
+    
+    # CRITICAL: Use --no-incremental to force fresh check (ignores cache)
+    echo "🗑️  Clearing MyPy cache and running fresh check..."
+    MYPY_OUTPUT=$(python -m mypy src/ --strict --ignore-missing-imports --no-incremental 2>&1)
     MYPY_EXIT=$?
     
     if [ $MYPY_EXIT -eq 0 ]; then
