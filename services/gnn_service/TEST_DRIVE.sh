@@ -2,20 +2,14 @@
 
 # 🧪 FULL TEST DRIVE SCRIPT FOR GNN SERVICE
 # CRITICAL: Proper error handling + Ruff linting with summary only
-# Author: ML Engineer (FINAL with Ruff summary)
+# Author: ML Engineer (FINAL with fixed colors and Ruff summary)
 # Date: December 14, 2025
 
 echo ""
-echo "════════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════════════"
 echo "🧪 GNN SERVICE - FULL TEST DRIVE"
-echo "════════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════════════"
 echo ""
-
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
 
 # Test counter
 TESTS_PASSED=0
@@ -23,16 +17,16 @@ TESTS_FAILED=0
 
 test_step() {
     echo ""
-    echo "${YELLOW}→ $1${NC}"
+    echo "→ $1"
 }
 
 test_pass() {
-    echo "${GREEN}✅ $1${NC}"
+    echo "✅ $1"
     ((TESTS_PASSED++))
 }
 
 test_fail() {
-    echo "${RED}❌ $1${NC}"
+    echo "❌ $1"
     ((TESTS_FAILED++))
 }
 
@@ -45,20 +39,24 @@ test_step "Phase 0: Ruff Linting (Code quality summary)"
 if python -m ruff --version &> /dev/null; then
     test_pass "Ruff is installed"
     
-    # Run Ruff with quiet output - shows only counts
-    RUFF_OUTPUT=$(python -m ruff check src/ --quiet 2>&1)
+    # Run Ruff - capture output
+    RUFF_OUTPUT=$(python -m ruff check src/ 2>&1)
     RUFF_EXIT=$?
     
     if [ $RUFF_EXIT -eq 0 ]; then
         test_pass "Ruff: NO LINTING ISSUES ✅"
     else
-        # Show summary by error code - NOT all errors
-        echo "${YELLOW}Ruff Error Summary (by code):${NC}"
-        python -m ruff check src/ 2>&1 | grep -E "^src/" | cut -d: -f3- | sort | uniq -c | sort -rn | head -10
+        # Show summary: extract error codes and count them
+        echo "📄 Ruff Error Summary (top 10 by code):"
+        echo "$RUFF_OUTPUT" | grep -oP '\[\K[A-Z0-9]+(?=\])' | sort | uniq -c | sort -rn | head -10 | awk '{printf "    %3d × %s\n", $1, $2}'
+        
+        # Show total count
+        TOTAL_ERRORS=$(echo "$RUFF_OUTPUT" | grep -c "^src/")
+        echo "📈 Total errors: $TOTAL_ERRORS"
         test_fail "Ruff: LINTING ISSUES FOUND"
     fi
 else
-    echo "${YELLOW}⚠️  Ruff not installed (optional)${NC}"
+    echo "⚠️  Ruff not installed (optional)"
     echo "   Install with: python -m pip install ruff"
     test_pass "Ruff skipped (optional)"
 fi
@@ -74,7 +72,6 @@ if command -v python &> /dev/null; then
     test_pass "Python found: $PYTHON_VERSION"
 else
     test_fail "Python not found"
-    ((TESTS_FAILED++))
     exit 1
 fi
 
@@ -100,12 +97,17 @@ if python -m mypy --version &> /dev/null; then
         test_pass "MyPy: ZERO ERRORS ✅"
     else
         # Show summary - error count by file
-        echo "${RED}MyPy errors (by file):${NC}"
-        echo "$MYPY_OUTPUT" | grep -E "error:" | cut -d: -f1 | sort | uniq -c | sort -rn
+        echo "📄 MyPy errors (by file):"
+        echo "$MYPY_OUTPUT" | grep -E "error:" | cut -d: -f1 | sed 's/\\/\//g' | sort | uniq -c | sort -rn | awk '{printf "    %3d × %s\n", $1, $2}'
+        
+        # Show first 3 actual errors
+        echo ""
+        echo "🔍 First 3 errors:"
+        echo "$MYPY_OUTPUT" | grep -E "error:" | head -3
         test_fail "MyPy: TYPE ERRORS FOUND"
     fi
 else
-    echo "${YELLOW}⚠️  MyPy not installed (optional)${NC}"
+    echo "⚠️  MyPy not installed (optional)"
     test_pass "MyPy skipped (optional)"
 fi
 
@@ -115,7 +117,7 @@ fi
 
 test_step "Phase 3: Python Imports Validation (Real classes)"
 
-echo "${YELLOW}Testing imports with REAL existing classes...${NC}"
+echo "Testing imports with REAL existing classes..."
 
 python << 'EOF'
 import sys
@@ -137,7 +139,7 @@ try:
     # Check what REALLY exists in responses.py
     from schemas import responses
     real_classes = [x for x in dir(responses) if not x.startswith('_') and x[0].isupper()]
-    print(f"✅ responses.py: Available classes = {real_classes}")
+    print(f"✅ responses.py: Available classes = {real_classes[:5]}...")  # Show first 5 only
     
     from data.feature_config import FeatureConfig, DataLoaderConfig
     print("✅ feature_config.py: FeatureConfig, DataLoaderConfig - OK")
@@ -221,15 +223,20 @@ try:
     print("\nTest 3: DataLoaderConfig instantiation...")
     loader_config = DataLoaderConfig()
     loader_kwargs = loader_config.get_loader_kwargs(split="train")
-    print(f"  ✅ DataLoaderConfig.get_loader_kwargs() returns dict with keys: {list(loader_kwargs.keys())}")
+    print(f"  ✅ DataLoaderConfig.get_loader_kwargs() returns dict with {len(loader_kwargs)} keys")
     
-    # Test 4: MinimalInferenceRequest
+    # Test 4: MinimalInferenceRequest - CORRECT data structure
     print("\nTest 4: MinimalInferenceRequest instantiation...")
     request = MinimalInferenceRequest(
         equipment_id="pump_001",
         timestamp=datetime.now(),
         topology_id="standard_pump_system",
-        sensor_readings={"pump": {"pressure": 250.0}}
+        sensor_readings={
+            "pump": {
+                "pressure_bar": 250.0,
+                "temperature_c": 45.0
+            }
+        }
     )
     print(f"  ✅ MinimalInferenceRequest created: {request.equipment_id}")
     
@@ -347,33 +354,31 @@ fi
 # ============================================================================
 
 echo ""
-echo "════════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════════════"
 echo "📊 TEST DRIVE RESULTS"
-echo "════════════════════════════════════════════════════════════════════"
+echo "═══════════════════════════════════════════════════════════════════════"
 echo ""
-echo "${GREEN}✅ Tests Passed: $TESTS_PASSED${NC}"
-echo "${RED}❌ Tests Failed: $TESTS_FAILED${NC}"
+echo "✅ Tests Passed: $TESTS_PASSED"
+echo "❌ Tests Failed: $TESTS_FAILED"
 echo ""
 
 if [ $TESTS_FAILED -eq 0 ]; then
-    echo "${GREEN}🎉 ALL TESTS PASSED - READY FOR MERGE!${NC}"
+    echo "🎉 ALL TESTS PASSED - READY FOR MERGE!"
     echo ""
     echo "Entry point for production:"
     echo "  uvicorn src.api.main:app --host 0.0.0.0 --port 8000"
     echo ""
     exit 0
 else
-    echo "${RED}❌ TESTS FAILED - ISSUES TO FIX:${NC}"
+    echo "❌ TESTS FAILED - ISSUES TO FIX:"
     echo ""
     echo "Summary of failures:"
-    echo "  • Ruff: Linting issues (see summary above)"
-    echo "  • MyPy: Type checking errors (see summary above)"
-    echo "  • Imports: Some expected classes don't exist"
-    echo "  • Pydantic: Schema validation issues"
+    echo "  • Check Ruff/MyPy summaries above for details"
+    echo "  • Most issues are likely: imports, type hints, schema validation"
     echo ""
     echo "Next steps:"
-    echo "  1. Review Ruff/MyPy summaries above"
-    echo "  2. Fix critical issues only (ignore long lines, Russian text)"
+    echo "  1. Review error summaries above"
+    echo "  2. Fix critical issues (focus on MyPy errors in requests.py)"
     echo "  3. Run again: ./TEST_DRIVE.sh"
     echo ""
     exit 1
