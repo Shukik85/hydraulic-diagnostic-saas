@@ -57,8 +57,8 @@ def create_dataloader(
     dataset: HydraulicGraphDataset,
     config: DataLoaderConfig | None = None,
     split: Literal["train", "val", "test"] = "train",
-    **kwargs,
-) -> DataLoader:
+    **kwargs: any,
+) -> DataLoader[Batch]:
     """Create DataLoader для hydraulic graphs.
 
     Args:
@@ -109,7 +109,7 @@ def create_dataloader(
     loader_kwargs["collate_fn"] = hydraulic_collate_fn
 
     # Create DataLoader
-    loader = DataLoader(dataset, **loader_kwargs)
+    loader: DataLoader[Batch] = DataLoader(dataset, **loader_kwargs)
 
     logger.info(
         f"Created {split} DataLoader: batch_size={loader_kwargs['batch_size']}, "
@@ -124,7 +124,7 @@ def create_train_val_loaders(
     config: DataLoaderConfig | None = None,
     train_ratio: float = 0.8,
     seed: int = 42,
-) -> tuple[DataLoader, DataLoader]:
+) -> tuple[DataLoader[Batch], DataLoader[Batch]]:
     """Create train and validation DataLoaders.
 
     Args:
@@ -160,8 +160,8 @@ def create_train_val_loaders(
     logger.info(f"Split dataset: train={train_size}, val={val_size}")
 
     # Create loaders
-    train_loader = create_dataloader(train_dataset, config, split="train")
-    val_loader = create_dataloader(val_dataset, config, split="val")
+    train_loader = create_dataloader(train_dataset, config, split="train")  # type: ignore[arg-type]
+    val_loader = create_dataloader(val_dataset, config, split="val")  # type: ignore[arg-type]
 
     return train_loader, val_loader
 
@@ -172,7 +172,7 @@ def create_train_val_test_loaders(
     train_ratio: float = 0.7,
     val_ratio: float = 0.15,
     seed: int = 42,
-) -> tuple[DataLoader, DataLoader, DataLoader]:
+) -> tuple[DataLoader[Batch], DataLoader[Batch], DataLoader[Batch]]:
     """Create train, validation, and test DataLoaders.
 
     Args:
@@ -209,8 +209,8 @@ def create_train_val_test_loaders(
     logger.info(f"Split dataset: train={train_size}, val={val_size}, test={test_size}")
 
     # Create loaders
-    train_loader = create_dataloader(train_dataset, config, split="train")
-    val_loader = create_dataloader(val_dataset, config, split="val")
-    test_loader = create_dataloader(test_dataset, config, split="test")
+    train_loader = create_dataloader(train_dataset, config, split="train")  # type: ignore[arg-type]
+    val_loader = create_dataloader(val_dataset, config, split="val")  # type: ignore[arg-type]
+    test_loader = create_dataloader(test_dataset, config, split="test")  # type: ignore[arg-type]
 
     return train_loader, val_loader, test_loader
