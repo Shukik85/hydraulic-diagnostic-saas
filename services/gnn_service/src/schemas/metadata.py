@@ -5,6 +5,7 @@
 Python 3.14 Features:
     - Deferred annotations для forward references
     - Union types с pipe operator
+    - Pydantic v2 @computed_field without @property
 """
 
 from __future__ import annotations
@@ -49,8 +50,7 @@ class TimeWindow(BaseModel):
             raise ValueError(msg)
         return v
 
-    @computed_field
-    @property
+    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
     def duration_minutes(self) -> float:
         """Duration in minutes."""
         delta = self.end_time - self.start_time
@@ -181,14 +181,12 @@ class SensorConfig(BaseModel):
                 raise ValueError(msg)
         return v
 
-    @computed_field
-    @property
+    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
     def measurement_range(self) -> float:
         """Ширина измерительного диапазона."""
         return self.range_max - self.range_min
 
-    @computed_field
-    @property
+    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
     def absolute_accuracy(self) -> float:
         """Абсолютная точность в единицах измерения."""
         return (self.accuracy_percent / 100.0) * self.measurement_range
@@ -295,16 +293,14 @@ class EquipmentMetadata(BaseModel):
         default_factory=dict, description="Дополнительные пользовательские поля"
     )
 
-    @computed_field
-    @property
+    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
     def age_years(self) -> float:
         """Возраст оборудования (лет)."""
         now = datetime.now()
         delta = now - self.installation_date
         return delta.days / 365.25
 
-    @computed_field
-    @property
+    @computed_field  # ✅ Removed @property - Pydantic v2 best practice
     def hours_since_maintenance(self) -> float | None:
         """Часы с последнего ТО."""
         if self.last_maintenance_date is None:
