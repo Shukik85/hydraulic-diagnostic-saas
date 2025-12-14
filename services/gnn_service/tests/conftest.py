@@ -15,18 +15,36 @@ sys.path.insert(0, str(src_path))
 
 
 @pytest.fixture(scope="session")
-def project_root_path():
-    """Корневая директория проекта."""
+def project_root_path() -> Path:
+    """Корневая директория проекта.
+    
+    Returns:
+        Path: Root directory of the project
+    """
     return project_root
 
 
 @pytest.fixture(scope="session")
-def data_dir(project_root_path):
-    """Директория data/."""
+def data_dir(project_root_path: Path) -> Path:
+    """Директория data/.
+    
+    Args:
+        project_root_path: Root path fixture
+    
+    Returns:
+        Path: Data directory path
+    """
     return project_root_path / "data"
 
 
 @pytest.fixture(scope="session")
-def models_dir(project_root_path):
-    """Директория models/."""
+def models_dir(project_root_path: Path) -> Path:
+    """Директория models/.
+    
+    Args:
+        project_root_path: Root path fixture
+    
+    Returns:
+        Path: Models directory path
+    """
     return project_root_path / "models"
