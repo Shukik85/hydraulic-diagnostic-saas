@@ -130,13 +130,13 @@ def load_checkpoint(
     optimizer: torch.optim.Optimizer | None = None,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ) -> dict[str, Any]:
-    """Загрузить model checkpoint.
+    """Лагрузить model checkpoint.
 
     Args:
         checkpoint_path: Путь к checkpoint
-        model: PyTorch модель для загрузки весов
-        optimizer: Optimizer для загрузки state (optional)
-        device: Device для загрузки
+        model: PyTorch модель для лагрузки весов
+        optimizer: Optimizer для лагрузки state (optional)
+        device: Device для лагрузки
 
     Returns:
         checkpoint: Dictionary с всей информацией checkpoint
@@ -153,7 +153,7 @@ def load_checkpoint(
         raise FileNotFoundError(msg)
 
     # Load checkpoint
-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)  # type: ignore[no-any-return]
 
     # Load model weights
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -218,7 +218,7 @@ def model_summary(
     # Calculate memory footprint (approximate)
     param_memory_mb = (total_params * 4) / (1024**2)  # 4 bytes per float32
 
-    summary = {
+    summary: dict[str, Any] = {
         "total_params": total_params,
         "trainable_params": trainable_params,
         "non_trainable_params": total_params - trainable_params,
@@ -226,7 +226,7 @@ def model_summary(
     }
 
     # Layer breakdown
-    layer_summary = []
+    layer_summary: list[dict[str, str | int]] = []
     for name, module in model.named_modules():
         if len(list(module.children())) == 0:  # Leaf modules only
             num_params = sum(p.numel() for p in module.parameters())
@@ -301,14 +301,14 @@ def model_to_device(model: nn.Module, device: str | torch.device) -> nn.Module:
         >>> model = UniversalTemporalGNN(...)
         >>> model = model_to_device(model, 'cuda:0')
     """
-    device = torch.device(device)
-    model = model.to(device)
+    device_obj = torch.device(device)
+    model = model.to(device_obj)
 
-    logger.info(f"Model moved to {device}")
+    logger.info(f"Model moved to {device_obj}")
 
     # Log GPU memory if CUDA
-    if device.type == "cuda":
-        memory_allocated = torch.cuda.memory_allocated(device) / (1024**2)
+    if device_obj.type == "cuda":
+        memory_allocated = torch.cuda.memory_allocated(device_obj) / (1024**2)
         logger.info(f"GPU memory allocated: {memory_allocated:.2f} MB")
 
     return model
