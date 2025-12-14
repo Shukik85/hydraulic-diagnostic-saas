@@ -222,7 +222,7 @@ class UniversalTemporalGNN(nn.Module):
 
         # Compile if requested (PyTorch 2.8 optimization)
         if use_compile:
-            self.forward = torch.compile(self.forward)
+            self.forward = torch.compile(self.forward)  # type: ignore[assignment]
 
     def forward(
         self,
