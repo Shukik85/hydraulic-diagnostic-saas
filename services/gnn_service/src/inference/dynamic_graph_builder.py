@@ -95,7 +95,7 @@ class DynamicGraphBuilder:
             RuntimeError: If database error
         """
         # 1. Read sensors from TimescaleDB
-        sensor_data = await self.connector.read_sensor_data(
+        sensor_data = await self.connector.fetch_sensor_data(
             equipment_id=equipment_id, lookback_minutes=lookback_minutes
         )
 
@@ -282,8 +282,8 @@ class DynamicGraphBuilder:
         edge_attr_list = []
 
         for edge_idx in range(num_edges):
-            from_node = edge_index[0, edge_idx].item()
-            to_node = edge_index[1, edge_idx].item()
+            from_node = int(edge_index[0, edge_idx].item())
+            to_node = int(edge_index[1, edge_idx].item())
 
             # Get sensor IDs for this edge
             from_sensor = topology.sensor_ids[from_node]
