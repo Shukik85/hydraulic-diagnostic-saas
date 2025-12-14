@@ -103,6 +103,23 @@ ignore = [
     # Russian text handling
     "RUF100",   # Unused noqa (Russian text causes false positives)
     
+    # Logging - f-strings are fine for modern Python
+    "G004",     # f-string in logging (acceptable in Python 3.14)
+    
+    # Naming conventions - ML code has different standards
+    "N806",     # Variable name should be lowercase (ML uses X, y, etc.)
+    
+    # Whitespace - autofix handles this
+    "W293",     # Blank line contains whitespace (autofix)
+    
+    # __future__ imports - not needed in Python 3.14
+    "UP036",    # outdated __future__ imports
+    "UP037",    # quoted annotations (default in 3.14)
+    
+    # Refurb rules - can be noisy in ML code
+    "FURB118",  # operator.itemgetter (not always clearer)
+    "FURB140",  # itertools.starmap (verbose for simple cases)
+    
     # REMOVED PT004 - deprecated rule in Ruff v0.8+
 ]
 
@@ -134,6 +151,17 @@ ignore = [
 "src/_legacy/*.py" = [
     "F401",     # unused imports (we're cleaning up)
     "F841",     # unused variables
+]
+
+# ML models - different naming conventions
+"src/models/**/*.py" = [
+    "N806",     # Allow X, y, W, b, etc. in ML code
+    "N803",     # Allow UpperCase for tensors
+]
+
+# Training code - ML conventions
+"src/training/**/*.py" = [
+    "N806",     # Allow X, y in training loops
 ]
 
 # ============================================================================
