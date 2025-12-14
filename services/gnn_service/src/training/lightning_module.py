@@ -74,8 +74,8 @@ class HydraulicGNNModule(pl.LightningModule):
         use_focal_loss: bool = True,
         use_wing_loss: bool = True,
         use_quantile_rul: bool = True,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize Lightning module.
 
         Args:
@@ -224,6 +224,9 @@ class HydraulicGNNModule(pl.LightningModule):
                 "component_anomaly": component_anomaly_loss,
             }
             total_loss = self.uncertainty_weighter(losses)
+        else:
+            msg = f"Unknown loss_weighting: {self.loss_weighting}"
+            raise ValueError(msg)
 
         # Loss dict for logging
         loss_dict = {
@@ -335,11 +338,19 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss
 
-    def configure_optimizers(self) -> dict[str, Any]:
+    def configure_optimizers(
+        self,
+    ) -> dict[str, Any] | tuple[list[Any], list[Any]]:
         """Configure optimizers and schedulers.
 
         Returns:
-            config: Optimizer and scheduler configuration
+            dict or tuple: Optimizer and scheduler configuration
+
+        Note:
+            PyTorch Lightning supports multiple return formats:
+            - dict with 'optimizer' and 'lr_scheduler'
+            - tuple of (optimizers, schedulers)
+            - just optimizer dict
         """
         # Optimizer
         optimizer = Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
@@ -347,7 +358,7 @@ class HydraulicGNNModule(pl.LightningModule):
         # Scheduler
         if self.scheduler_type == "plateau":
             scheduler = ReduceLROnPlateau(
-                optimizer, mode="min", factor=0.5, patience=10, verbose=True
+                optimizer, mode="min", factor=0.5, patience=10, verbose=False
             )
 
             return {
@@ -368,5 +379,5 @@ class HydraulicGNNModule(pl.LightningModule):
                 "lr_scheduler": {"scheduler": scheduler, "interval": "epoch", "frequency": 1},
             }
 
-        # No scheduler
+        # No scheduler - return just optimizer
         return {"optimizer": optimizer}
