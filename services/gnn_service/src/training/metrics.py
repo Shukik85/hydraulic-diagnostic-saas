@@ -69,7 +69,7 @@ class RegressionMetrics(Metric):
         >>> result = metrics.compute()  # {"graph_health_mae": 0.05, ...}
     """
 
-    def __init__(self, prefix: str = "", **kwargs):
+    def __init__(self, prefix: str = "", **kwargs: Any) -> None:
         """Initialize regression metrics.
 
         Args:
@@ -108,8 +108,8 @@ class RegressionMetrics(Metric):
         # Update MAPE state (avoid division by zero)
         epsilon = 1e-8
         ape = torch.abs((target_flat - preds_flat) / (target_flat + epsilon))
-        self.sum_ape += ape.sum()
-        self.total += target_flat.numel()
+        self.sum_ape += ape.sum()  # type: ignore[operator]
+        self.total += target_flat.numel()  # type: ignore[operator]
 
     def compute(self) -> dict[str, torch.Tensor]:
         """Compute final metrics.
@@ -169,8 +169,8 @@ class ClassificationMetrics(Metric):
         average: Literal["micro", "macro", "weighted"] = "macro",
         threshold: float = 0.5,
         prefix: str = "",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """Initialize classification metrics.
 
         Args:
@@ -263,7 +263,9 @@ class RULMetrics(Metric):
         >>> result = metrics.compute()  # Includes horizon-specific accuracy
     """
 
-    def __init__(self, horizons: list[int] | None = None, prefix: str = "", **kwargs):
+    def __init__(
+        self, horizons: list[int] | None = None, prefix: str = "", **kwargs: Any
+    ) -> None:
         """Initialize RUL metrics.
 
         Args:
@@ -305,14 +307,14 @@ class RULMetrics(Metric):
         # Horizon accuracy: within ±h hours
         for horizon in self.horizons:
             correct = (torch.abs(error) <= horizon).sum()
-            getattr(self, f"correct_h{horizon}").add_(correct)
+            getattr(self, f"correct_h{horizon}").add_(correct)  # type: ignore[union-attr]
 
         # Asymmetric loss (penalize late predictions more)
         # L = |e| if e >= 0 (early/on-time), 2|e| if e < 0 (late)
         asymmetric = torch.where(error >= 0, torch.abs(error), 2 * torch.abs(error))
-        self.asymmetric_loss_sum += asymmetric.sum()
+        self.asymmetric_loss_sum += asymmetric.sum()  # type: ignore[operator]
 
-        self.total += target_flat.numel()
+        self.total += target_flat.numel()  # type: ignore[operator]
 
     def compute(self) -> dict[str, torch.Tensor]:
         """Compute RUL metrics.
@@ -323,7 +325,7 @@ class RULMetrics(Metric):
         mae_val = self.mae.compute()
 
         # Horizon accuracy
-        horizon_acc = {}
+        horizon_acc: dict[str, torch.Tensor] = {}
         for horizon in self.horizons:
             correct = getattr(self, f"correct_h{horizon}")
             accuracy = correct.float() / self.total if self.total > 0 else torch.tensor(0.0)
@@ -345,10 +347,10 @@ class RULMetrics(Metric):
         self.mae.reset()
 
         for horizon in self.horizons:
-            getattr(self, f"correct_h{horizon}").zero_()
+            getattr(self, f"correct_h{horizon}").zero_()  # type: ignore[union-attr]
 
-        self.total.zero_()
-        self.asymmetric_loss_sum.zero_()
+        self.total.zero_()  # type: ignore[operator]
+        self.asymmetric_loss_sum.zero_()  # type: ignore[operator]
 
 
 class MultiLevelMetrics:
@@ -376,7 +378,7 @@ class MultiLevelMetrics:
 
     def __init__(
         self, config: MetricConfig | None = None, stage: Literal["train", "val", "test"] = "train"
-    ):
+    ) -> None:
         """Initialize multi-level metrics.
 
         Args:
@@ -450,7 +452,7 @@ class MultiLevelMetrics:
         Returns:
             Flat dictionary with all metrics
         """
-        metrics = {}
+        metrics: dict[str, torch.Tensor] = {}
 
         # Component-level
         metrics.update(self.component_health_metrics.compute())
