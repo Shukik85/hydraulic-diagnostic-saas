@@ -60,7 +60,7 @@ def get_fluid_density(temperature_c: float) -> float:
     rho = rho_15 + temp_coeff * (temperature_c - 15.0)
 
     # Clamp to reasonable range
-    return np.clip(rho, 800.0, 900.0)
+    return float(np.clip(rho, 800.0, 900.0))
 
 
 def get_fluid_viscosity(temperature_c: float) -> float:
@@ -104,7 +104,7 @@ def get_fluid_viscosity(temperature_c: float) -> float:
         nu = math.exp(log_nu)
 
     # Clamp to reasonable range
-    return np.clip(nu, 1.0, 1000.0)
+    return float(np.clip(nu, 1.0, 1000.0))
 
 
 def get_material_roughness(material: EdgeMaterial | str) -> float:
@@ -171,7 +171,7 @@ def estimate_friction_factor(relative_roughness: float, reynolds_number: float) 
         t = (reynolds_number - 2300) / (4000 - 2300)
         return f_laminar + t * (f_turbulent - f_laminar)
     # Turbulent flow: Haaland approximation
-    # 1/√f = -1.8 * log₁₀[(ε/D/3.7)^1.11 + 6.9/Re]
+    # 1/√f = -1.8 * log₁₀[(e/D/3.7)^1.11 + 6.9/Re]
     term1 = (relative_roughness / 3.7) ** 1.11
     term2 = 6.9 / reynolds_number
 
@@ -284,7 +284,7 @@ class EdgeFeatureComputer:
         dict_keys(['flow_rate_lpm', 'pressure_drop_bar', ...])
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize EdgeFeatureComputer."""
 
     def compute_edge_features(
@@ -461,7 +461,7 @@ class EdgeFeatureComputer:
             >>> all_features["pump_1->valve_1"]["flow_rate_lpm"]
             115.3
         """
-        all_features = {}
+        all_features: dict[str, dict[str, float]] = {}
 
         for edge in edges:
             edge_id = f"{edge.source_id}->{edge.target_id}"
