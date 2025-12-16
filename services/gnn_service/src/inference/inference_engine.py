@@ -652,6 +652,7 @@ class InferenceEngine:
 
     def _load_normalizer(self, checkpoint_path: str) -> Any:
         """Load normalizer from checkpoint."""
+        # Import already available from __init__ imports
         from src.data.normalization import create_edge_feature_normalizer
 
         try:
