@@ -335,11 +335,8 @@ class UniversalTemporalGNN(nn.Module):
             else:
                 x_new = gat_layer(x, edge_index, edge_attr=edge_attr)
 
-            # Residual connection + normalization
-            if i > 0:
-                x = x + x_new  # Skip connection
-            else:
-                x = x_new
+            # Residual connection + normalization (SIM108 fixed)
+            x = x + x_new if i > 0 else x_new
 
             x = norm(x)
             x = F.relu(x)
@@ -359,7 +356,7 @@ class UniversalTemporalGNN(nn.Module):
         x_temporal = x_pooled.unsqueeze(1)  # [B, 1, H]
 
         # ARMA-Attention LSTM
-        lstm_out, (h_n, _c_n) = self.temporal_lstm(x_temporal)  # lstm_out: [B, 1, lstm_hidden]
+        _lstm_out, (h_n, _c_n) = self.temporal_lstm(x_temporal)  # lstm_out: [B, 1, lstm_hidden]
 
         # Use final hidden state
         final_hidden = h_n[-1]  # [B, lstm_hidden]
