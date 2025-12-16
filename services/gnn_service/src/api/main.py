@@ -24,7 +24,7 @@ inference_engine: InferenceEngine | None = None
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> Any:
+async def lifespan(_app: FastAPI) -> Any:
     """FastAPI lifespan context manager.
     
     Startup: Initialize inference engine
@@ -200,12 +200,12 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
-        )
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Inference error: {str(e)}",
-        )
+        ) from e
 
 
 @app.post(
@@ -243,7 +243,7 @@ async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
-        )
+        ) from e
 
 
 # ============================================================================
@@ -253,7 +253,7 @@ async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(
-    request: Any, exc: HTTPException
+    _request: Any, exc: HTTPException
 ) -> JSONResponse:
     """Handle HTTP exceptions."""
     return JSONResponse(
@@ -267,7 +267,7 @@ async def http_exception_handler(
 
 @app.exception_handler(Exception)
 async def general_exception_handler(
-    request: Any, exc: Exception
+    _request: Any, exc: Exception
 ) -> JSONResponse:
     """Handle unexpected exceptions."""
     print(f"Unexpected error: {exc}")
