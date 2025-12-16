@@ -194,14 +194,14 @@ def count_parameters(model: nn.Module, trainable_only: bool = False) -> int:
 
 
 def model_summary(
-    model: nn.Module, input_size: tuple[int, ...] | None = None, device: str = "cpu"
+    model: nn.Module, _input_size: tuple[int, ...] | None = None, _device: str = "cpu"
 ) -> dict[str, Any]:
     """Generate model summary.
 
     Args:
         model: PyTorch model
-        input_size: Input tensor size (optional, for FLOPs estimation)
-        device: Device for computation
+        _input_size: Input tensor size (reserved for future FLOPs estimation)
+        _device: Device for computation (reserved for future use)
 
     Returns:
         summary: Dictionary with model metrics
@@ -266,7 +266,7 @@ def print_model_summary(model: nn.Module) -> None:
     if "layers" in summary:
         sorted_layers = sorted(summary["layers"], key=lambda x: x["params"], reverse=True)[:10]
 
-        for layer in sorted_layers:
+        for _layer in sorted_layers:
             pass
 
 
