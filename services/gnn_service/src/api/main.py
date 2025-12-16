@@ -3,52 +3,101 @@
 Universal Temporal GNN (GAT + LSTM) for multi-label classification
 of hydraulic system component states.
 
-Entry Point: uvicorn src.api.main:app
+Entry Point: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 """
 
+import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.api.validators import RequestValidator
 from src.inference.inference_engine import InferenceConfig, InferenceEngine
 from src.schemas.requests import MinimalInferenceRequest, PredictionRequest
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 
 # ============================================================================
 # LIFESPAN MANAGEMENT
 # ============================================================================
 
-inference_engine: InferenceEngine | None = None
-
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> Any:
+async def lifespan(app: FastAPI) -> Any:
     """FastAPI lifespan context manager.
-    
-    Startup: Initialize inference engine
-    Shutdown: Cleanup resources
+
+    Startup:
+        - Initialize inference engine
+        - Initialize request validator
+        - Log configuration
+
+    Shutdown:
+        - Cleanup resources
+        - Log shutdown
+
+    Yields:
+        None: Application runs between startup and shutdown
     """
-    global inference_engine
-    
-    # Startup
+    # ========================================================================
+    # STARTUP
+    # ========================================================================
     try:
+        # Initialize inference engine
         config = InferenceConfig()
-        inference_engine = InferenceEngine(config)
-        print("✅ Inference engine initialized")
+        app.state.inference_engine = InferenceEngine(config)
+        logger.info("✅ Inference engine initialized")
+
+        # Initialize request validator with limits
+        app.state.validator = RequestValidator(
+            inference_engine=app.state.inference_engine,
+            max_batch_size=32,  # Config value
+            max_graph_size=1000,  # Config value
+        )
+        logger.info(
+            "✅ Request validator initialized",
+            extra={
+                "max_batch_size": 32,
+                "max_graph_size": 1000,
+            },
+        )
+
     except Exception as e:
-        print(f"⚠️  Warning: Inference engine initialization failed: {e}")
-        print("   API will operate in limited mode")
-    
+        logger.warning(
+            "⚠️  Failed to initialize inference engine",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
+        app.state.inference_engine = None
+        app.state.validator = None
+
     yield
-    
-    # Shutdown
-    if inference_engine:
+
+    # ========================================================================
+    # SHUTDOWN
+    # ========================================================================
+    if hasattr(app.state, "inference_engine") and app.state.inference_engine:
         try:
-            print("✅ Inference engine cleaned up")
+            # Cleanup if InferenceEngine supports it
+            # app.state.inference_engine.cleanup()
+            logger.info("🧹 Inference engine cleaned up")
         except Exception as e:
-            print(f"⚠️  Cleanup error: {e}")
+            logger.error(
+                "⚠️  Cleanup error",
+                extra={"error": str(e)},
+                exc_info=True,
+            )
 
 
 # ============================================================================
@@ -60,6 +109,13 @@ app = FastAPI(
     description="Universal Temporal GNN for Hydraulic System Diagnostics",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_tags=[
+        {"name": "Health", "description": "Health and metrics checks"},
+        {"name": "Inference", "description": "Prediction and diagnosis endpoints"},
+        {"name": "Info", "description": "Service information"},
+    ],
 )
 
 
@@ -67,12 +123,15 @@ app = FastAPI(
 # MIDDLEWARE
 # ============================================================================
 
-# CORS Configuration
+# CORS Configuration (production-ready)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TODO: Configure for production
+    allow_origins=[
+        "http://localhost:3000",  # Local development
+        # "https://yourdomain.com",  # Production domain
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],  # Restrict methods
     allow_headers=["*"],
 )
 
@@ -89,15 +148,19 @@ app.add_middleware(
     response_model=dict[str, Any],
 )
 async def health_check() -> dict[str, Any]:
-    """Check if service is running.
-    
+    """Basic health check - service is running.
+
     Returns:
         dict: Status information
+
+    Examples:
+        >>> GET /health
+        {"status": "healthy", "service": "gnn-service", "version": "1.0.0"}
     """
     return {
         "status": "healthy",
         "service": "gnn-service",
-        "version": "1.0.0",
+        "version": app.version,
     }
 
 
@@ -108,20 +171,27 @@ async def health_check() -> dict[str, Any]:
     response_model=dict[str, Any],
 )
 async def readiness_check() -> dict[str, Any]:
-    """Check if service is ready for requests.
-    
+    """Readiness check - service ready to handle requests.
+
+    Checks if inference engine is initialized.
+
     Returns:
         dict: Readiness status
-        
+
     Raises:
-        HTTPException: If service not ready
+        HTTPException(503): If inference engine not initialized
+
+    Examples:
+        >>> GET /ready
+        {"ready": true, "inference_engine": "initialized"}
     """
-    if inference_engine is None:
+    engine = getattr(app.state, "inference_engine", None)
+    if engine is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Inference engine not initialized",
         )
-    
+
     return {
         "ready": True,
         "inference_engine": "initialized",
@@ -136,24 +206,38 @@ async def readiness_check() -> dict[str, Any]:
 )
 async def get_metrics() -> dict[str, Any]:
     """Get service metrics and statistics.
-    
+
+    Returns inference engine stats if available.
+
     Returns:
         dict: Current metrics
+
+    Examples:
+        >>> GET /metrics
+        {
+            "status": "ok",
+            "inference_engine": {...},
+            "service_version": "1.0.0"
+        }
     """
-    if inference_engine is None:
+    engine = getattr(app.state, "inference_engine", None)
+    if engine is None:
         return {"status": "engine_not_initialized"}
-    
+
     try:
-        stats = inference_engine.get_stats()
+        stats = engine.get_stats()
         return {
+            "status": "ok",
             "inference_engine": stats,
-            "service_version": "1.0.0",
+            "service_version": app.version,
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e),
-        }
+        logger.error(
+            "Metrics collection failed",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
+        return {"status": "error", "error": str(e)}
 
 
 # ============================================================================
@@ -170,41 +254,113 @@ async def get_metrics() -> dict[str, Any]:
 )
 async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
     """Run GNN-based diagnosis on hydraulic system.
-    
+
+    Validates request, runs inference, and returns diagnosis.
+
     Args:
         request: Inference request with system readings
-        
+
     Returns:
         dict: Diagnosis results with predictions
-        
+
     Raises:
-        HTTPException: If inference fails
+        HTTPException(503): If engine not initialized
+        HTTPException(404): If topology not found
+        HTTPException(400): If validation fails (missing sensors, wrong dimensions)
+        HTTPException(413): If graph too large
+        HTTPException(500): If inference fails
+
+    Examples:
+        >>> POST /v1/diagnose
+        {
+            "equipment_id": "excavator_001",
+            "topology_id": "double_pump_v1",
+            "timestamp": "2025-12-16T20:00:00Z",
+            "sensor_readings": {...}
+        }
+
+        Response:
+        {
+            "status": "success",
+            "equipment_id": "excavator_001",
+            "timestamp": "2025-12-16T20:00:00Z",
+            "diagnosis": {...}
+        }
     """
-    if inference_engine is None:
+    # Check engine availability
+    engine = getattr(app.state, "inference_engine", None)
+    validator = getattr(app.state, "validator", None)
+
+    if engine is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Inference engine not initialized",
+            detail="Inference engine not available",
         )
-    
+
+    logger.info(
+        "Diagnosis request received",
+        extra={
+            "equipment_id": request.equipment_id,
+            "topology_id": getattr(request, "topology_id", "unknown"),
+            "num_sensors": len(request.sensor_readings),
+        },
+    )
+
     try:
+        # ✅ VALIDATE REQUEST (if validator available)
+        if validator and hasattr(request, "topology_id"):
+            topology = await validator.validate_diagnosis_request(request)
+            logger.info(
+                "Request validated",
+                extra={
+                    "equipment_id": request.equipment_id,
+                    "num_components": topology.num_components,
+                },
+            )
+
         # Run inference
-        result = await inference_engine.predict_minimal(request)
-        
+        result = await engine.predict_minimal(request)
+
+        logger.info(
+            "Diagnosis completed",
+            extra={
+                "equipment_id": request.equipment_id,
+                "status": "success",
+            },
+        )
+
         return {
             "status": "success",
             "equipment_id": request.equipment_id,
             "timestamp": request.timestamp.isoformat(),
             "diagnosis": result,
         }
-    except ValueError as e:
+
+    except ValueError as ve:
+        logger.warning(
+            "Invalid input",
+            extra={
+                "equipment_id": request.equipment_id,
+                "error": str(ve),
+            },
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
-        ) from e
+            detail=f"Invalid input: {str(ve)}",
+        ) from ve
+
     except Exception as e:
+        logger.error(
+            "Inference error in /v1/diagnose",
+            extra={
+                "equipment_id": request.equipment_id,
+                "error": str(e),
+            },
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Inference error: {str(e)}",
+            detail="Internal inference error",
         ) from e
 
 
@@ -217,32 +373,79 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
 )
 async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
     """Get detailed predictions for system components.
-    
+
+    Supports batch inference with validation.
+
     Args:
-        request: Prediction request
-        
+        request: Prediction request with optional batch
+
     Returns:
         dict: Detailed predictions per component
-        
+
     Raises:
-        HTTPException: If prediction fails
+        HTTPException(503): If engine not initialized
+        HTTPException(413): If batch too large
+        HTTPException(400): If validation fails
+        HTTPException(500): If prediction fails
+
+    Examples:
+        >>> POST /v1/predict
+        {
+            "topology": {...},
+            "batch": [...]
+        }
+
+        Response:
+        {
+            "status": "success",
+            "predictions": [...]
+        }
     """
-    if inference_engine is None:
+    # Check engine availability
+    engine = getattr(app.state, "inference_engine", None)
+    validator = getattr(app.state, "validator", None)
+
+    if engine is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Inference engine not initialized",
+            detail="Inference engine not available",
         )
-    
+
+    logger.info(
+        "Prediction request received",
+        extra={
+            "batch_size": len(request.batch) if hasattr(request, "batch") else 1,
+        },
+    )
+
     try:
-        predictions = await inference_engine.predict(request, request.topology)
+        # ✅ VALIDATE REQUEST (if validator available)
+        if validator:
+            await validator.validate_prediction_request(request)
+            logger.info("Batch request validated")
+
+        # Run inference
+        predictions = await engine.predict(request, request.topology)
+
+        logger.info(
+            "Predictions completed",
+            extra={"status": "success"},
+        )
+
         return {
             "status": "success",
             "predictions": predictions,
         }
+
     except Exception as e:
+        logger.error(
+            "Prediction error",
+            extra={"error": str(e)},
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
+            detail="Failed to generate predictions",
         ) from e
 
 
@@ -253,9 +456,17 @@ async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(
-    _request: Any, exc: HTTPException
+    _request: Request, exc: HTTPException
 ) -> JSONResponse:
-    """Handle HTTP exceptions."""
+    """Handle HTTP exceptions with structured response.
+
+    Args:
+        _request: FastAPI request (unused)
+        exc: HTTP exception
+
+    Returns:
+        JSONResponse: Error details
+    """
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -267,15 +478,29 @@ async def http_exception_handler(
 
 @app.exception_handler(Exception)
 async def general_exception_handler(
-    _request: Any, exc: Exception
+    _request: Request, exc: Exception
 ) -> JSONResponse:
-    """Handle unexpected exceptions."""
-    print(f"Unexpected error: {exc}")
+    """Handle unexpected exceptions.
+
+    Logs full traceback and returns safe error message.
+
+    Args:
+        _request: FastAPI request (unused)
+        exc: Unexpected exception
+
+    Returns:
+        JSONResponse: Generic error response
+    """
+    logger.error(
+        "Unhandled exception",
+        extra={"error": str(exc)},
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "error": "Internal server error",
-            "detail": str(exc),
+            "detail": "An unexpected error occurred",
         },
     )
 
@@ -293,13 +518,21 @@ async def general_exception_handler(
 )
 async def get_info() -> dict[str, Any]:
     """Get service information and available endpoints.
-    
+
     Returns:
         dict: Service details and endpoints
+
+    Examples:
+        >>> GET /
+        {
+            "service": "GNN Service",
+            "version": "1.0.0",
+            "endpoints": {...}
+        }
     """
     return {
         "service": "GNN Service",
-        "version": "1.0.0",
+        "version": app.version,
         "description": "Universal Temporal GNN for Hydraulic System Diagnostics",
         "endpoints": {
             "health": "/health",
@@ -315,7 +548,7 @@ async def get_info() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "src.api.main:app",
         host="0.0.0.0",
