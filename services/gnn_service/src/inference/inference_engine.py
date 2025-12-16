@@ -54,9 +54,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import torch
+from configs.config import inference_config
 from torch_geometric.data import Data
 
-from configs.config import inference_config
 from src.schemas import (
     AnomalyPrediction,
     DegradationPrediction,
@@ -587,7 +587,7 @@ class InferenceEngine:
         self, request: MinimalInferenceRequest, topology: GraphTopology
     ) -> Data:
         """Preprocess request into graph.
-        
+
         PERFORMANCE FIX: Uses polars instead of pandas.
         Polars is async-friendly and doesn't block GIL.
         """
@@ -622,7 +622,7 @@ class InferenceEngine:
 
             # Use polars DataFrame (async-friendly, faster)
             sensor_df = pl.DataFrame(sensor_records)
-            
+
             # Convert to pandas for compatibility with graph_builder
             # TODO: Update graph_builder to support polars natively
             sensor_df_pd = sensor_df.to_pandas()
@@ -716,12 +716,12 @@ class InferenceEngine:
 
     async def _batch_processor_loop(self) -> None:
         """Background batch processor.
-        
+
         IMPROVEMENT: Uses TaskGroup (Python 3.11+) for better task management.
         Falls back to traditional approach for Python 3.10.
         """
         logger.info("Batch processor started")
-        
+
         # FIX 3: Use TaskGroup if available (Python 3.11+)
         if PYTHON_311_PLUS:
             await self._batch_processor_loop_taskgroup()
