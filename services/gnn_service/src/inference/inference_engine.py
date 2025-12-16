@@ -195,7 +195,11 @@ class ModelConfig:
     enabled: bool = True
 
     def __post_init__(self):
-        """Validate."""
+        """Validate configuration.
+        
+        Note: Path.exists() check here is acceptable for early validation.
+        Model loading happens lazily during engine initialization.
+        """
         if not 0.0 <= self.traffic <= 1.0:
             msg = f"traffic must be [0,1], got {self.traffic}"
             raise ValueError(msg)
@@ -1124,14 +1128,17 @@ class InferenceEngine:
                 except asyncio.QueueEmpty:
                     break
 
-        # Unload models
+        # Unload models - explicit None assignment for clarity
         if self.model_registry:
             for version in self.model_registry.get_all_versions():
                 with suppress(KeyError):
                     model = self.model_registry.get_model(version)
                     del model
+            # Explicit cleanup
+            self.model_registry._loaded_models.clear()
         elif hasattr(self, "model"):
             del self.model
+            self.model = None  # Explicit None assignment
 
         # Clear GPU
         if torch.cuda.is_available():
