@@ -27,9 +27,8 @@ except ImportError:
 import pandas as pd
 
 if TYPE_CHECKING:
-    from datetime import datetime
 
-    from src.schemas import EquipmentMetadata, TimeWindow
+    from src.schemas import TimeWindow
 
 logger = logging.getLogger(__name__)
 

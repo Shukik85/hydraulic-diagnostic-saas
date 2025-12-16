@@ -415,17 +415,17 @@ def test_multilevel_metrics_integration(batch_data):
 
     # Check that all metric types are present
     # Component-level
-    assert any("component_health" in k for k in result.keys())
-    assert any("component_anomaly" in k for k in result.keys())
+    assert any("component_health" in k for k in result)
+    assert any("component_anomaly" in k for k in result)
 
     # Graph-level
-    assert any("graph_health" in k for k in result.keys())
-    assert any("graph_degradation" in k for k in result.keys())
-    assert any("graph_anomaly" in k for k in result.keys())
-    assert any("graph_rul" in k for k in result.keys())
+    assert any("graph_health" in k for k in result)
+    assert any("graph_degradation" in k for k in result)
+    assert any("graph_anomaly" in k for k in result)
+    assert any("graph_rul" in k for k in result)
 
     # Check stage prefix
-    assert all(k.startswith("val/") for k in result.keys())
+    assert all(k.startswith("val/") for k in result)
 
 
 @pytest.mark.filterwarnings("ignore::UserWarning")

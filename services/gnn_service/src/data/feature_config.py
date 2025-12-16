@@ -14,7 +14,7 @@ Python 3.14 Features:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, Any
+from typing import Any, Literal
 
 
 @dataclass(slots=True, frozen=True)

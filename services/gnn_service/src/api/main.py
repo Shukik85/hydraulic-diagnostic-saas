@@ -6,17 +6,15 @@ of hydraulic system component states.
 Entry Point: uvicorn src.api.main:app
 """
 
-from typing import Any
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.inference.inference_engine import InferenceConfig, InferenceEngine
 from src.schemas.requests import MinimalInferenceRequest, PredictionRequest
-from src.schemas.metadata import EquipmentMetadata
-from src.inference.inference_engine import InferenceEngine, InferenceConfig
-
 
 # ============================================================================
 # LIFESPAN MANAGEMENT

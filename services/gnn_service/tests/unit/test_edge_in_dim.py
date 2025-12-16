@@ -101,7 +101,7 @@ class TestGraphBuilderEdgeDim:
     def test_edge_attr_padding_to_20d(self):
         """Test edge_attr padding from 14D to 20D."""
         config = FeatureConfig(edge_in_dim=20)
-        builder = GraphBuilder(feature_config=config)
+        GraphBuilder(feature_config=config)
 
         # Create graph with 14D edge features (below target 20D)
         x = torch.randn(3, config.total_features_per_sensor)
@@ -120,7 +120,7 @@ class TestGraphBuilderEdgeDim:
     def test_edge_attr_truncation_to_8d(self):
         """Test edge_attr truncation from 14D to 8D."""
         config = FeatureConfig(edge_in_dim=8)
-        builder = GraphBuilder(feature_config=config)
+        GraphBuilder(feature_config=config)
 
         # Create graph with 14D edge features (above target 8D)
         x = torch.randn(3, config.total_features_per_sensor)
