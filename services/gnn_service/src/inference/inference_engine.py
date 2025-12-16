@@ -62,13 +62,14 @@ import logging
 import time
 import warnings
 from collections import OrderedDict
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import torch
 from prometheus_client import Counter, Gauge, Histogram
-from torch_geometric.data import Batch, Data
+from torch_geometric.data import Data
 
 from src.schemas import (
     AnomalyPrediction,
@@ -80,16 +81,8 @@ from src.schemas import (
 from src.schemas.requests import MinimalInferenceRequest
 
 if TYPE_CHECKING:
-    import pandas as pd
-
-    from src.data import FeatureConfig, FeatureEngineer, GraphBuilder
-    from src.data.edge_features import EdgeFeatureComputer
-    from src.data.normalization import EdgeFeatureNormalizer
+    from src.data import FeatureConfig
     from src.data.timescale_connector import TimescaleConnector
-    from src.inference.dynamic_graph_builder import DynamicGraphBuilder
-    from src.inference.model_manager import ModelManager
-    from src.models.universal_temporal_gnn import UniversalTemporalGNN
-    from src.services.topology_service import TopologyService
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +214,7 @@ class ModelRegistry:
     def __init__(self):
         """Initialize."""
         self._models: dict[str, ModelConfig] = {}
-        self._loaded_models: dict[str, Any] = {}  # UniversalTemporalGNN
+        self._loaded_models: dict[str, Any] = {}
 
     def register(self, version: str, config: ModelConfig) -> None:
         """Register model."""
@@ -581,11 +574,11 @@ class InferenceEngine:
 
         try:
             # Components
-            self.model_manager: ModelManager = ModelManager()
-            self.feature_engineer: FeatureEngineer = FeatureEngineer(self.feature_config)
+            self.model_manager = ModelManager()
+            self.feature_engineer = FeatureEngineer(self.feature_config)
 
             # Dynamic builder
-            self.dynamic_builder: DynamicGraphBuilder | None = None
+            self.dynamic_builder = None
             if config.use_dynamic_builder and timescale_connector:
                 self.dynamic_builder = DynamicGraphBuilder(
                     timescale_connector=timescale_connector,
@@ -603,7 +596,7 @@ class InferenceEngine:
             )
 
             # Graph builder
-            self.graph_builder: GraphBuilder = GraphBuilder(
+            self.graph_builder = GraphBuilder(
                 feature_engineer=self.feature_engineer,
                 feature_config=self.feature_config,
                 edge_feature_computer=self.edge_feature_computer,
@@ -621,7 +614,7 @@ class InferenceEngine:
             )
 
             # Tensor validator
-            self.tensor_validator: TensorValidator | None = None
+            self.tensor_validator = None
             if config.validate_tensors:
                 self.tensor_validator = TensorValidator(
                     expected_node_dim=self.feature_config.node_feature_dim,
@@ -629,7 +622,7 @@ class InferenceEngine:
                 )
 
             # Multi-model registry
-            self.model_registry: ModelRegistry | None = None
+            self.model_registry = None
             if config.model_versions:
                 self.model_registry = ModelRegistry()
                 for version, model_config in config.model_versions.items():
@@ -642,8 +635,8 @@ class InferenceEngine:
                 self.model = self._load_model_safe(config.model_path, "default")
 
             # Dynamic batching
-            self._batch_queue: asyncio.Queue[BatchItem] | None = None
-            self._batch_processor_task: asyncio.Task | None = None
+            self._batch_queue = None
+            self._batch_processor_task = None
             if config.enable_dynamic_batching:
                 self._batch_queue = asyncio.Queue(maxsize=config.max_queue_size)
                 self._batch_processor_task = asyncio.create_task(
@@ -670,8 +663,8 @@ class InferenceEngine:
                 return normalizer
             logger.warning("⚠️  No normalizer stats, using defaults")
             return create_edge_feature_normalizer()
-        except Exception as e:
-            logger.warning(f"⚠️  Normalizer load failed: {e}")
+        except Exception:
+            logger.warning("⚠️  Normalizer load failed, using defaults")
             return create_edge_feature_normalizer()
 
     def _load_model_safe(self, model_path: str, version: str) -> Any:
@@ -758,7 +751,7 @@ class InferenceEngine:
 
             return response
 
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             self.config._total_errors += 1
             INFERENCE_ERRORS_TOTAL.labels(error_type="timeout").inc()
             INFERENCE_REQUESTS_TOTAL.labels(
@@ -981,7 +974,7 @@ class InferenceEngine:
                 batch_items = await self._collect_batch()
                 if batch_items:
                     await self._process_batch(batch_items)
-            except Exception as e:
+            except Exception:
                 logger.error("❌ Batch processor error", exc_info=True)
                 await asyncio.sleep(0.1)
 
@@ -1000,7 +993,7 @@ class InferenceEngine:
             try:
                 item = await asyncio.wait_for(self._batch_queue.get(), timeout=timeout)
                 batch_items.append(item)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 break
 
         REQUEST_QUEUE_SIZE.set(self._batch_queue.qsize())
@@ -1036,10 +1029,8 @@ class InferenceEngine:
         # Stop batch processor
         if self._batch_processor_task:
             self._batch_processor_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._batch_processor_task
-            except asyncio.CancelledError:
-                pass
 
         # Clear queue
         if self._batch_queue:
@@ -1052,11 +1043,9 @@ class InferenceEngine:
         # Unload models
         if self.model_registry:
             for version in self.model_registry.get_all_versions():
-                try:
+                with suppress(KeyError):
                     model = self.model_registry.get_model(version)
                     del model
-                except KeyError:
-                    pass
         elif hasattr(self, "model"):
             del self.model
 
