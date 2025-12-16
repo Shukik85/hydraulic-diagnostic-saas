@@ -17,7 +17,8 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING, Any
 
@@ -28,8 +29,6 @@ from src.schemas.topology import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from src.schemas import GraphTopology
 
 logger = logging.getLogger(__name__)
@@ -122,7 +121,7 @@ class TopologyService:
             try:
                 template = get_builtin_template(template_id)
                 self._cache[template_id] = template
-                self._cache_timestamps[template_id] = datetime.now()
+                self._cache_timestamps[template_id] = datetime.now(timezone.utc)
                 logger.debug(f"Loaded built-in template: {template_id}")
             except ValueError as e:
                 logger.warning(f"Failed to load template {template_id}: {e}")
@@ -147,7 +146,7 @@ class TopologyService:
         }
         """
         try:
-            with open(path) as f:
+            with Path(path).open() as f:
                 data = json.load(f)
 
             templates = data.get("templates", [])
@@ -158,7 +157,7 @@ class TopologyService:
                     template_id = template.template_id
 
                     self._cache[template_id] = template
-                    self._cache_timestamps[template_id] = datetime.now()
+                    self._cache_timestamps[template_id] = datetime.now(timezone.utc)
 
                     logger.info(f"Loaded custom template: {template_id}")
                 except Exception as e:
@@ -190,7 +189,7 @@ class TopologyService:
         if template_id in self._cache:
             # Check if cache expired
             cached_time = self._cache_timestamps.get(template_id)
-            if cached_time and (datetime.now() - cached_time) < self._cache_ttl:
+            if cached_time and (datetime.now(timezone.utc) - cached_time) < self._cache_ttl:
                 return self._cache[template_id]
             # Cache expired, remove
             del self._cache[template_id]
@@ -201,7 +200,7 @@ class TopologyService:
             try:
                 template = get_builtin_template(template_id)
                 self._cache[template_id] = template
-                self._cache_timestamps[template_id] = datetime.now()
+                self._cache_timestamps[template_id] = datetime.now(timezone.utc)
                 return template
             except ValueError:
                 pass
@@ -219,7 +218,7 @@ class TopologyService:
             >>> service = TopologyService.get_instance()
             >>> templates = service.list_templates()
             >>> for t in templates:
-            ...     print(f"{t['template_id']}: {t['name']}")
+            ...     print(f\"{t['template_id']}: {t['name']}\")
         """
         templates = []
 
