@@ -241,12 +241,12 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss, loss_dict
 
-    def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
         """Training step.
 
         Args:
             batch: Batch from DataLoader
-            batch_idx: Batch index
+            _batch_idx: Batch index (unused, required by Lightning)
 
         Returns:
             loss: Total loss
@@ -280,12 +280,12 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss
 
-    def validation_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+    def validation_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
         """Validation step.
 
         Args:
             batch: Batch from DataLoader
-            batch_idx: Batch index
+            _batch_idx: Batch index (unused, required by Lightning)
 
         Returns:
             loss: Total loss
@@ -309,12 +309,12 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss
 
-    def test_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+    def test_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
         """Test step.
 
         Args:
             batch: Batch from DataLoader
-            batch_idx: Batch index
+            _batch_idx: Batch index (unused, required by Lightning)
 
         Returns:
             loss: Total loss
