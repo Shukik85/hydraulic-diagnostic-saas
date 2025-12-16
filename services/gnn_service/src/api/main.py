@@ -9,6 +9,8 @@ Security:
     - Request size limiting (10MB max)
     - CORS strict origin checking
     - Request ID tracing
+    - Rate limiting (100 req/60s)
+    - OpenTelemetry distributed tracing
     - Async cleanup on shutdown
 """
 
@@ -25,6 +27,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from src.api.validators import RequestValidator
 from src.inference.inference_engine import InferenceConfig, InferenceEngine
 from src.inference.request_context import set_request_id
+from src.middleware import (
+    OpenTelemetryMiddleware,
+    RateLimitMiddleware,
+    setup_opentelemetry,
+)
 from src.schemas.requests import MinimalInferenceRequest, PredictionRequest
 
 # ============================================================================
@@ -86,9 +93,9 @@ async def lifespan(app: FastAPI) -> Any:
     """FastAPI lifespan context manager.
 
     Startup:
+        - Setup OpenTelemetry
         - Initialize inference engine
         - Initialize request validator
-        - Log configuration
 
     Shutdown:
         - Cleanup resources
@@ -101,6 +108,10 @@ async def lifespan(app: FastAPI) -> Any:
     # ========================================================================
     # STARTUP
     # ========================================================================
+    
+    # Setup OpenTelemetry (if enabled)
+    setup_opentelemetry()
+    
     try:
         # Initialize inference engine
         config = InferenceConfig()
@@ -110,8 +121,8 @@ async def lifespan(app: FastAPI) -> Any:
         # Initialize request validator with limits
         app.state.validator = RequestValidator(
             inference_engine=app.state.inference_engine,
-            max_batch_size=32,  # Config value
-            max_graph_size=1000,  # Config value
+            max_batch_size=32,
+            max_graph_size=1000,
         )
         logger.info(
             "✅ Request validator initialized",
@@ -137,7 +148,6 @@ async def lifespan(app: FastAPI) -> Any:
     # ========================================================================
     if hasattr(app.state, "inference_engine") and app.state.inference_engine:
         try:
-            # FIX 5: Proper async cleanup
             logger.info("🧹 Starting engine cleanup...")
             await app.state.inference_engine.cleanup()
             logger.info("✅ Inference engine cleaned up")
@@ -161,7 +171,8 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_tags=[
-        {"name": "Health", "description": "Health and metrics checks"},
+        {"name": "Health", "description": "Health and readiness checks"},
+        {"name": "Kubernetes", "description": "K8s liveness/readiness probes"},
         {"name": "Inference", "description": "Prediction and diagnosis endpoints"},
         {"name": "Info", "description": "Service information"},
     ],
@@ -169,32 +180,109 @@ app = FastAPI(
 
 
 # ============================================================================
-# MIDDLEWARE REGISTRATION
+# MIDDLEWARE REGISTRATION (ORDER MATTERS!)
 # ============================================================================
 
-# FIX 4: Security - Request ID tracking
+# 1. Request ID tracking (first, so all middleware can use it)
 app.add_middleware(RequestIDMiddleware)
 
-# FIX 4: Security - Body size limiting (DoS prevention)
-app.add_middleware(BodySizeLimitMiddleware, max_body_size=10 * 1024 * 1024)  # 10 MB
+# 2. OpenTelemetry tracing (after Request ID)
+app.add_middleware(OpenTelemetryMiddleware)
 
-# FIX 4: Security - CORS hardening
+# 3. Rate limiting (before body size check)
+app.add_middleware(RateLimitMiddleware, requests_per_window=100, window_seconds=60)
+
+# 4. Body size limiting (before CORS)
+app.add_middleware(BodySizeLimitMiddleware, max_body_size=10 * 1024 * 1024)
+
+# 5. CORS (last, so it applies to all responses)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # Local development
-        # Add production domains here:
+        "http://localhost:3000",
+        # Add production domains:
         # "https://yourdomain.com",
-        # "https://api.yourdomain.com",
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],  # Restrict to needed methods only
+    allow_methods=["GET", "POST"],
     allow_headers=["X-Request-ID", "Content-Type", "Authorization"],
 )
 
 
 # ============================================================================
-# HEALTH CHECK ENDPOINTS
+# KUBERNETES HEALTH ENDPOINTS
+# ============================================================================
+
+
+@app.get(
+    "/healthz",
+    tags=["Kubernetes"],
+    summary="Kubernetes liveness probe",
+    response_model=dict[str, Any],
+)
+async def healthz() -> dict[str, Any]:
+    """Kubernetes liveness probe.
+
+    Returns 200 if service is alive (running).
+    Used by K8s to restart unhealthy pods.
+
+    Returns:
+        dict: Basic health status
+
+    Examples:
+        >>> GET /healthz
+        {"status": "ok"}
+    """
+    return {"status": "ok"}
+
+
+@app.get(
+    "/readyz",
+    tags=["Kubernetes"],
+    summary="Kubernetes readiness probe",
+    response_model=dict[str, Any],
+)
+async def readyz() -> dict[str, Any]:
+    """Kubernetes readiness probe.
+
+    Returns 200 if service is ready to accept traffic.
+    Checks:
+    - Inference engine initialized
+    - (Future: Database connection)
+    - (Future: Model loaded)
+
+    Returns:
+        dict: Readiness status with component checks
+
+    Raises:
+        HTTPException(503): If not ready
+
+    Examples:
+        >>> GET /readyz
+        {"ready": true, "components": {"inference_engine": "ok"}}
+    """
+    components = {}
+
+    # Check inference engine
+    engine = getattr(app.state, "inference_engine", None)
+    if engine is None:
+        components["inference_engine"] = "not_initialized"
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"ready": False, "components": components},
+        )
+    components["inference_engine"] = "ok"
+
+    # Future checks:
+    # - Database connection
+    # - Model loaded
+    # - Queue not full
+
+    return {"ready": True, "components": components}
+
+
+# ============================================================================
+# STANDARD HEALTH CHECK ENDPOINTS
 # ============================================================================
 
 
@@ -323,7 +411,7 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
     Raises:
         HTTPException(503): If engine not initialized
         HTTPException(404): If topology not found
-        HTTPException(400): If validation fails (missing sensors, wrong dimensions)
+        HTTPException(400): If validation fails
         HTTPException(413): If graph too large
         HTTPException(500): If inference fails
 
@@ -335,16 +423,7 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
             "timestamp": "2025-12-16T20:00:00Z",
             "sensor_readings": {...}
         }
-
-        Response:
-        {
-            "status": "success",
-            "equipment_id": "excavator_001",
-            "timestamp": "2025-12-16T20:00:00Z",
-            "diagnosis": {...}
-        }
     """
-    # Check engine availability
     engine = getattr(app.state, "inference_engine", None)
     validator = getattr(app.state, "validator", None)
 
@@ -364,7 +443,6 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
     )
 
     try:
-        # ✅ VALIDATE REQUEST (if validator available)
         if validator and hasattr(request, "topology_id"):
             topology = await validator.validate_diagnosis_request(request)
             logger.info(
@@ -375,7 +453,6 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
                 },
             )
 
-        # Run inference
         result = await engine.predict_minimal(request)
 
         logger.info(
@@ -447,18 +524,8 @@ async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
 
     Examples:
         >>> POST /v1/predict
-        {
-            "topology": {...},
-            "batch": [...]
-        }
-
-        Response:
-        {
-            "status": "success",
-            "predictions": [...]
-        }
+        {"topology": {...}, "batch": [...]}
     """
-    # Check engine availability
     engine = getattr(app.state, "inference_engine", None)
     validator = getattr(app.state, "validator", None)
 
@@ -476,12 +543,10 @@ async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
     )
 
     try:
-        # ✅ VALIDATE REQUEST (if validator available)
         if validator:
             await validator.validate_prediction_request(request)
             logger.info("Batch request validated")
 
-        # Run inference
         predictions = await engine.predict(request, request.topology)
 
         logger.info(
@@ -595,10 +660,18 @@ async def get_info() -> dict[str, Any]:
             "health": "/health",
             "ready": "/ready",
             "metrics": "/metrics",
+            "healthz": "/healthz (K8s liveness)",
+            "readyz": "/readyz (K8s readiness)",
             "diagnose": "/v1/diagnose",
             "predict": "/v1/predict",
             "docs": "/docs",
             "redoc": "/redoc",
+        },
+        "features": {
+            "distributed_tracing": "OpenTelemetry",
+            "rate_limiting": "100 req/60s",
+            "request_tracking": "X-Request-ID",
+            "max_body_size": "10MB",
         },
     }
 

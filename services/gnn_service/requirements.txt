@@ -12,8 +12,8 @@ torch-sparse>=0.6.18             # Sparse tensor operations
 # ============================================================================
 # DATA PROCESSING
 # ============================================================================
-polars>=0.20.0                   # Fast async-friendly DataFrame (FIX 1)
-pandas>=2.2.0                    # Compatibility layer until full polars migration
+polars>=0.20.0                   # Fast async-friendly DataFrame
+pandas>=2.2.0                    # Compatibility layer (being phased out)
 numpy>=1.26.0,<3.0.0
 scipy>=1.14.0                    # Scientific computing
 
@@ -36,7 +36,17 @@ timescaledb-toolkit>=0.1.0       # TimescaleDB utilities (optional)
 # MONITORING & OBSERVABILITY
 # ============================================================================
 prometheus-client>=0.21.0        # Prometheus metrics
-structlog>=24.4.0                # Structured logging (optional upgrade)
+
+# OpenTelemetry (distributed tracing)
+opentelemetry-api>=1.28.0
+opentelemetry-sdk>=1.28.0
+opentelemetry-instrumentation-fastapi>=0.49b0
+opentelemetry-exporter-otlp-proto-http>=1.28.0
+
+# ============================================================================
+# CACHING & RATE LIMITING
+# ============================================================================
+redis>=5.2.0                     # Redis client (optional, for rate limiting)
 
 # ============================================================================
 # CONFIGURATION
