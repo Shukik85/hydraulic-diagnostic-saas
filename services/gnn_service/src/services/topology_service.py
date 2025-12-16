@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Lock
 from typing import TYPE_CHECKING, Any
@@ -121,7 +121,7 @@ class TopologyService:
             try:
                 template = get_builtin_template(template_id)
                 self._cache[template_id] = template
-                self._cache_timestamps[template_id] = datetime.now(timezone.utc)
+                self._cache_timestamps[template_id] = datetime.now(UTC)
                 logger.debug(f"Loaded built-in template: {template_id}")
             except ValueError as e:
                 logger.warning(f"Failed to load template {template_id}: {e}")
@@ -157,7 +157,7 @@ class TopologyService:
                     template_id = template.template_id
 
                     self._cache[template_id] = template
-                    self._cache_timestamps[template_id] = datetime.now(timezone.utc)
+                    self._cache_timestamps[template_id] = datetime.now(UTC)
 
                     logger.info(f"Loaded custom template: {template_id}")
                 except Exception as e:
@@ -189,7 +189,7 @@ class TopologyService:
         if template_id in self._cache:
             # Check if cache expired
             cached_time = self._cache_timestamps.get(template_id)
-            if cached_time and (datetime.now(timezone.utc) - cached_time) < self._cache_ttl:
+            if cached_time and (datetime.now(UTC) - cached_time) < self._cache_ttl:
                 return self._cache[template_id]
             # Cache expired, remove
             del self._cache[template_id]
@@ -200,7 +200,7 @@ class TopologyService:
             try:
                 template = get_builtin_template(template_id)
                 self._cache[template_id] = template
-                self._cache_timestamps[template_id] = datetime.now(timezone.utc)
+                self._cache_timestamps[template_id] = datetime.now(UTC)
                 return template
             except ValueError:
                 pass

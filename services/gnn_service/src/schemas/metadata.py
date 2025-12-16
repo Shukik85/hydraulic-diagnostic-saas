@@ -10,7 +10,7 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Annotated, Literal
 
@@ -304,8 +304,8 @@ class EquipmentMetadata(BaseModel):
     @computed_field
     def age_years(self) -> float:
         """Возраст оборудования (лет)."""
-        now = datetime.now(timezone.utc)
-        delta = now - self.installation_date.replace(tzinfo=timezone.utc)
+        now = datetime.now(UTC)
+        delta = now - self.installation_date.replace(tzinfo=UTC)
         return delta.days / 365.25
 
     @computed_field
@@ -313,8 +313,8 @@ class EquipmentMetadata(BaseModel):
         """Часы с последнего ТО."""
         if self.last_maintenance_date is None:
             return None
-        now = datetime.now(timezone.utc)
-        delta = now - self.last_maintenance_date.replace(tzinfo=timezone.utc)
+        now = datetime.now(UTC)
+        delta = now - self.last_maintenance_date.replace(tzinfo=UTC)
         # Approximate (assumes continuous operation)
         return delta.days * 10  # ~10 hours/day average
 
