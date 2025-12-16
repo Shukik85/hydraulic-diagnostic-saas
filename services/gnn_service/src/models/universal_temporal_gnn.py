@@ -270,12 +270,9 @@ class UniversalTemporalGNN(nn.Module):
         # === 1. Initial Node Projection ===
         h = self.initial_projection(x)  # [N, in_channels] → [N, hidden]
 
-        # === 2. Edge Feature Projection ===
+        # === 2. Edge Feature Projection (SIM108 fixed) ===
         # Project edge features to hidden dimension (if provided)
-        if edge_attr is not None:
-            edge_emb = self.edge_projection(edge_attr)  # [E, edge_in_dim] → [E, edge_hidden]
-        else:
-            edge_emb = None
+        edge_emb = self.edge_projection(edge_attr) if edge_attr is not None else None
 
         # === 3. GATv2 Spatial Encoding ===
         for i, gat_layer in enumerate(self.gat_layers):
