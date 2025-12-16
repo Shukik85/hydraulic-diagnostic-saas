@@ -48,12 +48,12 @@ class NormalizationStatistics(BaseModel):
     flow_log_std: float = Field(default=1.0, description="Std of log(1 + flow)")
 
     # Pressure drop statistics
-    pressure_drop_mean: float = Field(default=2.0, description="Mean ΔP (bar)")
-    pressure_drop_std: float = Field(default=1.0, description="Std ΔP (bar)")
+    pressure_drop_mean: float = Field(default=2.0, description="Mean \u0394P (bar)")
+    pressure_drop_std: float = Field(default=1.0, description="Std \u0394P (bar)")
 
     # Temperature delta statistics
-    temp_delta_mean: float = Field(default=5.0, description="Mean ΔT (°C)")
-    temp_delta_std: float = Field(default=3.0, description="Std ΔT (°C)")
+    temp_delta_mean: float = Field(default=5.0, description="Mean \u0394T (\u00b0C)")
+    temp_delta_std: float = Field(default=3.0, description="Std \u0394T (\u00b0C)")
 
     # Vibration statistics
     vibration_max: float = Field(default=10.0, description="Max vibration (g)")
@@ -185,7 +185,7 @@ class EdgeFeatureNormalizer:
         Can handle negative values (cooling).
 
         Args:
-            dt_c: Temperature delta in °C
+            dt_c: Temperature delta in \u00b0C
 
         Returns:
             Normalized temperature delta
@@ -199,13 +199,13 @@ class EdgeFeatureNormalizer:
         return float(np.clip(dt_norm, -5.0, 5.0))
 
     def denormalize_temp_delta(self, dt_norm: float) -> float:
-        """Denormalize temperature delta back to °C.
+        """Denormalize temperature delta back to \u00b0C.
 
         Args:
             dt_norm: Normalized temperature delta
 
         Returns:
-            Temperature delta in °C
+            Temperature delta in \u00b0C
         """
         return float(dt_norm * self.stats.temp_delta_std + self.stats.temp_delta_mean)
 
@@ -388,7 +388,7 @@ class EdgeFeatureNormalizer:
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(path, "w") as f:
+        with path.open("w") as f:
             json.dump(self.stats.model_dump(), f, indent=2)
 
     @classmethod
@@ -404,7 +404,7 @@ class EdgeFeatureNormalizer:
         Examples:
             >>> normalizer = EdgeFeatureNormalizer.load("checkpoints/normalizer_v2.0.0.json")
         """
-        with open(path) as f:
+        with Path(path).open() as f:
             stats_dict = json.load(f)
 
         stats = NormalizationStatistics(**stats_dict)
