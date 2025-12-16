@@ -31,9 +31,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from src.schemas import (
-        ComponentSpec,
         EdgeSpec,
-        EquipmentMetadata,
         GraphTopology,
     )
     from src.schemas.requests import ComponentSensorReading
