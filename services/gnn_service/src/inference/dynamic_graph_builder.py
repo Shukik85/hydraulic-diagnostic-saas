@@ -13,6 +13,7 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, TypeVar
 
@@ -29,6 +30,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+# Default timeout for database queries (prevents hanging)
+DB_QUERY_TIMEOUT_S = 10.0
 
 
 class DynamicGraphBuilder:
@@ -82,6 +86,8 @@ class DynamicGraphBuilder:
     ) -> Data:
         """Build graph from TimescaleDB data.
 
+        FIX 2: Added timeout to prevent database hangs.
+
         Args:
             equipment_id: Equipment identifier
             topology: Equipment topology definition
@@ -92,12 +98,30 @@ class DynamicGraphBuilder:
 
         Raises:
             ValueError: If topology invalid or no sensors found
-            RuntimeError: If database error
+            RuntimeError: If database error or timeout
         """
-        # 1. Read sensors from TimescaleDB
-        sensor_data = await self.connector.fetch_sensor_data(
-            equipment_id=equipment_id, lookback_minutes=lookback_minutes
-        )
+        # FIX 2: Add timeout to database query (prevents hanging)
+        try:
+            sensor_data = await asyncio.wait_for(
+                self.connector.fetch_sensor_data(
+                    equipment_id=equipment_id,
+                    lookback_minutes=lookback_minutes,
+                ),
+                timeout=DB_QUERY_TIMEOUT_S,
+            )
+        except TimeoutError as e:
+            logger.error(
+                f"Database timeout fetching sensors for {equipment_id}",
+                extra={
+                    "equipment_id": equipment_id,
+                    "timeout_s": DB_QUERY_TIMEOUT_S,
+                },
+            )
+            # Import here to avoid circular dependency
+            from .exceptions import GraphBuildError
+            raise GraphBuildError(
+                f"Database timeout after {DB_QUERY_TIMEOUT_S}s for {equipment_id}"
+            ) from e
 
         if sensor_data is None or sensor_data.empty:
             msg = f"No sensor data found for {equipment_id}"

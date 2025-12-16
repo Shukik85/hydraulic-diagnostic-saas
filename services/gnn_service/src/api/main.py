@@ -4,18 +4,27 @@ Universal Temporal GNN (GAT + LSTM) for multi-label classification
 of hydraulic system component states.
 
 Entry Point: uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+
+Security:
+    - Request size limiting (10MB max)
+    - CORS strict origin checking
+    - Request ID tracing
+    - Async cleanup on shutdown
 """
 
 import logging
+import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.api.validators import RequestValidator
 from src.inference.inference_engine import InferenceConfig, InferenceEngine
+from src.inference.request_context import set_request_id
 from src.schemas.requests import MinimalInferenceRequest, PredictionRequest
 
 # ============================================================================
@@ -27,6 +36,44 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# MIDDLEWARE
+# ============================================================================
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Add X-Request-ID to all requests for tracing."""
+
+    async def dispatch(self, request: Request, call_next):
+        """Add request ID to context and response headers."""
+        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        set_request_id(request_id)
+
+        response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+        return response
+
+
+class BodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Limit request body size to prevent DoS."""
+
+    def __init__(self, app, max_body_size: int = 10 * 1024 * 1024):  # 10 MB default
+        super().__init__(app)
+        self.max_body_size = max_body_size
+
+    async def dispatch(self, request: Request, call_next):
+        """Check body size before processing."""
+        if request.method in ["POST", "PUT", "PATCH"]:
+            content_length = request.headers.get("content-length")
+            if content_length and int(content_length) > self.max_body_size:
+                return JSONResponse(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    content={"error": "Request body too large"},
+                )
+
+        return await call_next(request)
 
 
 # ============================================================================
@@ -45,7 +92,8 @@ async def lifespan(app: FastAPI) -> Any:
 
     Shutdown:
         - Cleanup resources
-        - Log shutdown
+        - Drain queues
+        - Release GPU memory
 
     Yields:
         None: Application runs between startup and shutdown
@@ -89,9 +137,10 @@ async def lifespan(app: FastAPI) -> Any:
     # ========================================================================
     if hasattr(app.state, "inference_engine") and app.state.inference_engine:
         try:
-            # Cleanup if InferenceEngine supports it
-            # app.state.inference_engine.cleanup()
-            logger.info("🧹 Inference engine cleaned up")
+            # FIX 5: Proper async cleanup
+            logger.info("🧹 Starting engine cleanup...")
+            await app.state.inference_engine.cleanup()
+            logger.info("✅ Inference engine cleaned up")
         except Exception as e:
             logger.error(
                 "⚠️  Cleanup error",
@@ -120,19 +169,27 @@ app = FastAPI(
 
 
 # ============================================================================
-# MIDDLEWARE
+# MIDDLEWARE REGISTRATION
 # ============================================================================
 
-# CORS Configuration (production-ready)
+# FIX 4: Security - Request ID tracking
+app.add_middleware(RequestIDMiddleware)
+
+# FIX 4: Security - Body size limiting (DoS prevention)
+app.add_middleware(BodySizeLimitMiddleware, max_body_size=10 * 1024 * 1024)  # 10 MB
+
+# FIX 4: Security - CORS hardening
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",  # Local development
-        # "https://yourdomain.com",  # Production domain
+        # Add production domains here:
+        # "https://yourdomain.com",
+        # "https://api.yourdomain.com",
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST"],  # Restrict methods
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],  # Restrict to needed methods only
+    allow_headers=["X-Request-ID", "Content-Type", "Authorization"],
 )
 
 
