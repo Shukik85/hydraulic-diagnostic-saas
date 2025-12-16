@@ -1,23 +1,59 @@
-"""Inference module for production predictions.
+"""Inference package.
 
-Components:
-- InferenceEngine - Main inference orchestrator
-- DynamicGraphBuilder - Variable topology support (Phase 3)
-- ModelManager - Model loading and management
-
-Python 3.14 Features:
-    - Deferred annotations
+Provides production-ready inference engine with:
+- Dynamic batching
+- Multi-model A/B testing
+- Prometheus metrics
+- Topology caching
+- Request tracking
 """
 
-from __future__ import annotations
-
-from src.inference.dynamic_graph_builder import DynamicGraphBuilder
-from src.inference.inference_engine import InferenceConfig, InferenceEngine
-from src.inference.model_manager import ModelManager
+from .batching import BatchItem
+from .cache import AsyncTopologyCache, TopologyCache
+from .exceptions import (
+    GPUOutOfMemoryError,
+    GraphBuildError,
+    InferenceEngineError,
+    InferenceError,
+    ModelLoadError,
+    TensorValidationError,
+    TopologyNotFoundError,
+)
+from .inference_engine import InferenceConfig, InferenceEngine
+from .model_registry import ModelConfig, ModelRegistry
+from .request_context import (
+    ensure_request_id,
+    generate_request_id,
+    get_request_id,
+    set_request_id,
+)
+from .validation import TensorValidator
 
 __all__ = [
-    "DynamicGraphBuilder",
-    "InferenceConfig",
+    # Main classes
     "InferenceEngine",
-    "ModelManager",
+    "InferenceConfig",
+    # Model management
+    "ModelConfig",
+    "ModelRegistry",
+    # Caching
+    "TopologyCache",
+    "AsyncTopologyCache",
+    # Batching
+    "BatchItem",
+    # Validation
+    "TensorValidator",
+    # Request tracking
+    "get_request_id",
+    "set_request_id",
+    "generate_request_id",
+    "ensure_request_id",
+    # Exceptions
+    "InferenceEngineError",
+    "ModelLoadError",
+    "GraphBuildError",
+    "InferenceError",
+    "TopologyNotFoundError",
+    "GPUOutOfMemoryError",
+    "TensorValidationError",
 ]
