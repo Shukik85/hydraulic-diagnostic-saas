@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
     curl \
     ca-certificates \
+    build-essential \
     && add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -44,9 +45,16 @@ COPY requirements.txt .
 # Install PyTorch 2.8.0 with CUDA 12.8 support first (separate layer for caching)
 RUN pip install --no-cache-dir \
     torch==2.8.0 \
-    torchvision==0.19.0 \
-    torchaudio==2.5.0 \
     --index-url https://download.pytorch.org/whl/cu128
+
+# Install PyTorch Geometric and dependencies
+RUN pip install --no-cache-dir \
+    torch-geometric \
+    torch-scatter \
+    torch-sparse \
+    torch-cluster \
+    torch-spline-conv \
+    -f https://data.pyg.org/whl/torch-2.8.0+cu128.html
 
 # Install remaining dependencies
 RUN pip install --no-cache-dir -r requirements.txt
@@ -72,10 +80,7 @@ RUN mkdir -p \
     logs \
     models/checkpoints \
     models/production \
-    data/raw \
-    data/processed \
-    checkpoints/dev \
-    checkpoints/production \
+    data/topology_templates \
     && chown -R appuser:appuser /app
 
 # Switch to non-root user
@@ -84,18 +89,21 @@ USER appuser
 # Set environment variables
 ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=8000
 
-# Health check
+# Health check (using K8s standard /healthz endpoint)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8002/health || exit 1
+    CMD curl -f http://localhost:8000/healthz || exit 1
 
 # Expose port
-EXPOSE 8002
+EXPOSE 8000
 
 # Start application with uvicorn
-CMD ["uvicorn", "api.main:app", \
+# Note: Use --workers 1 with GPU to avoid CUDA memory conflicts
+# For CPU-only deployment, can increase to 2-4 workers
+CMD ["uvicorn", "src.api.main:app", \
      "--host", "0.0.0.0", \
-     "--port", "8002", \
-     "--workers", "2", \
+     "--port", "8000", \
+     "--workers", "1", \
      "--log-level", "info"]
