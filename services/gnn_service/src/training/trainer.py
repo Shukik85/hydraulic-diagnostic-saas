@@ -331,13 +331,12 @@ def create_trainer(
     # === Distributed Strategy ===
     strategy = trainer_config.strategy
 
-    # If using multiple GPUs, configure DDP
-    if isinstance(trainer_config.devices, int) and trainer_config.devices > 1:
-        if strategy == "auto":
-            strategy = DDPStrategy(
-                find_unused_parameters=False,
-                gradient_as_bucket_view=True,
-            )
+    # If using multiple GPUs, configure DDP (SIM102 fixed)
+    if isinstance(trainer_config.devices, int) and trainer_config.devices > 1 and strategy == "auto":
+        strategy = DDPStrategy(
+            find_unused_parameters=False,
+            gradient_as_bucket_view=True,
+        )
 
     # === Create Trainer ===
     return pl.Trainer(
