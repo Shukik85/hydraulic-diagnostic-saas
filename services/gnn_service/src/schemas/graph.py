@@ -101,7 +101,7 @@ class EdgeSpec(BaseModel):
         temperature_delta_c: Temperature difference (°C)
         vibration_level_g: Average vibration level (g)
         age_hours: Operating hours since installation
-        last_maintenance_date: Date of last maintenance
+        maintenance_score: Maintenance score [0, 1]
 
     Examples:
         >>> # Static configuration (from topology)
