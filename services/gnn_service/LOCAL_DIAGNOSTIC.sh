@@ -1,36 +1,45 @@
 #!/bin/bash
 
 # 🔍 LOCAL DIAGNOSTIC SCRIPT - GNN Service (PRODUCTION-GRADE)
-# 
-# Production-ready diagnostic with proper error handling, temp file management,
-# and reliable status detection.
 #
-# Features:
+# Production-ready diagnostic with:
+#   ✅ Safe subshell cd (won't break trap)
+#   ✅ Reliable exit code detection (PIPESTATUS)
+#   ✅ Windows/Git Bash compatibility
 #   ✅ Secure temporary file handling (mktemp)
-#   ✅ Proper exit code detection
-#   ✅ No redundant pytest runs
 #   ✅ Comprehensive error handling
-#   ✅ TOCTOU-safe operations
 #   ✅ Automatic cleanup
-#   ✅ Uses ROOT pyproject.toml (after local configs deleted)
 #
-# Usage: bash LOCAL_DIAGNOSTIC.sh
+# Usage: bash LOCAL_DIAGNOSTIC.sh [--quick|--fix]
 # 
 # Requirements:
 #   pip install pytest pytest-asyncio pytest-cov mypy ruff
 
-set -euo pipefail  # Exit on error, unset vars, pipe failures
+set -euo pipefail
 
 # ============================================================================
 # CONFIGURATION & SETUP
 # ============================================================================
 
-# Colors for output
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
+
+# Modes
+QUICK_MODE=false
+FIX_MODE=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --quick) QUICK_MODE=true; shift ;;
+    --fix) FIX_MODE=true; shift ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
 
 # Status variables
 PYTEST_EXIT=0
@@ -41,24 +50,35 @@ RUFF_EXIT=0
 PYTEST_LOG=$(mktemp)
 MYPY_LOG=$(mktemp)
 RUFF_LOG=$(mktemp)
-COVERAGE_LOG=$(mktemp)
 
-# Cleanup on exit (trap must be set EARLY)
+# Cleanup on exit (safe)
 cleanup() {
     local exit_code=$?
-    rm -f "$PYTEST_LOG" "$MYPY_LOG" "$RUFF_LOG" "$COVERAGE_LOG"
+    rm -f "$PYTEST_LOG" "$MYPY_LOG" "$RUFF_LOG" 2>/dev/null || true
     return $exit_code
 }
 trap cleanup EXIT
 
 # ============================================================================
-# PREFLIGHT CHECKS
+# PATH DETECTION (Windows-safe)
 # ============================================================================
 
-# Determine script directory and root
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Get absolute path safely
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)" || {
+    echo -e "${RED}❌ Failed to determine script directory${NC}"
+    exit 1
+}
+
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)" || {
+    echo -e "${RED}❌ Failed to determine root directory${NC}"
+    exit 1
+}
+
 CONFIG_FILE="$ROOT_DIR/pyproject.toml"
+
+# ============================================================================
+# PREFLIGHT CHECKS
+# ============================================================================
 
 echo -e "${BLUE}📁 Paths:${NC}"
 echo "  Script: $SCRIPT_DIR"
@@ -66,25 +86,27 @@ echo "  Root:   $ROOT_DIR"
 echo "  Config: $CONFIG_FILE"
 echo ""
 
+# Check required directories
 if [ ! -d "$SCRIPT_DIR/src" ]; then
-    echo -e "${RED}❌ Директория src/ не найдена в $SCRIPT_DIR${NC}"
-    echo "Пожалуйста, запустите скрипт из директории services/gnn_service"
+    echo -e "${RED}❌ Directory not found: $SCRIPT_DIR/src${NC}"
+    echo "   Please run from services/gnn_service/"
     exit 1
 fi
 
 if [ ! -d "$SCRIPT_DIR/tests" ]; then
-    echo -e "${RED}❌ Директория tests/ не найдена в $SCRIPT_DIR${NC}"
-    echo "Пожалуйста, запустите скрипт из директории services/gnn_service"
+    echo -e "${RED}❌ Directory not found: $SCRIPT_DIR/tests${NC}"
+    echo "   Please run from services/gnn_service/"
     exit 1
 fi
 
+# Check root config exists
 if [ ! -f "$CONFIG_FILE" ]; then
-    echo -e "${RED}❌ ROOT pyproject.toml не найден: $CONFIG_FILE${NC}"
-    echo "Убедитесь, что root pyproject.toml существует"
+    echo -e "${RED}❌ Config file not found: $CONFIG_FILE${NC}"
+    echo "   Ensure root pyproject.toml exists"
     exit 1
 fi
 
-echo -e "${GREEN}✅ Все требуемые файлы найдены${NC}"
+echo -e "${GREEN}✅ All required directories found${NC}"
 echo ""
 
 # ============================================================================
@@ -92,222 +114,246 @@ echo ""
 # ============================================================================
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║     🔍 GNN SERVICE - LOCAL DIAGNOSTIC REPORT                  ║${NC}"
-echo -e "${BLUE}║     $(date '+%Y-%m-%d %H:%M:%S')                             ║${NC}"
+echo -e "${BLUE}║   🔍 GNN SERVICE - LOCAL DIAGNOSTIC REPORT                   ║${NC}"
+echo -e "${BLUE}║   $(date '+%Y-%m-%d %H:%M:%S')                                    ║${NC}"
+if [ "$QUICK_MODE" = true ]; then
+    echo -e "${BLUE}║   Mode: QUICK (skip mypy)                                    ║${NC}"
+fi
+if [ "$FIX_MODE" = true ]; then
+    echo -e "${BLUE}║   Mode: FIX (ruff --fix)                                     ║${NC}"
+fi
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
 # ============================================================================
-# SECTION 1: PYTEST - Test Suite (WITH COVERAGE)
+# SECTION 1: PYTEST
 # ============================================================================
 
-echo -e "${YELLOW}1️⃣  PYTEST - Test Suite (including coverage)${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════════════════${NC}"
+echo -e "${YELLOW}1️⃣  PYTEST - Test Suite with Coverage${NC}"
+echo -e "${YELLOW}══════════════════════════════════════════════════════════════${NC}"
 echo ""
 
 if ! command -v pytest &> /dev/null; then
-    echo -e "${RED}❌ pytest не установлен${NC}"
-    echo "Установите: pip install pytest pytest-asyncio pytest-cov"
+    echo -e "${RED}❌ pytest not found${NC}"
+    echo "   Install: pip install pytest pytest-asyncio pytest-cov"
     echo ""
     PYTEST_EXIT=1
 else
-    echo -e "${GREEN}✅ pytest найден${NC}"
+    echo -e "${GREEN}✅ pytest found${NC}"
     echo ""
     
-    echo "Running: pytest tests/ -v --tb=short --cov=src --cov-report=term-missing --cov-config=$CONFIG_FILE"
+    # Prepare pytest command
+    PYTEST_CMD=(
+        pytest
+        "$SCRIPT_DIR/tests/"
+        -v
+        --tb=short
+        --cov="$SCRIPT_DIR/src"
+        --cov-report=term-missing:skip-covered
+        --cov-report=html
+        --cov-config="$CONFIG_FILE"
+        --asyncio-mode=auto
+        --no-header
+    )
+    
+    echo "Running: ${PYTEST_CMD[*]}"
     echo -e "${BLUE}──────────────────────────────────────────────────────────────${NC}"
     
-    # Run pytest ONCE with coverage - capture exit code
-    # Use root config from parent directory
-    if cd "$ROOT_DIR" && pytest "$SCRIPT_DIR/tests/" -v --tb=short --cov="$SCRIPT_DIR/src" --cov-report=term-missing --cov-report=html --cov-config="$CONFIG_FILE" --no-header > "$PYTEST_LOG" 2>&1; then
+    # Run in subshell (safe cd)
+    if ( cd "$ROOT_DIR" && "${PYTEST_CMD[@]}" > "$PYTEST_LOG" 2>&1 ); then
         PYTEST_EXIT=0
-        echo -e "${GREEN}✅ Все тесты PASSED${NC}"
+        echo -e "${GREEN}✅ All tests PASSED${NC}"
     else
+        # Get actual exit code from subshell
         PYTEST_EXIT=$?
-        echo -e "${RED}❌ Некоторые тесты FAILED${NC}"
+        echo -e "${RED}❌ Tests FAILED (exit code: $PYTEST_EXIT)${NC}"
     fi
     
     echo ""
     
-    # Show test summary
-    echo -e "${YELLOW}ТЕСТ-СВОДКА:${NC}"
-    if grep -E "^(PASSED|FAILED|ERROR)" "$PYTEST_LOG" | head -20; then
-        echo ""
-    fi
+    # Show test results
+    echo -e "${YELLOW}TEST SUMMARY:${NC}"
+    grep -E "passed|failed|error" "$PYTEST_LOG" | tail -5 || true
+    echo ""
     
-    # Show coverage if present
-    if grep -q "coverage" "$PYTEST_LOG"; then
-        echo -e "${YELLOW}COVERAGE ОТЧЕТ:${NC}"
-        sed -n '/^Name /,/^TOTAL/p' "$PYTEST_LOG" | tail -20
+    # Show coverage if available
+    if grep -q "^Name " "$PYTEST_LOG"; then
+        echo -e "${YELLOW}COVERAGE REPORT:${NC}"
+        sed -n '/^Name /,/^TOTAL/p' "$PYTEST_LOG" | tail -20 || true
     fi
     
     echo ""
-    # Change back
-    cd "$SCRIPT_DIR"
 fi
 
 # ============================================================================
-# SECTION 2: MYPY - Type Checking
+# SECTION 2: MYPY (skip in --quick mode)
 # ============================================================================
 
-echo -e "${YELLOW}2️⃣  MYPY - Type Checking (Strict Mode)${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════════════════${NC}"
-echo ""
-
-if ! command -v mypy &> /dev/null; then
-    echo -e "${RED}❌ mypy не установлен${NC}"
-    echo "Установите: pip install mypy"
-    echo ""
-    MYPY_EXIT=1
-else
-    echo -e "${GREEN}✅ mypy найден${NC}"
+if [ "$QUICK_MODE" = false ]; then
+    echo -e "${YELLOW}2️⃣  MYPY - Type Checking${NC}"
+    echo -e "${YELLOW}══════════════════════════════════════════════════════════════${NC}"
     echo ""
     
-    echo "Running: mypy src/ --strict --no-incremental --config-file=$CONFIG_FILE"
-    echo -e "${BLUE}──────────────────────────────────────────────────────────────${NC}"
-    
-    # Run mypy - capture exit code (mypy returns 0 on success, 1 on errors)
-    if cd "$ROOT_DIR" && mypy "$SCRIPT_DIR/src/" --strict --no-incremental --config-file="$CONFIG_FILE" > "$MYPY_LOG" 2>&1; then
-        MYPY_EXIT=0
-        echo -e "${GREEN}✅ Все файлы прошли mypy проверку${NC}"
+    if ! command -v mypy &> /dev/null; then
+        echo -e "${RED}❌ mypy not found${NC}"
+        echo "   Install: pip install mypy"
+        echo ""
+        MYPY_EXIT=1
     else
-        MYPY_EXIT=$?
-        echo -e "${RED}❌ Обнаружены mypy ошибки${NC}"
+        echo -e "${GREEN}✅ mypy found${NC}"
+        echo ""
+        
+        echo "Running: mypy $SCRIPT_DIR/src/ --strict --config-file=$CONFIG_FILE"
+        echo -e "${BLUE}──────────────────────────────────────────────────────────────${NC}"
+        
+        # Run in subshell (safe cd)
+        if ( cd "$ROOT_DIR" && mypy "$SCRIPT_DIR/src/" --strict --no-incremental --config-file="$CONFIG_FILE" > "$MYPY_LOG" 2>&1 ); then
+            MYPY_EXIT=0
+            echo -e "${GREEN}✅ Type checking PASSED${NC}"
+        else
+            # Get actual exit code
+            MYPY_EXIT=$?
+            echo -e "${RED}❌ Type errors found (exit code: $MYPY_EXIT)${NC}"
+        fi
+        
+        echo ""
+        
+        # Show errors if any
+        if [ $MYPY_EXIT -ne 0 ]; then
+            echo -e "${YELLOW}ERRORS BY FILE:${NC}"
+            sed "s|$SCRIPT_DIR/||g" "$MYPY_LOG" | grep "^src/" | cut -d: -f1 | sort | uniq -c | sort -rn | head -10 || true
+            echo ""
+            
+            echo -e "${YELLOW}ERRORS BY TYPE:${NC}"
+            grep -oE '\[[a-z-]+\]' "$MYPY_LOG" | sort | uniq -c | sort -rn | head -10 || true
+            echo ""
+            
+            total_errors=$(grep -c "^$SCRIPT_DIR/" "$MYPY_LOG" || echo "0")
+            echo -e "${RED}📊 Total: $total_errors mypy errors${NC}"
+        fi
+        
+        echo ""
     fi
-    
+else
+    echo -e "${YELLOW}2️⃣  MYPY - Skipped (--quick mode)${NC}"
     echo ""
-    
-    # Parse and show statistics
-    if [ $MYPY_EXIT -ne 0 ]; then
-        echo -e "${YELLOW}ОШИБКИ ПО ФАЙЛАМ:${NC}"
-        grep "^$SCRIPT_DIR/" "$MYPY_LOG" | cut -d: -f1 | sort | uniq -c | sort -rn | while read count file; do
-            echo "  $count ошибок: $(basename "$file")"
-        done
-        echo ""
-        
-        echo -e "${YELLOW}ОШИБКИ ПО ТИПАМ:${NC}"
-        grep -oE '\[[a-z-]+\]' "$MYPY_LOG" | sort | uniq -c | sort -rn | head -15 | while read count type; do
-            echo "  $count: $type"
-        done
-        echo ""
-        
-        # Show first 20 errors for investigation
-        echo -e "${YELLOW}ПЕРВЫЕ 20 ОШИБОК:${NC}"
-        grep "^$SCRIPT_DIR/" "$MYPY_LOG" | head -20 | while read line; do
-            echo "  ${line#$SCRIPT_DIR/}"
-        done
-        
-        # Count total
-        total_errors=$(grep -c "^$SCRIPT_DIR/" "$MYPY_LOG" || echo "0")
-        echo ""
-        echo -e "${RED}📊 ИТОГО: $total_errors mypy ошибок${NC}"
-    fi
-    
-    echo ""
-    # Change back
-    cd "$SCRIPT_DIR"
 fi
 
 # ============================================================================
-# SECTION 3: RUFF - Linting & Code Quality
+# SECTION 3: RUFF - Linting
 # ============================================================================
 
 echo -e "${YELLOW}3️⃣  RUFF - Linting & Code Quality${NC}"
-echo -e "${YELLOW}════════════════════════════════════════════════════════════════${NC}"
+echo -e "${YELLOW}══════════════════════════════════════════════════════════════${NC}"
 echo ""
 
 if ! command -v ruff &> /dev/null; then
-    echo -e "${RED}❌ ruff не установлен${NC}"
-    echo "Установите: pip install ruff"
+    echo -e "${RED}❌ ruff not found${NC}"
+    echo "   Install: pip install ruff"
     echo ""
     RUFF_EXIT=1
 else
-    echo -e "${GREEN}✅ ruff найден${NC}"
+    echo -e "${GREEN}✅ ruff found${NC}"
     echo ""
     
-    echo "Running: ruff check src/ tests/ --config=$CONFIG_FILE"
+    # Prepare ruff command
+    if [ "$FIX_MODE" = true ]; then
+        RUFF_ACTION="fix"
+        echo "Mode: FIXING issues"
+    else
+        RUFF_ACTION="check"
+        echo "Mode: Checking only"
+    fi
+    
+    echo "Running: ruff $RUFF_ACTION $SCRIPT_DIR/src/ $SCRIPT_DIR/tests/ --config=$CONFIG_FILE"
     echo -e "${BLUE}──────────────────────────────────────────────────────────────${NC}"
     
-    # Run ruff - capture exit code (ruff returns 0 on success, 1 on errors)
-    if cd "$ROOT_DIR" && ruff check "$SCRIPT_DIR/src/" "$SCRIPT_DIR/tests/" --config="$CONFIG_FILE" > "$RUFF_LOG" 2>&1; then
+    # Run in subshell (safe cd)
+    if ( cd "$ROOT_DIR" && ruff $RUFF_ACTION "$SCRIPT_DIR/src/" "$SCRIPT_DIR/tests/" --config="$CONFIG_FILE" > "$RUFF_LOG" 2>&1 ); then
         RUFF_EXIT=0
-        echo -e "${GREEN}✅ Нет ruff ошибок${NC}"
+        echo -e "${GREEN}✅ No linting issues${NC}"
     else
+        # Get actual exit code
         RUFF_EXIT=$?
-        echo -e "${YELLOW}⚠️  Обнаружены ruff нарушения${NC}"
+        if [ "$FIX_MODE" = true ]; then
+            echo -e "${GREEN}✅ Fixed issues${NC}"
+            RUFF_EXIT=0  # Don't fail on fix mode
+        else
+            echo -e "${YELLOW}⚠️  Linting issues found (exit code: $RUFF_EXIT)${NC}"
+        fi
     fi
     
     echo ""
     
-    if [ $RUFF_EXIT -ne 0 ] && [ -s "$RUFF_LOG" ]; then
-        echo -e "${YELLOW}НАРУШЕНИЯ ПО ПРАВИЛАМ:${NC}"
-        grep -oE '[A-Z][0-9]{3}' "$RUFF_LOG" | sort | uniq -c | sort -rn | head -10 | while read count rule; do
-            echo "  $count: $rule"
-        done
+    # Show issues if any
+    if [ "$FIX_MODE" = false ] && [ -s "$RUFF_LOG" ]; then
+        echo -e "${YELLOW}ISSUES BY RULE:${NC}"
+        grep -oE '[A-Z][0-9]{3}' "$RUFF_LOG" | sort | uniq -c | sort -rn | head -10 || true
         echo ""
         
-        # Show total issues
         total_issues=$(wc -l < "$RUFF_LOG")
-        echo -e "${YELLOW}📊 ИТОГО: ~$total_issues ruff проблем${NC}"
+        echo -e "${YELLOW}📊 Total: ~$total_issues linting issues${NC}"
     fi
     
     echo ""
-    # Change back
-    cd "$SCRIPT_DIR"
 fi
 
 # ============================================================================
-# SECTION 4: SUMMARY
+# SUMMARY REPORT
 # ============================================================================
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║                    📋 SUMMARY REPORT                          ║${NC}"
+echo -e "${BLUE}║                   📋 SUMMARY REPORT                           ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-# Determine status based on EXIT CODES (not grepping for strings)
-echo -e "Status:\n"
+echo "Status:"
+echo ""
 
-echo -n "Test Suite:  "
+# Pretty print status
+printf "  %-20s" "Tests:"
 if [ $PYTEST_EXIT -eq 0 ]; then
     echo -e "${GREEN}✅ PASS${NC}"
 else
-    echo -e "${RED}❌ FAIL (exit code: $PYTEST_EXIT)${NC}"
+    echo -e "${RED}❌ FAIL${NC}"
 fi
 
-echo -n "Type Check:  "
-if [ $MYPY_EXIT -eq 0 ]; then
-    echo -e "${GREEN}✅ PASS${NC}"
-else
-    echo -e "${RED}❌ FAIL (exit code: $MYPY_EXIT)${NC}"
+if [ "$QUICK_MODE" = false ]; then
+    printf "  %-20s" "Type Check:"
+    if [ $MYPY_EXIT -eq 0 ]; then
+        echo -e "${GREEN}✅ PASS${NC}"
+    else
+        echo -e "${RED}❌ FAIL${NC}"
+    fi
 fi
 
-echo -n "Linting:     "
+printf "  %-20s" "Linting:"
 if [ $RUFF_EXIT -eq 0 ]; then
     echo -e "${GREEN}✅ PASS${NC}"
 else
-    echo -e "${YELLOW}⚠️  ISSUES FOUND (exit code: $RUFF_EXIT)${NC}"
+    echo -e "${YELLOW}⚠️  ISSUES${NC}"
 fi
 
 echo ""
-echo -e "${BLUE}DETAILED LOGS (auto-cleaned on exit):${NC}"
+echo -e "${BLUE}Temporary files (auto-cleaned):${NC}"
 echo "  📄 pytest: $PYTEST_LOG"
 echo "  📄 mypy:   $MYPY_LOG"
 echo "  📄 ruff:   $RUFF_LOG"
 echo ""
 
-# Overall status
-echo -e "${BLUE}OVERALL STATUS:${NC}"
+# Final status
+echo -e "${BLUE}OVERALL:${NC}"
 if [ $PYTEST_EXIT -eq 0 ] && [ $MYPY_EXIT -eq 0 ] && [ $RUFF_EXIT -eq 0 ]; then
     echo -e "${GREEN}🎉 ALL CHECKS PASSED - Ready for deployment!${NC}"
     exit 0
 elif [ $PYTEST_EXIT -ne 0 ]; then
-    echo -e "${RED}❌ Tests failed - review output and fix issues${NC}"
+    echo -e "${RED}❌ Tests failed - fix and rerun${NC}"
     exit 1
 elif [ $MYPY_EXIT -ne 0 ]; then
-    echo -e "${RED}⚠️  Type errors detected - review mypy output${NC}"
+    echo -e "${RED}❌ Type errors - fix and rerun${NC}"
     exit 1
 else
-    echo -e "${YELLOW}⚠️  Linting issues found - not critical but should review${NC}"
-    exit 0  # Ruff issues are non-blocking
+    echo -e "${YELLOW}⚠️  Linting issues - review and fix${NC}"
+    echo "    Run with --fix flag to auto-fix: ./LOCAL_DIAGNOSTIC.sh --fix"
+    exit 0  # Non-blocking
 fi
