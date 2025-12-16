@@ -59,6 +59,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import pickle
 import time
 import warnings
 from collections import OrderedDict
@@ -71,6 +72,7 @@ import torch
 from prometheus_client import Counter, Gauge, Histogram
 from torch_geometric.data import Data
 
+from configs.config import inference_config
 from src.schemas import (
     AnomalyPrediction,
     DegradationPrediction,
@@ -220,7 +222,7 @@ class ModelRegistry:
         """Register model."""
         self._models[version] = config
         logger.info(
-            f"✅ Registered model '{version}'",
+            f"Registered model '{version}'",
             extra={"traffic": config.traffic},
         )
 
@@ -552,7 +554,9 @@ class InferenceEngine:
         self.config = config
         self._shutdown = False
 
-        # Import here to avoid circular deps
+        # Deferred imports to avoid circular dependencies.
+        # These modules depend on InferenceEngine, so we import them here
+        # after the class definition is complete.
         from src.data import FeatureConfig, FeatureEngineer, GraphBuilder
         from src.data.edge_features import create_edge_feature_computer
         from src.data.normalization import create_edge_feature_normalizer
@@ -585,9 +589,9 @@ class InferenceEngine:
                     feature_engineer=self.feature_engineer,
                     feature_config=self.feature_config,
                 )
-                logger.info("✅ DynamicGraphBuilder enabled")
+                logger.info("DynamicGraphBuilder enabled")
             elif config.use_dynamic_builder:
-                logger.warning("⚠️  DynamicGraphBuilder requested but no connector")
+                logger.warning("DynamicGraphBuilder requested but no connector")
 
             # Edge features
             self.edge_feature_computer = create_edge_feature_computer()
@@ -642,30 +646,47 @@ class InferenceEngine:
                 self._batch_processor_task = asyncio.create_task(
                     self._batch_processor_loop()
                 )
-                logger.info("✅ Dynamic batching enabled")
+                logger.info("Dynamic batching enabled")
 
-            logger.info("✅ InferenceEngine initialized")
+            logger.info("InferenceEngine initialized")
 
         except Exception as e:
-            logger.error("❌ Initialization failed", exc_info=True)
+            logger.error("Initialization failed", exc_info=True)
             raise ModelLoadError(f"Init failed: {e}") from e
 
     def _load_normalizer(self, checkpoint_path: str) -> Any:
-        """Load normalizer from checkpoint."""
-        # Import already available from __init__ imports
+        """Load normalizer from checkpoint.
+        
+        Security Fix: Uses weights_only=True to prevent arbitrary code execution.
+        """
         from src.data.normalization import create_edge_feature_normalizer
 
         try:
-            checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+            # SECURITY FIX: weights_only=True prevents RCE vulnerability
+            checkpoint = torch.load(
+                checkpoint_path,
+                map_location="cpu",
+                weights_only=True  # Changed from False - prevents arbitrary code execution
+            )
             if "normalizer_stats" in checkpoint:
                 normalizer = create_edge_feature_normalizer()
                 normalizer.load_stats(checkpoint["normalizer_stats"])
-                logger.info("✅ Loaded normalizer")
+                logger.info("Loaded normalizer from checkpoint")
                 return normalizer
-            logger.warning("⚠️  No normalizer stats, using defaults")
+            logger.warning("No normalizer stats in checkpoint, using defaults")
             return create_edge_feature_normalizer()
+        except (RuntimeError, pickle.UnpicklingError) as e:
+            logger.error(
+                f"Failed to load checkpoint with weights_only=True: {checkpoint_path}. "
+                "Ensure checkpoint was saved with PyTorch 2.0+",
+                exc_info=True
+            )
+            raise ModelLoadError(
+                f"Checkpoint incompatible with weights_only=True. "
+                f"Re-save checkpoint with PyTorch 2.0+: {e}"
+            ) from e
         except Exception:
-            logger.warning("⚠️  Normalizer load failed, using defaults")
+            logger.warning("Normalizer load failed, using defaults", exc_info=True)
             return create_edge_feature_normalizer()
 
     def _load_model_safe(self, model_path: str, version: str) -> Any:
@@ -680,17 +701,17 @@ class InferenceEngine:
             return model
         except torch.cuda.OutOfMemoryError as e:
             if self.config.fallback_to_cpu:
-                logger.warning(f"⚠️  GPU OOM for {version}, falling back to CPU")
+                logger.warning(f"GPU OOM for {version}, falling back to CPU")
                 model = self.model_manager.load_model(
                     model_path=model_path,
                     device="cpu",
                     use_compile=False,
                 )
                 return model
-            logger.error("❌ GPU OOM and fallback_to_cpu=False")
+            logger.error("GPU OOM and fallback_to_cpu=False")
             raise GPUOutOfMemoryError(f"GPU OOM loading {version}") from e
         except Exception as e:
-            logger.error(f"❌ Model load failed: {version}", exc_info=True)
+            logger.error(f"Model load failed: {version}", exc_info=True)
             raise ModelLoadError(f"Load failed: {e}") from e
 
     # ========================================================================
@@ -725,14 +746,45 @@ class InferenceEngine:
                     future=future,
                     model_version=model_version,
                 )
-                await self._batch_queue.put(item)
-                REQUEST_QUEUE_SIZE.set(self._batch_queue.qsize())
+                
+                # FIX: Add timeout for queue put operation
+                try:
+                    await asyncio.wait_for(
+                        self._batch_queue.put(item),
+                        timeout=inference_config.queue_put_timeout_s
+                    )
+                    REQUEST_QUEUE_SIZE.set(self._batch_queue.qsize())
+                except asyncio.TimeoutError as e:
+                    INFERENCE_ERRORS_TOTAL.labels(error_type="queue_timeout").inc()
+                    logger.error(
+                        "Queue full, cannot accept request",
+                        extra={
+                            "equipment_id": request.equipment_id,
+                            "queue_size": self._batch_queue.qsize()
+                        }
+                    )
+                    raise InferenceError("Request queue full, please retry") from e
 
-                # Wait for result
-                response = await asyncio.wait_for(
-                    future,
-                    timeout=self.config.inference_timeout_s,
-                )
+                # FIX: Add cancellation guard for future timeout
+                try:
+                    response = await asyncio.wait_for(
+                        future,
+                        timeout=self.config.inference_timeout_s,
+                    )
+                except asyncio.TimeoutError as e:
+                    # Cancel future if not already done
+                    if not future.done():
+                        future.cancel()
+                    logger.error(
+                        "Inference timeout",
+                        extra={
+                            "equipment_id": request.equipment_id,
+                            "timeout_s": self.config.inference_timeout_s
+                        }
+                    )
+                    raise InferenceError(
+                        f"Inference timeout after {self.config.inference_timeout_s}s"
+                    ) from e
             else:
                 # Direct inference
                 response = await asyncio.wait_for(
@@ -759,7 +811,7 @@ class InferenceEngine:
                 model_version=model_version,
                 status="timeout",
             ).inc()
-            logger.error(f"⏱️  Timeout: {request.equipment_id}")
+            logger.error(f"Timeout: {request.equipment_id}")
             raise InferenceError(f"Timeout after {self.config.inference_timeout_s}s") from e
         except Exception as e:
             self.config._total_errors += 1
@@ -769,7 +821,7 @@ class InferenceEngine:
                 model_version=model_version,
                 status="error",
             ).inc()
-            logger.error(f"❌ Inference failed: {request.equipment_id}", exc_info=True)
+            logger.error(f"Inference failed: {request.equipment_id}", exc_info=True)
             raise
 
     async def _predict_minimal_impl(
@@ -815,13 +867,18 @@ class InferenceEngine:
                 )
         except torch.cuda.OutOfMemoryError as e:
             if self.config.fallback_to_cpu:
-                logger.warning(f"⚠️  GPU OOM, retrying on CPU: {request.equipment_id}")
-                # Move model to CPU
+                logger.warning(
+                    "GPU OOM detected, falling back to CPU",
+                    extra={"equipment_id": request.equipment_id}
+                )
+                # FIX: Use .to('cpu') instead of .cpu() for proper device transfer
                 if self.model_registry:
                     model = self.model_registry.get_model(model_version)
+                    model.to('cpu')  # In-place device transfer
                 else:
-                    model = self.model
-                model = model.cpu()
+                    self.model.to('cpu')  # In-place device transfer
+                # Move graph to CPU as well
+                graph = graph.to('cpu')
                 health, degradation, anomaly = self._inference_single(graph, model_version)
             else:
                 raise GPUOutOfMemoryError("GPU OOM during inference") from e
@@ -838,7 +895,7 @@ class InferenceEngine:
         )
 
         logger.info(
-            "✅ Prediction complete",
+            "Prediction complete",
             extra={
                 "equipment_id": request.equipment_id,
                 "health_score": response.health.score,
@@ -951,9 +1008,9 @@ class InferenceEngine:
 
         # Warnings
         if health_score < 0.3:
-            logger.warning(f"⚠️  Low health: {health_score:.2f} for {equipment_id}")
+            logger.warning(f"Low health: {health_score:.2f} for {equipment_id}")
         if degradation_rate > 0.8:
-            logger.warning(f"⚠️  High degradation: {degradation_rate:.2f} for {equipment_id}")
+            logger.warning(f"High degradation: {degradation_rate:.2f} for {equipment_id}")
 
         return PredictionResponse(
             equipment_id=equipment_id,
@@ -969,17 +1026,17 @@ class InferenceEngine:
 
     async def _batch_processor_loop(self) -> None:
         """Background batch processor."""
-        logger.info("🚀 Batch processor started")
+        logger.info("Batch processor started")
         while not self._shutdown:
             try:
                 batch_items = await self._collect_batch()
                 if batch_items:
                     await self._process_batch(batch_items)
             except Exception:
-                logger.error("❌ Batch processor error", exc_info=True)
+                logger.error("Batch processor error", exc_info=True)
                 await asyncio.sleep(0.1)
 
-        logger.info("🛑 Batch processor stopped")
+        logger.info("Batch processor stopped")
 
     async def _collect_batch(self) -> list[BatchItem]:
         """Collect batch items."""
@@ -1001,7 +1058,7 @@ class InferenceEngine:
         return batch_items
 
     async def _process_batch(self, batch_items: list[BatchItem]) -> None:
-        """Process batch."""
+        """Process batch with race condition guards."""
         if not batch_items:
             return
 
@@ -1010,13 +1067,39 @@ class InferenceEngine:
         self.config._total_batch_items += len(batch_items)
 
         for item in batch_items:
+            # FIX: Guard against already-completed futures (race condition)
+            if item.future.done():
+                logger.warning(
+                    "Future already completed, skipping",
+                    extra={"equipment_id": item.request.equipment_id}
+                )
+                continue
+                
             try:
                 response = await self._predict_minimal_impl(
                     item.request, item.model_version
                 )
-                item.future.set_result(response)
+                # Double-check before setting result
+                if not item.future.done():
+                    item.future.set_result(response)
+                else:
+                    logger.warning(
+                        "Future completed during processing",
+                        extra={"equipment_id": item.request.equipment_id}
+                    )
             except Exception as e:
-                item.future.set_exception(e)
+                # Double-check before setting exception
+                if not item.future.done():
+                    item.future.set_exception(e)
+                else:
+                    logger.error(
+                        "Cannot set exception, future already done",
+                        extra={
+                            "equipment_id": item.request.equipment_id,
+                            "error": str(e)
+                        },
+                        exc_info=True
+                    )
 
     # ========================================================================
     # CLEANUP
@@ -1054,7 +1137,7 @@ class InferenceEngine:
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-        logger.info("✅ Cleanup complete")
+        logger.info("Cleanup complete")
 
     async def __aenter__(self):
         """Context manager entry."""
