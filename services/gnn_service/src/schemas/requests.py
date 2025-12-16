@@ -494,7 +494,7 @@ class BatchInferenceRequest(BaseModel):
 
     @field_validator("requests")
     @classmethod
-    def validate_unique_equipment_ids(cls, v: list[InferenceRequest], info: ValidationInfo) -> list[InferenceRequest]:
+    def validate_unique_equipment_ids(cls, v: list[InferenceRequest], _info: ValidationInfo) -> list[InferenceRequest]:
         """Проверка уникальности equipment_id в batch."""
         equipment_ids = [req.equipment_id for req in v]
         if len(equipment_ids) != len(set(equipment_ids)):
