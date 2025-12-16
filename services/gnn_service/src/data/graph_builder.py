@@ -42,9 +42,9 @@ logger = logging.getLogger(__name__)
 
 
 class GraphBuilder:
-    """Build PyG graphs из sensor data и metadata.
+    """Build PyG graphs iz sensor data i metadata.
 
-    Процесс:
+    Process:
     1. Extract component-level features from sensor data
     2. Build node feature matrix [N, F]
     3. Construct edge_index from topology [2, E]
@@ -127,12 +127,12 @@ class GraphBuilder:
     def build_component_features(
         self, component_id: str, sensor_data: pd.DataFrame, component_spec: ComponentSpec
     ) -> torch.Tensor:
-        """Construir features для одного component.
+        """Construir features dlya odnogo component.
 
         Args:
             component_id: Component identifier
-            sensor_data: DataFrame с sensor readings [T, sensors]
-            component_spec: ComponentSpec с metadata
+            sensor_data: DataFrame s sensor readings [T, sensors]
+            component_spec: ComponentSpec s metadata
 
         Returns:
             features: Tensor [F]
@@ -148,7 +148,7 @@ class GraphBuilder:
             ...     component_spec
             ... )
         """
-        # Filter sensors для этого component
+        # Filter sensors dlya etogo component
         component_cols = [col for col in sensor_data.columns if component_id in col]
 
         if not component_cols:
@@ -372,8 +372,8 @@ class GraphBuilder:
         """Construir complete PyG graph.
 
         Args:
-            sensor_data: DataFrame с sensor readings [T, sensors]
-            topology: GraphTopology с components and edges
+            sensor_data: DataFrame s sensor readings [T, sensors]
+            topology: GraphTopology s components and edges
             metadata: EquipmentMetadata
             sensor_readings: Optional dict for dynamic edge features
             current_time: Optional timestamp for age calculation
@@ -489,7 +489,7 @@ class GraphBuilder:
             data: PyG Data object
 
         Returns:
-            valid: True если graph valid
+            valid: True esli graph valid
 
         Examples:
             >>> graph = builder.build_graph(...)
@@ -540,17 +540,17 @@ class GraphBuilder:
     def get_component_sensor_columns(
         self, component_id: str, sensor_data: pd.DataFrame
     ) -> list[str]:
-        """Naiti sensor columns для component.
+        """Naiti sensor columns dlya component.
 
         Convention: sensor columns named as "{sensor_type}_{component_id}"
         Example: "pressure_pump_main", "temperature_valve_01"
 
         Args:
             component_id: Component identifier
-            sensor_data: DataFrame с sensor columns
+            sensor_data: DataFrame s sensor columns
 
         Returns:
-            columns: Описание column names
+            columns: Opisanie column names
 
         Examples:
             >>> cols = builder.get_component_sensor_columns("pump_main", sensor_df)
