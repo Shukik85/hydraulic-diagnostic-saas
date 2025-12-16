@@ -10,7 +10,7 @@ Python 3.14 Features:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Annotated, Literal
 
@@ -182,10 +182,9 @@ class SensorConfig(BaseModel):
     @classmethod
     def validate_range(cls, v: float, info: ValidationInfo) -> float:
         """Валидация корректности диапазона."""
-        if info.field_name == "range_max" and "range_min" in info.data:
-            if v <= info.data["range_min"]:
-                msg = "range_max must be greater than range_min"
-                raise ValueError(msg)
+        if info.field_name == "range_max" and "range_min" in info.data and v <= info.data["range_min"]:
+            msg = "range_max must be greater than range_min"
+            raise ValueError(msg)
         return v
 
     @computed_field
@@ -305,8 +304,8 @@ class EquipmentMetadata(BaseModel):
     @computed_field
     def age_years(self) -> float:
         """Возраст оборудования (лет)."""
-        now = datetime.now()
-        delta = now - self.installation_date
+        now = datetime.now(timezone.utc)
+        delta = now - self.installation_date.replace(tzinfo=timezone.utc)
         return delta.days / 365.25
 
     @computed_field
@@ -314,8 +313,8 @@ class EquipmentMetadata(BaseModel):
         """Часы с последнего ТО."""
         if self.last_maintenance_date is None:
             return None
-        now = datetime.now()
-        delta = now - self.last_maintenance_date
+        now = datetime.now(timezone.utc)
+        delta = now - self.last_maintenance_date.replace(tzinfo=timezone.utc)
         # Approximate (assumes continuous operation)
         return delta.days * 10  # ~10 hours/day average
 
@@ -443,8 +442,7 @@ class SystemConfig(BaseModel):
     @classmethod
     def validate_critical_less_than_warning(cls, v: float, info: ValidationInfo) -> float:
         """Critical threshold должен быть ниже warning."""
-        if "health_threshold_warning" in info.data:
-            if v >= info.data["health_threshold_warning"]:
-                msg = "health_threshold_critical must be less than health_threshold_warning"
-                raise ValueError(msg)
+        if "health_threshold_warning" in info.data and v >= info.data["health_threshold_warning"]:
+            msg = "health_threshold_critical must be less than health_threshold_warning"
+            raise ValueError(msg)
         return v
