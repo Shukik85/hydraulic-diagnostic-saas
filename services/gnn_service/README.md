@@ -15,18 +15,39 @@
 
 ---
 
+## ⚙️ Requirements
+
+**Python:** 3.14+ (recommended) | 3.11+ (compatible)
+
+- **3.14+** — Full support with PEP 649 (deferred annotations), enhanced asyncio
+- **3.11+** — Compatible with legacy fallback for TaskGroup
+- **3.10** — Minimum (pipe operator support, but limited features)
+
+**Why Python 3.14?**
+- ✅ **PEP 649** — Deferred type annotations (performance boost)
+- ✅ **Enhanced asyncio** — Better task management
+- ✅ **JIT improvements** — Faster inference
+
+**Dependencies:**
+- PyTorch 2.5+ (CUDA 12.9 support)
+- PyTorch Geometric 2.7+
+- FastAPI 0.115+
+- Polars 0.20+ (async-friendly DataFrames)
+
+---
+
 ## 🏛️ Architecture
 
 ```
-┌────────────────────────────────────────┐
+┌──────────────────────────────────────┐
 │  FastAPI Application (main.py)         │
 │  ├─ Request ID Middleware                 │
 │  ├─ OpenTelemetry Middleware              │
 │  ├─ Rate Limit Middleware (100 req/60s)  │
 │  ├─ Body Size Limit (10MB)                │
 │  └─ CORS Middleware                       │
-└────────────────┬────────────────────────┘
-                 │
+└────────────┬─────────────────────────┘
+             │
         ┌────────▼────────┐
         │  InferenceEngine  │
         ├──────────────────┤
@@ -36,9 +57,9 @@
         │ ● Tensor Validator│
         └────────┬─────────┘
                  │
-     ┌───────────┼───────────┐
+     ┌───────────┼────────────┐
      │            │            │
-┌────▼────┐  ┌────▼─────┐  ┌▼──────────┐
+┌────▼────┐  ┌────▼─────┐  ┌▼───────────┐
 │ PyTorch  │  │ TimescaleDB│  │ Prometheus│
 │ Model    │  │ (Sensors)  │  │ Metrics    │
 └──────────┘  └───────────┘  └────────────┘
@@ -159,7 +180,7 @@ config = InferenceConfig(
 # Available in all logs and traces
 ```
 
-### 7. ☸️ Kubernetes Health Endpoints
+### 7. ⚓ Kubernetes Health Endpoints
 
 ```yaml
 # Liveness probe
@@ -197,9 +218,10 @@ readinessProbe:
 ### 9. ⚡ Performance Optimizations
 
 ✅ **Polars instead of pandas:** Async-friendly, no GIL blocking  
-✅ **TaskGroup (Python 3.11+):** Better async task management  
+✅ **TaskGroup (Python 3.11+):** Better async task management (fallback for 3.10)  
 ✅ **torch.compile:** JIT compilation (if enabled)  
 ✅ **CPU fallback:** Graceful degradation on GPU OOM  
+✅ **PEP 649 (Python 3.14):** Deferred annotations for faster imports  
 
 ---
 
@@ -306,7 +328,7 @@ POST /v1/diagnose
 ### Docker
 
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
@@ -453,8 +475,8 @@ curl http://localhost:8000/metrics
 git clone https://github.com/Shukik85/hydraulic-diagnostic-saas.git
 cd hydraulic-diagnostic-saas/services/gnn_service
 
-# Create venv
-python3.11 -m venv venv
+# Create venv (Python 3.14 recommended)
+python3.14 -m venv venv
 source venv/bin/activate
 
 # Install dependencies
@@ -538,16 +560,16 @@ torch.save({
 ## 🎉 Credits
 
 **Built with:**
+- Python 3.14 (PEP 649, enhanced asyncio)
 - PyTorch 2.5+ & PyTorch Geometric 2.7+
 - FastAPI 0.115+
-- Polars 0.20+
+- Polars 0.20+ (async-friendly DataFrames)
 - OpenTelemetry 1.28+
-- Python 3.11+ (3.14+ recommended)
 
 **Architecture by:** Senior ML Engineer @ Hydraulic Diagnostics Team
 
 ---
 
-## 📝 License
+## 📄 License
 
 MIT License - see LICENSE file for details
