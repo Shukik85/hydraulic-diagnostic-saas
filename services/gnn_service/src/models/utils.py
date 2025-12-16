@@ -24,14 +24,14 @@ logger = logging.getLogger(__name__)
 
 
 def initialize_model(model: nn.Module, method: str = "xavier_uniform") -> nn.Module:
-    """Инициализировать веса модели.
+    """Inicialize weights of the model.
 
     Args:
-        model: PyTorch модель
-        method: Метод инициализации (xavier_uniform, kaiming_normal, orthogonal)
+        model: PyTorch model
+        method: Initialization method (xavier_uniform, kaiming_normal, orthogonal)
 
     Returns:
-        model: Модель с инициализированными весами
+        model: Model with initialized weights
 
     Examples:
         >>> model = UniversalTemporalGNN(...)
@@ -79,16 +79,16 @@ def save_checkpoint(
     save_path: str | Path,
     model_config: dict[str, Any] | None = None,
 ) -> None:
-    """Сохранить model checkpoint.
+    """Save model checkpoint.
 
     Args:
-        model: PyTorch модель
+        model: PyTorch model
         optimizer: Optimizer (or None)
-        epoch: Текущая эпоха
+        epoch: Current epoch
         loss: Loss value
-        metrics: Dictionary с метриками
-        save_path: Путь для сохранения
-        model_config: Конфигурация модели
+        metrics: Dictionary with metrics
+        save_path: Path for saving
+        model_config: Model configuration
 
     Examples:
         >>> save_checkpoint(
@@ -116,7 +116,7 @@ def save_checkpoint(
     if model_config is not None:
         checkpoint["model_config"] = model_config
 
-    # Добавить PyTorch и CUDA версии
+    # Add PyTorch and CUDA versions
     checkpoint["pytorch_version"] = torch.__version__
     checkpoint["cuda_version"] = torch.version.cuda if torch.cuda.is_available() else None
 
@@ -130,16 +130,16 @@ def load_checkpoint(
     optimizer: torch.optim.Optimizer | None = None,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ) -> dict[str, Any]:
-    """Лагрузить model checkpoint.
+    """Load model checkpoint.
 
     Args:
-        checkpoint_path: Путь к checkpoint
-        model: PyTorch модель для лагрузки весов
-        optimizer: Optimizer для лагрузки state (optional)
-        device: Device для лагрузки
+        checkpoint_path: Path to checkpoint
+        model: PyTorch model for loading weights
+        optimizer: Optimizer for loading state (optional)
+        device: Device for loading
 
     Returns:
-        checkpoint: Dictionary с всей информацией checkpoint
+        checkpoint: Dictionary with checkpoint information
 
     Examples:
         >>> model = UniversalTemporalGNN(...)
@@ -173,14 +173,14 @@ def load_checkpoint(
 
 
 def count_parameters(model: nn.Module, trainable_only: bool = False) -> int:
-    """Подсчитать количество параметров модели.
+    """Count number of model parameters.
 
     Args:
-        model: PyTorch модель
-        trainable_only: Считать только trainable параметры
+        model: PyTorch model
+        trainable_only: Count only trainable parameters
 
     Returns:
-        count: Количество параметров
+        count: Number of parameters
 
     Examples:
         >>> model = UniversalTemporalGNN(in_channels=12, hidden_channels=128)
@@ -199,12 +199,12 @@ def model_summary(
     """Generate model summary.
 
     Args:
-        model: PyTorch модель
-        input_size: Input tensor size (optional, для FLOPs estimation)
-        device: Device для computation
+        model: PyTorch model
+        input_size: Input tensor size (optional, for FLOPs estimation)
+        device: Device for computation
 
     Returns:
-        summary: Dictionary с метриками модели
+        summary: Dictionary with model metrics
 
     Examples:
         >>> model = UniversalTemporalGNN(in_channels=12, hidden_channels=128)
@@ -244,10 +244,10 @@ def model_summary(
 
 
 def print_model_summary(model: nn.Module) -> None:
-    """Напечатать human-readable model summary.
+    """Print human-readable model summary.
 
     Args:
-        model: PyTorch модель
+        model: PyTorch model
 
     Examples:
         >>> model = UniversalTemporalGNN(in_channels=12, hidden_channels=128)
@@ -266,15 +266,15 @@ def print_model_summary(model: nn.Module) -> None:
     if "layers" in summary:
         sorted_layers = sorted(summary["layers"], key=lambda x: x["params"], reverse=True)[:10]
 
-        for _layer in sorted_layers:
+        for layer in sorted_layers:
             pass
 
 
 def get_device(model: nn.Module) -> torch.device:
-    """Получить device модели.
+    """Get device of model.
 
     Args:
-        model: PyTorch модель
+        model: PyTorch model
 
     Returns:
         device: torch.device ('cuda:0', 'cpu', etc.)
@@ -288,14 +288,14 @@ def get_device(model: nn.Module) -> torch.device:
 
 
 def model_to_device(model: nn.Module, device: str | torch.device) -> nn.Module:
-    """Перенести модель на device с logging.
+    """Move model to device with logging.
 
     Args:
-        model: PyTorch модель
+        model: PyTorch model
         device: Target device
 
     Returns:
-        model: Модель на указанном device
+        model: Model on specified device
 
     Examples:
         >>> model = UniversalTemporalGNN(...)
@@ -315,14 +315,14 @@ def model_to_device(model: nn.Module, device: str | torch.device) -> nn.Module:
 
 
 def freeze_layers(model: nn.Module, layer_names: list[str]) -> nn.Module:
-    """Заморозить определённые layers (для fine-tuning).
+    """Freeze specific layers (for fine-tuning).
 
     Args:
-        model: PyTorch модель
-        layer_names: Список имён layers для заморозки
+        model: PyTorch model
+        layer_names: List of layer names to freeze
 
     Returns:
-        model: Модель с замороженными layers
+        model: Model with frozen layers
 
     Examples:
         >>> model = UniversalTemporalGNN(...)
@@ -342,13 +342,13 @@ def freeze_layers(model: nn.Module, layer_names: list[str]) -> nn.Module:
 
 
 def unfreeze_all_layers(model: nn.Module) -> nn.Module:
-    """Разморозить все layers.
+    """Unfreeze all layers.
 
     Args:
-        model: PyTorch модель
+        model: PyTorch model
 
     Returns:
-        model: Модель с размороженными parameters
+        model: Model with unfrozen parameters
     """
     for param in model.parameters():
         param.requires_grad = True
