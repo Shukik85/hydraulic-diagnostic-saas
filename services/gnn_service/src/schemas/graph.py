@@ -239,14 +239,14 @@ class EdgeSpec(BaseModel):
     # DYNAMIC METHODS
     # ========================================================================
 
-    def get_age_hours(self, current_time: datetime) -> float:
+    def get_age_hours(self, _current_time: datetime) -> float:
         """Get connection age in hours.
 
         Returns age_hours if set, otherwise 0 (unknown age).
         For topology-based age computation, see EdgeConfiguration.get_age_hours().
 
         Args:
-            current_time: Current timestamp
+            _current_time: Current timestamp (reserved for future use)
 
         Returns:
             Age in hours (0 if unknown)
@@ -374,7 +374,7 @@ class ComponentSpec(BaseModel):
 
     @field_validator("sensors")
     @classmethod
-    def validate_unique_sensors(cls, v: list[str], info: ValidationInfo) -> list[str]:
+    def validate_unique_sensors(cls, v: list[str], _info: ValidationInfo) -> list[str]:
         """Проверка уникальности sensor IDs."""
         if len(v) != len(set(v)):
             msg = "Sensor IDs must be unique"
@@ -473,7 +473,7 @@ class GraphTopology(BaseModel):
 
     @field_validator("components")
     @classmethod
-    def validate_component_ids_match(cls, v: dict[str, ComponentSpec], info: ValidationInfo) -> dict[str, ComponentSpec]:
+    def validate_component_ids_match(cls, v: dict[str, ComponentSpec], _info: ValidationInfo) -> dict[str, ComponentSpec]:
         """Проверка соответствия ключей и component_id."""
         for key, component in v.items():
             if key != component.component_id:
