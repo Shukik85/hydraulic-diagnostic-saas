@@ -125,14 +125,13 @@ class GraphBuilder:
         self.edge_normalizer = edge_normalizer or create_edge_feature_normalizer()
 
     def build_component_features(
-        self, component_id: str, sensor_data: pd.DataFrame, component_spec: ComponentSpec
+        self, component_id: str, sensor_data: pd.DataFrame
     ) -> torch.Tensor:
         """Construir features dlya odnogo component.
 
         Args:
             component_id: Component identifier
             sensor_data: DataFrame s sensor readings [T, sensors]
-            component_spec: ComponentSpec s metadata
 
         Returns:
             features: Tensor [F]
@@ -144,8 +143,7 @@ class GraphBuilder:
             ... })
             >>> features = builder.build_component_features(
             ...     "pump_main",
-            ...     sensor_df,
-            ...     component_spec
+            ...     sensor_df
             ... )
         """
         # Filter sensors dlya etogo component
@@ -365,7 +363,6 @@ class GraphBuilder:
         self,
         sensor_data: pd.DataFrame,
         topology: GraphTopology,
-        metadata: EquipmentMetadata,
         sensor_readings: dict[str, ComponentSensorReading] | None = None,
         current_time: datetime | None = None,
     ) -> Data:
@@ -374,7 +371,6 @@ class GraphBuilder:
         Args:
             sensor_data: DataFrame s sensor readings [T, sensors]
             topology: GraphTopology s components and edges
-            metadata: EquipmentMetadata
             sensor_readings: Optional dict for dynamic edge features
             current_time: Optional timestamp for age calculation
 
@@ -386,7 +382,6 @@ class GraphBuilder:
             >>> graph = builder.build_graph(
             ...     sensor_df,
             ...     topology,
-            ...     metadata,
             ...     sensor_readings={
             ...         "pump_1": ComponentSensorReading(pressure_bar=150, ...),
             ...         "valve_1": ComponentSensorReading(pressure_bar=148, ...)
@@ -396,16 +391,16 @@ class GraphBuilder:
             >>> graph.edge_attr.shape  # [E, 14]
             >>>
             >>> # Without dynamic features (8D)
-            >>> graph = builder.build_graph(sensor_df, topology, metadata)
+            >>> graph = builder.build_graph(sensor_df, topology)
             >>> graph.edge_attr.shape  # [E, 8]
         """
         # 1. Build node features
         node_features_list = []
         component_id_to_idx = {}  # Map component_id -> node index
 
-        for idx, (comp_id, comp_spec) in enumerate(topology.components.items()):
+        for idx, comp_id in enumerate(topology.components.keys()):
             features = self.build_component_features(
-                component_id=comp_id, sensor_data=sensor_data, component_spec=comp_spec
+                component_id=comp_id, sensor_data=sensor_data
             )
             node_features_list.append(features)
             component_id_to_idx[comp_id] = idx
