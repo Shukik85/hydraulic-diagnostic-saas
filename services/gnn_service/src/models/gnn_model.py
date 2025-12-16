@@ -288,8 +288,7 @@ class UniversalTemporalGNN(nn.Module):
         # Use compiled version if available, otherwise use eager
         if self._compiled_forward is not None and not return_attention:
             return self._compiled_forward(x, edge_index, edge_attr, batch)
-        else:
-            return self._forward_impl(x, edge_index, edge_attr, batch, return_attention)
+        return self._forward_impl(x, edge_index, edge_attr, batch, return_attention)
 
     def _forward_impl(
         self,
