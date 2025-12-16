@@ -69,10 +69,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 import torch
+from configs.config import inference_config
 from prometheus_client import Counter, Gauge, Histogram
 from torch_geometric.data import Data
 
-from configs.config import inference_config
 from src.schemas import (
     AnomalyPrediction,
     DegradationPrediction,
@@ -196,7 +196,7 @@ class ModelConfig:
 
     def __post_init__(self):
         """Validate configuration.
-        
+
         Note: Path.exists() check here is acceptable for early validation.
         Model loading happens lazily during engine initialization.
         """
@@ -269,7 +269,9 @@ class ModelRegistry:
             "total_versions": len(self._models),
             "enabled_versions": sum(1 for c in self._models.values() if c.enabled),
             "loaded_versions": len(self._loaded_models),
-            "traffic_split": {v: c.traffic for v, c in self._models.items() if c.enabled},
+            "traffic_split": {
+                v: c.traffic for v, c in self._models.items() if c.enabled
+            },
         }
 
 
@@ -380,7 +382,10 @@ class TensorValidator:
             )
 
         # Edge features
-        if graph.edge_attr is not None and graph.edge_attr.shape[1] != self.expected_edge_dim:
+        if (
+            graph.edge_attr is not None
+            and graph.edge_attr.shape[1] != self.expected_edge_dim
+        ):
             raise TensorValidationError(
                 f"Edge dim mismatch: expected {self.expected_edge_dim}, "
                 f"got {graph.edge_attr.shape[1]}"
@@ -504,13 +509,19 @@ class InferenceConfig:
             raise ValueError(msg)
 
         # Single model validation
-        if self.model_path and not self.model_versions and not Path(self.model_path).exists():
+        if (
+            self.model_path
+            and not self.model_versions
+            and not Path(self.model_path).exists()
+        ):
             msg = f"Model not found: {self.model_path}"
             raise FileNotFoundError(msg)
 
         # Multi-model traffic validation
         if self.model_versions:
-            total_traffic = sum(c.traffic for c in self.model_versions.values() if c.enabled)
+            total_traffic = sum(
+                c.traffic for c in self.model_versions.values() if c.enabled
+            )
             if not 0.99 <= total_traffic <= 1.01:
                 warnings.warn(
                     f"Traffic sums to {total_traffic:.2f} (expected 1.0)",
@@ -563,7 +574,6 @@ class InferenceEngine:
         # after the class definition is complete.
         from src.data import FeatureConfig, FeatureEngineer, GraphBuilder
         from src.data.edge_features import create_edge_feature_computer
-        from src.data.normalization import create_edge_feature_normalizer
         from src.inference.dynamic_graph_builder import DynamicGraphBuilder
         from src.inference.model_manager import ModelManager
         from src.services.topology_service import get_topology_service
@@ -660,7 +670,7 @@ class InferenceEngine:
 
     def _load_normalizer(self, checkpoint_path: str) -> Any:
         """Load normalizer from checkpoint.
-        
+
         Security Fix: Uses weights_only=True to prevent arbitrary code execution.
         """
         from src.data.normalization import create_edge_feature_normalizer
@@ -670,7 +680,7 @@ class InferenceEngine:
             checkpoint = torch.load(
                 checkpoint_path,
                 map_location="cpu",
-                weights_only=True  # Changed from False - prevents arbitrary code execution
+                weights_only=True,  # Changed from False - prevents arbitrary code execution
             )
             if "normalizer_stats" in checkpoint:
                 normalizer = create_edge_feature_normalizer()
@@ -683,7 +693,7 @@ class InferenceEngine:
             logger.error(
                 f"Failed to load checkpoint with weights_only=True: {checkpoint_path}. "
                 "Ensure checkpoint was saved with PyTorch 2.0+",
-                exc_info=True
+                exc_info=True,
             )
             raise ModelLoadError(
                 f"Checkpoint incompatible with weights_only=True. "
@@ -722,7 +732,9 @@ class InferenceEngine:
     # PREDICTION
     # ========================================================================
 
-    async def predict_minimal(self, request: MinimalInferenceRequest) -> PredictionResponse:
+    async def predict_minimal(
+        self, request: MinimalInferenceRequest
+    ) -> PredictionResponse:
         """Predict with minimal request.
 
         Args:
@@ -750,22 +762,22 @@ class InferenceEngine:
                     future=future,
                     model_version=model_version,
                 )
-                
+
                 # FIX: Add timeout for queue put operation
                 try:
                     await asyncio.wait_for(
                         self._batch_queue.put(item),
-                        timeout=inference_config.queue_put_timeout_s
+                        timeout=inference_config.queue_put_timeout_s,
                     )
                     REQUEST_QUEUE_SIZE.set(self._batch_queue.qsize())
-                except asyncio.TimeoutError as e:
+                except TimeoutError as e:
                     INFERENCE_ERRORS_TOTAL.labels(error_type="queue_timeout").inc()
                     logger.error(
                         "Queue full, cannot accept request",
                         extra={
                             "equipment_id": request.equipment_id,
-                            "queue_size": self._batch_queue.qsize()
-                        }
+                            "queue_size": self._batch_queue.qsize(),
+                        },
                     )
                     raise InferenceError("Request queue full, please retry") from e
 
@@ -775,7 +787,7 @@ class InferenceEngine:
                         future,
                         timeout=self.config.inference_timeout_s,
                     )
-                except asyncio.TimeoutError as e:
+                except TimeoutError as e:
                     # Cancel future if not already done
                     if not future.done():
                         future.cancel()
@@ -783,8 +795,8 @@ class InferenceEngine:
                         "Inference timeout",
                         extra={
                             "equipment_id": request.equipment_id,
-                            "timeout_s": self.config.inference_timeout_s
-                        }
+                            "timeout_s": self.config.inference_timeout_s,
+                        },
                     )
                     raise InferenceError(
                         f"Inference timeout after {self.config.inference_timeout_s}s"
@@ -816,7 +828,9 @@ class InferenceEngine:
                 status="timeout",
             ).inc()
             logger.error(f"Timeout: {request.equipment_id}")
-            raise InferenceError(f"Timeout after {self.config.inference_timeout_s}s") from e
+            raise InferenceError(
+                f"Timeout after {self.config.inference_timeout_s}s"
+            ) from e
         except Exception as e:
             self.config._total_errors += 1
             error_type = type(e).__name__
@@ -873,17 +887,19 @@ class InferenceEngine:
             if self.config.fallback_to_cpu:
                 logger.warning(
                     "GPU OOM detected, falling back to CPU",
-                    extra={"equipment_id": request.equipment_id}
+                    extra={"equipment_id": request.equipment_id},
                 )
                 # FIX: Use .to('cpu') instead of .cpu() for proper device transfer
                 if self.model_registry:
                     model = self.model_registry.get_model(model_version)
-                    model.to('cpu')  # In-place device transfer
+                    model.to("cpu")  # In-place device transfer
                 else:
-                    self.model.to('cpu')  # In-place device transfer
+                    self.model.to("cpu")  # In-place device transfer
                 # Move graph to CPU as well
-                graph = graph.to('cpu')
-                health, degradation, anomaly = self._inference_single(graph, model_version)
+                graph = graph.to("cpu")
+                health, degradation, anomaly = self._inference_single(
+                    graph, model_version
+                )
             else:
                 raise GPUOutOfMemoryError("GPU OOM during inference") from e
         except Exception as e:
@@ -923,7 +939,9 @@ class InferenceEngine:
             sensor_records = []
             for component_id, readings in request.sensor_readings.items():
                 readings_dict = (
-                    readings.model_dump() if hasattr(readings, "model_dump") else readings
+                    readings.model_dump()
+                    if hasattr(readings, "model_dump")
+                    else readings
                 )
                 for sensor_name, value in readings_dict.items():
                     if value is None:
@@ -1007,14 +1025,17 @@ class InferenceEngine:
         ]
 
         anomaly_predictions = {
-            atype: float(prob) for atype, prob in zip(anomaly_types, anomaly_probs, strict=True)
+            atype: float(prob)
+            for atype, prob in zip(anomaly_types, anomaly_probs, strict=True)
         }
 
         # Warnings
         if health_score < 0.3:
             logger.warning(f"Low health: {health_score:.2f} for {equipment_id}")
         if degradation_rate > 0.8:
-            logger.warning(f"High degradation: {degradation_rate:.2f} for {equipment_id}")
+            logger.warning(
+                f"High degradation: {degradation_rate:.2f} for {equipment_id}"
+            )
 
         return PredictionResponse(
             equipment_id=equipment_id,
@@ -1075,10 +1096,10 @@ class InferenceEngine:
             if item.future.done():
                 logger.warning(
                     "Future already completed, skipping",
-                    extra={"equipment_id": item.request.equipment_id}
+                    extra={"equipment_id": item.request.equipment_id},
                 )
                 continue
-                
+
             try:
                 response = await self._predict_minimal_impl(
                     item.request, item.model_version
@@ -1089,7 +1110,7 @@ class InferenceEngine:
                 else:
                     logger.warning(
                         "Future completed during processing",
-                        extra={"equipment_id": item.request.equipment_id}
+                        extra={"equipment_id": item.request.equipment_id},
                     )
             except Exception as e:
                 # Double-check before setting exception
@@ -1100,9 +1121,9 @@ class InferenceEngine:
                         "Cannot set exception, future already done",
                         extra={
                             "equipment_id": item.request.equipment_id,
-                            "error": str(e)
+                            "error": str(e),
                         },
-                        exc_info=True
+                        exc_info=True,
                     )
 
     # ========================================================================
@@ -1165,9 +1186,7 @@ class InferenceEngine:
         avg_time_ms = (
             (self.config._total_inference_time_s / total) * 1000 if total > 0 else 0.0
         )
-        avg_batch_size = (
-            self.config._total_batch_items / total if total > 0 else 0.0
-        )
+        avg_batch_size = self.config._total_batch_items / total if total > 0 else 0.0
 
         stats = {
             # Config
@@ -1194,7 +1213,9 @@ class InferenceEngine:
 
         # GPU
         if torch.cuda.is_available():
-            stats["gpu_memory_allocated_mb"] = torch.cuda.memory_allocated() / 1024 / 1024
+            stats["gpu_memory_allocated_mb"] = (
+                torch.cuda.memory_allocated() / 1024 / 1024
+            )
             stats["gpu_memory_reserved_mb"] = torch.cuda.memory_reserved() / 1024 / 1024
 
         return stats
