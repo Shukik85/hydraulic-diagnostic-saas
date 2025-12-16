@@ -896,7 +896,7 @@ class InferenceEngine:
             stats["model_registry"] = self.model_registry.get_stats()
 
         if self._batch_queue:
-            stats["queue_size": self._batch_queue.qsize()
+            stats["queue_size"] = self._batch_queue.qsize()  # FIX: Added missing `]`
 
         if torch.cuda.is_available():
             stats["gpu_memory_allocated_mb"] = (
