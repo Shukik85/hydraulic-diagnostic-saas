@@ -137,7 +137,7 @@ class HydraulicGraphDataset(Dataset[Data]):
             msg = f"Equipment list not found: {self.data_path}"
             raise FileNotFoundError(msg)
 
-        with open(self.data_path) as f:
+        with self.data_path.open() as f:
             equipment_list = json.load(f)
 
         logger.info(f"Loaded {len(equipment_list)} equipment from {self.data_path}")
@@ -193,7 +193,7 @@ class HydraulicGraphDataset(Dataset[Data]):
             return None
 
         try:
-            with open(cache_path, "rb") as f:
+            with cache_path.open("rb") as f:
                 graph = pickle.load(f)
             logger.debug(f"Cache hit: {cache_path.name}")
             return graph
@@ -209,7 +209,7 @@ class HydraulicGraphDataset(Dataset[Data]):
             graph: Data object to cache
         """
         try:
-            with open(cache_path, "wb") as f:
+            with cache_path.open("wb") as f:
                 pickle.dump(graph, f, protocol=pickle.HIGHEST_PROTOCOL)
             logger.debug(f"Cached: {cache_path.name}")
         except Exception as e:
