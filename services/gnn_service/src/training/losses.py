@@ -278,25 +278,41 @@ class UncertaintyWeighting(nn.Module):
         """Compute weighted loss.
 
         Args:
-            losses: Dictionary of task losses
+            losses: Dictionary of task losses (must be scalar tensors)
 
         Returns:
             total_loss: Weighted sum of losses
 
-        Examples:
-            Formula: L_total = sum_i (exp(-log_var_i) * L_i + log_var_i)
+        Formula:
+            L_total = sum_i (exp(-log_var_i) * L_i + log_var_i)
+
+        Note:
+            Uses list+stack approach to avoid inplace operations
+            that cause "backward through graph twice" errors.
         """
         task_names = list(losses.keys())
-
-        total_loss: torch.Tensor = torch.tensor(0.0, device=self.log_vars.device)
-
+        
+        # Validate that all losses are scalars
+        for task_name, loss_val in losses.items():
+            if loss_val.dim() > 0:
+                raise ValueError(
+                    f"Loss '{task_name}' must be scalar, got shape {loss_val.shape}. "
+                    "Call .mean() on the loss before passing to UncertaintyWeighting."
+                )
+        
+        # CRITICAL: Use list+stack instead of inplace accumulation
+        # This prevents "backward through graph twice" errors
+        weighted_losses = []
+        
         for i, task_name in enumerate(task_names):
-            # Uncertainty weighting
+            # Uncertainty weighting: precision * loss + regularization
             precision = torch.exp(-self.log_vars[i])
             loss_weighted = precision * losses[task_name] + self.log_vars[i]
-
-            total_loss = total_loss + loss_weighted
-
+            weighted_losses.append(loss_weighted)
+        
+        # Stack and sum (preserves gradient graph correctly)
+        total_loss = torch.stack(weighted_losses).sum()
+        
         return total_loss
 
 
