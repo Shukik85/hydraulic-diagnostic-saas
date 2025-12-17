@@ -4,6 +4,7 @@
 # Model architecture
 model:
   in_channels: 34
+  edge_dim: 14  # 8 static + 6 dynamic edge features
   hidden_channels: 128
   num_heads: 8
   num_gat_layers: 3
