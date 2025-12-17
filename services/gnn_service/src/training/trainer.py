@@ -206,7 +206,7 @@ def create_production_trainer(
     early_stopping_cfg = config.get("early_stopping", {})
     logging_cfg = config.get("logging", {})
     validation_cfg = config.get("validation", {})
-    hardware_cfg = config.get("hardware", {})
+    hardware_cfg = config.get("hardware", {})  # noqa: F841
     reproducibility_cfg = config.get("reproducibility", {})
 
     trainer_config = TrainerConfig(
@@ -242,7 +242,7 @@ def create_production_trainer(
         deterministic=reproducibility_cfg.get("deterministic", False),
         benchmark=reproducibility_cfg.get("benchmark", True),
     )
-    
+
     return create_trainer(trainer_config)
 
 
@@ -275,5 +275,5 @@ def create_development_trainer(
         logger_name="hydraulic_gnn_dev",
         fast_dev_run=fast_dev_run,
     )
-    
+
     return create_trainer(trainer_config)

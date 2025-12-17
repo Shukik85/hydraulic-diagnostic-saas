@@ -56,7 +56,7 @@ def load_config(config_path: str | Path) -> dict:
     Returns:
         Configuration dictionary
     """
-    with open(config_path) as f:
+    with Path(config_path).open() as f:
         config = yaml.safe_load(f)
     return config
 
@@ -150,13 +150,17 @@ def create_module_from_config(config: dict) -> HydraulicGNNModule:
         component_weights=component_weights,
         severity_weights=severity_weights,
         # Domain adversarial config
-        lambda_domain=loss_config.get("domain_adversarial", {}).get("lambda_domain", 0.5),
+        lambda_domain=loss_config.get("domain_adversarial", {}).get(
+            "lambda_domain", 0.5
+        ),
         num_domains=loss_config.get("domain_adversarial", {}).get("num_domains", 2),
     )
 
     logger.info("✅ Module created with full config integration")
     logger.info(f"   - Advanced losses: {loss_config.get('use_advanced_losses', True)}")
-    logger.info(f"   - Confidence weighting: {loss_config.get('use_confidence_weighting', True)}")
+    logger.info(
+        f"   - Confidence weighting: {loss_config.get('use_confidence_weighting', True)}"
+    )
     logger.info(f"   - Loss weighting: {loss_config.get('weighting', 'uncertainty')}")
     logger.info(f"   - Scheduler: {scheduler_type}")
 
@@ -216,7 +220,9 @@ async def create_dataloader_from_config(config: dict, mode: str = "dev"):
         graphs = await loader.load_temporal_sequence(
             equipment_id="pump_001",
             start_time="2024-01-01T00:00:00",
-            end_time=f"2024-01-01T{hours:02d}:00:00" if hours < 24 else "2024-01-08T00:00:00",
+            end_time=f"2024-01-01T{hours:02d}:00:00"
+            if hours < 24
+            else "2024-01-08T00:00:00",
             topology=topology,
         )
 
@@ -258,9 +264,13 @@ async def create_dataloader_from_config(config: dict, mode: str = "dev"):
 
         # Validate first batch
         sample_batch = next(iter(train_loader))
-        logger.info(f"   - Sample batch: {sample_batch.num_graphs} graphs, {sample_batch.x.shape[0]} nodes")
+        logger.info(
+            f"   - Sample batch: {sample_batch.num_graphs} graphs, {sample_batch.x.shape[0]} nodes"
+        )
         if hasattr(sample_batch, "confidence"):
-            logger.info(f"   - ✅ Confidence scores present (mean: {sample_batch.confidence.mean():.3f})")
+            logger.info(
+                f"   - ✅ Confidence scores present (mean: {sample_batch.confidence.mean():.3f})"
+            )
         else:
             logger.warning("   - ⚠️  No confidence scores in batch")
 
@@ -295,9 +305,9 @@ def main():
     )
     args = parser.parse_args()
 
-    logger.info("="*80)
+    logger.info("=" * 80)
     logger.info("🚀 Universal Temporal GNN Training")
-    logger.info("="*80)
+    logger.info("=" * 80)
 
     # Load and validate config
     logger.info(f"📄 Loading config from: {args.config}")
@@ -353,18 +363,20 @@ def main():
     logger.info(f"   - Devices: {config['training'].get('devices', 1)}")
     logger.info(f"   - Accelerator: {config['training'].get('accelerator', 'gpu')}")
     logger.info(f"   - Precision: {config['training'].get('precision', 16)}")
-    logger.info(f"   - Gradient clip: {config['training'].get('gradient_clip_val', 1.0)}")
+    logger.info(
+        f"   - Gradient clip: {config['training'].get('gradient_clip_val', 1.0)}"
+    )
 
     # Start training
-    logger.info("\n" + "="*80)
+    logger.info("\n" + "=" * 80)
     logger.info("🚀 Starting training...")
-    logger.info("="*80)
+    logger.info("=" * 80)
 
     try:
         trainer.fit(module, train_loader, val_loader)
-        logger.info("\n" + "="*80)
+        logger.info("\n" + "=" * 80)
         logger.info("✅ Training completed successfully!")
-        logger.info("="*80)
+        logger.info("=" * 80)
 
         # Log results
         if hasattr(trainer, "checkpoint_callback"):
@@ -373,7 +385,9 @@ def main():
                 logger.info(f"🏆 Best model saved: {best_model_path}")
 
         logger.info("\n📈 View training logs:")
-        logger.info(f"   tensorboard --logdir {config.get('logging', {}).get('save_dir', 'logs')}")
+        logger.info(
+            f"   tensorboard --logdir {config.get('logging', {}).get('save_dir', 'logs')}"
+        )
 
     except KeyboardInterrupt:
         logger.warning("\n⚠️  Training interrupted by user")
