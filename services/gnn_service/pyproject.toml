@@ -11,6 +11,15 @@ authors = [
     {name = "GNN Service Team", email = "team@example.com"},
 ]
 
+# Setuptools configuration for package discovery
+[tool.setuptools.packages.find]
+where = ["."]  # Look in current directory
+include = ["src*"]  # Include src and all subpackages
+exclude = ["tests*", "docs*", "*.tests", "*.tests.*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.yml", "*.json", "*.toml"]
+
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["tests"]
