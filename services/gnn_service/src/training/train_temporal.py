@@ -127,6 +127,7 @@ def create_module_from_config(config: dict) -> HydraulicGNNModule:
     module = HydraulicGNNModule(
         # Model architecture
         in_channels=model_config["in_channels"],
+        edge_in_dim=model_config.get("edge_dim", 8),  # Map edge_dim to edge_in_dim
         hidden_channels=model_config["hidden_channels"],
         num_heads=model_config.get("num_heads", 8),
         num_gat_layers=model_config.get("num_gat_layers", 3),
@@ -163,6 +164,7 @@ def create_module_from_config(config: dict) -> HydraulicGNNModule:
     )
     logger.info(f"   - Loss weighting: {loss_config.get('weighting', 'uncertainty')}")
     logger.info(f"   - Scheduler: {scheduler_type}")
+    logger.info(f"   - Edge dim: {model_config.get('edge_dim', 8)}")
 
     return module
 
