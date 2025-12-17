@@ -217,6 +217,21 @@ class HydraulicGNNModule(pl.LightningModule):
             if not hasattr(batch, field):
                 raise AttributeError(f"Batch missing required field: {field}")
 
+        # Fix anomaly target shapes if flattened by DataLoader
+        # Graph anomaly: should be [batch_size, 9]
+        y_graph_anomaly = batch.y_graph_anomaly
+        if y_graph_anomaly.dim() == 1:
+            batch_size = outputs["graph"]["anomaly"].size(0)
+            num_classes = outputs["graph"]["anomaly"].size(1)
+            y_graph_anomaly = y_graph_anomaly.view(batch_size, num_classes)
+        
+        # Component anomaly: should be [num_nodes, 9]
+        y_component_anomaly = batch.y_component_anomaly
+        if y_component_anomaly.dim() == 1:
+            num_nodes = outputs["component"]["anomaly"].size(0)
+            num_classes = outputs["component"]["anomaly"].size(1)
+            y_component_anomaly = y_component_anomaly.view(num_nodes, num_classes)
+
         # Get confidence if using confidence-weighted losses
         if self.use_confidence_weighting and self.use_advanced_losses:
             if not hasattr(batch, "confidence"):
@@ -275,11 +290,11 @@ class HydraulicGNNModule(pl.LightningModule):
             # Anomaly losses (no confidence for classification)
             graph_anomaly_loss = self.graph_anomaly_loss(
                 outputs["graph"]["anomaly"], 
-                batch.y_graph_anomaly
+                y_graph_anomaly  # Fixed shape
             )
             component_anomaly_loss = self.component_anomaly_loss(
                 outputs["component"]["anomaly"], 
-                batch.y_component_anomaly
+                y_component_anomaly  # Fixed shape
             )
 
         else:
@@ -294,7 +309,7 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             graph_anomaly_loss = self.graph_anomaly_loss(
                 outputs["graph"]["anomaly"], 
-                batch.y_graph_anomaly
+                y_graph_anomaly  # Fixed shape
             )
             graph_rul_loss = self.graph_rul_loss(
                 outputs["graph"]["rul"].squeeze(-1), 
@@ -306,7 +321,7 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             component_anomaly_loss = self.component_anomaly_loss(
                 outputs["component"]["anomaly"], 
-                batch.y_component_anomaly
+                y_component_anomaly  # Fixed shape
             )
 
         # Domain adversarial loss (optional)
