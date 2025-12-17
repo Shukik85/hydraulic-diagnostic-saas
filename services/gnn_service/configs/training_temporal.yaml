@@ -21,7 +21,7 @@ training:
   num_workers: 4
   devices: 1
   accelerator: gpu
-  precision: 16
+  precision: "32"  # Use 32-bit for stability
   gradient_clip_val: 1.0
   accumulate_grad_batches: 1
 
@@ -33,7 +33,9 @@ loss_config:
   use_domain_adversarial: false   # Enable for transfer learning
   
   # Loss weighting strategy
-  weighting: "uncertainty"  # "fixed" or "uncertainty"
+  # NOTE: Using 'fixed' instead of 'uncertainty' to avoid Lightning backward conflicts
+  # TODO: Debug UncertaintyWeighting for future use
+  weighting: "fixed"  # "fixed" or "uncertainty"
   
   # Fixed weights (if weighting="fixed")
   loss_weights:
@@ -139,7 +141,7 @@ checkpoint:
 
 # Logging
 logging:
-  log_every_n_steps: 50
+  log_every_n_steps: 5  # Lower value to see logs earlier
   save_dir: "logs/production"
   name: "hydraulic_gnn_grape_dida"
   version: null
