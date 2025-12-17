@@ -304,6 +304,7 @@ class UncertaintyWeighting(nn.Module):
 
         Note:
             All computations in float32 for stability.
+            Weights are NEVER part of backward graph.
         """
         task_names = list(losses.keys())
         
@@ -322,12 +323,19 @@ class UncertaintyWeighting(nn.Module):
             )
         
         # Simple weighted sum (no learnable parameters)
+        # NOTE: Detach weights to ensure they never participate in backward
         weighted_losses = []
         
         for i, task_name in enumerate(task_names):
+            # Get weight (as buffer, not parameter)
             weight = self.task_weights[i].float()
+            
+            # Get loss value and ensure it's a scalar
             loss_val = losses[task_name].float()
-            loss_weighted = weight * loss_val
+            
+            # CRITICAL: Detach weight from computation graph
+            # This ensures weight never participates in backward pass
+            loss_weighted = weight.detach() * loss_val
             weighted_losses.append(loss_weighted)
         
         # Stack and sum
