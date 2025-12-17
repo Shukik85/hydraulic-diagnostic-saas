@@ -18,7 +18,6 @@ import torch
 from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
-from torch_scatter import scatter_mean
 
 from src.models import UniversalTemporalGNN
 from src.training.losses import UncertaintyWeighting
@@ -235,12 +234,18 @@ class HydraulicGNNModule(pl.LightningModule):
                 node_confidence = batch.confidence
                 
                 # Aggregate to graph-level confidence [num_graphs] e.g. [32]
-                # Using scatter_mean: average node confidences per graph
-                graph_confidence = scatter_mean(
-                    node_confidence, 
-                    batch.batch, 
+                # Using native PyTorch scatter_reduce (mean)
+                graph_confidence = torch.zeros(
+                    batch.num_graphs, 
+                    dtype=node_confidence.dtype, 
+                    device=node_confidence.device
+                )
+                graph_confidence.scatter_reduce_(
                     dim=0,
-                    dim_size=batch.num_graphs
+                    index=batch.batch,
+                    src=node_confidence,
+                    reduce="mean",
+                    include_self=False
                 )
 
             # === GRAPH-LEVEL LOSSES (use graph_confidence) ===
