@@ -65,7 +65,8 @@ class TimescaleConnector:
         end_dt = datetime.fromisoformat(end_time.replace("Z", ""))
 
         # Generate timestamps (10 second intervals)
-        timestamps = pd.date_range(start=start_dt, end=end_dt, freq="10S")
+        # NOTE: Use lowercase 's' instead of 'S' (pandas 2.x compatibility)
+        timestamps = pd.date_range(start=start_dt, end=end_dt, freq="10s")
         n_timesteps = len(timestamps)
 
         # Define sensors (matches GraphTopology)
