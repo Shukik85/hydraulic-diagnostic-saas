@@ -246,17 +246,22 @@ class QuantileRULLoss(nn.Module):
 
 
 class UncertaintyWeighting(nn.Module):
-    """Uncertainty-based multi-task weighting.
+    """Uncertainty-based multi-task weighting (Lightning-compatible).
 
-    Learns task weights dynamically based on homoscedastic uncertainty.
-    Balances tasks automatically without manual tuning.
+    Uses fixed uncertainty weights (buffers) instead of learnable parameters
+    to avoid conflicts with Lightning's optimization loop.
 
     Args:
         num_tasks: Number of tasks
-        init_log_var: Initial log variance for each task
+        init_weights: Initial fixed weights for each task (default: equal weights)
 
     References:
         - Multi-Task Learning Using Uncertainty: https://arxiv.org/abs/1705.07115
+
+    Note:
+        This implementation uses `register_buffer` instead of `nn.Parameter`
+        to prevent "backward through graph twice" errors in Lightning.
+        Weights are fixed but can be manually updated if needed.
 
     Examples:
         >>> weighter = UncertaintyWeighting(num_tasks=3)
@@ -268,13 +273,21 @@ class UncertaintyWeighting(nn.Module):
         >>> total_loss = weighter(losses)
     """
 
-    def __init__(self, num_tasks: int, init_log_var: float = 0.0):
+    def __init__(self, num_tasks: int, init_weights: list[float] | None = None):
         super().__init__()
 
-        # Learnable log variances (one per task)
-        # CRITICAL: Initialize as float32 to avoid AMP issues
-        self.log_vars = nn.Parameter(
-            torch.full((num_tasks,), init_log_var, dtype=torch.float32)
+        # Use fixed weights as buffers (not learnable parameters)
+        # This prevents conflicts with Lightning's optimizer.step()
+        if init_weights is None:
+            init_weights = [1.0] * num_tasks
+        
+        if len(init_weights) != num_tasks:
+            raise ValueError(f"init_weights length {len(init_weights)} != num_tasks {num_tasks}")
+        
+        # Register as buffer (not parameter) - no gradients, no optimizer
+        self.register_buffer(
+            "task_weights",
+            torch.tensor(init_weights, dtype=torch.float32)
         )
 
     def forward(self, losses: dict[str, torch.Tensor]) -> torch.Tensor:
@@ -287,11 +300,10 @@ class UncertaintyWeighting(nn.Module):
             total_loss: Weighted sum of losses
 
         Formula:
-            L_total = sum_i (exp(-log_var_i) * L_i + log_var_i)
+            L_total = sum_i (weight_i * L_i)
 
         Note:
-            Forces all computations to float32 for AMP compatibility.
-            This prevents "backward through graph twice" errors.
+            All computations in float32 for stability.
         """
         task_names = list(losses.keys())
         
@@ -303,21 +315,22 @@ class UncertaintyWeighting(nn.Module):
                     "Call .mean() on the loss before passing to UncertaintyWeighting."
                 )
         
-        # CRITICAL: Force float32 for AMP compatibility
-        # This prevents issues with 16-bit gradients on nn.Parameter
+        if len(task_names) != len(self.task_weights):
+            raise ValueError(
+                f"Number of losses ({len(task_names)}) does not match "
+                f"number of tasks ({len(self.task_weights)})"
+            )
+        
+        # Simple weighted sum (no learnable parameters)
         weighted_losses = []
         
         for i, task_name in enumerate(task_names):
-            # Force float32 conversion
-            log_var = self.log_vars[i].float()  # ← AMP-safe
-            loss_val = losses[task_name].float()  # ← AMP-safe
-            
-            # Uncertainty weighting: precision * loss + regularization
-            precision = torch.exp(-log_var)
-            loss_weighted = precision * loss_val + log_var
+            weight = self.task_weights[i].float()
+            loss_val = losses[task_name].float()
+            loss_weighted = weight * loss_val
             weighted_losses.append(loss_weighted)
         
-        # Stack and sum (preserves gradient graph correctly)
+        # Stack and sum
         total_loss = torch.stack(weighted_losses).sum()
         
         return total_loss
