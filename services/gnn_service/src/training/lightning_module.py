@@ -18,6 +18,7 @@ import torch
 from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
+from torch_scatter import scatter_mean
 
 from src.models import UniversalTemporalGNN
 from src.training.losses import UncertaintyWeighting
@@ -221,54 +222,86 @@ class HydraulicGNNModule(pl.LightningModule):
         if self.use_confidence_weighting and self.use_advanced_losses:
             if not hasattr(batch, "confidence"):
                 logger.warning("Confidence not found in batch, using 1.0")
-                confidence = torch.ones(
-                    batch.y_graph_health.shape[0],
-                    device=batch.y_graph_health.device,
+                node_confidence = torch.ones(
+                    batch.x.shape[0],
+                    device=batch.x.device,
+                )
+                graph_confidence = torch.ones(
+                    batch.num_graphs,
+                    device=batch.x.device,
                 )
             else:
-                confidence = batch.confidence
+                # Node-level confidence [num_nodes] e.g. [320]
+                node_confidence = batch.confidence
+                
+                # Aggregate to graph-level confidence [num_graphs] e.g. [32]
+                # Using scatter_mean: average node confidences per graph
+                graph_confidence = scatter_mean(
+                    node_confidence, 
+                    batch.batch, 
+                    dim=0,
+                    dim_size=batch.num_graphs
+                )
 
-            # Compute losses with confidence
+            # === GRAPH-LEVEL LOSSES (use graph_confidence) ===
             graph_health_loss = self.graph_health_loss(
-                outputs["graph"]["health"], batch.y_graph_health, confidence
+                outputs["graph"]["health"].squeeze(-1),  # [batch_size]
+                batch.y_graph_health,
+                graph_confidence
             )
             graph_degradation_loss = self.graph_degradation_loss(
-                outputs["graph"]["degradation"], batch.y_graph_degradation, confidence
+                outputs["graph"]["degradation"].squeeze(-1),
+                batch.y_graph_degradation,
+                graph_confidence
             )
             graph_rul_loss = self.graph_rul_loss(
-                outputs["graph"]["rul"], batch.y_graph_rul, confidence
+                outputs["graph"]["rul"].squeeze(-1),
+                batch.y_graph_rul,
+                graph_confidence
             )
+
+            # === COMPONENT-LEVEL LOSSES (use node_confidence) ===
             component_health_loss = self.component_health_loss(
-                outputs["component"]["health"],
+                outputs["component"]["health"].squeeze(-1),  # [num_nodes]
                 batch.y_component_health,
-                confidence.unsqueeze(-1).expand_as(batch.y_component_health),
+                node_confidence
             )
 
             # Anomaly losses (no confidence for classification)
             graph_anomaly_loss = self.graph_anomaly_loss(
-                outputs["graph"]["anomaly"], batch.y_graph_anomaly
+                outputs["graph"]["anomaly"], 
+                batch.y_graph_anomaly
             )
             component_anomaly_loss = self.component_anomaly_loss(
-                outputs["component"]["anomaly"], batch.y_component_anomaly
+                outputs["component"]["anomaly"], 
+                batch.y_component_anomaly
             )
 
         else:
             # Standard losses without confidence
             graph_health_loss = self.graph_health_loss(
-                outputs["graph"]["health"], batch.y_graph_health
+                outputs["graph"]["health"].squeeze(-1), 
+                batch.y_graph_health
             )
             graph_degradation_loss = self.graph_degradation_loss(
-                outputs["graph"]["degradation"], batch.y_graph_degradation
+                outputs["graph"]["degradation"].squeeze(-1), 
+                batch.y_graph_degradation
             )
             graph_anomaly_loss = self.graph_anomaly_loss(
-                outputs["graph"]["anomaly"], batch.y_graph_anomaly
+                outputs["graph"]["anomaly"], 
+                batch.y_graph_anomaly
             )
-            graph_rul_loss = self.graph_rul_loss(outputs["graph"]["rul"], batch.y_graph_rul)
+            graph_rul_loss = self.graph_rul_loss(
+                outputs["graph"]["rul"].squeeze(-1), 
+                batch.y_graph_rul
+            )
             component_health_loss = self.component_health_loss(
-                outputs["component"]["health"], batch.y_component_health
+                outputs["component"]["health"].squeeze(-1), 
+                batch.y_component_health
             )
             component_anomaly_loss = self.component_anomaly_loss(
-                outputs["component"]["anomaly"], batch.y_component_anomaly
+                outputs["component"]["anomaly"], 
+                batch.y_component_anomaly
             )
 
         # Domain adversarial loss (optional)
