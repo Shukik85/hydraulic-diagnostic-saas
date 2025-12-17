@@ -16,10 +16,7 @@ Usage:
 import argparse
 import logging
 from pathlib import Path
-from typing import Optional
 
-import pytorch_lightning as pl
-import torch
 import yaml
 
 logger = logging.getLogger(__name__)
@@ -84,7 +81,6 @@ Examples:
         logger.info(f"Loaded config from {args.config}")
 
         # Import here to avoid circular imports
-        from src.training.dataloader_temporal import TemporalHydraulicDataLoader
         from src.training.lightning_module import HydraulicGNNModule
         from src.training.trainer import (
             create_development_trainer,

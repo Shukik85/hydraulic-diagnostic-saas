@@ -39,7 +39,7 @@ Examples:
 from __future__ import annotations
 
 import warnings
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import (
@@ -319,7 +319,7 @@ class TimeWindow(BaseModel):
         """Ensure datetime is timezone-aware."""
         if v.tzinfo is None:
             # Default to UTC if naive
-            return v.replace(tzinfo=timezone.utc)
+            return v.replace(tzinfo=UTC)
         return v
 
     @field_validator("end_time")
@@ -484,7 +484,7 @@ class MinimalInferenceRequest(BaseModel):
     def ensure_timestamp_timezone(cls, v: datetime) -> datetime:
         """Ensure timestamp is timezone-aware."""
         if v.tzinfo is None:
-            return v.replace(tzinfo=timezone.utc)
+            return v.replace(tzinfo=UTC)
         return v
 
     @field_validator("sensor_readings")

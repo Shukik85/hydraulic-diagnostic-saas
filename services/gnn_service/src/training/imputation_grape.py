@@ -15,9 +15,7 @@ References:
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
-import numpy as np
 import torch
 from torch import nn
 from torch_geometric.nn import GATConv
@@ -91,7 +89,7 @@ class GRAPEImputer(nn.Module):
         edge_index: torch.Tensor,  # [2, E] edges
         edge_attr: torch.Tensor,  # [E, 14] edge attributes
         mask_nodes: torch.Tensor,  # [N] bool (True=observed, False=missing)
-        static_topology: Optional[torch.Tensor] = None,  # [2, E_static]
+        static_topology: torch.Tensor | None = None,  # [2, E_static]
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Impute missing features via GNN propagation.
 
@@ -292,7 +290,7 @@ class TwoStageImputer:
         edge_index: torch.Tensor,  # [2, E]
         edge_attr: torch.Tensor,  # [E, 14]
         mask_sequence: torch.Tensor,  # [T, N] bool
-        static_topology: Optional[torch.Tensor] = None,
+        static_topology: torch.Tensor | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Complete two-stage imputation.
 

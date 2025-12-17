@@ -28,8 +28,8 @@ import logging
 import os
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
