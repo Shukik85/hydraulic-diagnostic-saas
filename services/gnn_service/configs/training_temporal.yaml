@@ -22,7 +22,7 @@ training:
   devices: 1
   accelerator: gpu
   precision: "32"  # Use 32-bit for stability
-  gradient_clip_val: 1.0
+  # NOTE: gradient_clip_val removed - done manually in training_step
   accumulate_grad_batches: 1
 
 # Advanced loss configuration (GRAPE + DIDA)
