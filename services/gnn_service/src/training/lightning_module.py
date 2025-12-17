@@ -210,16 +210,19 @@ class HydraulicGNNModule(pl.LightningModule):
         self,
         outputs: dict[str, dict[str, torch.Tensor]],
         batch: Any,
-    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        return_components: bool = False,
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor] | None]:
         """Compute multi-level multi-task loss with confidence weighting.
 
         Args:
             outputs: Model outputs
             batch: Batch data (must contain confidence if use_confidence_weighting=True)
+            return_components: If True, return individual loss components (for logging)
+                             If False, only return total loss (for training)
 
         Returns:
             total_loss: Combined loss
-            loss_dict: Individual loss components
+            loss_dict: Individual loss components (None if return_components=False)
         """
         # Validate batch
         required_fields = [
@@ -407,30 +410,35 @@ class HydraulicGNNModule(pl.LightningModule):
             # UncertaintyWeighting now uses fixed buffers (no gradients)
             total_loss = self.uncertainty_weighter(losses)
 
-        loss_dict = {
-            "graph_health": graph_health_loss,
-            "graph_degradation": graph_degradation_loss,
-            "graph_anomaly": graph_anomaly_loss,
-            "graph_rul": graph_rul_loss,
-            "component_health": component_health_loss,
-            "component_anomaly": component_anomaly_loss,
-            "domain": domain_loss,
-            "total": total_loss,
-        }
-
-        return total_loss, loss_dict
+        # 🔥 CRITICAL: Only create loss_dict if needed for logging
+        if return_components:
+            loss_dict = {
+                "graph_health": graph_health_loss.detach(),
+                "graph_degradation": graph_degradation_loss.detach(),
+                "graph_anomaly": graph_anomaly_loss.detach(),
+                "graph_rul": graph_rul_loss.detach(),
+                "component_health": component_health_loss.detach(),
+                "component_anomaly": component_anomaly_loss.detach(),
+                "domain": domain_loss.detach(),
+                "total": total_loss.detach(),
+            }
+            return total_loss, loss_dict
+        else:
+            # Training: only return total loss, discard components
+            return total_loss, None
 
     def training_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
-        """Training step (automatic optimization)."""
+        """Training step (automatic optimization).
+        
+        CRITICAL: Only compute total loss, not component losses.
+        Component losses are only computed for validation/logging.
+        """
         outputs = self(
             x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
         )
-        total_loss, loss_dict = self.compute_loss(outputs, batch)
+        total_loss, _ = self.compute_loss(outputs, batch, return_components=False)
 
         self.log("train/total_loss", total_loss, prog_bar=True, batch_size=batch.num_graphs)
-        for key, val in loss_dict.items():
-            if key != "total":
-                self.log(f"train/{key}_loss", val, prog_bar=False, batch_size=batch.num_graphs)
 
         # Lightning handles backward automatically
         return total_loss
@@ -449,17 +457,17 @@ class HydraulicGNNModule(pl.LightningModule):
             outputs = self(
                 x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
             )
-            total_loss, loss_dict = self.compute_loss(outputs, batch)
+            total_loss, loss_dict = self.compute_loss(outputs, batch, return_components=True)
 
         # 🔥 CRITICAL: Detach losses before logging!
         # TensorBoard can hold references to tensors with active graphs
         total_loss_detached = total_loss.detach()
         
         self.log("val/total_loss", total_loss_detached, prog_bar=True, batch_size=batch.num_graphs)
-        for key, val in loss_dict.items():
-            if key != "total":
-                val_detached = val.detach()
-                self.log(f"val/{key}_loss", val_detached, prog_bar=False, batch_size=batch.num_graphs)
+        if loss_dict is not None:
+            for key, val in loss_dict.items():
+                if key != "total":
+                    self.log(f"val/{key}_loss", val, prog_bar=False, batch_size=batch.num_graphs)
 
         return total_loss_detached
 
@@ -469,16 +477,16 @@ class HydraulicGNNModule(pl.LightningModule):
             outputs = self(
                 x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
             )
-            total_loss, loss_dict = self.compute_loss(outputs, batch)
+            total_loss, loss_dict = self.compute_loss(outputs, batch, return_components=True)
 
         # Detach before logging
         total_loss_detached = total_loss.detach()
         
         self.log("test/total_loss", total_loss_detached, batch_size=batch.num_graphs)
-        for key, val in loss_dict.items():
-            if key != "total":
-                val_detached = val.detach()
-                self.log(f"test/{key}_loss", val_detached, batch_size=batch.num_graphs)
+        if loss_dict is not None:
+            for key, val in loss_dict.items():
+                if key != "total":
+                    self.log(f"test/{key}_loss", val, batch_size=batch.num_graphs)
 
         return total_loss_detached
 
