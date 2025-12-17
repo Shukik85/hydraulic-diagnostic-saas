@@ -18,6 +18,7 @@ Examples:
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -27,7 +28,7 @@ from torch_geometric.data import Data
 
 if TYPE_CHECKING:
     from src.data.timescale_connector import TimescaleConnector
-    from src.topology.graph_topology import GraphTopology
+    from src.topology.mock_topology import GraphTopology
 
 logger = logging.getLogger(__name__)
 
@@ -154,17 +155,21 @@ class TemporalHydraulicDataLoader:
         min_time = df["timestamp"].min()
         max_time = df["timestamp"].max()
 
+        # Convert window_size and stride from seconds to timedelta
+        window_td = timedelta(seconds=self.window_size)
+        stride_td = timedelta(seconds=self.stride)
+
         # Generate window starts
         window_starts = []
         current_time = min_time
-        while current_time + self.window_size <= max_time:
+        while current_time + window_td <= max_time:
             window_starts.append(current_time)
-            current_time += self.stride
+            current_time += stride_td
 
         # Create snapshots
         snapshots = []
         for window_start in window_starts:
-            window_end = window_start + self.window_size
+            window_end = window_start + window_td
 
             # Filter data for window
             window_df = df.filter(
