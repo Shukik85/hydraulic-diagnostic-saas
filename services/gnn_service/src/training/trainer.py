@@ -2,7 +2,7 @@
 
 Provides:
 - create_trainer: General trainer
-- create_production_trainer: Production settings
+- create_production_trainer: Production settings from config
 - create_development_trainer: Development/debug settings
 """
 
@@ -45,9 +45,11 @@ class TrainerConfig:
         # Callbacks
         enable_checkpointing: bool = True,
         checkpoint_dir: str | Path = "checkpoints",
+        checkpoint_filename: str = "hydraulic-gnn-{epoch:02d}-{val_total_loss:.4f}",
         checkpoint_monitor: str = "val/total_loss",
         checkpoint_mode: str = "min",
         save_top_k: int = 5,
+        save_last: bool = True,
         enable_early_stopping: bool = True,
         early_stopping_patience: int = 30,
         early_stopping_min_delta: float = 0.0001,
@@ -72,9 +74,11 @@ class TrainerConfig:
         # Callbacks
         self.enable_checkpointing = enable_checkpointing
         self.checkpoint_dir = Path(checkpoint_dir)
+        self.checkpoint_filename = checkpoint_filename
         self.checkpoint_monitor = checkpoint_monitor
         self.checkpoint_mode = checkpoint_mode
         self.save_top_k = save_top_k
+        self.save_last = save_last
         self.enable_early_stopping = enable_early_stopping
         self.early_stopping_patience = early_stopping_patience
         self.early_stopping_min_delta = early_stopping_min_delta
@@ -114,11 +118,11 @@ def create_trainer(config: TrainerConfig) -> pl.Trainer:
         config.checkpoint_dir.mkdir(parents=True, exist_ok=True)
         checkpoint_callback = ModelCheckpoint(
             dirpath=config.checkpoint_dir,
-            filename="hydraulic-gnn-{epoch:02d}-{val_total_loss:.4f}",
+            filename=config.checkpoint_filename,
             monitor=config.checkpoint_monitor,
             mode=config.checkpoint_mode,
             save_top_k=config.save_top_k,
-            save_last=True,
+            save_last=config.save_last,
             every_n_epochs=1,
         )
         callbacks.append(checkpoint_callback)
@@ -172,60 +176,98 @@ def create_trainer(config: TrainerConfig) -> pl.Trainer:
 
 
 def create_production_trainer(
-    max_epochs: int = 200,
-    devices: int = 1,
-    checkpoint_dir: str | Path = "checkpoints/production",
-    logger_save_dir: str | Path = "logs/production",
+    config: dict | None = None,
 ) -> pl.Trainer:
-    """Create production trainer with best practices.
+    """Create production trainer from full config dictionary.
 
     Args:
-        max_epochs: Maximum training epochs
-        devices: Number of devices (GPUs)
-        checkpoint_dir: Checkpoint directory
-        logger_save_dir: Log directory
+        config: Full configuration dictionary from training_temporal.yaml
 
     Returns:
         Production-ready Trainer
+
+    Examples:
+        >>> import yaml
+        >>> with open("configs/training_temporal.yaml") as f:
+        ...     config = yaml.safe_load(f)
+        >>> trainer = create_production_trainer(config=config)
     """
-    config = TrainerConfig(
-        max_epochs=max_epochs,
-        devices=devices,
-        accelerator="gpu" if devices > 0 else "cpu",
-        precision="16-mixed" if devices > 0 else "32",
-        gradient_clip_val=1.0,
-        accumulate_grad_batches=1,
+    if config is None:
+        # Fallback to defaults
+        logger.warning("No config provided, using defaults")
+        config = {
+            "training": {"max_epochs": 200, "devices": 1},
+            "checkpoint": {"dirpath": "checkpoints/production"},
+            "logging": {"save_dir": "logs/production"},
+        }
+
+    training_cfg = config.get("training", {})
+    checkpoint_cfg = config.get("checkpoint", {})
+    early_stopping_cfg = config.get("early_stopping", {})
+    logging_cfg = config.get("logging", {})
+    validation_cfg = config.get("validation", {})
+    hardware_cfg = config.get("hardware", {})
+    reproducibility_cfg = config.get("reproducibility", {})
+
+    trainer_config = TrainerConfig(
+        # Training
+        max_epochs=training_cfg.get("max_epochs", 200),
+        devices=training_cfg.get("devices", 1),
+        accelerator=training_cfg.get("accelerator", "gpu"),
+        precision=training_cfg.get("precision", 16),
+        gradient_clip_val=training_cfg.get("gradient_clip_val", 1.0),
+        accumulate_grad_batches=training_cfg.get("accumulate_grad_batches", 1),
+        # Checkpoint
         enable_checkpointing=True,
-        checkpoint_dir=checkpoint_dir,
-        save_top_k=5,
-        enable_early_stopping=True,
-        early_stopping_patience=30,
-        logger_save_dir=logger_save_dir,
-        logger_name="hydraulic_gnn_production",
-        benchmark=True,
+        checkpoint_dir=checkpoint_cfg.get("dirpath", "checkpoints/production"),
+        checkpoint_filename=checkpoint_cfg.get(
+            "filename", "hydraulic-gnn-{epoch:02d}-{val_total_loss:.4f}"
+        ),
+        checkpoint_monitor=checkpoint_cfg.get("monitor", "val/total_loss"),
+        checkpoint_mode=checkpoint_cfg.get("mode", "min"),
+        save_top_k=checkpoint_cfg.get("save_top_k", 5),
+        save_last=checkpoint_cfg.get("save_last", True),
+        # Early stopping
+        enable_early_stopping=early_stopping_cfg.get("enabled", True),
+        early_stopping_patience=early_stopping_cfg.get("patience", 30),
+        early_stopping_min_delta=early_stopping_cfg.get("min_delta", 0.0001),
+        # Logging
+        logger_save_dir=logging_cfg.get("save_dir", "logs/production"),
+        logger_name=logging_cfg.get("name", "hydraulic_gnn_production"),
+        log_every_n_steps=logging_cfg.get("log_every_n_steps", 50),
+        # Validation
+        check_val_every_n_epoch=int(validation_cfg.get("check_interval", 1.0)),
+        num_sanity_val_steps=validation_cfg.get("num_sanity_val_steps", 2),
+        # Reproducibility
+        deterministic=reproducibility_cfg.get("deterministic", False),
+        benchmark=reproducibility_cfg.get("benchmark", True),
     )
-    return create_trainer(config)
+    
+    return create_trainer(trainer_config)
 
 
 def create_development_trainer(
-    max_epochs: int = 10,
-    devices: int = 1,
+    config: dict | None = None,
     fast_dev_run: bool = False,
 ) -> pl.Trainer:
     """Create development trainer for debugging.
 
     Args:
-        max_epochs: Maximum epochs
-        devices: Number of devices
+        config: Full configuration dictionary
         fast_dev_run: Run single batch for debugging
 
     Returns:
         Development Trainer
     """
-    config = TrainerConfig(
-        max_epochs=max_epochs,
-        devices=devices,
-        accelerator="gpu" if devices > 0 else "cpu",
+    if config is None:
+        config = {"training": {"max_epochs": 10, "devices": 1}}
+
+    training_cfg = config.get("training", {})
+
+    trainer_config = TrainerConfig(
+        max_epochs=training_cfg.get("max_epochs", 10),
+        devices=training_cfg.get("devices", 1),
+        accelerator=training_cfg.get("accelerator", "cpu"),
         precision="32",
         enable_checkpointing=False,
         enable_early_stopping=False,
@@ -233,4 +275,5 @@ def create_development_trainer(
         logger_name="hydraulic_gnn_dev",
         fast_dev_run=fast_dev_run,
     )
-    return create_trainer(config)
+    
+    return create_trainer(trainer_config)
