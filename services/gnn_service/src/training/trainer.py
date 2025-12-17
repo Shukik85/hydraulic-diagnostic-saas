@@ -267,7 +267,7 @@ def create_development_trainer(
     trainer_config = TrainerConfig(
         max_epochs=training_cfg.get("max_epochs", 10),
         devices=training_cfg.get("devices", 1),
-        accelerator=training_cfg.get("accelerator", "cpu"),
+        accelerator="cpu",  # ALWAYS use CPU for dev mode
         precision="32",
         enable_checkpointing=False,
         enable_early_stopping=False,
