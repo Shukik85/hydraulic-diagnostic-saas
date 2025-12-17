@@ -109,34 +109,43 @@ class HydraulicGNNModule(pl.LightningModule):
         if use_advanced_losses:
             logger.info("Using advanced losses (GRAPE + DIDA patterns)")
 
-            # Graph-level losses
-            self.graph_health_loss = nn.MSELoss(reduction="none")  # Wrapped with confidence
-            self.graph_degradation_loss = nn.MSELoss(reduction="none")
+            # Graph-level losses (reduction='mean' for scalars)
+            self.graph_health_loss = nn.MSELoss(reduction="mean")
+            self.graph_degradation_loss = nn.MSELoss(reduction="mean")
             self.graph_anomaly_loss = PhysicsAwareFocalLoss(
                 alpha=0.25,
                 gamma=2.0,
                 severity_weights=severity_weights,
-                reduction="none",
+                reduction="mean",
             )
-            self.graph_rul_loss = AsymmetricL1Loss(tau=rul_tau, reduction="none")
+            self.graph_rul_loss = AsymmetricL1Loss(tau=rul_tau, reduction="mean")
 
             # Component-level losses
-            self.component_health_loss = nn.MSELoss(reduction="none")
+            self.component_health_loss = nn.MSELoss(reduction="mean")
             self.component_anomaly_loss = PhysicsAwareFocalLoss(
                 alpha=0.25,
                 gamma=2.0,
                 component_weights=component_weights,
                 severity_weights=severity_weights,
-                reduction="none",
+                reduction="mean",
             )
 
             # Wrap with confidence weighting if enabled
             if use_confidence_weighting:
                 logger.info("Enabling confidence-weighted training")
-                self.graph_health_loss = ConfidenceWeightedLoss(self.graph_health_loss)
-                self.graph_degradation_loss = ConfidenceWeightedLoss(self.graph_degradation_loss)
-                self.graph_rul_loss = ConfidenceWeightedLoss(self.graph_rul_loss)
-                self.component_health_loss = ConfidenceWeightedLoss(self.component_health_loss)
+                # Re-create with reduction='none' for confidence weighting
+                self.graph_health_loss = ConfidenceWeightedLoss(
+                    nn.MSELoss(reduction="none")
+                )
+                self.graph_degradation_loss = ConfidenceWeightedLoss(
+                    nn.MSELoss(reduction="none")
+                )
+                self.graph_rul_loss = ConfidenceWeightedLoss(
+                    AsymmetricL1Loss(tau=rul_tau, reduction="none")
+                )
+                self.component_health_loss = ConfidenceWeightedLoss(
+                    nn.MSELoss(reduction="none")
+                )
 
         else:
             # Basic losses (backward compatibility)
@@ -339,23 +348,24 @@ class HydraulicGNNModule(pl.LightningModule):
                     domain_pred = self.domain_classifier(features.detach())
                     domain_loss = self.domain_loss(domain_pred, batch.domain_labels)
         else:
-            domain_loss = torch.tensor(0.0, device=graph_health_loss.device)
+            domain_loss = torch.tensor(0.0, device=graph_health_loss.device, dtype=torch.float32)
 
-        # Ensure all losses are scalars for proper combination
-        # This is critical for uncertainty weighting which requires scalar losses
-        def ensure_scalar(loss: torch.Tensor) -> torch.Tensor:
-            """Convert loss to scalar if needed."""
+        # Ensure all losses are scalars + convert to float32 for AMP compatibility
+        def ensure_scalar_float32(loss: torch.Tensor) -> torch.Tensor:
+            """Convert loss to scalar float32 (AMP-safe)."""
             if loss.dim() > 0:
-                return loss.mean()
-            return loss
+                loss = loss.mean()
+            # CRITICAL: Convert to float32 before uncertainty weighting
+            # This prevents AMP issues with log_vars in 16-bit
+            return loss.float()
         
-        graph_health_loss = ensure_scalar(graph_health_loss)
-        graph_degradation_loss = ensure_scalar(graph_degradation_loss)
-        graph_anomaly_loss = ensure_scalar(graph_anomaly_loss)
-        graph_rul_loss = ensure_scalar(graph_rul_loss)
-        component_health_loss = ensure_scalar(component_health_loss)
-        component_anomaly_loss = ensure_scalar(component_anomaly_loss)
-        domain_loss = ensure_scalar(domain_loss)
+        graph_health_loss = ensure_scalar_float32(graph_health_loss)
+        graph_degradation_loss = ensure_scalar_float32(graph_degradation_loss)
+        graph_anomaly_loss = ensure_scalar_float32(graph_anomaly_loss)
+        graph_rul_loss = ensure_scalar_float32(graph_rul_loss)
+        component_health_loss = ensure_scalar_float32(component_health_loss)
+        component_anomaly_loss = ensure_scalar_float32(component_anomaly_loss)
+        domain_loss = ensure_scalar_float32(domain_loss)
 
         # Combine losses
         if self.loss_weighting == "fixed":
@@ -369,6 +379,7 @@ class HydraulicGNNModule(pl.LightningModule):
                 + domain_loss  # DIDA
             )
         else:  # uncertainty
+            # All losses are now float32 scalars (AMP-safe)
             losses = {
                 "graph_health": graph_health_loss,
                 "graph_degradation": graph_degradation_loss,
@@ -379,6 +390,8 @@ class HydraulicGNNModule(pl.LightningModule):
             }
             if self.use_domain_adversarial:
                 losses["domain"] = domain_loss
+            
+            # UncertaintyWeighting now safely handles float32 scalars
             total_loss = self.uncertainty_weighter(losses)
 
         loss_dict = {
