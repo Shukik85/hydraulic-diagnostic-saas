@@ -8,6 +8,11 @@ Supports:
 - Complete config-driven training
 - Local training with mock components
 
+Debug features:
+- Automatic anomaly detection for backward errors
+- Backward call tracing
+- Loss tensor property logging
+
 Usage:
     # Development mode (mock data, fast)
     python src/training/train_temporal.py \
@@ -24,6 +29,9 @@ Usage:
         --config configs/training_temporal.yaml \
         --mode dev \
         --fast-dev-run
+        
+    # With backward tracing (debug only)
+    DEBUG_BACKWARD=1 python src/training/train_temporal.py ...
 """
 
 from __future__ import annotations
@@ -31,6 +39,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -45,6 +54,86 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
+
+# ==============================================================================
+# DEBUG: Backward Tracing and Anomaly Detection
+# ==============================================================================
+
+_backward_call_count = {}
+_original_backward = torch.Tensor.backward
+DEBUG_BACKWARD = os.environ.get("DEBUG_BACKWARD", "0") == "1"
+
+
+def _traced_backward(self, *args, **kwargs):
+    """Trace all .backward() calls to detect double backward.
+    
+    Usage:
+        Set DEBUG_BACKWARD=1 environment variable to enable
+    """
+    if not DEBUG_BACKWARD:
+        return _original_backward(self, *args, **kwargs)
+    
+    # Create unique key for this tensor's backward call
+    grad_fn_name = str(self.grad_fn).split("(")[0] if self.grad_fn else "leaf"
+    key = (grad_fn_name, id(self), id(self.grad_fn))
+    
+    _backward_call_count[key] = _backward_call_count.get(key, 0) + 1
+    call_num = _backward_call_count[key]
+    
+    # Log the call
+    logger.debug(
+        f"🔙 .backward() call #{call_num}: {grad_fn_name}, "
+        f"requires_grad={self.requires_grad}, is_leaf={self.is_leaf}"
+    )
+    
+    # WARN if this is a second backward on same tensor
+    if call_num > 1:
+        logger.warning(
+            f"⚠️  POTENTIAL DOUBLE BACKWARD: {grad_fn_name} backward called {call_num} times!"
+        )
+        import traceback
+        logger.warning("Stack trace:")
+        for line in traceback.format_stack()[:-1]:
+            logger.warning(line.strip())
+    
+    # Call original backward
+    return _original_backward(self, *args, **kwargs)
+
+
+def setup_debug_hooks():
+    """Setup backward tracing if DEBUG_BACKWARD enabled."""
+    if DEBUG_BACKWARD:
+        logger.info("🔥 BACKWARD TRACING ENABLED (DEBUG_BACKWARD=1)")
+        logger.info("   This will slow down training but catch double backward errors")
+        torch.Tensor.backward = _traced_backward
+    
+    # Always enable anomaly detection in debug mode
+    logger.info("🔍 Enabling torch.autograd.set_detect_anomaly(True)")
+    torch.autograd.set_detect_anomaly(True)
+
+
+def log_loss_properties(loss: torch.Tensor, context: str = "") -> None:
+    """Log tensor properties for debugging.
+    
+    Args:
+        loss: Loss tensor to inspect
+        context: Context string for logging
+    """
+    if DEBUG_BACKWARD:
+        logger.debug(
+            f"📊 Loss properties [{context}]:\n"
+            f"   Shape: {loss.shape}\n"
+            f"   dtype: {loss.dtype}\n"
+            f"   requires_grad: {loss.requires_grad}\n"
+            f"   is_leaf: {loss.is_leaf}\n"
+            f"   grad_fn: {loss.grad_fn}\n"
+            f"   device: {loss.device}"
+        )
+
+
+# ==============================================================================
+# Main Training Functions
+# ==============================================================================
 
 
 def load_config(config_path: str | Path) -> dict:
@@ -286,6 +375,9 @@ async def create_dataloader_from_config(config: dict, mode: str = "dev"):
 
 def main():
     """Main training function."""
+    # Setup debug hooks FIRST
+    setup_debug_hooks()
+    
     parser = argparse.ArgumentParser(description="Train Universal Temporal GNN")
     parser.add_argument(
         "--config",
@@ -365,9 +457,6 @@ def main():
     logger.info(f"   - Devices: {config['training'].get('devices', 1)}")
     logger.info(f"   - Accelerator: {config['training'].get('accelerator', 'gpu')}")
     logger.info(f"   - Precision: {config['training'].get('precision', 16)}")
-    logger.info(
-        f"   - Gradient clip: {config['training'].get('gradient_clip_val', 1.0)}"
-    )
 
     # Start training
     logger.info("\n" + "=" * 80)
