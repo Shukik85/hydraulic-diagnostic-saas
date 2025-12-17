@@ -35,7 +35,7 @@ class TrainerConfig:
         accelerator: str = "auto",
         strategy: str = "auto",
         precision: str | int = "32",
-        gradient_clip_val: float = 1.0,
+        # NOTE: gradient_clip_val removed - done manually in lightning_module
         accumulate_grad_batches: int = 1,
         log_every_n_steps: int = 50,
         check_val_every_n_epoch: int = 1,
@@ -63,7 +63,6 @@ class TrainerConfig:
         self.accelerator = accelerator
         self.strategy = strategy
         self.precision = precision
-        self.gradient_clip_val = gradient_clip_val
         self.accumulate_grad_batches = accumulate_grad_batches
         self.log_every_n_steps = log_every_n_steps
         self.check_val_every_n_epoch = check_val_every_n_epoch
@@ -153,14 +152,14 @@ def create_trainer(config: TrainerConfig) -> pl.Trainer:
             static_graph=True,
         )
 
-    # Create trainer
+    # Create trainer (NO gradient_clip_val for manual optimization compatibility)
     trainer = pl.Trainer(
         max_epochs=config.max_epochs,
         devices=config.devices,
         accelerator=config.accelerator,
         strategy=strategy,
         precision=config.precision,
-        gradient_clip_val=config.gradient_clip_val,
+        # NOTE: gradient_clip_val removed - done manually in training_step
         accumulate_grad_batches=config.accumulate_grad_batches,
         log_every_n_steps=config.log_every_n_steps,
         check_val_every_n_epoch=config.check_val_every_n_epoch,
@@ -215,7 +214,7 @@ def create_production_trainer(
         devices=training_cfg.get("devices", 1),
         accelerator=training_cfg.get("accelerator", "gpu"),
         precision=training_cfg.get("precision", 16),
-        gradient_clip_val=training_cfg.get("gradient_clip_val", 1.0),
+        # NOTE: gradient_clip_val removed
         accumulate_grad_batches=training_cfg.get("accumulate_grad_batches", 1),
         # Checkpoint
         enable_checkpointing=True,
