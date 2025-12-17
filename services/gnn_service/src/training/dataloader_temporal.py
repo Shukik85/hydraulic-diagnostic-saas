@@ -252,14 +252,16 @@ class TemporalHydraulicDataLoader:
                 top_k_indices = np.argsort(similarity[i])[-self.k_neighbors :]
 
                 for j in top_k_indices:
-                    if similarity[i, j] > self.correlation_threshold:
-                        # Check if edge already exists
-                        if [i, j] not in list(zip(edge_index[0], edge_index[1], strict=False)):
-                            edge_index[0].append(i)
-                            edge_index[1].append(j)
-                            # Dynamic edge features (correlation-based)
-                            edge_attr.append(np.ones(14) * similarity[i, j])
-                            edge_mask.append(False)  # Dynamic
+                    # Combined condition to avoid nested if (SIM102)
+                    if (
+                        similarity[i, j] > self.correlation_threshold
+                        and [i, j] not in list(zip(edge_index[0], edge_index[1], strict=False))
+                    ):
+                        edge_index[0].append(i)
+                        edge_index[1].append(j)
+                        # Dynamic edge features (correlation-based)
+                        edge_attr.append(np.ones(14) * similarity[i, j])
+                        edge_mask.append(False)  # Dynamic
 
         edge_index = np.array(edge_index)
         edge_attr = np.array(edge_attr)
