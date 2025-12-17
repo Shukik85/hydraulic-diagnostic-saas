@@ -441,6 +441,9 @@ class HydraulicGNNModule(pl.LightningModule):
         CRITICAL: Wrapped with torch.no_grad() to prevent graph conflicts.
         Validation should never build computation graph during training.
         This prevents 'backward through graph twice' errors.
+        
+        Also detach all metrics before logging to prevent TensorBoard
+        from caching computation graph.
         """
         with torch.no_grad():
             outputs = self(
@@ -448,12 +451,17 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             total_loss, loss_dict = self.compute_loss(outputs, batch)
 
-        self.log("val/total_loss", total_loss, prog_bar=True, batch_size=batch.num_graphs)
+        # 🔥 CRITICAL: Detach losses before logging!
+        # TensorBoard can hold references to tensors with active graphs
+        total_loss_detached = total_loss.detach()
+        
+        self.log("val/total_loss", total_loss_detached, prog_bar=True, batch_size=batch.num_graphs)
         for key, val in loss_dict.items():
             if key != "total":
-                self.log(f"val/{key}_loss", val, prog_bar=False, batch_size=batch.num_graphs)
+                val_detached = val.detach()
+                self.log(f"val/{key}_loss", val_detached, prog_bar=False, batch_size=batch.num_graphs)
 
-        return total_loss
+        return total_loss_detached
 
     def test_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
         """Test step (no gradients needed)."""
@@ -463,12 +471,16 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             total_loss, loss_dict = self.compute_loss(outputs, batch)
 
-        self.log("test/total_loss", total_loss, batch_size=batch.num_graphs)
+        # Detach before logging
+        total_loss_detached = total_loss.detach()
+        
+        self.log("test/total_loss", total_loss_detached, batch_size=batch.num_graphs)
         for key, val in loss_dict.items():
             if key != "total":
-                self.log(f"test/{key}_loss", val, batch_size=batch.num_graphs)
+                val_detached = val.detach()
+                self.log(f"test/{key}_loss", val_detached, batch_size=batch.num_graphs)
 
-        return total_loss
+        return total_loss_detached
 
     def on_epoch_end(self) -> None:
         """Clear PyTorch cache at end of epoch.
