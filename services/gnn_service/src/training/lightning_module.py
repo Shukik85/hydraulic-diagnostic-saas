@@ -39,6 +39,7 @@ class HydraulicGNNModule(pl.LightningModule):
     - Confidence-weighted training for imputed data
     - Domain adversarial loss for transfer learning
     - Multi-task uncertainty weighting
+    - Manual optimization for multi-head output compatibility
 
     Examples:
         >>> module = HydraulicGNNModule(
@@ -79,6 +80,9 @@ class HydraulicGNNModule(pl.LightningModule):
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
+
+        # CRITICAL: Enable manual optimization for multi-head compatibility
+        self.automatic_optimization = False
 
         # Validate loss_weighting
         if loss_weighting not in ["fixed", "uncertainty"]:
@@ -417,21 +421,32 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss, loss_dict
 
-    def training_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
-        """Training step."""
+    def training_step(self, batch: Any, _batch_idx: int) -> None:
+        """Training step with manual backward."""
+        # Get optimizer
+        optimizer = self.optimizers()
+        
+        # Forward pass
         outputs = self(
             x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
         )
         total_loss, loss_dict = self.compute_loss(outputs, batch)
 
-        self.log("train/total_loss", total_loss, prog_bar=True)
+        # Manual backward
+        self.manual_backward(total_loss, retain_graph=False)
+        
+        # Gradient clipping
+        self.clip_gradients(optimizer, gradient_clip_val=1.0, gradient_clip_algorithm="norm")
+        
+        # Optimizer step
+        optimizer.step()
+        optimizer.zero_grad()
+
+        # Logging
+        self.log("train/total_loss", total_loss, prog_bar=True, batch_size=batch.num_graphs)
         for key, val in loss_dict.items():
             if key != "total":
-                self.log(f"train/{key}_loss", val, prog_bar=False)
-
-        # Note: No log_vars logging since weights are now fixed buffers
-
-        return total_loss
+                self.log(f"train/{key}_loss", val, prog_bar=False, batch_size=batch.num_graphs)
 
     def validation_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
         """Validation step."""
@@ -440,10 +455,10 @@ class HydraulicGNNModule(pl.LightningModule):
         )
         total_loss, loss_dict = self.compute_loss(outputs, batch)
 
-        self.log("val/total_loss", total_loss, prog_bar=True)
+        self.log("val/total_loss", total_loss, prog_bar=True, batch_size=batch.num_graphs)
         for key, val in loss_dict.items():
             if key != "total":
-                self.log(f"val/{key}_loss", val, prog_bar=False)
+                self.log(f"val/{key}_loss", val, prog_bar=False, batch_size=batch.num_graphs)
 
         return total_loss
 
@@ -454,10 +469,10 @@ class HydraulicGNNModule(pl.LightningModule):
         )
         total_loss, loss_dict = self.compute_loss(outputs, batch)
 
-        self.log("test/total_loss", total_loss)
+        self.log("test/total_loss", total_loss, batch_size=batch.num_graphs)
         for key, val in loss_dict.items():
             if key != "total":
-                self.log(f"test/{key}_loss", val)
+                self.log(f"test/{key}_loss", val, batch_size=batch.num_graphs)
 
         return total_loss
 
