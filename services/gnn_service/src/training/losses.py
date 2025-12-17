@@ -272,7 +272,10 @@ class UncertaintyWeighting(nn.Module):
         super().__init__()
 
         # Learnable log variances (one per task)
-        self.log_vars = nn.Parameter(torch.full((num_tasks,), init_log_var))
+        # CRITICAL: Initialize as float32 to avoid AMP issues
+        self.log_vars = nn.Parameter(
+            torch.full((num_tasks,), init_log_var, dtype=torch.float32)
+        )
 
     def forward(self, losses: dict[str, torch.Tensor]) -> torch.Tensor:
         """Compute weighted loss.
@@ -287,8 +290,8 @@ class UncertaintyWeighting(nn.Module):
             L_total = sum_i (exp(-log_var_i) * L_i + log_var_i)
 
         Note:
-            Uses list+stack approach to avoid inplace operations
-            that cause "backward through graph twice" errors.
+            Forces all computations to float32 for AMP compatibility.
+            This prevents "backward through graph twice" errors.
         """
         task_names = list(losses.keys())
         
@@ -300,14 +303,18 @@ class UncertaintyWeighting(nn.Module):
                     "Call .mean() on the loss before passing to UncertaintyWeighting."
                 )
         
-        # CRITICAL: Use list+stack instead of inplace accumulation
-        # This prevents "backward through graph twice" errors
+        # CRITICAL: Force float32 for AMP compatibility
+        # This prevents issues with 16-bit gradients on nn.Parameter
         weighted_losses = []
         
         for i, task_name in enumerate(task_names):
+            # Force float32 conversion
+            log_var = self.log_vars[i].float()  # ← AMP-safe
+            loss_val = losses[task_name].float()  # ← AMP-safe
+            
             # Uncertainty weighting: precision * loss + regularization
-            precision = torch.exp(-self.log_vars[i])
-            loss_weighted = precision * losses[task_name] + self.log_vars[i]
+            precision = torch.exp(-log_var)
+            loss_weighted = precision * loss_val + log_var
             weighted_losses.append(loss_weighted)
         
         # Stack and sum (preserves gradient graph correctly)
