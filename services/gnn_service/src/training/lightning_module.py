@@ -386,8 +386,9 @@ class HydraulicGNNModule(pl.LightningModule):
         optimizer = Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
         if self.scheduler_type == "plateau":
+            # Note: 'verbose' parameter removed in PyTorch 2.9+
             scheduler = ReduceLROnPlateau(
-                optimizer, mode="min", factor=0.5, patience=10, verbose=False
+                optimizer, mode="min", factor=0.5, patience=10
             )
             return {
                 "optimizer": optimizer,
