@@ -436,11 +436,17 @@ class HydraulicGNNModule(pl.LightningModule):
         return total_loss
 
     def validation_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
-        """Validation step."""
-        outputs = self(
-            x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
-        )
-        total_loss, loss_dict = self.compute_loss(outputs, batch)
+        """Validation step (no gradients needed).
+        
+        CRITICAL: Wrapped with torch.no_grad() to prevent graph conflicts.
+        Validation should never build computation graph during training.
+        This prevents 'backward through graph twice' errors.
+        """
+        with torch.no_grad():
+            outputs = self(
+                x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
+            )
+            total_loss, loss_dict = self.compute_loss(outputs, batch)
 
         self.log("val/total_loss", total_loss, prog_bar=True, batch_size=batch.num_graphs)
         for key, val in loss_dict.items():
@@ -450,11 +456,12 @@ class HydraulicGNNModule(pl.LightningModule):
         return total_loss
 
     def test_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
-        """Test step."""
-        outputs = self(
-            x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
-        )
-        total_loss, loss_dict = self.compute_loss(outputs, batch)
+        """Test step (no gradients needed)."""
+        with torch.no_grad():
+            outputs = self(
+                x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
+            )
+            total_loss, loss_dict = self.compute_loss(outputs, batch)
 
         self.log("test/total_loss", total_loss, batch_size=batch.num_graphs)
         for key, val in loss_dict.items():
