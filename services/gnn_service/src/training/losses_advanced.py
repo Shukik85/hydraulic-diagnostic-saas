@@ -137,7 +137,7 @@ class PhysicsAwareFocalLoss(nn.Module):
     Args:
         alpha: Class balancing factor
         gamma: Focusing parameter (higher = more focus on hard examples)
-        component_weights: Importance weights per component [N]
+        component_weights: Importance weights per component type [num_component_types]
         severity_weights: Severity weights per anomaly class [C]
         reduction: 'mean', 'sum', or 'none'
 
@@ -172,7 +172,7 @@ class PhysicsAwareFocalLoss(nn.Module):
         """Compute physics-aware focal loss.
 
         Args:
-            logits: Predicted logits [N, C]
+            logits: Predicted logits [N, C] where N = batch_size * num_nodes_per_graph
             targets: True labels [N, C]
 
         Returns:
@@ -196,6 +196,25 @@ class PhysicsAwareFocalLoss(nn.Module):
         # Component importance weighting
         if self.component_weights is not None:
             comp_weights = self.component_weights.to(logits.device)
+            
+            # Handle batched graph data: if component_weights has fewer elements
+            # than nodes in batch, repeat it to match batch size
+            # Example: [10 component types] × [32 graphs] = [320 nodes]
+            num_nodes = logits.size(0)
+            num_component_types = comp_weights.size(0)
+            
+            if num_nodes != num_component_types:
+                # Repeat component weights for each graph in batch
+                # Assumes identical topology across batch
+                num_repeats = num_nodes // num_component_types
+                if num_nodes % num_component_types != 0:
+                    raise ValueError(
+                        f"Number of nodes ({num_nodes}) must be divisible by "
+                        f"number of component types ({num_component_types})"
+                    )
+                comp_weights = comp_weights.repeat(num_repeats)  # [10] → [320]
+            
+            # Now broadcast: [N] → [N, 1] → [N, C]
             comp_weights = comp_weights.view(-1, 1).expand_as(focal_loss)
             focal_loss = focal_loss * comp_weights
 
