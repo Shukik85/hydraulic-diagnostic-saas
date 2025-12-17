@@ -39,7 +39,6 @@ class HydraulicGNNModule(pl.LightningModule):
     - Confidence-weighted training for imputed data
     - Domain adversarial loss for transfer learning
     - Multi-task uncertainty weighting
-    - Manual optimization for multi-head output compatibility
 
     Examples:
         >>> module = HydraulicGNNModule(
@@ -81,8 +80,8 @@ class HydraulicGNNModule(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        # CRITICAL: Enable manual optimization for multi-head compatibility
-        self.automatic_optimization = False
+        # NOTE: Using AUTOMATIC optimization (Lightning default)
+        # Do NOT set self.automatic_optimization = False
 
         # Validate loss_weighting
         if loss_weighting not in ["fixed", "uncertainty"]:
@@ -421,32 +420,20 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss, loss_dict
 
-    def training_step(self, batch: Any, _batch_idx: int) -> None:
-        """Training step with manual backward."""
-        # Get optimizer
-        optimizer = self.optimizers()
-        
-        # Forward pass
+    def training_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
+        """Training step (automatic optimization)."""
         outputs = self(
             x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
         )
         total_loss, loss_dict = self.compute_loss(outputs, batch)
 
-        # Manual backward
-        self.manual_backward(total_loss, retain_graph=False)
-        
-        # Gradient clipping
-        self.clip_gradients(optimizer, gradient_clip_val=1.0, gradient_clip_algorithm="norm")
-        
-        # Optimizer step
-        optimizer.step()
-        optimizer.zero_grad()
-
-        # Logging
         self.log("train/total_loss", total_loss, prog_bar=True, batch_size=batch.num_graphs)
         for key, val in loss_dict.items():
             if key != "total":
                 self.log(f"train/{key}_loss", val, prog_bar=False, batch_size=batch.num_graphs)
+
+        # Lightning handles backward automatically
+        return total_loss
 
     def validation_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
         """Validation step."""
