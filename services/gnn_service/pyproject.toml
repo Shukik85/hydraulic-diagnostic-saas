@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hydraulic-gnn-service"
+version = "0.1.0"
+description = "Universal Temporal GNN for hydraulic diagnostics"
+requires-python = ">=3.11"
+authors = [
+    {name = "GNN Service Team", email = "team@example.com"},
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+markers = [
+    "unit: unit tests",
+    "integration: integration tests",
+    "slow: slow tests (timeout > 5s)",
+    "gpu: tests requiring GPU",
+    "smoke: smoke tests",
+    "asyncio: async tests",
+]
+
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+    "-ra",
+    "--cov=src",
+    "--cov-report=html",
+    "--cov-report=term-missing:skip-covered",
+    "--asyncio-mode=auto",
+]
+
+log_cli = false
+log_cli_level = "INFO"
+log_file = "tests/pytest.log"
+log_file_level = "DEBUG"
+
+timeout = 300
+timeout_method = "thread"
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["src"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false

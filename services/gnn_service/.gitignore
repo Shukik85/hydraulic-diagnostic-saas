@@ -1,93 +1,24 @@
-# Python
+# Pytest
+.pytest_cache/
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-PIPFILE.lock
 
-# Virtual environments
-venv/
-ENV/
-env/
-.venv/
-
-# PyCharm
-.idea/
-
-# VS Code
-.vscode/
-
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb
-
-# Testing
-.pytest_cache/
+# Coverage
 .coverage
-.coverage.*
 htmlcov/
+.coveragerc
 coverage.xml
-*.cover
-.hypothesis/
-.tox/
 
-# MyPy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+# PyTest logs
+tests/pytest.log
 
-# Ruff
-.ruff_cache/
-
-# Models and data
-models/checkpoints/*.ckpt
-models/checkpoints/*.pth
-data/cache/
-data/raw/
-data/processed/
-*.pkl
-*.pickle
-
-# Logs
-logs/
-*.log
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# macOS
-.DS_Store
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# Docker
-.dockerignore
-
-# Temporary files
-*.tmp
-*.bak
+# IDE
+.vscode/
+.idea/
 *.swp
-*~
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
