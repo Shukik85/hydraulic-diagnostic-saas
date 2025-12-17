@@ -432,13 +432,19 @@ class HydraulicGNNModule(pl.LightningModule):
             # Training: only return total loss, discard components
             return total_loss, None
 
-    def training_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: Any, _batch_idx: int) -> None:
         """Training step (MANUAL optimization).
         
-        CRITICAL: We control optimizer.step() manually.
-        This prevents PyTorch Lightning's automatic.py from calling
-        optimizer.step(closure=closure), which causes Adam to call
-        closure() multiple times, leading to double backward.
+        CRITICAL FIXES:
+        1. We control optimizer.step() manually to prevent closure() double backward
+        2. Always detach losses before logging (self.log caches computation graphs)
+        3. Return None instead of tensor to prevent Lightning from caching graph
+        4. Never return tensors with active gradients from training_step
+        
+        When Lightning calls optimizer.step(closure=closure), Adam internally calls
+        closure() multiple times for line search. Each time it calls backward().
+        This causes "backward through graph twice" error.
+        Manual optimization gives us full control.
         """
         # Forward pass
         outputs = self(
@@ -456,12 +462,23 @@ class HydraulicGNNModule(pl.LightningModule):
         opt.step()
         opt.zero_grad()
 
-        # Logging
-        self.log("train/total_loss", total_loss, prog_bar=True, batch_size=batch.num_graphs)
+        # 🔥 CRITICAL: ALWAYS detach before logging!
+        # PyTorch Lightning's TensorBoard logger caches computation graphs
+        # from logged metrics. This prevents proper garbage collection.
+        loss_detached = total_loss.detach().clone()  # Detach + create new tensor
+        self.log(
+            "train/total_loss", 
+            loss_detached,  # Log detached scalar
+            prog_bar=True, 
+            batch_size=batch.num_graphs
+        )
+        
+        # 🔥 CRITICAL: Return None, not tensor!
+        # If we return a tensor with active graph, Lightning might cache it.
+        # Returning None prevents any graph caching.
+        return None
 
-        return total_loss
-
-    def validation_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
+    def validation_step(self, batch: Any, _batch_idx: int) -> None:
         """Validation step (no gradients needed).
         
         CRITICAL: Wrapped with torch.no_grad() to prevent graph conflicts.
@@ -477,19 +494,32 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             total_loss, loss_dict = self.compute_loss(outputs, batch, return_components=True)
 
-        # 🔥 CRITICAL: Detach losses before logging!
+        # 🔥 CRITICAL: Detach losses BEFORE logging!
         # TensorBoard can hold references to tensors with active graphs
-        total_loss_detached = total_loss.detach()
+        total_loss_detached = total_loss.detach().clone()
         
-        self.log("val/total_loss", total_loss_detached, prog_bar=True, batch_size=batch.num_graphs)
+        self.log(
+            "val/total_loss", 
+            total_loss_detached,  # Log detached scalar
+            prog_bar=True, 
+            batch_size=batch.num_graphs
+        )
         if loss_dict is not None:
             for key, val in loss_dict.items():
                 if key != "total":
-                    self.log(f"val/{key}_loss", val, prog_bar=False, batch_size=batch.num_graphs)
+                    # Already detached in compute_loss, but clone for safety
+                    val_safe = val.clone() if val.is_floating_point() else val
+                    self.log(
+                        f"val/{key}_loss", 
+                        val_safe,
+                        prog_bar=False, 
+                        batch_size=batch.num_graphs
+                    )
+        
+        # Return None to prevent graph caching
+        return None
 
-        return total_loss_detached
-
-    def test_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
+    def test_step(self, batch: Any, _batch_idx: int) -> None:
         """Test step (no gradients needed)."""
         with torch.no_grad():
             outputs = self(
@@ -498,15 +528,16 @@ class HydraulicGNNModule(pl.LightningModule):
             total_loss, loss_dict = self.compute_loss(outputs, batch, return_components=True)
 
         # Detach before logging
-        total_loss_detached = total_loss.detach()
+        total_loss_detached = total_loss.detach().clone()
         
         self.log("test/total_loss", total_loss_detached, batch_size=batch.num_graphs)
         if loss_dict is not None:
             for key, val in loss_dict.items():
                 if key != "total":
-                    self.log(f"test/{key}_loss", val, batch_size=batch.num_graphs)
+                    val_safe = val.clone() if val.is_floating_point() else val
+                    self.log(f"test/{key}_loss", val_safe, batch_size=batch.num_graphs)
 
-        return total_loss_detached
+        return None
 
     def on_epoch_end(self) -> None:
         """Clear PyTorch cache at end of epoch.
@@ -518,11 +549,24 @@ class HydraulicGNNModule(pl.LightningModule):
             torch.cuda.empty_cache()
         torch.cuda.synchronize() if torch.cuda.is_available() else None
 
+    def on_train_batch_end(self, outputs, batch, batch_idx: int) -> None:
+        """Clear cache after each training batch.
+        
+        CRITICAL: Prevents accumulation of computation graphs in memory.
+        This is especially important with manual optimization.
+        """
+        # Force garbage collection of computation graphs
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
     def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers.
         
         CRITICAL: Uses interval='epoch' to prevent scheduler from
         caching computation graphs between epoch transitions.
+        
+        NOTE: For development/debugging, consider disabling scheduler
+        to simplify the optimization loop.
         """
         optimizer = Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
