@@ -107,7 +107,7 @@ def setup_debug_hooks():
         logger.info("   This will slow down training but catch double backward errors")
         torch.Tensor.backward = _traced_backward
     
-    # Always enable anomaly detection in debug mode
+    # Always enable anomaly detection
     logger.info("🔍 Enabling torch.autograd.set_detect_anomaly(True)")
     torch.autograd.set_detect_anomaly(True)
 
