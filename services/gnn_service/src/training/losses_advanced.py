@@ -280,7 +280,7 @@ class DomainAdversarialLoss(nn.Module):
 
 
 class ConfidenceWeightedLoss(nn.Module):
-    """Wrapper for confidence-weighted loss.
+    """Wrapper for confidence-weighted loss (Lightning-compatible).
 
     Reduces loss contribution from low-confidence predictions
     (e.g., from imputed sensors).
@@ -309,20 +309,39 @@ class ConfidenceWeightedLoss(nn.Module):
         """Compute confidence-weighted loss.
 
         Args:
-            pred: Predictions
-            target: Targets
+            pred: Predictions [N] or [N, 1]
+            target: Targets [N] or [N, 1]
             confidence: Confidence scores [N] or [N, 1]
 
         Returns:
-            Weighted loss
+            Weighted loss (scalar)
         """
-        # Compute base loss (no reduction)
+        # Compute base loss (reduction='none' required)
         loss = self.base_loss(pred, target)
 
-        # Clamp confidence
+        # Ensure loss is [N] for proper weighting
+        if loss.dim() > 1:
+            loss = loss.squeeze(-1)
+        
+        # Ensure confidence is [N]
+        if confidence.dim() > 1:
+            confidence = confidence.squeeze(-1)
+        
+        # Validate shapes
+        if loss.shape != confidence.shape:
+            raise ValueError(
+                f"Loss shape {loss.shape} does not match confidence shape {confidence.shape}"
+            )
+
+        # Clamp confidence to avoid zero weights
         confidence = torch.clamp(confidence, min=self.min_confidence, max=1.0)
 
-        # Weight by confidence
-        weighted_loss = loss * confidence.expand_as(loss)
+        # CRITICAL: Detach confidence to prevent double backward
+        # Confidence comes from imputation model (separate graph)
+        confidence = confidence.detach()
 
+        # Weight by confidence (simple multiplication, no expand_as)
+        weighted_loss = loss * confidence
+
+        # Return mean (scalar)
         return weighted_loss.mean()
