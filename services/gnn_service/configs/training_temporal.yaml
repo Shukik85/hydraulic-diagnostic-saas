@@ -1,6 +1,7 @@
-# Production configuration for temporal GNN training
-# Based on TimeGNN + GRAPE research papers
+# Production training configuration for Universal Temporal GNN
+# Integrates GRAPE + DIDA + TimeGNN patterns
 
+# Model architecture
 model:
   in_channels: 34
   hidden_channels: 128
@@ -8,52 +9,153 @@ model:
   num_gat_layers: 3
   lstm_hidden: 256
   lstm_layers: 2
-  use_compile: false
+  dropout: 0.1
 
+# Training parameters
 training:
-  max_epochs: 150
-  learning_rate: 0.0005
-  weight_decay: 1.0e-05
-  batch_size: 16  # Smaller for temporal sequences
-  devices: 1
-  precision: '16'  # Mixed precision for speed
-  accumulate_grad_batches: 2
-
-# Temporal configuration
-temporal:
-  window_size: 3600  # 1 hour in seconds
-  stride: 900  # 15 minutes in seconds
-  correlation_threshold: 0.5  # For dynamic edge detection
-  propagation_hops: 2  # For missing data imputation
-
-# Data settings
-data:
-  train_path: data/processed/temporal_train
-  val_path: data/processed/temporal_val
-  test_path: data/processed/temporal_test
+  max_epochs: 200
+  learning_rate: 0.001
+  weight_decay: 0.00001
+  batch_size: 32
   num_workers: 4
-  max_missing_ratio: 0.5  # Handle up to 50% missing data
+  devices: 1
+  accelerator: gpu
+  precision: 16
+  gradient_clip_val: 1.0
+  accumulate_grad_batches: 1
 
-checkpoint:
-  dirpath: checkpoints/temporal_production
-  save_top_k: 5
-  monitor: val/total_loss
-  save_last: true
+# Advanced loss configuration (GRAPE + DIDA)
+loss_config:
+  # Use advanced losses from research papers
+  use_advanced_losses: true
+  use_confidence_weighting: true  # Weight by imputation confidence
+  use_domain_adversarial: false   # Enable for transfer learning
+  
+  # Loss weighting strategy
+  weighting: "uncertainty"  # "fixed" or "uncertainty"
+  
+  # Fixed weights (if weighting="fixed")
+  loss_weights:
+    graph_health: 1.0
+    graph_degradation: 1.0
+    graph_anomaly: 1.5  # Higher weight for safety
+    graph_rul: 1.2
+    component_health: 0.5
+    component_anomaly: 0.8
+  
+  # RUL loss configuration
+  rul:
+    tau: 0.7  # AsymmetricL1: 70% penalty for underestimation
+    quantiles: [0.1, 0.5, 0.9]  # Multi-quantile prediction
+  
+  # Physics-aware focal loss
+  physics_aware:
+    alpha: 0.25
+    gamma: 2.0
+    # Component criticality weights (from equipment metadata)
+    component_weights: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.3, 0.2]
+    # Anomaly severity weights (catastrophic → minor)
+    severity_weights: [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2]
+  
+  # Domain adversarial (DIDA)
+  domain_adversarial:
+    lambda_domain: 0.5
+    num_domains: 2  # Source + target
 
+# Two-stage imputation (GRAPE)
+imputation:
+  enabled: true
+  
+  # Stage 1: Spatial (GNN-based)
+  spatial:
+    hidden_dim: 128
+    num_heads: 4
+    num_layers: 2
+    dropout: 0.1
+    use_static_prior: true  # Use physical topology
+  
+  # Stage 2: Temporal (LSTM-based)
+  temporal:
+    hidden_dim: 128
+    num_layers: 2
+    dropout: 0.1
+  
+  # Confidence thresholds
+  min_confidence: 0.1
+  confidence_decay: 0.9  # Temporal decay
+
+# Temporal window configuration (TimeGNN)
+temporal:
+  window_size: 3600  # seconds (1 hour)
+  stride: 900        # seconds (15 minutes)
+  sequence_length: 12  # number of snapshots
+  
+  # Dynamic graph construction
+  dynamic_edges:
+    enabled: true
+    correlation_threshold: 0.5
+    k_neighbors: 5
+  
+  # Missing data handling
+  max_missing_ratio: 0.5  # Up to 50% missing sensors
+
+# Data augmentation
+augmentation:
+  enabled: true
+  noise_scale: 0.05
+  dropout_prob: 0.1
+  time_shift: true
+  magnitude_warp: false
+
+# Scheduler configuration
+scheduler:
+  type: "plateau"  # "plateau", "cosine", or "none"
+  plateau:
+    patience: 20
+    factor: 0.5
+    min_lr: 0.000001
+  cosine:
+    T_max: 100
+    eta_min: 0.000001
+
+# Early stopping
 early_stopping:
-  patience: 25  # More patient for temporal
-  min_delta: 1.0e-05
+  enabled: true
+  monitor: "val/total_loss"
+  patience: 30
+  min_delta: 0.0001
+  mode: "min"
 
-logger:
-  save_dir: logs/temporal
-  name: hydraulic_gnn_temporal
-  version: v1
+# Checkpoint configuration
+checkpoint:
+  dirpath: "checkpoints/production"
+  filename: "hydraulic-gnn-{epoch:02d}-{val_total_loss:.4f}"
+  monitor: "val/total_loss"
+  mode: "min"
+  save_top_k: 5
+  save_last: true
+  every_n_epochs: 1
 
-# Loss weights (multi-task)
-loss_weights:
-  graph_health: 1.0
-  graph_degradation: 1.0
-  graph_anomaly: 1.0
-  graph_rul: 1.0
-  component_health: 0.5
-  component_anomaly: 0.5
+# Logging
+logging:
+  log_every_n_steps: 50
+  save_dir: "logs/production"
+  name: "hydraulic_gnn_grape_dida"
+  version: null
+
+# Validation
+validation:
+  check_interval: 1.0  # Every epoch
+  num_sanity_val_steps: 2
+
+# Hardware
+hardware:
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+
+# Reproducibility
+reproducibility:
+  deterministic: false
+  benchmark: true
+  seed: 42
