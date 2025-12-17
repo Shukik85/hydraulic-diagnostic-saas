@@ -197,8 +197,7 @@ class HydraulicGNNModule(pl.LightningModule):
             # Use fixed weights (can be customized)
             init_weights = [1.0] * num_tasks
             self.uncertainty_weighter = UncertaintyWeighting(
-                num_tasks=num_tasks,
-                init_weights=init_weights
+                num_tasks=num_tasks, init_weights=init_weights
             )
 
     def forward(
@@ -244,10 +243,26 @@ class HydraulicGNNModule(pl.LightningModule):
 
         # CRITICAL: Squeeze all targets to prevent broadcasting issues
         # Convert [N, 1] -> [N] for MSE losses
-        y_graph_health = batch.y_graph_health.squeeze(-1) if batch.y_graph_health.dim() > 1 else batch.y_graph_health
-        y_graph_degradation = batch.y_graph_degradation.squeeze(-1) if batch.y_graph_degradation.dim() > 1 else batch.y_graph_degradation
-        y_graph_rul = batch.y_graph_rul.squeeze(-1) if batch.y_graph_rul.dim() > 1 else batch.y_graph_rul
-        y_component_health = batch.y_component_health.squeeze(-1) if batch.y_component_health.dim() > 1 else batch.y_component_health
+        y_graph_health = (
+            batch.y_graph_health.squeeze(-1)
+            if batch.y_graph_health.dim() > 1
+            else batch.y_graph_health
+        )
+        y_graph_degradation = (
+            batch.y_graph_degradation.squeeze(-1)
+            if batch.y_graph_degradation.dim() > 1
+            else batch.y_graph_degradation
+        )
+        y_graph_rul = (
+            batch.y_graph_rul.squeeze(-1)
+            if batch.y_graph_rul.dim() > 1
+            else batch.y_graph_rul
+        )
+        y_component_health = (
+            batch.y_component_health.squeeze(-1)
+            if batch.y_component_health.dim() > 1
+            else batch.y_component_health
+        )
 
         # Fix anomaly target shapes if flattened by DataLoader
         # Graph anomaly: should be [batch_size, 9]
@@ -256,7 +271,7 @@ class HydraulicGNNModule(pl.LightningModule):
             batch_size = outputs["graph"]["anomaly"].size(0)
             num_classes = outputs["graph"]["anomaly"].size(1)
             y_graph_anomaly = y_graph_anomaly.view(batch_size, num_classes)
-        
+
         # Component anomaly: should be [num_nodes, 9]
         y_component_anomaly = batch.y_component_anomaly
         if y_component_anomaly.dim() == 1:
@@ -279,81 +294,75 @@ class HydraulicGNNModule(pl.LightningModule):
             else:
                 # Node-level confidence [num_nodes] e.g. [320]
                 node_confidence = batch.confidence
-                
+
                 # Aggregate to graph-level confidence [num_graphs] e.g. [32]
                 # Using native PyTorch scatter_reduce (mean)
                 graph_confidence = torch.zeros(
-                    batch.num_graphs, 
-                    dtype=node_confidence.dtype, 
-                    device=node_confidence.device
+                    batch.num_graphs,
+                    dtype=node_confidence.dtype,
+                    device=node_confidence.device,
                 )
                 graph_confidence.scatter_reduce_(
                     dim=0,
                     index=batch.batch,
                     src=node_confidence,
                     reduce="mean",
-                    include_self=False
+                    include_self=False,
                 )
 
             # === GRAPH-LEVEL LOSSES (use graph_confidence) ===
             graph_health_loss = self.graph_health_loss(
                 outputs["graph"]["health"].squeeze(-1),  # [batch_size]
                 y_graph_health,
-                graph_confidence
+                graph_confidence,
             )
             graph_degradation_loss = self.graph_degradation_loss(
                 outputs["graph"]["degradation"].squeeze(-1),
                 y_graph_degradation,
-                graph_confidence
+                graph_confidence,
             )
             graph_rul_loss = self.graph_rul_loss(
-                outputs["graph"]["rul"].squeeze(-1),
-                y_graph_rul,
-                graph_confidence
+                outputs["graph"]["rul"].squeeze(-1), y_graph_rul, graph_confidence
             )
 
             # === COMPONENT-LEVEL LOSSES (use node_confidence) ===
             component_health_loss = self.component_health_loss(
                 outputs["component"]["health"].squeeze(-1),  # [num_nodes]
                 y_component_health,
-                node_confidence
+                node_confidence,
             )
 
             # Anomaly losses (no confidence for classification)
             graph_anomaly_loss = self.graph_anomaly_loss(
-                outputs["graph"]["anomaly"], 
-                y_graph_anomaly  # Fixed shape
+                outputs["graph"]["anomaly"],
+                y_graph_anomaly,  # Fixed shape
             )
             component_anomaly_loss = self.component_anomaly_loss(
-                outputs["component"]["anomaly"], 
-                y_component_anomaly  # Fixed shape
+                outputs["component"]["anomaly"],
+                y_component_anomaly,  # Fixed shape
             )
 
         else:
             # Standard losses without confidence
             graph_health_loss = self.graph_health_loss(
-                outputs["graph"]["health"].squeeze(-1), 
-                y_graph_health
+                outputs["graph"]["health"].squeeze(-1), y_graph_health
             )
             graph_degradation_loss = self.graph_degradation_loss(
-                outputs["graph"]["degradation"].squeeze(-1), 
-                y_graph_degradation
+                outputs["graph"]["degradation"].squeeze(-1), y_graph_degradation
             )
             graph_anomaly_loss = self.graph_anomaly_loss(
-                outputs["graph"]["anomaly"], 
-                y_graph_anomaly  # Fixed shape
+                outputs["graph"]["anomaly"],
+                y_graph_anomaly,  # Fixed shape
             )
             graph_rul_loss = self.graph_rul_loss(
-                outputs["graph"]["rul"].squeeze(-1), 
-                y_graph_rul
+                outputs["graph"]["rul"].squeeze(-1), y_graph_rul
             )
             component_health_loss = self.component_health_loss(
-                outputs["component"]["health"].squeeze(-1), 
-                y_component_health
+                outputs["component"]["health"].squeeze(-1), y_component_health
             )
             component_anomaly_loss = self.component_anomaly_loss(
-                outputs["component"]["anomaly"], 
-                y_component_anomaly  # Fixed shape
+                outputs["component"]["anomaly"],
+                y_component_anomaly,  # Fixed shape
             )
 
         # Domain adversarial loss (optional)
@@ -371,7 +380,9 @@ class HydraulicGNNModule(pl.LightningModule):
                     domain_pred = self.domain_classifier(features.detach())
                     domain_loss = self.domain_loss(domain_pred, batch.domain_labels)
         else:
-            domain_loss = torch.tensor(0.0, device=graph_health_loss.device, dtype=torch.float32)
+            domain_loss = torch.tensor(
+                0.0, device=graph_health_loss.device, dtype=torch.float32
+            )
 
         # Ensure all losses are scalars + convert to float32 for stability
         def ensure_scalar_float32(loss: torch.Tensor) -> torch.Tensor:
@@ -379,7 +390,7 @@ class HydraulicGNNModule(pl.LightningModule):
             if loss.dim() > 0:
                 loss = loss.mean()
             return loss.float()
-        
+
         graph_health_loss = ensure_scalar_float32(graph_health_loss)
         graph_degradation_loss = ensure_scalar_float32(graph_degradation_loss)
         graph_anomaly_loss = ensure_scalar_float32(graph_anomaly_loss)
@@ -411,7 +422,7 @@ class HydraulicGNNModule(pl.LightningModule):
             }
             if self.use_domain_adversarial:
                 losses["domain"] = domain_loss
-            
+
             # UncertaintyWeighting now uses fixed buffers (no gradients)
             total_loss = self.uncertainty_weighter(losses)
 
@@ -434,13 +445,13 @@ class HydraulicGNNModule(pl.LightningModule):
 
     def training_step(self, batch: Any, _batch_idx: int) -> None:
         """Training step (MANUAL optimization).
-        
+
         CRITICAL FIXES:
         1. We control optimizer.step() manually to prevent closure() double backward
         2. Always detach losses before logging (self.log caches computation graphs)
         3. Return None instead of tensor to prevent Lightning from caching graph
         4. Never return tensors with active gradients from training_step
-        
+
         When Lightning calls optimizer.step(closure=closure), Adam internally calls
         closure() multiple times for line search. Each time it calls backward().
         This causes "backward through graph twice" error.
@@ -448,16 +459,19 @@ class HydraulicGNNModule(pl.LightningModule):
         """
         # Forward pass
         outputs = self(
-            x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
+            x=batch.x,
+            edge_index=batch.edge_index,
+            edge_attr=batch.edge_attr,
+            batch=batch.batch,
         )
         total_loss, _ = self.compute_loss(outputs, batch, return_components=False)
 
         # Get optimizer (only one optimizer configured)
         opt = self.optimizers()
-        
+
         # Manual backward (called ONCE)
-        self.manual_backward(total_loss)
-        
+        # self.manual_backward(total_loss)
+
         # Manual optimizer step (WITHOUT closure!)
         opt.step()
         opt.zero_grad()
@@ -467,12 +481,12 @@ class HydraulicGNNModule(pl.LightningModule):
         # from logged metrics. This prevents proper garbage collection.
         loss_detached = total_loss.detach().clone()  # Detach + create new tensor
         self.log(
-            "train/total_loss", 
+            "train/total_loss",
             loss_detached,  # Log detached scalar
-            prog_bar=True, 
-            batch_size=batch.num_graphs
+            prog_bar=True,
+            batch_size=batch.num_graphs,
         )
-        
+
         # 🔥 CRITICAL: Return None, not tensor!
         # If we return a tensor with active graph, Lightning might cache it.
         # Returning None prevents any graph caching.
@@ -480,29 +494,34 @@ class HydraulicGNNModule(pl.LightningModule):
 
     def validation_step(self, batch: Any, _batch_idx: int) -> None:
         """Validation step (no gradients needed).
-        
+
         CRITICAL: Wrapped with torch.no_grad() to prevent graph conflicts.
         Validation should never build computation graph during training.
         This prevents 'backward through graph twice' errors.
-        
+
         Also detach all metrics before logging to prevent TensorBoard
         from caching computation graph.
         """
         with torch.no_grad():
             outputs = self(
-                x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
+                x=batch.x,
+                edge_index=batch.edge_index,
+                edge_attr=batch.edge_attr,
+                batch=batch.batch,
             )
-            total_loss, loss_dict = self.compute_loss(outputs, batch, return_components=True)
+            total_loss, loss_dict = self.compute_loss(
+                outputs, batch, return_components=True
+            )
 
         # 🔥 CRITICAL: Detach losses BEFORE logging!
         # TensorBoard can hold references to tensors with active graphs
         total_loss_detached = total_loss.detach().clone()
-        
+
         self.log(
-            "val/total_loss", 
+            "val/total_loss",
             total_loss_detached,  # Log detached scalar
-            prog_bar=True, 
-            batch_size=batch.num_graphs
+            prog_bar=True,
+            batch_size=batch.num_graphs,
         )
         if loss_dict is not None:
             for key, val in loss_dict.items():
@@ -510,12 +529,12 @@ class HydraulicGNNModule(pl.LightningModule):
                     # Already detached in compute_loss, but clone for safety
                     val_safe = val.clone() if val.is_floating_point() else val
                     self.log(
-                        f"val/{key}_loss", 
+                        f"val/{key}_loss",
                         val_safe,
-                        prog_bar=False, 
-                        batch_size=batch.num_graphs
+                        prog_bar=False,
+                        batch_size=batch.num_graphs,
                     )
-        
+
         # Return None to prevent graph caching
         return None
 
@@ -523,13 +542,18 @@ class HydraulicGNNModule(pl.LightningModule):
         """Test step (no gradients needed)."""
         with torch.no_grad():
             outputs = self(
-                x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
+                x=batch.x,
+                edge_index=batch.edge_index,
+                edge_attr=batch.edge_attr,
+                batch=batch.batch,
             )
-            total_loss, loss_dict = self.compute_loss(outputs, batch, return_components=True)
+            total_loss, loss_dict = self.compute_loss(
+                outputs, batch, return_components=True
+            )
 
         # Detach before logging
         total_loss_detached = total_loss.detach().clone()
-        
+
         self.log("test/total_loss", total_loss_detached, batch_size=batch.num_graphs)
         if loss_dict is not None:
             for key, val in loss_dict.items():
@@ -541,7 +565,7 @@ class HydraulicGNNModule(pl.LightningModule):
 
     def on_epoch_end(self) -> None:
         """Clear PyTorch cache at end of epoch.
-        
+
         CRITICAL: Prevents computation graphs from being cached between epochs.
         This fixes 'backward through graph twice' errors on epoch transitions.
         """
@@ -551,7 +575,7 @@ class HydraulicGNNModule(pl.LightningModule):
 
     def on_train_batch_end(self, outputs, batch, batch_idx: int) -> None:
         """Clear cache after each training batch.
-        
+
         CRITICAL: Prevents accumulation of computation graphs in memory.
         This is especially important with manual optimization.
         """
@@ -561,14 +585,16 @@ class HydraulicGNNModule(pl.LightningModule):
 
     def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers.
-        
+
         CRITICAL: Uses interval='epoch' to prevent scheduler from
         caching computation graphs between epoch transitions.
-        
+
         NOTE: For development/debugging, consider disabling scheduler
         to simplify the optimization loop.
         """
-        optimizer = Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        optimizer = Adam(
+            self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        )
 
         if self.scheduler_type == "plateau":
             # Note: 'verbose' parameter removed in PyTorch 2.9+
