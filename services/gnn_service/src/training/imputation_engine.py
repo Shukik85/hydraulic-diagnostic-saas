@@ -1,19 +1,16 @@
-"""Missing data imputation engine (IMPROVED).
+"""Imputation engine for missing sensor data.
 
-Handles highly incomplete data (>50% missing) via:
-- Vectorized neighbor finding
-- Spatial-temporal feature propagation
+Provides:
+- K-NN based imputation
+- Confidence scoring
 - Asymmetric noise modeling
-- Input validation
-
-References:
-  [3] GRAPE: Missing data via GNN edge embeddings
-  [5] Spatial-temporal imputation for sensor networks
 """
 
 from __future__ import annotations
 
 import logging
+from collections import deque
+from typing import Any
 
 import numpy as np
 
@@ -21,11 +18,16 @@ logger = logging.getLogger(__name__)
 
 
 class ImputationEngine:
-    """Missing data imputation (Production-ready).
+    """Imputation engine for missing sensor data.
 
-    Two-stage approach:
-    1. Feature propagation: Fill missing values from neighbors
-    2. Confidence weighting: Reduce impact of reconstructions
+    Examples:
+        >>> engine = ImputationEngine(confidence_threshold=0.5)
+        >>> x_imputed, confidence = engine.impute_missing_features(
+        ...     x=features,
+        ...     mask_nodes=observed_mask,
+        ...     edge_index=edges,
+        ...     edge_weights=weights,
+        ... )
     """
 
     def __init__(
@@ -41,120 +43,139 @@ class ImputationEngine:
 
     def impute_missing_features(
         self,
-        x: np.ndarray,  # [N, F]
-        mask_nodes: np.ndarray,  # [N]
-        edge_index: np.ndarray,  # [2, E]
-        edge_weights: np.ndarray | None = None,  # [E]
+        x: np.ndarray,
+        mask_nodes: np.ndarray,
+        edge_index: np.ndarray,
+        edge_weights: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Impute missing node features via spatial propagation (IMPROVED).
+        """Impute missing features via neighbor propagation.
 
         Args:
-            x: Node features (NaN or 0 for missing)
-            mask_nodes: Binary mask (True=present, False=missing)
-            edge_index: Graph edges [2, E]
-            edge_weights: Edge confidence scores [E] (required)
+            x: Node features [N, F] (missing = 0)
+            mask_nodes: Boolean mask [N] (True=observed, False=missing)
+            edge_index: Edge indices [2, E]
+            edge_weights: Edge weights [E]
 
         Returns:
             x_imputed: Imputed features [N, F]
-            imputation_conf: Confidence scores [N]
+            confidence: Confidence scores [N] (0-1)
         """
-        # Validate inputs
-        assert x.shape[0] == mask_nodes.shape[0], "x and mask_nodes shape mismatch"
-        assert edge_index.max() < x.shape[0], f"edge_index out of bounds: {edge_index.max()}"
-        if edge_weights is None:
-            logger.warning("edge_weights not provided, using uniform weights")
-            edge_weights = np.ones(edge_index.shape[1])
-        else:
-            assert edge_weights.shape[0] == edge_index.shape[1], "edge_weights shape mismatch"
-
+        n_nodes = x.shape[0]
         x_imputed = x.copy()
-        imputation_conf = np.ones(mask_nodes.shape[0])
+        confidence = np.ones(n_nodes)
 
         # Identify missing nodes
-        missing_nodes = np.where(mask_nodes == False)[0]
+        missing_nodes = np.where(~mask_nodes)[0]
 
         if len(missing_nodes) == 0:
-            return x_imputed, imputation_conf
+            return x_imputed, confidence
 
-        # Build adjacency dict (vectorized)
-        adjacency = self._build_adjacency_dict(edge_index, edge_weights, x.shape[0])
+        # Build adjacency dict
+        adjacency = self._build_adjacency_dict(edge_index, edge_weights, n_nodes)
 
+        # Impute each missing node
         for node_idx in missing_nodes:
-            # Find neighbors using BFS
-            neighbors_with_dist = self._find_neighbors_bfs(
+            # Find neighbors via BFS
+            neighbors = self._find_neighbors_bfs(
                 node_idx, adjacency, self.propagation_hops, mask_nodes
             )
 
-            if neighbors_with_dist:
-                # Weighted average from neighbors
-                neighbor_values = np.array([x[n] for n, _ in neighbors_with_dist])
-                distances = np.array([d for _, d in neighbors_with_dist])
-                weights = 1.0 / (1.0 + distances)  # Decay by distance
-                weights /= weights.sum()
-
-                x_imputed[node_idx] = np.average(neighbor_values, axis=0, weights=weights)
-                imputation_conf[node_idx] = np.mean(weights)
+            if not neighbors:
+                # No neighbors - use global mean
+                observed_features = x[mask_nodes]
+                if len(observed_features) > 0:
+                    x_imputed[node_idx] = observed_features.mean(axis=0)
+                confidence[node_idx] = 0.1  # Low confidence
             else:
-                # No neighbors: use global mean
-                global_mean = np.nanmean(x[mask_nodes], axis=0)
-                x_imputed[node_idx] = np.nan_to_num(global_mean, nan=0.0)
-                imputation_conf[node_idx] = 0.1  # Low confidence
+                # Weighted average of neighbors
+                neighbor_features = []
+                neighbor_weights = []
 
-        return x_imputed, imputation_conf
+                for neighbor_idx, distance in neighbors:
+                    neighbor_features.append(x[neighbor_idx])
+                    # Weight decays with distance
+                    weight = edge_weights[0] / (distance + 1)
+                    neighbor_weights.append(weight)
+
+                neighbor_features = np.array(neighbor_features)
+                neighbor_weights = np.array(neighbor_weights)
+                neighbor_weights /= neighbor_weights.sum()
+
+                # Weighted average
+                x_imputed[node_idx] = (neighbor_features.T @ neighbor_weights).T
+
+                # Confidence based on number and distance of neighbors
+                avg_distance = np.mean([d for _, d in neighbors])
+                confidence[node_idx] = max(0.3, 1.0 - (avg_distance / self.propagation_hops))
+
+        return x_imputed, confidence
 
     def _build_adjacency_dict(
         self, edge_index: np.ndarray, edge_weights: np.ndarray, n_nodes: int
-    ) -> dict:
+    ) -> dict[int, list[tuple[int, float]]]:
         """Build adjacency dict with weights (vectorized)."""
         adjacency = {i: [] for i in range(n_nodes)}
-        for (src, dst), weight in zip(edge_index.T, edge_weights):
+        for (src, dst), weight in zip(edge_index.T, edge_weights, strict=False):
             adjacency[src].append((dst, weight))
         return adjacency
 
     def _find_neighbors_bfs(
         self,
         node_idx: int,
-        adjacency: dict,
+        adjacency: dict[int, list[tuple[int, float]]],
         max_hops: int,
         mask_nodes: np.ndarray,
-    ) -> list[tuple[int, float]]:
-        """Find neighbors within k hops using BFS (vectorized).
+    ) -> list[tuple[int, int]]:
+        """Find observed neighbors via BFS.
 
-        Returns list of (neighbor_idx, distance) tuples.
+        Returns:
+            List of (neighbor_idx, distance) tuples
         """
+        visited = set()
+        queue: deque[tuple[int, int]] = deque([(node_idx, 0)])
         neighbors = []
-        visited = {node_idx}
-        queue = [(node_idx, 0)]  # (node, distance)
 
         while queue:
-            current, dist = queue.pop(0)
+            current_node, distance = queue.popleft()
 
-            if dist > max_hops:
+            if current_node in visited:
                 continue
 
-            for neighbor, weight in adjacency.get(current, []):
-                if neighbor not in visited and mask_nodes[neighbor]:
-                    visited.add(neighbor)
-                    neighbors.append((neighbor, dist + 1 - weight))  # Account for edge weight
-                    if dist + 1 < max_hops:
-                        queue.append((neighbor, dist + 1))
+            visited.add(current_node)
+
+            # Check if observed
+            if current_node != node_idx and mask_nodes[current_node]:
+                neighbors.append((current_node, distance))
+
+            # Explore neighbors
+            if distance < max_hops:
+                for neighbor, _ in adjacency.get(current_node, []):
+                    if neighbor not in visited:
+                        queue.append((neighbor, distance + 1))
 
         return neighbors
 
     def apply_asymmetric_noise_model(
-        self,
-        x: np.ndarray,
-        imputation_conf: np.ndarray,
-        noise_scale: float = 0.1,
+        self, x: np.ndarray, confidence: np.ndarray, noise_scale: float = 0.1
     ) -> np.ndarray:
-        """Apply confidence-weighted noise to low-quality reconstructions.
+        """Apply asymmetric noise based on confidence.
 
-        Low-confidence sensors get more noise injected to reduce
-        their influence on training (asymmetric noise modeling).
+        Low confidence nodes get more noise.
+
+        Args:
+            x: Features [N, F]
+            confidence: Confidence scores [N]
+            noise_scale: Base noise scale
+
+        Returns:
+            x_noisy: Features with asymmetric noise
         """
-        assert x.shape[0] == imputation_conf.shape[0], "Shape mismatch"
-        assert 0 <= noise_scale <= 1, "noise_scale must be in [0, 1]"
+        assert 0 <= noise_scale <= 1, f"noise_scale must be in [0, 1], got {noise_scale}"
 
-        noise = np.random.normal(0, noise_scale, x.shape)
-        noise_strength = (1.0 - imputation_conf)[:, np.newaxis]  # Inverse confidence
-        return x + noise * noise_strength
+        # Noise inversely proportional to confidence
+        noise_multiplier = 1.0 - confidence
+        noise = np.random.randn(*x.shape) * noise_scale
+        noise = noise * noise_multiplier[:, np.newaxis]
+
+        x_noisy = x + noise
+        return x_noisy

@@ -15,6 +15,7 @@ References:
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
 import torch
 from torch import nn
@@ -89,7 +90,7 @@ class GRAPEImputer(nn.Module):
         edge_index: torch.Tensor,  # [2, E] edges
         edge_attr: torch.Tensor,  # [E, 14] edge attributes
         mask_nodes: torch.Tensor,  # [N] bool (True=observed, False=missing)
-        static_topology: torch.Tensor | None = None,  # [2, E_static]
+        static_topology: Optional[torch.Tensor] = None,  # [2, E_static]
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Impute missing features via GNN propagation.
 
@@ -105,7 +106,6 @@ class GRAPEImputer(nn.Module):
             confidence: Confidence scores [N] (0-1)
         """
         device = x.device
-        n_nodes = x.shape[0]
 
         # Combine dynamic + static edges if provided
         if static_topology is not None and self.use_static_prior:
@@ -114,8 +114,8 @@ class GRAPEImputer(nn.Module):
             edge_index = torch.cat([edge_index, static_topology], dim=1)
             edge_attr = torch.cat([edge_attr, static_edge_attr], dim=0)
 
-        # Compute edge confidence from edge features
-        edge_confidence = self.edge_encoder(edge_attr).squeeze(-1)  # [E]
+        # Compute edge confidence from edge features (use for potential weighting later)
+        _edge_confidence = self.edge_encoder(edge_attr).squeeze(-1)  # [E]
 
         # Propagate features through GAT layers
         h = x
@@ -290,7 +290,7 @@ class TwoStageImputer:
         edge_index: torch.Tensor,  # [2, E]
         edge_attr: torch.Tensor,  # [E, 14]
         mask_sequence: torch.Tensor,  # [T, N] bool
-        static_topology: torch.Tensor | None = None,
+        static_topology: Optional[torch.Tensor] = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Complete two-stage imputation.
 

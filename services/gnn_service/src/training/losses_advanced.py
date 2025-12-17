@@ -15,8 +15,8 @@ References:
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F
 from torch import nn
+import torch.nn.functional as F
 
 
 class AsymmetricL1Loss(nn.Module):
@@ -88,8 +88,10 @@ class QuantileRULLoss(nn.Module):
         >>> loss = loss_fn(pred, true)
     """
 
-    def __init__(self, quantiles: list[float] = [0.1, 0.5, 0.9], reduction: str = "mean"):
+    def __init__(self, quantiles: list[float] | None = None, reduction: str = "mean"):
         super().__init__()
+        if quantiles is None:
+            quantiles = [0.1, 0.5, 0.9]
         for q in quantiles:
             if not 0 < q < 1:
                 raise ValueError(f"Quantile must be in (0, 1), got {q}")

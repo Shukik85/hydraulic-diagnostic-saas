@@ -1,365 +1,294 @@
-"""Temporal DataLoader based on TimeGNN approach (IMPROVED).
+"""Temporal dataloader for hydraulic diagnostics.
 
-Provides temporal graph snapshots with:
-- Robust time window slicing using Polars
-- Dynamic edge detection from sensor correlations
-- Missing data handling via GRAPE
-- Fallback to static topology when no dynamic edges
-- Multi-task targets (health, degradation, anomaly, RUL)
-
-References:
-  [1] TimeGNN: 4-80x faster temporal GNN inference
-  [2] GRAPE: Missing data via GNN edge embeddings
-  [3] Dynamic graph construction for time series
+Provides:
+- Temporal snapshot creation
+- Dynamic edge construction
+- Missing data handling
+- Target loading from TimescaleDB
 """
 
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
 import torch
 from torch_geometric.data import Data
-from torch_geometric.loader import DataLoader as PyGDataLoader
 
 if TYPE_CHECKING:
     from src.data.timescale_connector import TimescaleConnector
-    from src.features.feature_engineer import FeatureEngineer
-    from src.schemas import GraphTopology
+    from src.topology.graph_topology import GraphTopology
 
 logger = logging.getLogger(__name__)
 
 
 class TemporalHydraulicDataLoader:
-    """DataLoader for temporal hydraulic GNN training (Production-ready).
+    """DataLoader for temporal hydraulic diagnostics.
 
-    Implements TimeGNN + GRAPE approach with robust error handling:
-    1. Create temporal snapshots with Polars truncate (handles gaps)
-    2. Detect dynamic edges from sensor correlations
-    3. Handle missing data via graph reconstruction
-    4. Batch snapshots for training
-    5. Fallback to static topology if no dynamic edges
+    Creates temporal snapshots with dynamic graph construction.
 
     Examples:
         >>> loader = TemporalHydraulicDataLoader(
         ...     timescale_connector=connector,
-        ...     feature_engineer=engineer,
-        ...     window_size=timedelta(hours=1),
-        ...     stride=timedelta(minutes=15),
+        ...     window_size=3600,
+        ...     stride=900,
+        ...     sequence_length=12,
         ... )
-        >>> datasets = await loader.load_temporal_dataset(
-        ...     equipment_ids=["pump_001"],
-        ...     start_date="2024-01-01",
-        ...     end_date="2024-01-31",
+        >>> graphs = await loader.load_temporal_sequence(
+        ...     equipment_id="excavator_001",
+        ...     start_time="2024-01-01",
+        ...     end_time="2024-01-02",
+        ...     topology=graph_topology,
         ... )
-        >>> train_loader = loader.get_train_loader(datasets[0])
     """
 
     def __init__(
         self,
         timescale_connector: TimescaleConnector,
-        feature_engineer: FeatureEngineer,
-        window_size: timedelta = timedelta(hours=1),
-        stride: timedelta = timedelta(minutes=15),
+        window_size: int = 3600,
+        stride: int = 900,
+        sequence_length: int = 12,
         correlation_threshold: float = 0.5,
-        batch_size: int = 32,
-        num_workers: int = 4,
-        min_edges: int = 1,
+        k_neighbors: int = 5,
+        max_missing_ratio: float = 0.5,
     ):
-        """Initialize temporal dataloader.
-
-        Args:
-            timescale_connector: TimescaleDB connection
-            feature_engineer: Feature extraction engine
-            window_size: Temporal window (e.g., 1 hour)
-            stride: Window stride (e.g., 15 min)
-            correlation_threshold: Edge creation threshold (0-1)
-            batch_size: Batch size for training
-            num_workers: DataLoader workers
-            min_edges: Minimum edges required (fallback to static if fewer)
-        """
-        self.timescale_connector = timescale_connector
-        self.feature_engineer = feature_engineer
+        self.timescale = timescale_connector
         self.window_size = window_size
         self.stride = stride
+        self.sequence_length = sequence_length
         self.correlation_threshold = correlation_threshold
-        self.batch_size = batch_size
-        self.num_workers = num_workers
-        self.min_edges = min_edges
+        self.k_neighbors = k_neighbors
+        self.max_missing_ratio = max_missing_ratio
 
-    async def load_temporal_dataset(
+    async def load_temporal_sequence(
         self,
-        equipment_ids: list[str],
-        start_date: str,
-        end_date: str,
+        equipment_id: str,
+        start_time: str,
+        end_time: str,
         topology: GraphTopology,
-    ) -> list[list[Data]]:
-        """Load temporal dataset as list of temporal graphs.
+    ) -> list[Data]:
+        """Load temporal sequence of graphs.
+
+        Args:
+            equipment_id: Equipment identifier
+            start_time: Start timestamp
+            end_time: End timestamp
+            topology: Graph topology
 
         Returns:
-            For each equipment: list of Data objects (one per time window)
+            List of temporal graph snapshots
         """
-        datasets = []
+        # Load sensor data
+        df = await self.timescale.fetch_sensor_data(equipment_id, start_time, end_time)
 
-        for equipment_id in equipment_ids:
-            logger.info(f"Loading temporal data for {equipment_id}")
+        if df.is_empty():
+            logger.warning(f"No data found for {equipment_id} in [{start_time}, {end_time}]")
+            return []
 
-            try:
-                # Fetch sensor data
-                df = await self.timescale_connector.fetch_sensor_data(
-                    equipment_id=equipment_id,
-                    start_time=start_date,
-                    end_time=end_date,
-                )
+        # Create temporal windows
+        temporal_graphs = self._create_temporal_snapshots(df, topology)
 
-                if df.is_empty():
-                    logger.warning(f"No data for {equipment_id}")
-                    continue
+        # Load targets
+        temporal_graphs = await self._load_targets_for_snapshots(temporal_graphs)
 
-                # Create temporal snapshots
-                temporal_graphs = self._create_temporal_snapshots(
-                    df=df,
-                    topology=topology,
-                    equipment_id=equipment_id,
-                )
-
-                if not temporal_graphs:
-                    logger.warning(f"No graphs created for {equipment_id}")
-                    continue
-
-                # Load targets for each snapshot
-                temporal_graphs = await self._load_targets_for_snapshots(
-                    temporal_graphs=temporal_graphs,
-                    equipment_id=equipment_id,
-                )
-
-                datasets.append(temporal_graphs)
-                logger.info(f"Created {len(temporal_graphs)} snapshots for {equipment_id}")
-
-            except Exception as e:
-                logger.error(f"Failed to load data for {equipment_id}: {e}", exc_info=True)
-                continue
-
-        return datasets
+        return temporal_graphs
 
     def _create_temporal_snapshots(
-        self,
-        df: pl.DataFrame,
-        topology: GraphTopology,
-        equipment_id: str,
+        self, df: pl.DataFrame, topology: GraphTopology
     ) -> list[Data]:
-        """Create temporal graph snapshots with sliding windows (ROBUST).
+        """Create temporal snapshots from sensor data.
 
-        Uses Polars truncate instead of manual slicing to handle gaps.
+        Args:
+            df: Sensor data
+            topology: Graph topology
+
+        Returns:
+            List of graph snapshots
         """
-        snapshots = []
+        # Get time range
+        min_time = df["timestamp"].min()
+        max_time = df["timestamp"].max()
 
-        try:
-            # Truncate timestamps to window boundaries
-            df_with_window = df.with_columns(
-                pl.col("timestamp")
-                .dt.truncate(f"{int(self.window_size.total_seconds())}s")
-                .alias("window")
+        # Generate window starts
+        window_starts = []
+        current_time = min_time
+        while current_time + self.window_size <= max_time:
+            window_starts.append(current_time)
+            current_time += self.stride
+
+        # Create snapshots
+        snapshots = []
+        for window_start in window_starts:
+            window_end = window_start + self.window_size
+
+            # Filter data for window
+            window_df = df.filter(
+                (pl.col("timestamp") >= window_start) & (pl.col("timestamp") < window_end)
             )
 
-            # Get unique windows
-            windows = df_with_window.select("window").unique().sort("window")["window"].to_list()
+            if window_df.is_empty():
+                continue
 
-            for window_start in windows:
-                # Filter data for this window
-                window_df = df_with_window.filter(pl.col("window") == window_start)
+            # Extract features
+            node_features, mask_nodes = self._extract_node_features(window_df, topology)
 
-                if window_df.is_empty():
-                    continue
-
-                # Extract features
-                node_features, mask_nodes = self._extract_node_features(
-                    window_df, topology
+            # Check missing ratio
+            missing_ratio = 1.0 - mask_nodes.sum() / len(mask_nodes)
+            if missing_ratio > self.max_missing_ratio:
+                logger.warning(
+                    f"Skipping window (missing ratio: {missing_ratio:.2%} > {self.max_missing_ratio:.2%})"
                 )
+                continue
 
-                # Construct dynamic edges
-                edge_index, edge_attr, mask_edges = self._construct_dynamic_edges(
-                    window_df, topology, node_features
-                )
+            # Construct edges
+            edge_index, edge_attr, edge_mask = self._construct_dynamic_edges(
+                topology, node_features
+            )
 
-                # Validate edge_index
-                if edge_index.shape[1] == 0:
-                    logger.warning(f"No edges for {equipment_id} at {window_start}, using static topology")
-                    # Fallback to static topology
-                    edge_index, edge_attr = self._get_static_topology_edges(topology)
+            # Create graph
+            snapshot = Data(
+                x=torch.tensor(node_features, dtype=torch.float32),
+                edge_index=torch.tensor(edge_index, dtype=torch.long),
+                edge_attr=torch.tensor(edge_attr, dtype=torch.float32),
+                mask_nodes=torch.tensor(mask_nodes, dtype=torch.bool),
+                edge_mask=torch.tensor(edge_mask, dtype=torch.bool),
+                timestamp=window_start,
+            )
 
-                # Create Data object
-                data = Data(
-                    x=torch.tensor(node_features, dtype=torch.float32),
-                    edge_index=torch.tensor(edge_index, dtype=torch.long),
-                    edge_attr=torch.tensor(edge_attr, dtype=torch.float32),
-                    mask_nodes=torch.tensor(mask_nodes, dtype=torch.bool),
-                    mask_edges=torch.tensor(mask_edges, dtype=torch.bool),
-                    timestamp=str(window_start),
-                    equipment_id=equipment_id,
-                )
-
-                snapshots.append(data)
-
-        except Exception as e:
-            logger.error(f"Error creating temporal snapshots: {e}", exc_info=True)
+            snapshots.append(snapshot)
 
         return snapshots
 
     def _extract_node_features(
         self, df: pl.DataFrame, topology: GraphTopology
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Extract node features with missing data masking.
+        """Extract node features from sensor data.
+
+        Args:
+            df: Sensor data for time window
+            topology: Graph topology
 
         Returns:
-            node_features: [N, F] feature matrix
-            mask_nodes: [N] boolean mask (True=data present)
+            node_features: [N, F] array
+            mask_nodes: [N] bool array (True=observed, False=missing)
         """
-        features = []
-        masks = []
+        nodes = list(topology.components.keys())
+        n_nodes = len(nodes)
+        n_features = 34  # Fixed feature dimension
 
-        for component in topology.components.values():
-            sensor_id = component.component_id
-            sensor_df = df.filter(pl.col("sensor_id") == sensor_id)
+        node_features = np.zeros((n_nodes, n_features))
+        mask_nodes = np.zeros(n_nodes, dtype=bool)
 
-            if sensor_df.is_empty():
-                # Missing sensor: zero features, mask=False
-                feat = np.zeros(34)
-                mask = False
-            else:
-                try:
-                    # Use FeatureEngineer
-                    feat = self.feature_engineer.extract_all_features(sensor_df.to_numpy())
-                    # Handle NaN
-                    feat = np.nan_to_num(feat, nan=0.0)
-                    mask = True
-                except Exception as e:
-                    logger.warning(f"Failed to extract features for {sensor_id}: {e}")
-                    feat = np.zeros(34)
-                    mask = False
+        for idx, node_id in enumerate(nodes):
+            # Get sensor data for this component
+            node_data = df.filter(pl.col("component_id") == node_id)
 
-            features.append(feat)
-            masks.append(mask)
+            if node_data.is_empty():
+                # Missing node
+                mask_nodes[idx] = False
+                continue
 
-        return np.array(features), np.array(masks)
+            # Extract features (simplified - real implementation uses FeatureEngineer)
+            # Features: mean, std, min, max, etc.
+            values = node_data["value"].to_numpy()
+            if len(values) > 0:
+                node_features[idx, :4] = [
+                    np.mean(values),
+                    np.std(values),
+                    np.min(values),
+                    np.max(values),
+                ]
+                mask_nodes[idx] = True
+
+        return node_features, mask_nodes
 
     def _construct_dynamic_edges(
-        self, df: pl.DataFrame, topology: GraphTopology, node_features: np.ndarray
+        self, topology: GraphTopology, node_features: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Construct dynamic edges from sensor correlations.
 
+        Args:
+            topology: Graph topology (static edges)
+            node_features: Node features [N, F]
+
         Returns:
-            edge_index: [2, E] edge connectivity
-            edge_attrs: [E, 14] edge features
-            edge_mask: [E] boolean mask (True=dynamic, False=static)
+            edge_index: [2, E]
+            edge_attr: [E, 14]
+            edge_mask: [E] bool (True=static, False=dynamic)
         """
         n_nodes = len(topology.components)
+
+        # Start with static edges from topology
         edge_index = [[], []]
-        edge_attrs = []
+        edge_attr = []
         edge_mask = []
 
-        try:
-            # Compute pairwise correlations
-            correlations = np.corrcoef(node_features)
-
-            for i in range(n_nodes):
-                for j in range(i + 1, n_nodes):
-                    if abs(correlations[i, j]) > self.correlation_threshold:
-                        edge_index[0].append(i)
-                        edge_index[1].append(j)
-                        # Symmetric edge
-                        edge_index[0].append(j)
-                        edge_index[1].append(i)
-
-                        # Static + dynamic features (8+6=14)
-                        edge_attr = np.concatenate([
-                            np.zeros(8),  # Static features
-                            [correlations[i, j], 0, 0, 0, 0, 0],  # Dynamic
-                        ])
-                        edge_attrs.append(edge_attr)
-                        edge_attrs.append(edge_attr)
-                        edge_mask.append(True)  # Dynamic
-                        edge_mask.append(True)
-
-        except Exception as e:
-            logger.warning(f"Error constructing dynamic edges: {e}")
-
-        # Add static topology edges if missing
-        for conn in topology.connections:
-            nodes = list(topology.components.keys())
-            i = nodes.index(conn["from"])
-            j = nodes.index(conn["to"])
-            if [i, j] not in list(zip(edge_index[0], edge_index[1])):
-                edge_index[0].append(i)
-                edge_index[1].append(j)
-                edge_attrs.append(np.zeros(14))
-                edge_mask.append(False)  # Static
-
-        # Fallback if still no edges
-        if not edge_index[0]:
-            edge_index = [[0, 1], [1, 0]]
-            edge_attrs = [np.zeros(14), np.zeros(14)]
-            edge_mask = [False, False]
-
-        return (
-            np.array(edge_index),
-            np.array(edge_attrs) if edge_attrs else np.zeros((len(edge_index[0]), 14)),
-            np.array(edge_mask),
-        )
-
-    def _get_static_topology_edges(self, topology: GraphTopology) -> tuple[np.ndarray, np.ndarray]:
-        """Get static edges from topology definition."""
-        edge_index = [[], []]
-        edge_attrs = []
-
         nodes = list(topology.components.keys())
+
+        # Add static edges
         for conn in topology.connections:
-            i = nodes.index(conn["from"])
-            j = nodes.index(conn["to"])
-            edge_index[0].append(i)
-            edge_index[1].append(j)
-            edge_attrs.append(np.zeros(14))
+            if conn["from"] in nodes and conn["to"] in nodes:
+                i = nodes.index(conn["from"])
+                j = nodes.index(conn["to"])
+                if [i, j] not in list(zip(edge_index[0], edge_index[1], strict=False)):
+                    edge_index[0].append(i)
+                    edge_index[1].append(j)
+                    edge_attr.append(np.ones(14))  # Static edge features
+                    edge_mask.append(True)  # Static
 
-        if not edge_index[0]:
-            edge_index = [[0, 1], [1, 0]]
-            edge_attrs = [np.zeros(14), np.zeros(14)]
+        # Add dynamic edges based on correlation (K-NN)
+        if node_features.shape[0] > 1:
+            # Compute pairwise distances
+            from sklearn.metrics.pairwise import cosine_similarity
 
-        return np.array(edge_index), np.array(edge_attrs)
+            similarity = cosine_similarity(node_features)
+            np.fill_diagonal(similarity, -1)  # Ignore self
+
+            # For each node, add K nearest neighbors
+            for i in range(n_nodes):
+                # Get top-k neighbors
+                top_k_indices = np.argsort(similarity[i])[-self.k_neighbors :]
+
+                for j in top_k_indices:
+                    if similarity[i, j] > self.correlation_threshold:
+                        # Check if edge already exists
+                        if [i, j] not in list(zip(edge_index[0], edge_index[1], strict=False)):
+                            edge_index[0].append(i)
+                            edge_index[1].append(j)
+                            # Dynamic edge features (correlation-based)
+                            edge_attr.append(np.ones(14) * similarity[i, j])
+                            edge_mask.append(False)  # Dynamic
+
+        edge_index = np.array(edge_index)
+        edge_attr = np.array(edge_attr)
+        edge_mask = np.array(edge_mask)
+
+        return edge_index, edge_attr, edge_mask
 
     async def _load_targets_for_snapshots(
-        self, temporal_graphs: list[Data], equipment_id: str
+        self, temporal_graphs: list[Data]
     ) -> list[Data]:
         """Load targets for each temporal snapshot.
 
-        TODO: Query from TimescaleDB labels table.
+        Args:
+            temporal_graphs: List of graph snapshots
+
+        Returns:
+            Graphs with targets attached
         """
+        # Mock implementation - real version loads from TimescaleDB
         for graph in temporal_graphs:
-            graph.y_graph_health = torch.tensor([0.8], dtype=torch.float32)
-            graph.y_graph_degradation = torch.tensor([0.2], dtype=torch.float32)
-            graph.y_graph_anomaly = torch.zeros(9, dtype=torch.float32)
-            graph.y_graph_rul = torch.tensor([1000.0], dtype=torch.float32)
-            graph.y_component_health = torch.ones(len(graph.x), 1, dtype=torch.float32)
-            graph.y_component_anomaly = torch.zeros(len(graph.x), 9, dtype=torch.float32)
+            # Graph-level targets
+            graph.y_graph_health = torch.rand(1)
+            graph.y_graph_degradation = torch.randn(1)
+            graph.y_graph_anomaly = torch.zeros(9)  # 9 anomaly classes
+            graph.y_graph_rul = torch.rand(1) * 1000
+
+            # Component-level targets
+            n_nodes = graph.x.shape[0]
+            graph.y_component_health = torch.rand(n_nodes, 1)
+            graph.y_component_anomaly = torch.zeros(n_nodes, 9)
 
         return temporal_graphs
-
-    def get_train_loader(self, temporal_graphs: list[Data]) -> PyGDataLoader:
-        """Create training DataLoader."""
-        return PyGDataLoader(
-            temporal_graphs,
-            batch_size=self.batch_size,
-            shuffle=True,
-            num_workers=self.num_workers,
-        )
-
-    def get_val_loader(self, temporal_graphs: list[Data]) -> PyGDataLoader:
-        """Create validation DataLoader."""
-        return PyGDataLoader(
-            temporal_graphs,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-        )

@@ -23,9 +23,9 @@ from src.models import UniversalTemporalGNN
 from src.training.losses import UncertaintyWeighting
 from src.training.losses_advanced import (
     AsymmetricL1Loss,
-    ConfidenceWeightedLoss,
-    DomainAdversarialLoss,
     PhysicsAwareFocalLoss,
+    DomainAdversarialLoss,
+    ConfidenceWeightedLoss,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,6 @@ class HydraulicGNNModule(pl.LightningModule):
         use_domain_adversarial: bool = False,
         # RUL loss config
         rul_tau: float = 0.7,  # AsymmetricL1 tau
-        rul_quantiles: list[float] = [0.1, 0.5, 0.9],
         # Physics-aware config
         component_weights: torch.Tensor | None = None,
         severity_weights: torch.Tensor | None = None,
@@ -279,7 +278,7 @@ class HydraulicGNNModule(pl.LightningModule):
                 domain_loss = torch.tensor(0.0, device=graph_health_loss.device)
             else:
                 # Extract features from model
-                features = outputs.get("features")
+                features = outputs.get("features", None)
                 if features is None:
                     logger.warning("Features not in outputs, skipping domain loss")
                     domain_loss = torch.tensor(0.0, device=graph_health_loss.device)
