@@ -257,6 +257,12 @@ def create_development_trainer(
 
     Returns:
         Development Trainer
+        
+    NOTE:
+        - num_sanity_val_steps=0 disables sanity checks
+        - This prevents validation BEFORE training starts
+        - Validation before training can cause double backward errors
+        - For full debugging, use production trainer instead
     """
     if config is None:
         config = {"training": {"max_epochs": 10, "devices": 1}}
@@ -272,6 +278,7 @@ def create_development_trainer(
         enable_early_stopping=False,
         logger_save_dir="logs/dev",
         logger_name="hydraulic_gnn_dev",
+        num_sanity_val_steps=0,  # 🔥 CRITICAL: Disable sanity checks to prevent double backward
         fast_dev_run=fast_dev_run,
     )
 
