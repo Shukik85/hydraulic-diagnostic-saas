@@ -231,6 +231,13 @@ class HydraulicGNNModule(pl.LightningModule):
             if not hasattr(batch, field):
                 raise AttributeError(f"Batch missing required field: {field}")
 
+        # CRITICAL: Squeeze all targets to prevent broadcasting issues
+        # Convert [N, 1] -> [N] for MSE losses
+        y_graph_health = batch.y_graph_health.squeeze(-1) if batch.y_graph_health.dim() > 1 else batch.y_graph_health
+        y_graph_degradation = batch.y_graph_degradation.squeeze(-1) if batch.y_graph_degradation.dim() > 1 else batch.y_graph_degradation
+        y_graph_rul = batch.y_graph_rul.squeeze(-1) if batch.y_graph_rul.dim() > 1 else batch.y_graph_rul
+        y_component_health = batch.y_component_health.squeeze(-1) if batch.y_component_health.dim() > 1 else batch.y_component_health
+
         # Fix anomaly target shapes if flattened by DataLoader
         # Graph anomaly: should be [batch_size, 9]
         y_graph_anomaly = batch.y_graph_anomaly
@@ -280,24 +287,24 @@ class HydraulicGNNModule(pl.LightningModule):
             # === GRAPH-LEVEL LOSSES (use graph_confidence) ===
             graph_health_loss = self.graph_health_loss(
                 outputs["graph"]["health"].squeeze(-1),  # [batch_size]
-                batch.y_graph_health,
+                y_graph_health,
                 graph_confidence
             )
             graph_degradation_loss = self.graph_degradation_loss(
                 outputs["graph"]["degradation"].squeeze(-1),
-                batch.y_graph_degradation,
+                y_graph_degradation,
                 graph_confidence
             )
             graph_rul_loss = self.graph_rul_loss(
                 outputs["graph"]["rul"].squeeze(-1),
-                batch.y_graph_rul,
+                y_graph_rul,
                 graph_confidence
             )
 
             # === COMPONENT-LEVEL LOSSES (use node_confidence) ===
             component_health_loss = self.component_health_loss(
                 outputs["component"]["health"].squeeze(-1),  # [num_nodes]
-                batch.y_component_health,
+                y_component_health,
                 node_confidence
             )
 
@@ -315,11 +322,11 @@ class HydraulicGNNModule(pl.LightningModule):
             # Standard losses without confidence
             graph_health_loss = self.graph_health_loss(
                 outputs["graph"]["health"].squeeze(-1), 
-                batch.y_graph_health
+                y_graph_health
             )
             graph_degradation_loss = self.graph_degradation_loss(
                 outputs["graph"]["degradation"].squeeze(-1), 
-                batch.y_graph_degradation
+                y_graph_degradation
             )
             graph_anomaly_loss = self.graph_anomaly_loss(
                 outputs["graph"]["anomaly"], 
@@ -327,11 +334,11 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             graph_rul_loss = self.graph_rul_loss(
                 outputs["graph"]["rul"].squeeze(-1), 
-                batch.y_graph_rul
+                y_graph_rul
             )
             component_health_loss = self.component_health_loss(
                 outputs["component"]["health"].squeeze(-1), 
-                batch.y_component_health
+                y_component_health
             )
             component_anomaly_loss = self.component_anomaly_loss(
                 outputs["component"]["anomaly"], 
