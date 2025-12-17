@@ -186,7 +186,12 @@ class HydraulicGNNModule(pl.LightningModule):
             }
         elif loss_weighting == "uncertainty":
             num_tasks = 7 if use_domain_adversarial else 6
-            self.uncertainty_weighter = UncertaintyWeighting(num_tasks=num_tasks)
+            # Use fixed weights (can be customized)
+            init_weights = [1.0] * num_tasks
+            self.uncertainty_weighter = UncertaintyWeighting(
+                num_tasks=num_tasks,
+                init_weights=init_weights
+            )
 
     def forward(
         self,
@@ -350,13 +355,11 @@ class HydraulicGNNModule(pl.LightningModule):
         else:
             domain_loss = torch.tensor(0.0, device=graph_health_loss.device, dtype=torch.float32)
 
-        # Ensure all losses are scalars + convert to float32 for AMP compatibility
+        # Ensure all losses are scalars + convert to float32 for stability
         def ensure_scalar_float32(loss: torch.Tensor) -> torch.Tensor:
-            """Convert loss to scalar float32 (AMP-safe)."""
+            """Convert loss to scalar float32."""
             if loss.dim() > 0:
                 loss = loss.mean()
-            # CRITICAL: Convert to float32 before uncertainty weighting
-            # This prevents AMP issues with log_vars in 16-bit
             return loss.float()
         
         graph_health_loss = ensure_scalar_float32(graph_health_loss)
@@ -379,7 +382,7 @@ class HydraulicGNNModule(pl.LightningModule):
                 + domain_loss  # DIDA
             )
         else:  # uncertainty
-            # All losses are now float32 scalars (AMP-safe)
+            # All losses are float32 scalars
             losses = {
                 "graph_health": graph_health_loss,
                 "graph_degradation": graph_degradation_loss,
@@ -391,7 +394,7 @@ class HydraulicGNNModule(pl.LightningModule):
             if self.use_domain_adversarial:
                 losses["domain"] = domain_loss
             
-            # UncertaintyWeighting now safely handles float32 scalars
+            # UncertaintyWeighting now uses fixed buffers (no gradients)
             total_loss = self.uncertainty_weighter(losses)
 
         loss_dict = {
@@ -419,19 +422,7 @@ class HydraulicGNNModule(pl.LightningModule):
             if key != "total":
                 self.log(f"train/{key}_loss", val, prog_bar=False)
 
-        if self.loss_weighting == "uncertainty":
-            log_vars = self.uncertainty_weighter.log_vars
-            for i, task in enumerate(
-                [
-                    "graph_health",
-                    "graph_degradation",
-                    "graph_anomaly",
-                    "graph_rul",
-                    "component_health",
-                    "component_anomaly",
-                ]
-            ):
-                self.log(f"train/weight_{task}", torch.exp(-log_vars[i]))
+        # Note: No log_vars logging since weights are now fixed buffers
 
         return total_loss
 
