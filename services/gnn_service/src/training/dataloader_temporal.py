@@ -1,10 +1,18 @@
-"""Temporal dataloader for hydraulic diagnostics.
+"""Temporal dataloader for hydraulic diagnostics with GRAPE imputation.
 
 Provides:
 - Temporal snapshot creation
 - Dynamic edge construction
+- GRAPE two-stage imputation (optional)
 - Missing data handling
 - Target loading from TimescaleDB
+
+Examples:
+    >>> loader = TemporalHydraulicDataLoader(
+    ...     timescale_connector=connector,
+    ...     window_size=3600,
+    ...     config={"imputation": {"enabled": True}},
+    ... )
 """
 
 from __future__ import annotations
@@ -25,22 +33,22 @@ logger = logging.getLogger(__name__)
 
 
 class TemporalHydraulicDataLoader:
-    """DataLoader for temporal hydraulic diagnostics.
+    """DataLoader for temporal hydraulic diagnostics with GRAPE imputation.
 
-    Creates temporal snapshots with dynamic graph construction.
+    Supports optional two-stage imputation for handling missing sensors.
 
     Examples:
+        >>> config = {
+        ...     "imputation": {
+        ...         "enabled": True,
+        ...         "spatial": {"hidden_dim": 128, "use_static_prior": True},
+        ...         "temporal": {"hidden_dim": 128},
+        ...     }
+        ... }
         >>> loader = TemporalHydraulicDataLoader(
         ...     timescale_connector=connector,
         ...     window_size=3600,
-        ...     stride=900,
-        ...     sequence_length=12,
-        ... )
-        >>> graphs = await loader.load_temporal_sequence(
-        ...     equipment_id="excavator_001",
-        ...     start_time="2024-01-01",
-        ...     end_time="2024-01-02",
-        ...     topology=graph_topology,
+        ...     config=config,
         ... )
     """
 
@@ -53,6 +61,8 @@ class TemporalHydraulicDataLoader:
         correlation_threshold: float = 0.5,
         k_neighbors: int = 5,
         max_missing_ratio: float = 0.5,
+        config: dict | None = None,
+        device: str = "cpu",
     ):
         self.timescale = timescale_connector
         self.window_size = window_size
@@ -61,6 +71,33 @@ class TemporalHydraulicDataLoader:
         self.correlation_threshold = correlation_threshold
         self.k_neighbors = k_neighbors
         self.max_missing_ratio = max_missing_ratio
+        self.device = device
+        self.config = config or {}
+
+        # Initialize GRAPE imputation if enabled
+        self.imputation_enabled = self.config.get("imputation", {}).get("enabled", False)
+        self.imputer = None
+
+        if self.imputation_enabled:
+            logger.info("🔬 Initializing GRAPE two-stage imputation")
+            from src.training.imputation_grape import TwoStageImputer
+
+            imputation_config = self.config["imputation"]
+            spatial_config = imputation_config.get("spatial", {})
+            temporal_config = imputation_config.get("temporal", {})
+
+            self.imputer = TwoStageImputer(
+                feature_dim=34,
+                spatial_hidden=spatial_config.get("hidden_dim", 128),
+                temporal_hidden=temporal_config.get("hidden_dim", 128),
+                spatial_layers=spatial_config.get("num_layers", 2),
+                temporal_layers=temporal_config.get("num_layers", 2),
+                device=device,
+            )
+            logger.info("   ✅ GRAPE imputer initialized")
+            logger.info(f"   - Spatial hidden: {spatial_config.get('hidden_dim', 128)}")
+            logger.info(f"   - Temporal hidden: {temporal_config.get('hidden_dim', 128)}")
+            logger.info(f"   - Use static prior: {spatial_config.get('use_static_prior', True)}")
 
     async def load_temporal_sequence(
         self,
@@ -89,6 +126,12 @@ class TemporalHydraulicDataLoader:
 
         # Create temporal windows
         temporal_graphs = self._create_temporal_snapshots(df, topology)
+
+        # Apply GRAPE imputation if enabled
+        if self.imputation_enabled and len(temporal_graphs) > 0:
+            logger.info(f"🔬 Applying GRAPE imputation to {len(temporal_graphs)} snapshots")
+            temporal_graphs = self._apply_grape_imputation(temporal_graphs, topology)
+            logger.info("   ✅ Imputation complete")
 
         # Load targets
         temporal_graphs = await self._load_targets_for_snapshots(temporal_graphs)
@@ -160,6 +203,73 @@ class TemporalHydraulicDataLoader:
             snapshots.append(snapshot)
 
         return snapshots
+
+    def _apply_grape_imputation(
+        self, snapshots: list[Data], topology: GraphTopology
+    ) -> list[Data]:
+        """Apply GRAPE spatial imputation to snapshots.
+
+        Args:
+            snapshots: List of graph snapshots
+            topology: Graph topology for static edges
+
+        Returns:
+            Snapshots with imputed features and confidence scores
+        """
+        if self.imputer is None:
+            logger.warning("Imputer not initialized, skipping imputation")
+            return snapshots
+
+        # Get static topology edges
+        static_edges = self._get_static_topology_edges(topology)
+        static_edges_tensor = torch.tensor(static_edges, dtype=torch.long).to(self.device)
+
+        # Apply spatial imputation to each snapshot
+        imputed_snapshots = []
+        for snapshot in snapshots:
+            # Move to device
+            x = snapshot.x.to(self.device)
+            edge_index = snapshot.edge_index.to(self.device)
+            edge_attr = snapshot.edge_attr.to(self.device)
+            mask_nodes = snapshot.mask_nodes.to(self.device)
+
+            # Apply spatial imputation
+            x_imputed, confidence = self.imputer.spatial_imputer(
+                x=x,
+                edge_index=edge_index,
+                edge_attr=edge_attr,
+                mask_nodes=mask_nodes,
+                static_topology=static_edges_tensor if static_edges_tensor.numel() > 0 else None,
+            )
+
+            # Update snapshot with imputed data
+            snapshot.x = x_imputed.cpu()
+            snapshot.confidence = confidence.cpu()
+
+            imputed_snapshots.append(snapshot)
+
+        return imputed_snapshots
+
+    def _get_static_topology_edges(self, topology: GraphTopology) -> np.ndarray:
+        """Extract static edges from topology.
+
+        Args:
+            topology: Graph topology
+
+        Returns:
+            Static edge_index [2, E]
+        """
+        nodes = list(topology.components.keys())
+        edge_index = [[], []]
+
+        for conn in topology.connections:
+            if conn["from"] in nodes and conn["to"] in nodes:
+                i = nodes.index(conn["from"])
+                j = nodes.index(conn["to"])
+                edge_index[0].append(i)
+                edge_index[1].append(j)
+
+        return np.array(edge_index) if edge_index[0] else np.array([[], []])
 
     def _extract_node_features(
         self, df: pl.DataFrame, topology: GraphTopology
@@ -292,5 +402,9 @@ class TemporalHydraulicDataLoader:
             n_nodes = graph.x.shape[0]
             graph.y_component_health = torch.rand(n_nodes, 1)
             graph.y_component_anomaly = torch.zeros(n_nodes, 9)
+
+            # Add confidence if not present (for non-imputed graphs)
+            if not hasattr(graph, "confidence"):
+                graph.confidence = torch.ones(n_nodes)
 
         return temporal_graphs
