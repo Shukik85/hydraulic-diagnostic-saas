@@ -470,8 +470,22 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return total_loss
 
+    def on_epoch_end(self) -> None:
+        """Clear PyTorch cache at end of epoch.
+        
+        CRITICAL: Prevents computation graphs from being cached between epochs.
+        This fixes 'backward through graph twice' errors on epoch transitions.
+        """
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        torch.cuda.synchronize() if torch.cuda.is_available() else None
+
     def configure_optimizers(self) -> dict[str, Any]:
-        """Configure optimizers and schedulers."""
+        """Configure optimizers and schedulers.
+        
+        CRITICAL: Uses interval='epoch' to prevent scheduler from
+        caching computation graphs between epoch transitions.
+        """
         optimizer = Adam(self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
 
         if self.scheduler_type == "plateau":
@@ -481,10 +495,24 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             return {
                 "optimizer": optimizer,
-                "lr_scheduler": {"scheduler": scheduler, "monitor": "val/total_loss"},
+                "lr_scheduler": {
+                    "scheduler": scheduler,
+                    "monitor": "val/total_loss",
+                    "interval": "epoch",  # 🔥 CRITICAL: Step at epoch end
+                    "frequency": 1,
+                    "name": "lr/plateau",
+                },
             }
         elif self.scheduler_type == "cosine":
             scheduler = CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-6)
-            return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler}}
+            return {
+                "optimizer": optimizer,
+                "lr_scheduler": {
+                    "scheduler": scheduler,
+                    "interval": "epoch",
+                    "frequency": 1,
+                    "name": "lr/cosine",
+                },
+            }
         else:
             return {"optimizer": optimizer}
