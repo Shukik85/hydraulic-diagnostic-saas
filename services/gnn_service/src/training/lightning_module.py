@@ -39,6 +39,7 @@ class HydraulicGNNModule(pl.LightningModule):
     - Confidence-weighted training for imputed data
     - Domain adversarial loss for transfer learning
     - Multi-task uncertainty weighting
+    - Manual optimization to prevent closure() double backward
 
     Examples:
         >>> module = HydraulicGNNModule(
@@ -80,8 +81,12 @@ class HydraulicGNNModule(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        # NOTE: Using AUTOMATIC optimization (Lightning default)
-        # Do NOT set self.automatic_optimization = False
+        # 🔥 CRITICAL: Use MANUAL optimization to prevent closure() double backward
+        # When Lightning calls optimizer.step(closure=closure), Adam internally calls
+        # closure() multiple times for line search. Each time it calls backward().
+        # This causes "backward through graph twice" error.
+        # Manual optimization gives us full control.
+        self.automatic_optimization = False
 
         # Validate loss_weighting
         if loss_weighting not in ["fixed", "uncertainty"]:
@@ -428,19 +433,32 @@ class HydraulicGNNModule(pl.LightningModule):
             return total_loss, None
 
     def training_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
-        """Training step (automatic optimization).
+        """Training step (MANUAL optimization).
         
-        CRITICAL: Only compute total loss, not component losses.
-        Component losses are only computed for validation/logging.
+        CRITICAL: We control optimizer.step() manually.
+        This prevents PyTorch Lightning's automatic.py from calling
+        optimizer.step(closure=closure), which causes Adam to call
+        closure() multiple times, leading to double backward.
         """
+        # Forward pass
         outputs = self(
             x=batch.x, edge_index=batch.edge_index, edge_attr=batch.edge_attr, batch=batch.batch
         )
         total_loss, _ = self.compute_loss(outputs, batch, return_components=False)
 
+        # Get optimizer (only one optimizer configured)
+        opt = self.optimizers()
+        
+        # Manual backward (called ONCE)
+        self.manual_backward(total_loss)
+        
+        # Manual optimizer step (WITHOUT closure!)
+        opt.step()
+        opt.zero_grad()
+
+        # Logging
         self.log("train/total_loss", total_loss, prog_bar=True, batch_size=batch.num_graphs)
 
-        # Lightning handles backward automatically
         return total_loss
 
     def validation_step(self, batch: Any, _batch_idx: int) -> torch.Tensor:
