@@ -341,6 +341,22 @@ class HydraulicGNNModule(pl.LightningModule):
         else:
             domain_loss = torch.tensor(0.0, device=graph_health_loss.device)
 
+        # Ensure all losses are scalars for proper combination
+        # This is critical for uncertainty weighting which requires scalar losses
+        def ensure_scalar(loss: torch.Tensor) -> torch.Tensor:
+            """Convert loss to scalar if needed."""
+            if loss.dim() > 0:
+                return loss.mean()
+            return loss
+        
+        graph_health_loss = ensure_scalar(graph_health_loss)
+        graph_degradation_loss = ensure_scalar(graph_degradation_loss)
+        graph_anomaly_loss = ensure_scalar(graph_anomaly_loss)
+        graph_rul_loss = ensure_scalar(graph_rul_loss)
+        component_health_loss = ensure_scalar(component_health_loss)
+        component_anomaly_loss = ensure_scalar(component_anomaly_loss)
+        domain_loss = ensure_scalar(domain_loss)
+
         # Combine losses
         if self.loss_weighting == "fixed":
             total_loss = (
