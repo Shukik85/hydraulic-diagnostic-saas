@@ -6,11 +6,11 @@ Combines:
 - Multi-task learning for component health + anomaly detection
 - Size-invariant design for different graph topologies
 
-Version 2.0.0:
-- PyTorch Geometric 2.x features (GATv2Conv, edge_dim, return_attention_weights)
-- PyTorch 2.8+ compilation support
-- Python 3.14 native type hints
-- Modern pooling strategies (AttentionPooling, VirtualNode)
+Version 2.0.1 (Production-Ready):
+- Fixed critical architectural issues from senior review
+- No redundant forward passes
+- Thread-safe attention extraction
+- Proper temporal/single mode separation
 
 Python 3.14 Features:
     - Deferred annotations (PEP 563)
@@ -41,7 +41,7 @@ class ModelConfig:
     """Configuration for UniversalTemporalGNNv2."""
     
     # Model version
-    version: str = "2.0.0"
+    version: str = "2.0.1"
     
     # Input dimensions
     node_features: int = 34
@@ -64,56 +64,40 @@ class ModelConfig:
     use_virtual_nodes: bool = True
     virtual_node_dim: int = 64
     use_attention_pooling: bool = True
-    graph_size_as_feature: bool = True
+    graph_size_as_feature: bool = True  # Only for single-graph mode
     
     # Multi-task heads
-    component_health_num_classes: int = 5  # healthy, degraded, worn, leaking, failed
-    anomaly_type_num_classes: int = 4  # normal, parallel_overload, sequential_cascade, cavitation
+    component_health_num_classes: int = 5
+    anomaly_type_num_classes: int = 4
     head_hidden_dim: int = 64
     head_dropout: float = 0.2
-    
-    # Attention extraction
-    extract_attention_weights: bool = True
-    return_attention_weights: bool = False  # Return in forward pass
 
 
 class UniversalTemporalGNNv2(nn.Module):
     """Universal Temporal GNN v2 for hydraulic diagnostics.
     
-    Version 2.0.0 improvements:
-    - GATv2Conv with dynamic attention (fixes static attention limitation)
-    - PyG 2.x edge_dim support for edge features
-    - Native attention weight extraction
-    - AttentionPooling for size-invariant graphs
-    - VirtualNode support for cross-topology generalization
-    - PyTorch 2.8+ torch.compile() compatible
+    Version 2.0.1 - Production-ready after senior review.
     
     Architecture:
     1. Node/edge encoding
     2. Multi-layer GATv2 (spatial, with edge features)
-    3. Optional: LSTM (temporal)
+    3. Optional VirtualNode
     4. AttentionPooling → graph representation
-    5. Dual prediction heads (node-level + graph-level)
+    5. LSTM (temporal mode only) or Linear projection (single mode)
+    6. Dual prediction heads (node-level + graph-level)
     
     Examples:
-        >>> config = ModelConfig(
-        ...     node_features=34,
-        ...     edge_features=14,
-        ...     gat_hidden_dim=128,
-        ...     lstm_hidden_dim=128
-        ... )
+        >>> config = ModelConfig(node_features=34, edge_features=14)
         >>> model = UniversalTemporalGNNv2(config)
         >>> 
         >>> # Single graph
-        >>> data = Data(x=..., edge_index=..., edge_attr=...)
-        >>> outputs = model(data)
-        >>> node_logits = outputs['node_logits']  # [num_nodes, 5]
-        >>> graph_logits = outputs['graph_logits']  # [1, 4]
+        >>> outputs = model(data, temporal=False)
+        >>> node_logits = outputs['node_logits']
+        >>> graph_logits = outputs['graph_logits']
         >>> 
         >>> # Temporal sequence
-        >>> sequence = [data_t0, data_t1, ..., data_t9]  # List[Data]
-        >>> outputs = model(sequence, temporal=True)
-        >>> graph_logits = outputs['graph_logits']  # [1, 4]
+        >>> outputs = model(sequence, temporal=True, return_attention=True)
+        >>> attention = outputs['attention_weights']
     """
     
     def __init__(self, config: ModelConfig | None = None) -> None:
@@ -125,55 +109,46 @@ class UniversalTemporalGNNv2(nn.Module):
         super().__init__()
         self.config = config or ModelConfig()
         
-        # Effective hidden dimension after GATv2
-        if self.config.gat_concat_heads:
-            self.gat_output_dim = self.config.gat_hidden_dim * self.config.gat_num_heads
-        else:
-            self.gat_output_dim = self.config.gat_hidden_dim
-        
         # Node feature encoder
         self.node_encoder = nn.Linear(
             self.config.node_features,
             self.config.gat_hidden_dim
         )
         
-        # Edge feature encoder (for GATv2)
+        # Edge feature encoder
         self.edge_encoder = nn.Linear(
             self.config.edge_features,
             self.config.gat_hidden_dim
         )
         
-        # GATv2 layers (dynamic attention)
+        # Build GATv2 layers with explicit dimension tracking
         self.gat_layers = nn.ModuleList()
+        in_channels = self.config.gat_hidden_dim
         
-        # First GATv2 layer
-        self.gat_layers.append(
-            GATv2Conv(
-                self.config.gat_hidden_dim,
-                self.config.gat_hidden_dim,
-                heads=self.config.gat_num_heads,
-                dropout=self.config.gat_dropout,
-                concat=self.config.gat_concat_heads,
-                edge_dim=self.config.gat_hidden_dim,  # PyG 2.x feature
-                add_self_loops=True,
-                share_weights=False  # GATv2 uses separate weight matrices
-            )
-        )
-        
-        # Subsequent GATv2 layers
-        for _ in range(self.config.gat_num_layers - 1):
+        for layer_idx in range(self.config.gat_num_layers):
+            out_channels = self.config.gat_hidden_dim
+            
             self.gat_layers.append(
                 GATv2Conv(
-                    self.gat_output_dim,
-                    self.config.gat_hidden_dim,
+                    in_channels=in_channels,
+                    out_channels=out_channels,
                     heads=self.config.gat_num_heads,
                     dropout=self.config.gat_dropout,
                     concat=self.config.gat_concat_heads,
-                    edge_dim=self.config.gat_hidden_dim,  # PyG 2.x feature
+                    edge_dim=self.config.gat_hidden_dim,
                     add_self_loops=True,
-                    share_weights=False  # GATv2 uses separate weight matrices
+                    share_weights=False
                 )
             )
+            
+            # Update in_channels for next layer
+            if self.config.gat_concat_heads:
+                in_channels = out_channels * self.config.gat_num_heads
+            else:
+                in_channels = out_channels
+        
+        # Final GATv2 output dimension
+        self.gat_output_dim = in_channels
         
         # Virtual node (optional)
         if self.config.use_virtual_nodes:
@@ -187,16 +162,16 @@ class UniversalTemporalGNNv2(nn.Module):
             self.virtual_node_pooling = None
             self.pooling_input_dim = self.gat_output_dim
         
-        # Attention pooling for graph-level representation
+        # Attention pooling
         if self.config.use_attention_pooling:
             self.pooling = AttentionPooling(
                 hidden_dim=self.pooling_input_dim,
                 dropout=self.config.gat_dropout
             )
         else:
-            self.pooling = None  # Will use global_mean_pool
+            self.pooling = None
         
-        # LSTM for temporal modeling
+        # LSTM for temporal mode
         self.lstm = nn.LSTM(
             input_size=self.pooling_input_dim,
             hidden_size=self.config.lstm_hidden_dim,
@@ -211,9 +186,15 @@ class UniversalTemporalGNNv2(nn.Module):
             else self.config.lstm_hidden_dim
         )
         
-        # Graph size embedding (optional)
+        # Single-graph projection (replaces LSTM for single mode)
+        self.single_graph_projection = nn.Linear(
+            self.pooling_input_dim,
+            lstm_output_dim
+        )
+        
+        # Graph size embedding (only for single-graph mode)
         if self.config.graph_size_as_feature:
-            self.size_embedding = nn.Embedding(101, 16)  # Support up to 100 nodes
+            self.size_embedding = nn.Embedding(101, 16)
             graph_feature_dim = lstm_output_dim + 16
         else:
             self.size_embedding = None
@@ -235,11 +216,101 @@ class UniversalTemporalGNNv2(nn.Module):
             nn.Linear(self.config.head_hidden_dim, self.config.anomaly_type_num_classes)
         )
         
-        # Attention storage for interpretability
-        self.last_attention_weights: dict[str, torch.Tensor] = {}
-        
-        logger.info("UniversalTemporalGNNv2 (v%s) initialized with GATv2Conv", self.config.version)
+        logger.info("UniversalTemporalGNNv2 (v%s) initialized", self.config.version)
         logger.info("GATv2 output dim: %d, LSTM output dim: %d", self.gat_output_dim, lstm_output_dim)
+        logger.info("Graph feature dim: %d", graph_feature_dim)
+    
+    def _validate_batch(self, data) -> torch.Tensor:
+        """Validate and extract batch tensor.
+        
+        Args:
+            data: PyG Data object
+            
+        Returns:
+            Batch tensor [num_nodes]
+            
+        Raises:
+            ValueError: If batch info missing for multi-graph batch
+        """
+        if hasattr(data, 'batch'):
+            return data.batch
+        
+        # Single graph case
+        if hasattr(data, 'num_graphs') and data.num_graphs > 1:
+            msg = "Batch attribute required for multi-graph batches"
+            raise ValueError(msg)
+        
+        return torch.zeros(data.x.size(0), dtype=torch.long, device=data.x.device)
+    
+    def _encode_nodes(
+        self,
+        data,
+        return_attention: bool = False
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor] | None]:
+        """Encode node features through GATv2 layers.
+        
+        Args:
+            data: PyG Data object
+            return_attention: Whether to return attention weights
+            
+        Returns:
+            Tuple of (node_embeddings, attention_weights)
+        """
+        x = data.x
+        edge_index = data.edge_index
+        edge_attr = data.edge_attr
+        
+        # Encode features
+        x = self.node_encoder(x)
+        edge_attr = self.edge_encoder(edge_attr)
+        
+        # GATv2 layers
+        attention_weights = {} if return_attention else None
+        
+        for i, gat_layer in enumerate(self.gat_layers):
+            x_out = gat_layer(
+                x, edge_index,
+                edge_attr=edge_attr,
+                return_attention_weights=return_attention
+            )
+            
+            # Extract attention if requested
+            if return_attention and isinstance(x_out, tuple):
+                x, (_, attn) = x_out
+                attention_weights[f'gatv2_layer_{i}'] = attn.detach()
+            else:
+                x = x_out if not isinstance(x_out, tuple) else x_out[0]
+            
+            x = F.relu(x)
+            x = F.dropout(x, p=self.config.gat_dropout, training=self.training)
+        
+        return x, attention_weights
+    
+    def _encode_graph(
+        self,
+        node_embeddings: torch.Tensor,
+        batch: torch.Tensor
+    ) -> torch.Tensor:
+        """Pool node embeddings to graph-level representation.
+        
+        Args:
+            node_embeddings: Node features [num_nodes, dim]
+            batch: Batch assignment [num_nodes]
+            
+        Returns:
+            Graph representation [batch_size, dim]
+        """
+        # Virtual node (optional)
+        if self.virtual_node_pooling is not None:
+            node_embeddings = self.virtual_node_pooling(node_embeddings, batch)
+        
+        # Pooling
+        if self.pooling is not None:
+            graph_repr = self.pooling(node_embeddings, batch)
+        else:
+            graph_repr = global_mean_pool(node_embeddings, batch)
+        
+        return graph_repr
     
     def forward(
         self,
@@ -276,72 +347,38 @@ class UniversalTemporalGNNv2(nn.Module):
         Returns:
             Dictionary with predictions
         """
-        x = data.x  # [num_nodes, node_features]
-        edge_index = data.edge_index  # [2, num_edges]
-        edge_attr = data.edge_attr  # [num_edges, edge_features]
-        batch = data.batch if hasattr(data, 'batch') else torch.zeros(
-            x.size(0), dtype=torch.long, device=x.device
-        )
+        batch = self._validate_batch(data)
         
-        # Encode features
-        x = self.node_encoder(x)  # [num_nodes, gat_hidden_dim]
-        edge_attr = self.edge_encoder(edge_attr)  # [num_edges, gat_hidden_dim]
-        
-        # GATv2 layers (dynamic attention)
-        attention_weights = {}
-        for i, gat_layer in enumerate(self.gat_layers):
-            x_out = gat_layer(x, edge_index, edge_attr=edge_attr, return_attention_weights=True)
-            
-            # Extract attention if tuple
-            if isinstance(x_out, tuple):
-                x, (edge_idx, attn) = x_out
-                if self.config.extract_attention_weights:
-                    attention_weights[f'gatv2_layer_{i}'] = attn
-            else:
-                x = x_out
-            
-            x = F.relu(x)
-            x = F.dropout(x, p=self.config.gat_dropout, training=self.training)
-        
-        # Store attention for later extraction
-        self.last_attention_weights = attention_weights
+        # Encode nodes
+        node_emb, attention_weights = self._encode_nodes(data, return_attention)
         
         # Component health prediction (node-level)
-        node_logits = self.component_health_head(x)  # [num_nodes, num_classes]
+        node_logits = self.component_health_head(node_emb)
         
-        # Add virtual node features (optional)
-        if self.virtual_node_pooling is not None:
-            x = self.virtual_node_pooling(x, batch)  # [num_nodes, gat_out + virtual_dim]
+        # Pool to graph-level
+        graph_repr = self._encode_graph(node_emb, batch)
         
-        # Pool to graph-level representation
-        if self.pooling is not None:
-            graph_repr = self.pooling(x, batch)  # [batch_size, pooling_input_dim]
-        else:
-            # Use global_mean_pool (PyG standard)
-            graph_repr = global_mean_pool(x, batch)  # [batch_size, pooling_input_dim]
-        
-        # LSTM (single timestep - just transform)
-        lstm_out, _ = self.lstm(graph_repr.unsqueeze(1))  # [batch, 1, lstm_hidden]
-        lstm_out = lstm_out.squeeze(1)  # [batch, lstm_hidden]
+        # Linear projection (no LSTM for single graphs)
+        graph_features = self.single_graph_projection(graph_repr)
+        graph_features = F.relu(graph_features)
         
         # Add graph size feature (optional)
         if self.size_embedding is not None:
-            # Count nodes per graph
             batch_size = batch.max().item() + 1
             node_counts = torch.bincount(batch, minlength=batch_size)
-            node_counts = torch.clamp(node_counts, max=100)  # Cap at 100
-            size_embed = self.size_embedding(node_counts)  # [batch, 16]
-            lstm_out = torch.cat([lstm_out, size_embed], dim=1)
+            node_counts = torch.clamp(node_counts, max=100)
+            size_embed = self.size_embedding(node_counts)
+            graph_features = torch.cat([graph_features, size_embed], dim=1)
         
         # Anomaly type prediction (graph-level)
-        graph_logits = self.anomaly_type_head(lstm_out)  # [batch, num_classes]
+        graph_logits = self.anomaly_type_head(graph_features)
         
         outputs = {
             'node_logits': node_logits,
             'graph_logits': graph_logits
         }
         
-        if return_attention or self.config.return_attention_weights:
+        if return_attention and attention_weights is not None:
             outputs['attention_weights'] = attention_weights
         
         return outputs
@@ -360,86 +397,43 @@ class UniversalTemporalGNNv2(nn.Module):
         Returns:
             Dictionary with predictions
         """
-        # Process each timestep through GATv2
+        # Process each timestep
         timestep_reprs = []
-        all_node_logits = []
+        last_node_logits = None
+        all_attention = {} if return_attention else None
         
-        for data_t in data_sequence:
-            outputs = self._forward_single(data_t, return_attention=False)
+        for t, data_t in enumerate(data_sequence):
+            batch = self._validate_batch(data_t)
             
-            # Get graph representation (before final prediction)
-            # Re-extract by running partial forward
-            x = data_t.x
-            edge_index = data_t.edge_index
-            edge_attr = data_t.edge_attr
-            batch = data_t.batch if hasattr(data_t, 'batch') else torch.zeros(
-                x.size(0), dtype=torch.long, device=x.device
-            )
+            # Encode nodes (single source of truth)
+            node_emb, attn_weights = self._encode_nodes(data_t, return_attention)
             
-            # Encode and run through GATv2
-            x = self.node_encoder(x)
-            edge_attr = self.edge_encoder(edge_attr)
+            # Node predictions (use last timestep)
+            if t == len(data_sequence) - 1:
+                last_node_logits = self.component_health_head(node_emb)
+                if return_attention and attn_weights is not None:
+                    all_attention = attn_weights
             
-            for gat_layer in self.gat_layers:
-                x = gat_layer(x, edge_index, edge_attr=edge_attr)
-                if isinstance(x, tuple):
-                    x, _ = x
-                x = F.relu(x)
-                x = F.dropout(x, p=self.config.gat_dropout, training=self.training)
-            
-            # Virtual node
-            if self.virtual_node_pooling is not None:
-                x = self.virtual_node_pooling(x, batch)
-            
-            # Pool
-            if self.pooling is not None:
-                graph_repr = self.pooling(x, batch)
-            else:
-                graph_repr = global_mean_pool(x, batch)
-            
+            # Pool to graph-level
+            graph_repr = self._encode_graph(node_emb, batch)
             timestep_reprs.append(graph_repr)
-            all_node_logits.append(outputs['node_logits'])
         
         # Stack temporal sequence
-        sequence_tensor = torch.stack(timestep_reprs, dim=1)  # [batch, seq_len, repr_dim]
+        sequence_tensor = torch.stack(timestep_reprs, dim=1)  # [batch, seq_len, dim]
         
         # LSTM
-        lstm_out, _ = self.lstm(sequence_tensor)  # [batch, seq_len, lstm_hidden]
+        lstm_out, _ = self.lstm(sequence_tensor)
+        lstm_final = lstm_out[:, -1, :]  # Take last timestep
         
-        # Take last timestep
-        lstm_final = lstm_out[:, -1, :]  # [batch, lstm_hidden]
-        
-        # Add graph size
-        if self.size_embedding is not None:
-            batch = data_sequence[-1].batch if hasattr(data_sequence[-1], 'batch') else torch.zeros(
-                data_sequence[-1].x.size(0), dtype=torch.long, device=data_sequence[-1].x.device
-            )
-            batch_size = batch.max().item() + 1
-            node_counts = torch.bincount(batch, minlength=batch_size)
-            node_counts = torch.clamp(node_counts, max=100)
-            size_embed = self.size_embedding(node_counts)
-            lstm_final = torch.cat([lstm_final, size_embed], dim=1)
-        
-        # Graph prediction
+        # Graph prediction (no size embedding in temporal mode)
         graph_logits = self.anomaly_type_head(lstm_final)
         
-        # Use node predictions from last timestep
-        node_logits = all_node_logits[-1]
-        
         outputs = {
-            'node_logits': node_logits,
+            'node_logits': last_node_logits,
             'graph_logits': graph_logits
         }
         
-        if return_attention or self.config.return_attention_weights:
-            outputs['attention_weights'] = self.last_attention_weights
+        if return_attention and all_attention is not None:
+            outputs['attention_weights'] = all_attention
         
         return outputs
-    
-    def get_attention_weights(self) -> dict[str, torch.Tensor]:
-        """Get last computed attention weights.
-        
-        Returns:
-            Dictionary of attention weights per layer
-        """
-        return self.last_attention_weights
