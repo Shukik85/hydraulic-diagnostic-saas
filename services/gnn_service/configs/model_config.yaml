@@ -1,0 +1,104 @@
+# Model Architecture Configuration for Universal Temporal GNN
+# Python 3.14+ compatible
+# Related: Issue #131 - Week 2
+
+model:
+  name: "UniversalTemporalGNN"
+  version: "2.0.0"
+  
+  # Input dimensions
+  input:
+    node_features: 34  # From NodeFeatures.dimension()
+    edge_features: 14  # From EdgeFeatures.dimension()
+  
+  # Graph Attention Network (GAT) configuration
+  gat:
+    hidden_dim: 128
+    num_layers: 3
+    num_heads: 4  # Multi-head attention
+    dropout: 0.1
+    concat_heads: true  # Concatenate attention heads
+    edge_dim: 14  # Use edge features in attention
+    
+  # LSTM for temporal modeling
+  lstm:
+    hidden_dim: 128
+    num_layers: 2
+    dropout: 0.1
+    bidirectional: false
+    
+  # Topology-aware components (size-invariant)
+  topology_aware:
+    use_virtual_nodes: true  # For graphs of different sizes
+    virtual_node_dim: 64
+    use_attention_pooling: true  # Instead of mean pooling
+    graph_size_as_feature: true  # Embed graph size
+    
+  # Multi-task learning heads
+  tasks:
+    component_health:
+      enabled: true
+      num_classes: 5  # healthy, degraded, worn, leaking, failed
+      hidden_dim: 64
+      dropout: 0.2
+      output_type: "node"  # Node-level prediction
+      
+    anomaly_type:
+      enabled: true
+      num_classes: 4  # normal, parallel_overload, sequential_cascade, cavitation
+      hidden_dim: 64
+      dropout: 0.2
+      output_type: "graph"  # Graph-level prediction
+  
+  # Attention weight extraction
+  attention:
+    extract_weights: true  # For interpretability
+    save_weights: true  # Save to disk during inference
+    
+  # Model compilation (PyTorch 2.8+)
+  compilation:
+    enabled: true
+    mode: "default"  # Options: default, reduce-overhead, max-autotune
+    fullgraph: false
+    dynamic: true  # Support dynamic graph sizes
+
+# Loss function configuration
+loss:
+  multi_task:
+    component_health_weight: 1.0
+    anomaly_type_weight: 1.0
+    
+  component_health:
+    type: "CrossEntropyLoss"
+    class_weights: null  # Auto-compute from data if null
+    label_smoothing: 0.0
+    
+  anomaly_type:
+    type: "CrossEntropyLoss"
+    class_weights: null
+    label_smoothing: 0.0
+
+# Optimizer configuration
+optimizer:
+  type: "Adam"
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  betas: [0.9, 0.999]
+  eps: 1.0e-8
+  amsgrad: false
+
+# Learning rate scheduler
+scheduler:
+  type: "ReduceLROnPlateau"
+  mode: "min"
+  factor: 0.5
+  patience: 10
+  min_lr: 1.0e-6
+  verbose: true
+
+# Device configuration
+device:
+  type: "cuda"  # Options: cuda, cpu, mps
+  device_id: 0
+  mixed_precision: true  # FP16 training
+  compile_backend: "inductor"  # PyTorch 2.8+ backend

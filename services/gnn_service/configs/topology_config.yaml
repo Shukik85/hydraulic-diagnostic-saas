@@ -1,0 +1,116 @@
+# Topology Configuration for Multi-Topology Training
+# Python 3.14+ compatible
+# Related: Issue #131
+
+# Training topologies (seen during training)
+train_topologies:
+  small_3_nodes:
+    num_nodes: 3
+    description: "Simple sequential: pump -> valve -> actuator"
+    num_samples: 200
+    topology_type: "SMALL_3_NODES"
+    use_for_training: true
+    
+  medium_7_nodes:
+    num_nodes: 7
+    description: "Parallel operations: 2 pumps -> LS valve -> 4 actuators"
+    num_samples: 700  # Main parallel dataset
+    topology_type: "MEDIUM_7_NODES"
+    use_for_training: true
+    
+  large_10_nodes:
+    num_nodes: 10
+    description: "Sequential cascade: pump -> relief -> distributor -> sections"
+    num_samples: 400  # Main sequential dataset
+    topology_type: "LARGE_10_NODES"
+    use_for_training: true
+
+# Test topologies (for generalization testing)
+test_topologies:
+  custom_6_nodes:
+    num_nodes: 6
+    description: "Unseen topology: custom 6-node configuration"
+    num_samples: 50
+    topology_type: "CUSTOM"
+    use_for_training: false  # Zero-shot test
+    
+  large_scale_50_nodes:
+    num_nodes: 50
+    description: "Large-scale system (generalization test)"
+    num_samples: 20
+    topology_type: "CUSTOM"
+    use_for_training: false
+    
+  different_structure:
+    num_nodes: 8
+    description: "Different hydraulic structure (e.g., series-parallel hybrid)"
+    num_samples: 30
+    topology_type: "CUSTOM"
+    use_for_training: false
+
+# Dataset paths
+datasets:
+  parallel:
+    path: "data/parallel_operations_700graphs.pt"
+    topology: "medium_7_nodes"
+    split:
+      train: 0.7  # 490 graphs
+      val: 0.15   # 105 graphs
+      test: 0.15  # 105 graphs
+      
+  sequential:
+    path: "data/sequential_cascade_400graphs.pt"
+    topology: "large_10_nodes"
+    split:
+      train: 0.7  # 280 graphs
+      val: 0.15   # 60 graphs
+      test: 0.15  # 60 graphs
+      
+  temporal:
+    path: "data/temporal_sequences_100x10.pt"
+    topology: "mixed"  # 3, 7, 10 nodes
+    split:
+      train: 0.7  # 70 sequences
+      val: 0.15   # 15 sequences
+      test: 0.15  # 15 sequences
+    sequence_length: 10
+
+# Transfer learning configuration
+transfer_learning:
+  enabled: true
+  
+  # Fine-tuning strategy
+  freeze_gat: true  # Freeze GAT layers initially
+  freeze_lstm: true  # Freeze LSTM layers initially
+  unfreeze_after_epochs: 10
+  
+  # Fine-tuning dataset size
+  min_samples: 50
+  recommended_samples: 100
+  
+  # Expected improvements
+  expected_accuracy_boost:
+    50_samples: 0.05  # +5%
+    100_samples: 0.07  # +7%
+
+# Expected performance by topology
+expected_performance:
+  seen_topologies:  # 3, 7, 10 nodes
+    node_accuracy: [0.89, 0.91]
+    graph_f1: [0.87, 0.91]
+    confidence: [0.92, 0.94]
+    
+  unseen_custom:  # 6 nodes
+    node_accuracy: [0.82, 0.86]
+    graph_f1: [0.78, 0.82]
+    confidence: [0.80, 0.85]
+    
+  large_scale:  # 50 nodes
+    node_accuracy: [0.82, 0.85]
+    graph_f1: [0.68, 0.71]
+    confidence: [0.75, 0.78]
+    
+  different_structure:
+    node_accuracy: [0.80, 0.82]
+    graph_f1: [0.65, 0.68]
+    confidence: [0.72, 0.74]
