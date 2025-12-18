@@ -2,6 +2,7 @@
 
 Implements:
 - AttentionPooling: Learnable importance weights per node
+- VirtualNodePooling: Virtual node for graph-level aggregation
 - Replaces naive mean/max pooling for better generalization
 
 Python 3.14 Features:
@@ -60,17 +61,21 @@ class AttentionPooling(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        batch: torch.Tensor
+        batch: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Pool node features to graph-level representation.
         
         Args:
             x: Node features [num_nodes, hidden_dim]
-            batch: Batch assignment [num_nodes]
+            batch: Batch assignment [num_nodes]. If None, assumes single graph.
             
         Returns:
             Graph-level features [batch_size, hidden_dim]
         """
+        # Handle None batch (single graph)
+        if batch is None:
+            batch = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
+        
         # Compute attention scores
         scores = self.attention_mlp(x)  # [num_nodes, 1]
         
@@ -96,17 +101,20 @@ class AttentionPooling(nn.Module):
     def get_attention_weights(
         self,
         x: torch.Tensor,
-        batch: torch.Tensor
+        batch: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Get attention weights for interpretability.
         
         Args:
             x: Node features [num_nodes, hidden_dim]
-            batch: Batch assignment [num_nodes]
+            batch: Batch assignment [num_nodes]. If None, assumes single graph.
             
         Returns:
             Attention weights [num_nodes]
         """
+        if batch is None:
+            batch = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
+        
         scores = self.attention_mlp(x)
         attention_weights = softmax(scores, batch, dim=0)
         return attention_weights.squeeze(-1)
@@ -168,17 +176,21 @@ class VirtualNodePooling(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        batch: torch.Tensor
+        batch: torch.Tensor | None = None
     ) -> torch.Tensor:
         """Add virtual node information to node features.
         
         Args:
             x: Node features [num_nodes, node_dim]
-            batch: Batch assignment [num_nodes]
+            batch: Batch assignment [num_nodes]. If None, assumes single graph.
             
         Returns:
             Enhanced features [num_nodes, node_dim + virtual_dim]
         """
+        # Handle None batch (single graph)
+        if batch is None:
+            batch = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
+        
         batch_size = batch.max().item() + 1
         
         # Aggregate node features per graph

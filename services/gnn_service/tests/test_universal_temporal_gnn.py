@@ -227,7 +227,7 @@ class TestUniversalTemporalGNNv2:
         assert outputs['graph_logits'].shape == (4, 4)  # 4 graphs
     
     def test_size_embedding_small_graph(self, model: UniversalTemporalGNNv2):
-        """Size embedding should handle small graphs."""
+        """Model should handle small graphs (no size embedding)."""
         graph = Data(
             x=torch.randn(3, 34),
             edge_index=torch.tensor([[0, 1], [1, 2]], dtype=torch.long),
@@ -238,11 +238,10 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(graph, temporal=False)
         
-        # Should use bin 0 (1-10 nodes)
         assert outputs['graph_logits'].shape == (1, 4)
     
     def test_size_embedding_large_graph(self, model: UniversalTemporalGNNv2):
-        """Size embedding should handle large graphs (1000+ nodes)."""
+        """Model should handle large graphs (1000+ nodes)."""
         num_nodes = 1000
         graph = Data(
             x=torch.randn(num_nodes, 34),
@@ -254,12 +253,11 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(graph, temporal=False)
         
-        # Should use bin 3 (201-1000 nodes)
         assert outputs['node_logits'].shape[0] == num_nodes
         assert outputs['graph_logits'].shape == (1, 4)
     
     def test_size_embedding_extra_large_graph(self, model: UniversalTemporalGNNv2):
-        """Size embedding should handle extra large graphs (10000+ nodes)."""
+        """Model should handle extra large graphs (10000+ nodes)."""
         num_nodes = 15000
         graph = Data(
             x=torch.randn(num_nodes, 34),
@@ -271,12 +269,11 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(graph, temporal=False)
         
-        # Should use bin 5 (10000+ nodes)
         assert outputs['node_logits'].shape[0] == num_nodes
         assert outputs['graph_logits'].shape == (1, 4)
     
     def test_no_attention_returns_empty_dict(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
-        """Should return empty dict (not None) when attention not requested."""
+        """Should not return attention_weights key when not requested."""
         model.eval()
         with torch.no_grad():
             outputs = model(sample_graph_3_nodes, temporal=False, return_attention=False)
@@ -319,14 +316,14 @@ class TestUniversalTemporalGNNv2:
         assert outputs['node_logits'].shape == (3, 5)
     
     def test_gradient_flow(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
-        """Gradients should flow correctly."""
+        """Gradients should flow correctly (single mode)."""
         model.train()
         
         outputs = model(sample_graph_3_nodes, temporal=False)
         loss = outputs['node_logits'].sum() + outputs['graph_logits'].sum()
         loss.backward()
         
-        # Check that gradients exist
+        # Check that gradients exist (excluding LSTM which is not used in single mode)
         for name, param in model.named_parameters():
-            if param.requires_grad:
+            if param.requires_grad and not name.startswith('lstm.'):
                 assert param.grad is not None, f"No gradient for {name}"

@@ -9,16 +9,16 @@ Combines:
 Version 2.0.2 (Production-Hardened):
 - Fixed all senior review findings
 - Proper configuration validation
-- Scalable size embedding (supports 10k+ nodes)
-- Flexible temporal processing
-- Batch optimization for sequences
+- Consistent single/temporal mode behavior
+- Removed size_embedding for simplicity and consistency
+- Robust batch handling
 
 Python 3.14 Features:
     - Deferred annotations (PEP 563)
     - Builtin generic types (PEP 585)
 
 References:
-    - GATv2: "How Attentive are Graph Attention Networks?" (ICLR 2022)
+    - GATv2: \"How Attentive are Graph Attention Networks?\" (ICLR 2022)
       https://arxiv.org/abs/2105.14491
 """
 
@@ -44,6 +44,11 @@ class ModelConfig:
     
     All parameters validated in __post_init__.
     
+    Design decisions:
+    - No size_embedding: Ensures consistency between single/temporal modes.
+      Graph size is not a critical feature for hydraulic anomaly detection.
+    - Unified anomaly_type_head: Same architecture for both modes (64 → 4).
+    
     Attributes:
         version: Model version string
         node_features: Input node feature dimension (must be > 0)
@@ -60,7 +65,6 @@ class ModelConfig:
         use_virtual_nodes: Enable virtual node pooling
         virtual_node_dim: Virtual node dimension (must be > 0 if used)
         use_attention_pooling: Use attention-based pooling
-        graph_size_as_feature: Add graph size as feature (binned)
         component_health_num_classes: Node-level classes (must be >= 2)
         anomaly_type_num_classes: Graph-level classes (must be >= 2)
         head_hidden_dim: Prediction head hidden dim (must be > 0)
@@ -91,7 +95,6 @@ class ModelConfig:
     use_virtual_nodes: bool = True
     virtual_node_dim: int = 64
     use_attention_pooling: bool = True
-    graph_size_as_feature: bool = True
     
     # Multi-task heads
     component_health_num_classes: int = 5
@@ -156,7 +159,7 @@ class ModelConfig:
 class UniversalTemporalGNNv2(nn.Module):
     """Universal Temporal GNN v2 for hydraulic diagnostics.
     
-    Version 2.0.2 - Production-hardened after senior review.
+    Version 2.0.2 - Production-hardened after dual review.
     
     Architecture:
     1. Node/edge encoding
@@ -165,6 +168,11 @@ class UniversalTemporalGNNv2(nn.Module):
     4. AttentionPooling → graph representation
     5. LSTM (temporal mode) or Linear projection (single mode)
     6. Dual prediction heads (node-level + graph-level)
+    
+    Mode differences:
+    - Single: GNN → projection → head (direct path)
+    - Temporal: GNN → LSTM → head (sequence modeling)
+    - Both use same anomaly_type_head (64 → 4) for consistency
     
     Examples:
         >>> config = ModelConfig(node_features=34, edge_features=14)
@@ -275,17 +283,6 @@ class UniversalTemporalGNNv2(nn.Module):
             lstm_output_dim
         )
         
-        # Graph size embedding (binned for scalability)
-        if self.config.graph_size_as_feature:
-            # Binned sizes: 1-10, 11-50, 51-200, 201-1000, 1001+
-            self.size_bins = [10, 50, 200, 1000, 10000]
-            self.size_embedding = nn.Embedding(len(self.size_bins) + 1, 16)
-            graph_feature_dim = lstm_output_dim + 16
-        else:
-            self.size_bins = None
-            self.size_embedding = None
-            graph_feature_dim = lstm_output_dim
-        
         # Component health head (node-level)
         self.component_health_head = nn.Sequential(
             nn.Linear(self.gat_output_dim, self.config.head_hidden_dim),
@@ -294,9 +291,11 @@ class UniversalTemporalGNNv2(nn.Module):
             nn.Linear(self.config.head_hidden_dim, self.config.component_health_num_classes)
         )
         
-        # Anomaly type head (graph-level)
+        # Anomaly type head (graph-level, unified for both modes)
+        # Input: lstm_output_dim (64 for default config)
+        # Output: anomaly_type_num_classes (4 for default config)
         self.anomaly_type_head = nn.Sequential(
-            nn.Linear(graph_feature_dim, self.config.head_hidden_dim),
+            nn.Linear(lstm_output_dim, self.config.head_hidden_dim),
             nn.ReLU(),
             nn.Dropout(self.config.head_dropout),
             nn.Linear(self.config.head_hidden_dim, self.config.anomaly_type_num_classes)
@@ -304,7 +303,7 @@ class UniversalTemporalGNNv2(nn.Module):
         
         logger.debug("UniversalTemporalGNNv2 (v%s) initialized", self.config.version)
         logger.debug("GATv2 output dim: %d, LSTM output dim: %d", self.gat_output_dim, lstm_output_dim)
-        logger.debug("Graph feature dim: %d", graph_feature_dim)
+        logger.debug("Anomaly head input: %d (consistent across modes)", lstm_output_dim)
     
     def _get_lstm_output_dim(self) -> int:
         """Calculate LSTM output dimension.
@@ -314,22 +313,6 @@ class UniversalTemporalGNNv2(nn.Module):
         """
         multiplier = 2 if self.config.lstm_bidirectional else 1
         return self.config.lstm_hidden_dim * multiplier
-    
-    def _get_size_bin(self, num_nodes: int) -> int:
-        """Get binned size category for graph.
-        
-        Bins: [1-10], [11-50], [51-200], [201-1000], [1001-10000], [10000+]
-        
-        Args:
-            num_nodes: Number of nodes in graph
-            
-        Returns:
-            Bin index (0-5)
-        """
-        for i, bin_max in enumerate(self.size_bins):
-            if num_nodes <= bin_max:
-                return i
-        return len(self.size_bins)  # Large graph category
     
     def _validate_batch(self, data: Data) -> torch.Tensor:
         """Validate and extract batch tensor.
@@ -469,6 +452,8 @@ class UniversalTemporalGNNv2(nn.Module):
     ) -> dict[str, torch.Tensor]:
         """Forward pass for single graph.
         
+        Path: GNN → projection → anomaly_type_head
+        
         Args:
             data: PyG Data object
             return_attention: Return attention weights
@@ -491,20 +476,6 @@ class UniversalTemporalGNNv2(nn.Module):
         graph_features = self.single_graph_projection(graph_repr)
         graph_features = F.relu(graph_features)
         
-        # Add graph size feature (binned, optional)
-        if self.size_embedding is not None:
-            batch_size = batch.max().item() + 1
-            node_counts = torch.bincount(batch, minlength=batch_size)
-            
-            # Convert to bin indices
-            size_bins = torch.tensor(
-                [self._get_size_bin(count.item()) for count in node_counts],
-                dtype=torch.long,
-                device=batch.device
-            )
-            size_embed = self.size_embedding(size_bins)
-            graph_features = torch.cat([graph_features, size_embed], dim=1)
-        
         # Anomaly type prediction (graph-level)
         graph_logits = self.anomaly_type_head(graph_features)
         
@@ -525,6 +496,8 @@ class UniversalTemporalGNNv2(nn.Module):
         return_all_timesteps: bool = False
     ) -> dict[str, torch.Tensor]:
         """Forward pass for temporal sequence.
+        
+        Path: GNN → LSTM → anomaly_type_head
         
         Args:
             data_sequence: List of PyG Data objects (time sequence)
@@ -572,7 +545,7 @@ class UniversalTemporalGNNv2(nn.Module):
         lstm_out, _ = self.lstm(sequence_tensor)
         lstm_final = lstm_out[:, -1, :]  # Take last timestep
         
-        # Graph prediction (no size embedding in temporal mode)
+        # Graph prediction - same head as single mode
         graph_logits = self.anomaly_type_head(lstm_final)
         
         outputs = {
