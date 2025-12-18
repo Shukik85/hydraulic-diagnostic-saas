@@ -21,8 +21,13 @@ import torch
 from torch_geometric.data import Data
 from tqdm import tqdm
 
-from .feature_definitions import EdgeFeatures, GraphLabels, NodeFeatures
-from .topologies import ComponentNode, ComponentType, Connection, TopologyDefinitions, TopologyType
+from .topologies import (
+    ComponentNode,
+    ComponentType,
+    Connection,
+    TopologyDefinitions,
+    TopologyType,
+)
 from .validators import PhysicalValidator
 
 logger = logging.getLogger(__name__)
@@ -441,7 +446,7 @@ class HydraulicScenarioGenerator:
                 degradation_progress = t / self.config.temporal_sequence_length
                 
                 node_health = []
-                for i in range(num_nodes):
+                for _ in range(num_nodes):
                     if np.random.random() < degradation_progress * 0.8:
                         # Health degrades: 0 -> 1 -> 2 -> 3 -> 4
                         max_health = min(4, int(degradation_progress * 5))
