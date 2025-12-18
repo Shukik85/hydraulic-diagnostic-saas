@@ -1,10 +1,16 @@
-"""Universal Temporal GNN for hydraulic system diagnostics.
+"""Universal Temporal GNN v2 for hydraulic system diagnostics.
 
 Combines:
 - Graph Attention Networks (GAT) for spatial relationships
 - LSTM for temporal patterns
 - Multi-task learning for component health + anomaly detection
 - Size-invariant design for different graph topologies
+
+Version 2.0.0:
+- PyTorch Geometric 2.x features (edge_dim, return_attention_weights)
+- PyTorch 2.8+ compilation support
+- Python 3.14 native type hints
+- Modern pooling strategies (AttentionPooling, VirtualNode)
 
 Python 3.14 Features:
     - Deferred annotations (PEP 563)
@@ -28,7 +34,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ModelConfig:
-    """Configuration for UniversalTemporalGNN."""
+    """Configuration for UniversalTemporalGNNv2."""
+    
+    # Model version
+    version: str = "2.0.0"
     
     # Input dimensions
     node_features: int = 34
@@ -64,12 +73,19 @@ class ModelConfig:
     return_attention_weights: bool = False  # Return in forward pass
 
 
-class UniversalTemporalGNN(nn.Module):
-    """Universal Temporal GNN for hydraulic diagnostics.
+class UniversalTemporalGNNv2(nn.Module):
+    """Universal Temporal GNN v2 for hydraulic diagnostics.
+    
+    Version 2.0.0 improvements:
+    - PyG 2.x GATConv with edge_dim support
+    - Native attention weight extraction
+    - AttentionPooling for size-invariant graphs
+    - VirtualNode support for cross-topology generalization
+    - PyTorch 2.8+ torch.compile() compatible
     
     Architecture:
     1. Node/edge encoding
-    2. Multi-layer GAT (spatial)
+    2. Multi-layer GAT (spatial, with edge features)
     3. Optional: LSTM (temporal)
     4. AttentionPooling → graph representation
     5. Dual prediction heads (node-level + graph-level)
@@ -81,7 +97,7 @@ class UniversalTemporalGNN(nn.Module):
         ...     gat_hidden_dim=128,
         ...     lstm_hidden_dim=128
         ... )
-        >>> model = UniversalTemporalGNN(config)
+        >>> model = UniversalTemporalGNNv2(config)
         >>> 
         >>> # Single graph
         >>> data = Data(x=..., edge_index=..., edge_attr=...)
@@ -122,7 +138,7 @@ class UniversalTemporalGNN(nn.Module):
             self.config.gat_hidden_dim
         )
         
-        # GAT layers
+        # GAT layers (PyG 2.x with edge_dim)
         self.gat_layers = nn.ModuleList()
         
         # First GAT layer
@@ -133,7 +149,7 @@ class UniversalTemporalGNN(nn.Module):
                 heads=self.config.gat_num_heads,
                 dropout=self.config.gat_dropout,
                 concat=self.config.gat_concat_heads,
-                edge_dim=self.config.gat_hidden_dim,
+                edge_dim=self.config.gat_hidden_dim,  # PyG 2.x feature
                 add_self_loops=True
             )
         )
@@ -147,7 +163,7 @@ class UniversalTemporalGNN(nn.Module):
                     heads=self.config.gat_num_heads,
                     dropout=self.config.gat_dropout,
                     concat=self.config.gat_concat_heads,
-                    edge_dim=self.config.gat_hidden_dim,
+                    edge_dim=self.config.gat_hidden_dim,  # PyG 2.x feature
                     add_self_loops=True
                 )
             )
@@ -215,7 +231,7 @@ class UniversalTemporalGNN(nn.Module):
         # Attention storage for interpretability
         self.last_attention_weights: dict[str, torch.Tensor] = {}
         
-        logger.info("UniversalTemporalGNN initialized with config: %s", self.config)
+        logger.info("UniversalTemporalGNNv2 (v%s) initialized", self.config.version)
         logger.info("GAT output dim: %d, LSTM output dim: %d", self.gat_output_dim, lstm_output_dim)
     
     def forward(
@@ -264,7 +280,7 @@ class UniversalTemporalGNN(nn.Module):
         x = self.node_encoder(x)  # [num_nodes, gat_hidden_dim]
         edge_attr = self.edge_encoder(edge_attr)  # [num_edges, gat_hidden_dim]
         
-        # GAT layers
+        # GAT layers (PyG 2.x return_attention_weights)
         attention_weights = {}
         for i, gat_layer in enumerate(self.gat_layers):
             x_out = gat_layer(x, edge_index, edge_attr=edge_attr, return_attention_weights=True)
@@ -276,9 +292,6 @@ class UniversalTemporalGNN(nn.Module):
                     attention_weights[f'gat_layer_{i}'] = attn
             else:
                 x = x_out
-            
-            # Residual connection (after first layer)
-            # Note: shapes must match, skipping for simplicity
             
             x = F.relu(x)
             x = F.dropout(x, p=self.config.gat_dropout, training=self.training)
