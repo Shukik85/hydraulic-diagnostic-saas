@@ -1,11 +1,12 @@
 """GNN v2 models for hydraulic diagnostics.
 
-Version 2.0.1 (Production-Ready):
+Version 2.0.2 (Production-Hardened):
 - PyTorch Geometric 2.x compatibility
 - PyTorch 2.8+ torch.compile() support
 - Python 3.14 native type hints
 - Modern attention mechanisms
-- Fixed critical architectural issues from senior review
+- All senior review findings addressed
+- Comprehensive validation and error handling
 
 Main components:
 - UniversalTemporalGNNv2: GAT + LSTM with multi-task learning
@@ -42,7 +43,7 @@ from .pooling import AttentionPooling, VirtualNodePooling
 from .universal_temporal_gnn import ModelConfig, UniversalTemporalGNNv2
 
 __all__ = [
-    # Main model (v2.0.1)
+    # Main model (v2.0.2)
     'UniversalTemporalGNNv2',
     'ModelConfig',
     # Loss functions
@@ -56,4 +57,4 @@ __all__ = [
     'VirtualNodePooling',
 ]
 
-__version__ = '2.0.1'
+__version__ = '2.0.2'
