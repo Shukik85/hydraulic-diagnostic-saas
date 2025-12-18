@@ -1,12 +1,19 @@
 """Physical validators for hydraulic system data.
 
 Ensures generated data adheres to physical laws and engineering constraints.
+
+Python 3.14 Features:
+    - Deferred annotations (PEP 563)
+    - Builtin generic types (PEP 585)
 """
 
-import torch
-from typing import Dict, List, Tuple, Optional
+from __future__ import annotations
+
 import logging
-from .feature_definitions import NodeFeatures, EdgeFeatures
+
+import torch
+
+from .feature_definitions import EdgeFeatures, NodeFeatures
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +21,7 @@ logger = logging.getLogger(__name__)
 class PhysicalValidator:
     """Validates hydraulic system data against physical constraints."""
     
-    def __init__(self, strict: bool = True):
+    def __init__(self, strict: bool = True) -> None:
         """Initialize validator.
         
         Args:
@@ -28,8 +35,8 @@ class PhysicalValidator:
     def validate_node_features(
         self,
         node_features: torch.Tensor,
-        feature_names: Optional[List[str]] = None
-    ) -> Tuple[bool, List[str]]:
+        feature_names: list[str] | None = None
+    ) -> tuple[bool, list[str]]:
         """Validate node feature tensor.
         
         Args:
@@ -85,20 +92,20 @@ class PhysicalValidator:
         if not is_valid:
             if self.strict:
                 raise ValueError(
-                    f"Node feature validation failed:\n" +
+                    "Node feature validation failed:\n" +
                     "\n".join(f"  - {e}" for e in errors)
                 )
             else:
                 for error in errors:
-                    logger.warning(f"Validation warning: {error}")
+                    logger.warning("Validation warning: %s", error)
         
         return is_valid, errors
     
     def validate_edge_features(
         self,
         edge_features: torch.Tensor,
-        feature_names: Optional[List[str]] = None
-    ) -> Tuple[bool, List[str]]:
+        feature_names: list[str] | None = None
+    ) -> tuple[bool, list[str]]:
         """Validate edge feature tensor.
         
         Args:
@@ -154,12 +161,12 @@ class PhysicalValidator:
         if not is_valid:
             if self.strict:
                 raise ValueError(
-                    f"Edge feature validation failed:\n" +
+                    "Edge feature validation failed:\n" +
                     "\n".join(f"  - {e}" for e in errors)
                 )
             else:
                 for error in errors:
-                    logger.warning(f"Validation warning: {error}")
+                    logger.warning("Validation warning: %s", error)
         
         return is_valid, errors
     
@@ -168,7 +175,7 @@ class PhysicalValidator:
         node_features: torch.Tensor,
         edge_index: torch.Tensor,
         edge_features: torch.Tensor
-    ) -> Tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """Validate hydraulic physical laws.
         
         Checks:
@@ -243,14 +250,11 @@ class PhysicalValidator:
         
         # Log warnings
         for warning in warnings:
-            logger.warning(f"Physical law validation: {warning}")
+            logger.warning("Physical law validation: %s", warning)
         
         return len(warnings) == 0, warnings
     
-    def validate_graph(
-        self,
-        data
-    ) -> bool:
+    def validate_graph(self, data) -> bool:
         """Validate complete PyG Data object.
         
         Args:
@@ -262,16 +266,16 @@ class PhysicalValidator:
         all_valid = True
         
         # Validate node features
-        node_valid, node_errors = self.validate_node_features(data.x)
+        node_valid, _node_errors = self.validate_node_features(data.x)
         all_valid &= node_valid
         
         # Validate edge features
         if hasattr(data, 'edge_attr') and data.edge_attr is not None:
-            edge_valid, edge_errors = self.validate_edge_features(data.edge_attr)
+            edge_valid, _edge_errors = self.validate_edge_features(data.edge_attr)
             all_valid &= edge_valid
             
             # Validate physical laws
-            laws_valid, warnings = self.validate_hydraulic_laws(
+            _laws_valid, _warnings = self.validate_hydraulic_laws(
                 data.x, data.edge_index, data.edge_attr
             )
             # Physical laws generate warnings, not hard failures

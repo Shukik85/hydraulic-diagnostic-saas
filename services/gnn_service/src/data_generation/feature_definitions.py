@@ -2,11 +2,15 @@
 
 Defines the 34-dimensional node features and 14-dimensional edge features
 used in hydraulic system modeling.
+
+Python 3.14 Features:
+    - Deferred annotations (PEP 563)
+    - Builtin generic types (PEP 585)
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple
-import torch
 
 
 @dataclass
@@ -63,7 +67,7 @@ class NodeFeatures:
     ambient_temperature: float  # °C (-20 to 50)
     
     @classmethod
-    def get_feature_names(cls) -> List[str]:
+    def get_feature_names(cls) -> list[str]:
         """Return list of all feature names."""
         return [
             # Physical
@@ -85,7 +89,7 @@ class NodeFeatures:
         ]
     
     @classmethod
-    def get_physical_ranges(cls) -> Dict[str, Tuple[float, float]]:
+    def get_physical_ranges(cls) -> dict[str, tuple[float, float]]:
         """Return valid physical ranges for each feature."""
         return {
             'pressure': (0.0, 400.0),
@@ -160,7 +164,7 @@ class EdgeFeatures:
     contamination_level: float  # ISO code (0-25)
     
     @classmethod
-    def get_feature_names(cls) -> List[str]:
+    def get_feature_names(cls) -> list[str]:
         """Return list of all feature names."""
         return [
             # Flow
@@ -175,7 +179,7 @@ class EdgeFeatures:
         ]
     
     @classmethod
-    def get_physical_ranges(cls) -> Dict[str, Tuple[float, float]]:
+    def get_physical_ranges(cls) -> dict[str, tuple[float, float]]:
         """Return valid physical ranges for each feature."""
         return {
             'flow_rate': (0.0, 500.0),
@@ -205,7 +209,7 @@ class GraphLabels:
     """Multi-label annotations for training."""
     
     # Node-level labels (5 classes)
-    node_health_status: List[int] = field(default_factory=list)
+    node_health_status: list[int] = field(default_factory=list)
     # 0: healthy, 1: degraded, 2: worn, 3: leaking, 4: failed
     
     # Graph-level labels (4 classes)
@@ -213,12 +217,12 @@ class GraphLabels:
     # 0: normal, 1: parallel_overload, 2: sequential_cascade, 3: cavitation
     
     @classmethod
-    def get_node_class_names(cls) -> List[str]:
+    def get_node_class_names(cls) -> list[str]:
         """Return node health class names."""
         return ['healthy', 'degraded', 'worn', 'leaking', 'failed']
     
     @classmethod
-    def get_graph_class_names(cls) -> List[str]:
+    def get_graph_class_names(cls) -> list[str]:
         """Return system anomaly class names."""
         return ['normal', 'parallel_overload', 'sequential_cascade', 'cavitation']
     

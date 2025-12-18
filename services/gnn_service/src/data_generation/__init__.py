@@ -10,9 +10,9 @@ Components:
     - PhysicalValidators: Physics-based validation
 """
 
+from .feature_definitions import EdgeFeatures, NodeFeatures
 from .hydraulic_scenario_generator import HydraulicScenarioGenerator
 from .topologies import TopologyDefinitions, TopologyType
-from .feature_definitions import NodeFeatures, EdgeFeatures
 from .validators import PhysicalValidator
 
 __all__ = [

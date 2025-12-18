@@ -1,11 +1,17 @@
 """Hydraulic system topology definitions.
 
 Defines standard topologies (3, 7, 10 nodes) for parallel and sequential operations.
+
+Python 3.14 Features:
+    - Deferred annotations (PEP 563)
+    - Builtin generic types (PEP 585)
 """
 
-from enum import Enum
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Tuple, Dict
+from enum import Enum
+
 import networkx as nx
 
 
@@ -55,7 +61,7 @@ class TopologyDefinitions:
     """Standard hydraulic topology definitions."""
     
     @staticmethod
-    def get_small_3_node_topology() -> Tuple[List[ComponentNode], List[Connection]]:
+    def get_small_3_node_topology() -> tuple[list[ComponentNode], list[Connection]]:
         """Simple 3-node topology: pump -> valve -> actuator.
         
         Used for basic sequential operations.
@@ -74,7 +80,7 @@ class TopologyDefinitions:
         return nodes, edges
     
     @staticmethod
-    def get_medium_7_node_parallel_topology() -> Tuple[List[ComponentNode], List[Connection]]:
+    def get_medium_7_node_parallel_topology() -> tuple[list[ComponentNode], list[Connection]]:
         """7-node parallel operations topology.
         
         Topology: 2 pumps -> load-sensing valve -> 4 actuators
@@ -107,7 +113,7 @@ class TopologyDefinitions:
         return nodes, edges
     
     @staticmethod
-    def get_large_10_node_sequential_topology() -> Tuple[List[ComponentNode], List[Connection]]:
+    def get_large_10_node_sequential_topology() -> tuple[list[ComponentNode], list[Connection]]:
         """10-node sequential safety cascade topology.
         
         Topology: pump -> main relief -> distributor -> section relief -> motor -> shock + makeup
@@ -153,8 +159,8 @@ class TopologyDefinitions:
     
     @staticmethod
     def create_networkx_graph(
-        nodes: List[ComponentNode],
-        edges: List[Connection]
+        nodes: list[ComponentNode],
+        edges: list[Connection]
     ) -> nx.DiGraph:
         """Convert topology to NetworkX directed graph.
         
@@ -191,7 +197,7 @@ class TopologyDefinitions:
     @staticmethod
     def get_topology(
         topology_type: TopologyType
-    ) -> Tuple[List[ComponentNode], List[Connection]]:
+    ) -> tuple[list[ComponentNode], list[Connection]]:
         """Get topology by type.
         
         Args:
@@ -207,14 +213,15 @@ class TopologyDefinitions:
         elif topology_type == TopologyType.LARGE_10_NODES:
             return TopologyDefinitions.get_large_10_node_sequential_topology()
         else:
-            raise ValueError(f"Unsupported topology type: {topology_type}")
+            msg = f"Unsupported topology type: {topology_type}"
+            raise ValueError(msg)
     
     @staticmethod
     def visualize_topology(
-        nodes: List[ComponentNode],
-        edges: List[Connection],
-        save_path: str = None
-    ):
+        nodes: list[ComponentNode],
+        edges: list[Connection],
+        save_path: str | None = None
+    ) -> None:
         """Visualize topology using NetworkX and matplotlib.
         
         Args:
@@ -224,8 +231,9 @@ class TopologyDefinitions:
         """
         try:
             import matplotlib.pyplot as plt
-        except ImportError:
-            raise ImportError("matplotlib required for visualization")
+        except ImportError as exc:
+            msg = "matplotlib required for visualization"
+            raise ImportError(msg) from exc
         
         G = TopologyDefinitions.create_networkx_graph(nodes, edges)
         
