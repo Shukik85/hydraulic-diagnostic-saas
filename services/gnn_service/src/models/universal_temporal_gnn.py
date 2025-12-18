@@ -1,13 +1,13 @@
 """Universal Temporal GNN v2 for hydraulic system diagnostics.
 
 Combines:
-- Graph Attention Networks (GAT) for spatial relationships
+- Graph Attention Networks v2 (GATv2) for spatial relationships
 - LSTM for temporal patterns
 - Multi-task learning for component health + anomaly detection
 - Size-invariant design for different graph topologies
 
 Version 2.0.0:
-- PyTorch Geometric 2.x features (edge_dim, return_attention_weights)
+- PyTorch Geometric 2.x features (GATv2Conv, edge_dim, return_attention_weights)
 - PyTorch 2.8+ compilation support
 - Python 3.14 native type hints
 - Modern pooling strategies (AttentionPooling, VirtualNode)
@@ -15,6 +15,10 @@ Version 2.0.0:
 Python 3.14 Features:
     - Deferred annotations (PEP 563)
     - Builtin generic types (PEP 585)
+
+References:
+    - GATv2: "How Attentive are Graph Attention Networks?" (ICLR 2022)
+      https://arxiv.org/abs/2105.14491
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ from dataclasses import dataclass
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GATConv
+from torch_geometric.nn import GATv2Conv, global_mean_pool
 
 from .pooling import AttentionPooling, VirtualNodePooling
 
@@ -43,7 +47,7 @@ class ModelConfig:
     node_features: int = 34
     edge_features: int = 14
     
-    # GAT configuration
+    # GATv2 configuration
     gat_hidden_dim: int = 128
     gat_num_layers: int = 3
     gat_num_heads: int = 4
@@ -77,7 +81,8 @@ class UniversalTemporalGNNv2(nn.Module):
     """Universal Temporal GNN v2 for hydraulic diagnostics.
     
     Version 2.0.0 improvements:
-    - PyG 2.x GATConv with edge_dim support
+    - GATv2Conv with dynamic attention (fixes static attention limitation)
+    - PyG 2.x edge_dim support for edge features
     - Native attention weight extraction
     - AttentionPooling for size-invariant graphs
     - VirtualNode support for cross-topology generalization
@@ -85,7 +90,7 @@ class UniversalTemporalGNNv2(nn.Module):
     
     Architecture:
     1. Node/edge encoding
-    2. Multi-layer GAT (spatial, with edge features)
+    2. Multi-layer GATv2 (spatial, with edge features)
     3. Optional: LSTM (temporal)
     4. AttentionPooling → graph representation
     5. Dual prediction heads (node-level + graph-level)
@@ -120,7 +125,7 @@ class UniversalTemporalGNNv2(nn.Module):
         super().__init__()
         self.config = config or ModelConfig()
         
-        # Effective hidden dimension after GAT
+        # Effective hidden dimension after GATv2
         if self.config.gat_concat_heads:
             self.gat_output_dim = self.config.gat_hidden_dim * self.config.gat_num_heads
         else:
@@ -132,39 +137,41 @@ class UniversalTemporalGNNv2(nn.Module):
             self.config.gat_hidden_dim
         )
         
-        # Edge feature encoder (for GAT)
+        # Edge feature encoder (for GATv2)
         self.edge_encoder = nn.Linear(
             self.config.edge_features,
             self.config.gat_hidden_dim
         )
         
-        # GAT layers (PyG 2.x with edge_dim)
+        # GATv2 layers (dynamic attention)
         self.gat_layers = nn.ModuleList()
         
-        # First GAT layer
+        # First GATv2 layer
         self.gat_layers.append(
-            GATConv(
+            GATv2Conv(
                 self.config.gat_hidden_dim,
                 self.config.gat_hidden_dim,
                 heads=self.config.gat_num_heads,
                 dropout=self.config.gat_dropout,
                 concat=self.config.gat_concat_heads,
                 edge_dim=self.config.gat_hidden_dim,  # PyG 2.x feature
-                add_self_loops=True
+                add_self_loops=True,
+                share_weights=False  # GATv2 uses separate weight matrices
             )
         )
         
-        # Subsequent GAT layers
+        # Subsequent GATv2 layers
         for _ in range(self.config.gat_num_layers - 1):
             self.gat_layers.append(
-                GATConv(
+                GATv2Conv(
                     self.gat_output_dim,
                     self.config.gat_hidden_dim,
                     heads=self.config.gat_num_heads,
                     dropout=self.config.gat_dropout,
                     concat=self.config.gat_concat_heads,
                     edge_dim=self.config.gat_hidden_dim,  # PyG 2.x feature
-                    add_self_loops=True
+                    add_self_loops=True,
+                    share_weights=False  # GATv2 uses separate weight matrices
                 )
             )
         
@@ -187,7 +194,7 @@ class UniversalTemporalGNNv2(nn.Module):
                 dropout=self.config.gat_dropout
             )
         else:
-            self.pooling = None  # Will use mean pooling
+            self.pooling = None  # Will use global_mean_pool
         
         # LSTM for temporal modeling
         self.lstm = nn.LSTM(
@@ -231,8 +238,8 @@ class UniversalTemporalGNNv2(nn.Module):
         # Attention storage for interpretability
         self.last_attention_weights: dict[str, torch.Tensor] = {}
         
-        logger.info("UniversalTemporalGNNv2 (v%s) initialized", self.config.version)
-        logger.info("GAT output dim: %d, LSTM output dim: %d", self.gat_output_dim, lstm_output_dim)
+        logger.info("UniversalTemporalGNNv2 (v%s) initialized with GATv2Conv", self.config.version)
+        logger.info("GATv2 output dim: %d, LSTM output dim: %d", self.gat_output_dim, lstm_output_dim)
     
     def forward(
         self,
@@ -280,7 +287,7 @@ class UniversalTemporalGNNv2(nn.Module):
         x = self.node_encoder(x)  # [num_nodes, gat_hidden_dim]
         edge_attr = self.edge_encoder(edge_attr)  # [num_edges, gat_hidden_dim]
         
-        # GAT layers (PyG 2.x return_attention_weights)
+        # GATv2 layers (dynamic attention)
         attention_weights = {}
         for i, gat_layer in enumerate(self.gat_layers):
             x_out = gat_layer(x, edge_index, edge_attr=edge_attr, return_attention_weights=True)
@@ -289,7 +296,7 @@ class UniversalTemporalGNNv2(nn.Module):
             if isinstance(x_out, tuple):
                 x, (edge_idx, attn) = x_out
                 if self.config.extract_attention_weights:
-                    attention_weights[f'gat_layer_{i}'] = attn
+                    attention_weights[f'gatv2_layer_{i}'] = attn
             else:
                 x = x_out
             
@@ -310,14 +317,8 @@ class UniversalTemporalGNNv2(nn.Module):
         if self.pooling is not None:
             graph_repr = self.pooling(x, batch)  # [batch_size, pooling_input_dim]
         else:
-            # Mean pooling fallback
-            batch_size = batch.max().item() + 1
-            graph_repr = torch.zeros(
-                batch_size, x.size(1), dtype=x.dtype, device=x.device
-            )
-            graph_repr.index_add_(0, batch, x)
-            counts = torch.bincount(batch, minlength=batch_size).float().unsqueeze(1)
-            graph_repr = graph_repr / counts.clamp(min=1)
+            # Use global_mean_pool (PyG standard)
+            graph_repr = global_mean_pool(x, batch)  # [batch_size, pooling_input_dim]
         
         # LSTM (single timestep - just transform)
         lstm_out, _ = self.lstm(graph_repr.unsqueeze(1))  # [batch, 1, lstm_hidden]
@@ -359,7 +360,7 @@ class UniversalTemporalGNNv2(nn.Module):
         Returns:
             Dictionary with predictions
         """
-        # Process each timestep through GAT
+        # Process each timestep through GATv2
         timestep_reprs = []
         all_node_logits = []
         
@@ -375,7 +376,7 @@ class UniversalTemporalGNNv2(nn.Module):
                 x.size(0), dtype=torch.long, device=x.device
             )
             
-            # Encode and run through GAT
+            # Encode and run through GATv2
             x = self.node_encoder(x)
             edge_attr = self.edge_encoder(edge_attr)
             
@@ -394,13 +395,7 @@ class UniversalTemporalGNNv2(nn.Module):
             if self.pooling is not None:
                 graph_repr = self.pooling(x, batch)
             else:
-                batch_size = batch.max().item() + 1
-                graph_repr = torch.zeros(
-                    batch_size, x.size(1), dtype=x.dtype, device=x.device
-                )
-                graph_repr.index_add_(0, batch, x)
-                counts = torch.bincount(batch, minlength=batch_size).float().unsqueeze(1)
-                graph_repr = graph_repr / counts.clamp(min=1)
+                graph_repr = global_mean_pool(x, batch)
             
             timestep_reprs.append(graph_repr)
             all_node_logits.append(outputs['node_logits'])
