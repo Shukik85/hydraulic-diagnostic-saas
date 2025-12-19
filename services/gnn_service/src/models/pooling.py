@@ -191,6 +191,7 @@ class VirtualNodePooling(nn.Module):
         if batch is None:
             batch = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
         
+        # ✅ FIX: Check batch is not None before calling .max()
         batch_size = batch.max().item() + 1
         
         # Aggregate node features per graph
