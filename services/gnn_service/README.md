@@ -107,6 +107,7 @@ services/gnn_service/
 │   │   ├── pooling.py                 # AttentionPooling, VirtualNode
 │   │   ├── multi_task_loss.py         # Multi-task learning
 │   │   ├── attention_weights.py       # Interpretability
+│   │   ├── README.md                  # 📖 Model documentation
 │   │   └── __init__.py                # Backward compatibility (v1 alias)
 │   ├── api/
 │   │   ├── main.py                 # FastAPI app
@@ -133,7 +134,7 @@ services/gnn_service/
 │   └── unit/                           # 239 unit tests
 ├── configs/
 │   ├── config.py                   # Configuration
-│   └── topology_templates.json     # 🆕 Built-in topologies
+│   └── topology_templates.json     # 📖 Built-in topologies
 └── requirements.txt                # Dependencies
 ```
 
@@ -248,8 +249,15 @@ config = InferenceConfig(
 ```python
 # LRU cache with TTL: 100 items, 300s TTL
 # AsyncTopologyCache with stampede protection
-# Built-in templates: excavator, loader, dozer
+# Built-in templates: standard_pump_system, dual_pump_system, hydraulic_circuit_type_a
 ```
+
+**Available Templates:**
+- **standard_pump_system** — Single pump (4 components) for excavators, loaders
+- **dual_pump_system** — Redundant pumps (7 components) for high-reliability
+- **hydraulic_circuit_type_a** — Cooling system (5 components) for industrial
+
+See [configs/topology_templates.json](configs/topology_templates.json) for full documentation.
 
 ---
 
@@ -372,11 +380,11 @@ curl -X POST http://localhost:8000/v1/diagnose \
   -H "X-Request-ID: req-123" \
   -d '{
     "equipment_id": "excavator_001",
-    "topology_id": "double_pump_v1",
+    "topology_id": "standard_pump_system",
     "timestamp": "2025-12-19T18:00:00Z",
     "sensor_readings": {
-      "pump_1": {"pressure": 150.5, "temperature": 65.2},
-      "valve_1": {"position": 0.75, "leakage": 0.01}
+      "pump_main": {"pressure": 150.5, "temperature": 65.2},
+      "valve_control": {"position": 0.75, "leakage": 0.01}
     }
   }'
 ```
@@ -390,8 +398,8 @@ curl -X POST http://localhost:8000/v1/diagnose \
   "timestamp": "2025-12-19T18:00:00Z",
   "diagnosis": {
     "component_health": [
-      {"component_id": "pump_1", "health_class": "good", "confidence": 0.92},
-      {"component_id": "valve_1", "health_class": "warning", "confidence": 0.78}
+      {"component_id": "pump_main", "health_class": "good", "confidence": 0.92},
+      {"component_id": "valve_control", "health_class": "warning", "confidence": 0.78}
     ],
     "anomaly_type": {
       "predictions": {
@@ -451,9 +459,11 @@ pytest tests/ --cov=src --cov-report=html
 
 ---
 
-## 🎓 Model Documentation
+## 📖 Documentation
 
-See [models/README.md](src/models/README.md) for detailed model architecture, configuration options, and migration guide from v1 to v2.
+- **[Model Architecture](src/models/README.md)** — UniversalTemporalGNNv2 detailed docs, configuration, migration guide
+- **[Topology Templates](configs/topology_templates.json)** — Built-in hydraulic system templates
+- **[API Reference](src/api/README.md)** — FastAPI endpoints (TODO: Week 3)
 
 ---
 
