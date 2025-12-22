@@ -12,7 +12,7 @@ Version 2.1.0 (Phase 2 - Multi-Level Predictions):
 Main components:
 - UniversalTemporalGNNv2: GAT + LSTM with 6-task predictions
 - ModelConfig: Configuration for v2 architecture
-- MultiTaskLoss: Joint optimization (needs update for 6 tasks)
+- MultiTaskLoss: Joint optimization for 6 tasks (Phase 2)
 - AttentionWeightExtractor: Interpretability tools
 - Pooling layers: AttentionPooling, VirtualNodeAugmentation
 
@@ -46,7 +46,7 @@ from .attention_weights import AttentionWeightExtractor
 from .multi_task_loss import (
     MultiTaskLoss,
     MultiTaskLossConfig,
-    compute_class_weights,
+    compute_pos_weights,
 )
 from .pooling import AttentionPooling, VirtualNodeAugmentation, VirtualNodePooling
 from .universal_temporal_gnn import ModelConfig, UniversalTemporalGNNv2
@@ -60,10 +60,10 @@ __all__ = [
     'ModelConfig',
     # Backward compatibility (v1 alias)
     'UniversalTemporalGNN',
-    # Loss functions
+    # Loss functions (Phase 2)
     'MultiTaskLoss',
     'MultiTaskLossConfig',
-    'compute_class_weights',
+    'compute_pos_weights',
     # Interpretability
     'AttentionWeightExtractor',
     # Pooling layers
