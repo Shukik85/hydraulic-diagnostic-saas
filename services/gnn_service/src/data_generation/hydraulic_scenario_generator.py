@@ -5,6 +5,12 @@ Generates realistic hydraulic system scenarios with:
 - Sequential cascades (400 graphs)
 - Temporal sequences (100 sequences × 10 timesteps)
 
+Phase 2 Multi-Task Architecture:
+- 6-task predictions (4 graph + 2 component)
+- Multi-label anomaly detection (9 classes)
+- RUL estimation (hours until failure)
+- Component-level health monitoring
+
 Python 3.14 Features:
     - Deferred annotations (PEP 563)
     - Builtin generic types (PEP 585)
@@ -53,16 +59,44 @@ class GeneratorConfig:
     nominal_flow_range: tuple[float, float] = (50.0, 300.0)  # l/min
     temperature_range: tuple[float, float] = (40.0, 90.0)  # °C
     
+    # RUL simulation (Phase 2)
+    rul_healthy_range: tuple[float, float] = (500.0, 1000.0)  # hours
+    rul_degraded_range: tuple[float, float] = (10.0, 500.0)  # hours
+    
+    # Anomaly classes (9 types - Phase 2)
+    anomaly_classes: list[str] = None
+    
     # Validation
     validate_physics: bool = True
     strict_validation: bool = False  # Warnings only
     
     # Random seed for reproducibility
     random_seed: int = 42
+    
+    def __post_init__(self):
+        """Initialize anomaly classes if not provided."""
+        if self.anomaly_classes is None:
+            self.anomaly_classes = [
+                'overload',           # 0: Load exceeds capacity
+                'pressure_spike',     # 1: Sudden pressure increase
+                'cavitation',         # 2: Bubble formation
+                'contamination',      # 3: Fluid contamination
+                'leakage',            # 4: Internal/external leak
+                'valve_stuck',        # 5: Valve malfunction
+                'pump_degradation',   # 6: Pump wear
+                'thermal_runaway',    # 7: Overheating
+                'vibration_anomaly',  # 8: Abnormal vibration
+            ]
 
 
 class HydraulicScenarioGenerator:
     """Generate realistic hydraulic scenarios for GNN training.
+    
+    Phase 2 Architecture:
+    - Multi-level predictions (graph + component)
+    - Multi-label anomaly detection (9 classes)
+    - RUL estimation
+    - Temporal degradation progression
     
     Creates datasets with:
     - Parallel operations: simultaneous actuator movements with load sensing
@@ -75,14 +109,9 @@ class HydraulicScenarioGenerator:
         >>> 
         >>> # Generate parallel operation scenarios
         >>> parallel_data = generator.generate_parallel_scenarios()
-        >>> len(parallel_data['graphs'])  # 700
-        >>> 
-        >>> # Generate sequential cascades
-        >>> sequential_data = generator.generate_sequential_scenarios()
-        >>> 
-        >>> # Generate temporal sequences
-        >>> temporal_data = generator.generate_temporal_sequences()
-        >>> temporal_data['graphs'][0].shape  # [10, num_nodes, 34]
+        >>> graph = parallel_data['graphs'][0]
+        >>> graph.y_graph_health  # [1] scalar
+        >>> graph.y_component_anomaly  # [N, 9] multi-label
     """
     
     def __init__(self, config: GeneratorConfig | None = None) -> None:
@@ -98,14 +127,16 @@ class HydraulicScenarioGenerator:
         np.random.seed(self.config.random_seed)
         torch.manual_seed(self.config.random_seed)
         
-        logger.info("HydraulicScenarioGenerator initialized with config: %s", self.config)
+        logger.info("HydraulicScenarioGenerator (Phase 2) initialized")
+        logger.info("Multi-task targets: 4 graph + 2 component = 6 tasks")
+        logger.info("Anomaly classes: %d", len(self.config.anomaly_classes))
     
     def _generate_base_node_features(
         self,
         component_type: ComponentType,
         nominal_pressure: float,
         nominal_flow: float,
-        health_status: int = 0  # 0=healthy by default
+        health_score: float = 1.0  # 1.0=healthy, 0.0=failed
     ) -> np.ndarray:
         """Generate base node features for a component.
         
@@ -113,12 +144,15 @@ class HydraulicScenarioGenerator:
             component_type: Type of hydraulic component
             nominal_pressure: Nominal operating pressure (bar)
             nominal_flow: Nominal flow rate (l/min)
-            health_status: Health status (0-4)
+            health_score: Health score ∈ [0,1]
             
         Returns:
             Feature vector [34]
         """
         features = np.zeros(34, dtype=np.float32)
+        
+        # Degradation factor (inverse of health)
+        degradation_factor = 1.0 - health_score
         
         # Physical measurements (indices 0-9)
         features[0] = nominal_pressure * (1.0 + np.random.uniform(-0.1, 0.1))  # pressure
@@ -128,7 +162,7 @@ class HydraulicScenarioGenerator:
         features[4] = np.random.uniform(0, 500)  # velocity
         features[5] = nominal_flow * 10 * (1.0 + np.random.uniform(-0.2, 0.2))  # torque
         features[6] = nominal_pressure * 0.5 * (1.0 + np.random.uniform(-0.2, 0.2))  # force
-        features[7] = np.random.uniform(0, 20)  # vibration
+        features[7] = np.random.uniform(0, 20) * (1 + degradation_factor)  # vibration (↑ when degraded)
         features[8] = np.random.uniform(40, 80)  # noise_level
         features[9] = (nominal_pressure * nominal_flow) / 600.0  # power (kW)
         
@@ -137,18 +171,17 @@ class HydraulicScenarioGenerator:
                                ComponentType.VALVE_RELIEF]:
             features[10] = np.random.uniform(20, 80)  # valve_opening
             features[11] = np.random.uniform(5, 30)  # valve_pressure_drop
-            features[12] = np.random.uniform(0.3, 0.9)  # valve_flow_coefficient
+            features[12] = np.random.uniform(0.3, 0.9) * health_score  # coefficient (↓ when degraded)
             features[13] = np.random.uniform(10, 25)  # pilot_pressure
             features[14] = features[10]  # spool_position matches opening
         
-        # Health indicators (indices 15-20) - degraded based on health_status
-        degradation_factor = health_status / 4.0  # 0.0 to 1.0
+        # Health indicators (indices 15-20) - degraded based on health_score
         features[15] = degradation_factor * 100  # wear_level
         features[16] = 12 + degradation_factor * 10  # contamination (ISO code)
-        features[17] = 100 - degradation_factor * 50  # seal_condition
+        features[17] = health_score * 100  # seal_condition
         features[18] = degradation_factor * 15  # internal_leakage
         features[19] = degradation_factor * 3  # external_leakage
-        features[20] = 100 - degradation_factor * 30  # efficiency
+        features[20] = health_score * 100  # efficiency
         
         # Temporal features (indices 21-24) - rates of change
         features[21] = np.random.uniform(-10, 10)  # pressure_rate_change
@@ -198,82 +231,172 @@ class HydraulicScenarioGenerator:
             flow_rate: Flow through connection (l/min)
             
         Returns:
-            Feature vector [14]
+            Feature vector [8] (static only - model will project to 14D)
         """
-        features = np.zeros(14, dtype=np.float32)
+        features = np.zeros(8, dtype=np.float32)
         
-        # Flow characteristics (indices 0-5)
-        features[0] = flow_rate * (1.0 + np.random.uniform(-0.05, 0.05))  # flow_rate
-        features[1] = abs(source_pressure - target_pressure)  # pressure_drop
+        # Static edge features (8D)
+        features[0] = connection.pipe_diameter  # diameter (mm)
+        features[1] = connection.pipe_length  # length (m)
+        features[2] = np.pi * (connection.pipe_diameter / 2000) ** 2  # cross-sectional area (m²)
+        features[3] = np.random.uniform(0.01, 0.05)  # loss_coefficient
+        features[4] = np.random.uniform(150, 350)  # pressure_rating (bar)
         
-        # Reynolds number (simplified)
-        velocity = flow_rate / (np.pi * (connection.pipe_diameter / 2000) ** 2) / 60  # m/s
-        features[2] = min(velocity / 10.0, 1.0)  # normalized reynolds (proxy)
-        features[3] = velocity  # flow_velocity
-        features[4] = connection.pipe_diameter  # pipe_diameter
-        features[5] = connection.pipe_length  # pipe_length
-        
-        # Connection state (indices 6-8)
-        features[6] = 1.0  # is_active
-        features[7] = np.random.uniform(0, 20)  # valve_restriction
-        features[8] = 1.0  # flow_direction (forward)
-        
-        # Fluid properties (indices 9-11)
-        features[9] = np.random.uniform(30, 60)  # fluid_viscosity (cSt)
-        features[10] = np.random.uniform(870, 900)  # fluid_density (kg/m³)
-        features[11] = np.random.uniform(40, 80)  # fluid_temperature
-        
-        # Connection health (indices 12-13)
-        features[12] = np.random.uniform(0.01, 0.1)  # pipe_roughness
-        features[13] = np.random.uniform(10, 18)  # contamination_level
+        # Material encoding (3D one-hot)
+        material = np.random.choice([0, 1, 2])  # steel, rubber, composite
+        material_enc = [0.0, 0.0, 0.0]
+        material_enc[material] = 1.0
+        features[5:8] = material_enc
         
         return features
     
-    def _assign_health_labels(self, num_nodes: int) -> list[int]:
-        """Assign health status labels to nodes.
+    def _compute_rul(self, component_health_scores: list[float]) -> float:
+        """Compute graph-level remaining useful life.
+        
+        Args:
+            component_health_scores: Health scores for all components [0,1]
+            
+        Returns:
+            RUL in hours (0 to 1000+)
+        """
+        # Average health
+        avg_health = np.mean(component_health_scores)
+        
+        # RUL inversely proportional to degradation
+        if avg_health > 0.8:
+            # Healthy system: 500-1000 hours
+            rul = np.random.uniform(*self.config.rul_healthy_range)
+        elif avg_health > 0.5:
+            # Degrading: 100-500 hours
+            rul = np.random.uniform(100, 500)
+        else:
+            # Critical: 10-100 hours
+            rul = np.random.uniform(10, 100)
+        
+        # Add correlation with health
+        rul = rul * avg_health
+        
+        return max(0.0, rul)
+    
+    def _sample_anomaly_flags(self, num_classes: int, base_probability: float) -> np.ndarray:
+        """Sample multi-label anomaly flags.
+        
+        Args:
+            num_classes: Number of anomaly classes (9)
+            base_probability: Base probability for each class
+            
+        Returns:
+            Binary flags [num_classes]
+        """
+        flags = np.zeros(num_classes, dtype=np.float32)
+        
+        # Sample each class independently
+        for i in range(num_classes):
+            if np.random.random() < base_probability:
+                flags[i] = 1.0
+        
+        return flags
+    
+    def _assign_multi_task_labels(
+        self, 
+        num_nodes: int,
+        scenario_type: str = 'normal'
+    ) -> dict[str, torch.Tensor]:
+        """Assign multi-task labels for Phase 2.
         
         Args:
             num_nodes: Number of nodes in graph
+            scenario_type: 'normal', 'parallel_overload', 'sequential_cascade'
             
         Returns:
-            List of health labels (0-4)
+            Dictionary with all 6 targets:
+            - y_graph_health: [1]
+            - y_graph_degradation: [1]
+            - y_graph_anomaly: [9]
+            - y_graph_rul: [1]
+            - y_component_health: [N]
+            - y_component_anomaly: [N, 9]
         """
-        labels = [0] * num_nodes  # Start with all healthy
-        
-        # Randomly degrade some components
-        for i in range(num_nodes):
+        # === Component-level health ===
+        component_health = []
+        for _ in range(num_nodes):
             if np.random.random() < self.config.degradation_probability:
-                # Weighted towards less severe degradation
-                labels[i] = np.random.choice([1, 2, 3, 4], p=[0.4, 0.3, 0.2, 0.1])
+                # Degraded: 0.2-0.8
+                health = np.random.uniform(0.2, 0.8)
+            else:
+                # Healthy: 0.8-1.0
+                health = np.random.uniform(0.8, 1.0)
+            component_health.append(health)
         
-        return labels
+        # === Component-level anomaly (multi-label) ===
+        component_anomaly = []
+        for health in component_health:
+            # Probability increases with degradation
+            anomaly_prob = (1.0 - health) * 0.5  # 0-50% chance
+            flags = self._sample_anomaly_flags(9, anomaly_prob)
+            component_anomaly.append(flags)
+        
+        # === Graph-level health (average) ===
+        graph_health = np.mean(component_health)
+        
+        # === Graph-level degradation rate ===
+        # Inversely proportional to health
+        graph_degradation = 1.0 - graph_health + np.random.uniform(-0.1, 0.1)
+        graph_degradation = np.clip(graph_degradation, 0.0, 1.0)
+        
+        # === Graph-level anomaly (multi-label) ===
+        graph_anomaly_prob = 0.5 if scenario_type != 'normal' else 0.2
+        graph_anomaly = self._sample_anomaly_flags(9, graph_anomaly_prob)
+        
+        # Set specific anomalies based on scenario
+        if scenario_type == 'parallel_overload':
+            graph_anomaly[0] = 1.0  # overload
+        elif scenario_type == 'sequential_cascade':
+            graph_anomaly[1] = 1.0  # pressure_spike
+            graph_anomaly[5] = 1.0  # valve_stuck
+        
+        # === Graph-level RUL ===
+        graph_rul = self._compute_rul(component_health)
+        
+        return {
+            'y_graph_health': torch.tensor([graph_health], dtype=torch.float32),
+            'y_graph_degradation': torch.tensor([graph_degradation], dtype=torch.float32),
+            'y_graph_anomaly': torch.from_numpy(graph_anomaly),
+            'y_graph_rul': torch.tensor([graph_rul], dtype=torch.float32),
+            'y_component_health': torch.tensor(component_health, dtype=torch.float32),
+            'y_component_anomaly': torch.from_numpy(np.stack(component_anomaly)),
+        }
     
     def _create_pyg_graph(
         self,
         nodes: list[ComponentNode],
         edges: list[Connection],
-        node_health_labels: list[int],
-        graph_anomaly_label: int
+        scenario_type: str = 'normal'
     ) -> Data:
-        """Create PyTorch Geometric Data object.
+        """Create PyTorch Geometric Data object with Phase 2 multi-task labels.
         
         Args:
             nodes: List of component nodes
             edges: List of connections
-            node_health_labels: Node-level health labels
-            graph_anomaly_label: Graph-level anomaly label
+            scenario_type: Type of scenario for label generation
             
         Returns:
-            PyG Data object
+            PyG Data object with 6 targets + batch tensor
         """
-        # Generate node features
+        num_nodes = len(nodes)
+        
+        # Generate multi-task labels
+        labels = self._assign_multi_task_labels(num_nodes, scenario_type)
+        
+        # Generate node features (use component health from labels)
         node_features_list = []
         for i, node in enumerate(nodes):
+            health_score = labels['y_component_health'][i].item()
             features = self._generate_base_node_features(
                 node.component_type,
                 node.nominal_pressure,
                 node.nominal_flow,
-                health_status=node_health_labels[i]
+                health_score=health_score
             )
             node_features_list.append(features)
         
@@ -299,13 +422,21 @@ class HydraulicScenarioGenerator:
         edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
         edge_attr = torch.from_numpy(np.stack(edge_attr_list))
         
-        # Create Data object with labels
+        # Create Data object with Phase 2 multi-task labels
         data = Data(
             x=x,
             edge_index=edge_index,
             edge_attr=edge_attr,
-            y_node=torch.tensor(node_health_labels, dtype=torch.long),
-            y_graph=torch.tensor(graph_anomaly_label, dtype=torch.long)
+            # Graph-level targets (4)
+            y_graph_health=labels['y_graph_health'],
+            y_graph_degradation=labels['y_graph_degradation'],
+            y_graph_anomaly=labels['y_graph_anomaly'],
+            y_graph_rul=labels['y_graph_rul'],
+            # Component-level targets (2)
+            y_component_health=labels['y_component_health'],
+            y_component_anomaly=labels['y_component_anomaly'],
+            # Batch tensor (for DataLoader)
+            batch=torch.zeros(num_nodes, dtype=torch.long)
         )
         
         # Validate if enabled
@@ -323,40 +454,30 @@ class HydraulicScenarioGenerator:
         - Models dynamic flow distribution
         
         Returns:
-            Dictionary with 'graphs', 'node_labels', 'graph_labels'
+            Dictionary with 'graphs' and metadata
         """
         logger.info("Generating %d parallel operation scenarios...", self.config.num_parallel_graphs)
         
         graphs = []
-        node_labels_list = []
-        graph_labels_list = []
-        
         nodes, edges = TopologyDefinitions.get_medium_7_node_parallel_topology()
         
         for _ in tqdm(range(self.config.num_parallel_graphs), desc="Parallel scenarios"):
-            # Assign health labels
-            node_health = self._assign_health_labels(len(nodes))
-            
-            # Determine graph-level anomaly
+            # Determine scenario type
             if np.random.random() < self.config.anomaly_probability:
-                graph_anomaly = 1  # parallel_overload
+                scenario_type = 'parallel_overload'
             else:
-                graph_anomaly = 0  # normal
+                scenario_type = 'normal'
             
             # Create graph
-            graph = self._create_pyg_graph(nodes, edges, node_health, graph_anomaly)
-            
+            graph = self._create_pyg_graph(nodes, edges, scenario_type)
             graphs.append(graph)
-            node_labels_list.append(node_health)
-            graph_labels_list.append(graph_anomaly)
         
         logger.info("Generated %d parallel scenarios", len(graphs))
         
         return {
             'graphs': graphs,
-            'node_labels': node_labels_list,
-            'graph_labels': graph_labels_list,
-            'topology_type': 'parallel_7_nodes'
+            'topology_type': 'parallel_7_nodes',
+            'num_graphs': len(graphs)
         }
     
     def generate_sequential_scenarios(self) -> dict[str, list]:
@@ -368,40 +489,30 @@ class HydraulicScenarioGenerator:
         - Models temporal cascade patterns
         
         Returns:
-            Dictionary with 'graphs', 'node_labels', 'graph_labels'
+            Dictionary with 'graphs' and metadata
         """
         logger.info("Generating %d sequential cascade scenarios...", self.config.num_sequential_graphs)
         
         graphs = []
-        node_labels_list = []
-        graph_labels_list = []
-        
         nodes, edges = TopologyDefinitions.get_large_10_node_sequential_topology()
         
         for _ in tqdm(range(self.config.num_sequential_graphs), desc="Sequential scenarios"):
-            # Assign health labels
-            node_health = self._assign_health_labels(len(nodes))
-            
-            # Determine graph-level anomaly
+            # Determine scenario type
             if np.random.random() < self.config.anomaly_probability:
-                graph_anomaly = 2  # sequential_cascade
+                scenario_type = 'sequential_cascade'
             else:
-                graph_anomaly = 0  # normal
+                scenario_type = 'normal'
             
             # Create graph
-            graph = self._create_pyg_graph(nodes, edges, node_health, graph_anomaly)
-            
+            graph = self._create_pyg_graph(nodes, edges, scenario_type)
             graphs.append(graph)
-            node_labels_list.append(node_health)
-            graph_labels_list.append(graph_anomaly)
         
         logger.info("Generated %d sequential scenarios", len(graphs))
         
         return {
             'graphs': graphs,
-            'node_labels': node_labels_list,
-            'graph_labels': graph_labels_list,
-            'topology_type': 'sequential_10_nodes'
+            'topology_type': 'sequential_10_nodes',
+            'num_graphs': len(graphs)
         }
     
     def generate_temporal_sequences(self) -> dict[str, list]:
@@ -413,7 +524,7 @@ class HydraulicScenarioGenerator:
         - Each sequence shows progression from healthy to failed
         
         Returns:
-            Dictionary with 'sequences', 'node_labels', 'graph_labels'
+            Dictionary with 'sequences' and metadata
         """
         logger.info(
             "Generating %d temporal sequences (length=%d)...",
@@ -422,8 +533,6 @@ class HydraulicScenarioGenerator:
         )
         
         sequences = []
-        node_labels_sequences = []
-        graph_labels_sequences = []
         
         topologies = [
             (TopologyType.SMALL_3_NODES, 3),
@@ -437,46 +546,30 @@ class HydraulicScenarioGenerator:
             nodes, edges = TopologyDefinitions.get_topology(topology_type)
             
             sequence_graphs = []
-            sequence_node_labels = []
-            sequence_graph_labels = []
             
             # Generate degradation progression
             for t in range(self.config.temporal_sequence_length):
-                # Increase degradation over time
+                # Progress from normal → degraded → anomalous
                 degradation_progress = t / self.config.temporal_sequence_length
                 
-                node_health = []
-                for _ in range(num_nodes):
-                    if np.random.random() < degradation_progress * 0.8:
-                        # Health degrades: 0 -> 1 -> 2 -> 3 -> 4
-                        max_health = min(4, int(degradation_progress * 5))
-                        node_health.append(np.random.randint(0, max_health + 1))
-                    else:
-                        node_health.append(0)  # healthy
-                
-                # Graph anomaly appears later in sequence
-                if degradation_progress > 0.6 and np.random.random() < 0.5:
-                    graph_anomaly = np.random.choice([1, 2, 3])  # some anomaly
+                if degradation_progress < 0.3:
+                    scenario_type = 'normal'
+                elif degradation_progress < 0.7:
+                    scenario_type = 'parallel_overload' if np.random.random() > 0.5 else 'normal'
                 else:
-                    graph_anomaly = 0  # normal
+                    scenario_type = 'sequential_cascade'
                 
-                graph = self._create_pyg_graph(nodes, edges, node_health, graph_anomaly)
-                
+                graph = self._create_pyg_graph(nodes, edges, scenario_type)
                 sequence_graphs.append(graph)
-                sequence_node_labels.append(node_health)
-                sequence_graph_labels.append(graph_anomaly)
             
             sequences.append(sequence_graphs)
-            node_labels_sequences.append(sequence_node_labels)
-            graph_labels_sequences.append(sequence_graph_labels)
         
         logger.info("Generated %d temporal sequences", len(sequences))
         
         return {
             'sequences': sequences,  # List[List[Data]] - [num_seq, seq_len]
-            'node_labels': node_labels_sequences,
-            'graph_labels': graph_labels_sequences,
-            'sequence_length': self.config.temporal_sequence_length
+            'sequence_length': self.config.temporal_sequence_length,
+            'num_sequences': len(sequences)
         }
     
     def generate_all(self, save_dir: Path | str | None = None) -> dict[str, dict]:
@@ -488,7 +581,7 @@ class HydraulicScenarioGenerator:
         Returns:
             Dictionary with all generated datasets
         """
-        logger.info("Starting full dataset generation...")
+        logger.info("Starting full dataset generation (Phase 2)...")
         
         # Generate all scenarios
         parallel_data = self.generate_parallel_scenarios()
@@ -515,8 +608,15 @@ class HydraulicScenarioGenerator:
             
             logger.info("Datasets saved successfully")
         
+        total_graphs = (
+            len(parallel_data['graphs']) +
+            len(sequential_data['graphs']) +
+            len(temporal_data['sequences']) * self.config.temporal_sequence_length
+        )
+        
         logger.info(
-            "Total graphs generated: %d parallel + %d sequential + %d temporal sequences",
+            "Total graphs generated: %d (%d parallel + %d sequential + %d temporal)",
+            total_graphs,
             len(parallel_data['graphs']),
             len(sequential_data['graphs']),
             len(temporal_data['sequences']) * self.config.temporal_sequence_length
