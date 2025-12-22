@@ -262,7 +262,9 @@ def main():
         enable_checkpointing=True,
         callbacks=[checkpoint_callback, early_stop_callback, lr_monitor],
         log_every_n_steps=10,
-        gradient_clip_val=1.0,  # Prevent gradient explosion
+        # NOTE: gradient_clip_val not supported with manual optimization
+        # If needed, implement manual clipping in lightning_module.py:
+        # torch.nn.utils.clip_grad_norm_(self.parameters(), max_norm=1.0)
         precision="16-mixed" if accelerator == "gpu" else "32",  # Mixed precision for GPU
     )
     
