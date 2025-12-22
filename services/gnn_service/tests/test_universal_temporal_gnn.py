@@ -3,7 +3,7 @@
 Test coverage:
 - Configuration validation
 - Forward pass correctness
-- Output shapes
+- Output shapes (Phase 2: 6 tasks)
 - Edge cases
 - Batch processing
 
@@ -34,6 +34,8 @@ class TestModelConfig:
         )
         assert config.node_features == 34
         assert config.gat_num_layers == 3
+        assert config.graph_anomaly_classes == 9
+        assert config.component_anomaly_classes == 9
     
     def test_invalid_dropout(self):
         """Invalid dropout should raise ValueError."""
@@ -60,12 +62,12 @@ class TestModelConfig:
             ModelConfig(lstm_num_layers=0)
     
     def test_invalid_num_classes(self):
-        """Invalid class counts should raise ValueError."""
-        with pytest.raises(ValueError, match="component_health_num_classes must be >= 2"):
-            ModelConfig(component_health_num_classes=1)
+        """Invalid class counts should raise ValueError (Phase 2)."""
+        with pytest.raises(ValueError, match="graph_anomaly_classes must be >= 2"):
+            ModelConfig(graph_anomaly_classes=1)
         
-        with pytest.raises(ValueError, match="anomaly_type_num_classes must be >= 2"):
-            ModelConfig(anomaly_type_num_classes=0)
+        with pytest.raises(ValueError, match="component_anomaly_classes must be >= 2"):
+            ModelConfig(component_anomaly_classes=0)
     
     def test_virtual_node_validation(self):
         """Virtual node dim must be positive if enabled."""
@@ -74,7 +76,7 @@ class TestModelConfig:
 
 
 class TestUniversalTemporalGNNv2:
-    """Test UniversalTemporalGNNv2 model."""
+    """Test UniversalTemporalGNNv2 model (Phase 2)."""
     
     @pytest.fixture
     def config(self) -> ModelConfig:
@@ -85,7 +87,9 @@ class TestUniversalTemporalGNNv2:
             gat_hidden_dim=64,  # Smaller for tests
             gat_num_layers=2,
             lstm_hidden_dim=64,
-            lstm_num_layers=1
+            lstm_num_layers=1,
+            graph_anomaly_classes=9,
+            component_anomaly_classes=9,
         )
     
     @pytest.fixture
@@ -100,8 +104,6 @@ class TestUniversalTemporalGNNv2:
             x=torch.randn(3, 34),
             edge_index=torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]], dtype=torch.long),
             edge_attr=torch.randn(4, 14),
-            y_node=torch.randint(0, 5, (3,)),
-            y_graph=torch.randint(0, 4, (1,))
         )
     
     @pytest.fixture
@@ -115,8 +117,6 @@ class TestUniversalTemporalGNNv2:
             x=torch.randn(num_nodes, 34),
             edge_index=edge_index,
             edge_attr=torch.randn(num_edges, 14),
-            y_node=torch.randint(0, 5, (num_nodes,)),
-            y_graph=torch.randint(0, 4, (1,))
         )
     
     def test_model_initialization(self, config: ModelConfig):
@@ -126,15 +126,30 @@ class TestUniversalTemporalGNNv2:
         assert model.gat_output_dim > 0
     
     def test_forward_single_graph(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
-        """Forward pass on single graph should work."""
+        """Forward pass on single graph should work (Phase 2)."""
         model.eval()
         with torch.no_grad():
             outputs = model(sample_graph_3_nodes, temporal=False)
         
-        assert 'node_logits' in outputs
-        assert 'graph_logits' in outputs
-        assert outputs['node_logits'].shape == (3, 5)  # [num_nodes, num_classes]
-        assert outputs['graph_logits'].shape == (1, 4)  # [batch_size, num_classes]
+        # Check nested structure
+        assert 'component' in outputs
+        assert 'graph' in outputs
+        
+        # Component-level
+        assert 'health' in outputs['component']
+        assert 'anomaly' in outputs['component']
+        assert outputs['component']['health'].shape == (3, 1)  # [N, 1]
+        assert outputs['component']['anomaly'].shape == (3, 9)  # [N, 9]
+        
+        # Graph-level
+        assert 'health' in outputs['graph']
+        assert 'degradation' in outputs['graph']
+        assert 'anomaly' in outputs['graph']
+        assert 'rul' in outputs['graph']
+        assert outputs['graph']['health'].shape == (1, 1)  # [B, 1]
+        assert outputs['graph']['degradation'].shape == (1, 1)  # [B, 1]
+        assert outputs['graph']['anomaly'].shape == (1, 9)  # [B, 9]
+        assert outputs['graph']['rul'].shape == (1, 1)  # [B, 1]
     
     def test_forward_with_attention(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
         """Forward pass should return attention weights if requested."""
@@ -155,10 +170,19 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(sequence, temporal=True)
         
-        assert 'node_logits' in outputs
-        assert 'graph_logits' in outputs
-        assert outputs['node_logits'].shape == (3, 5)
-        assert outputs['graph_logits'].shape == (1, 4)
+        # Check nested structure
+        assert 'component' in outputs
+        assert 'graph' in outputs
+        
+        # Component-level (last timestep)
+        assert outputs['component']['health'].shape == (3, 1)
+        assert outputs['component']['anomaly'].shape == (3, 9)
+        
+        # Graph-level (from LSTM)
+        assert outputs['graph']['health'].shape == (1, 1)
+        assert outputs['graph']['degradation'].shape == (1, 1)
+        assert outputs['graph']['anomaly'].shape == (1, 9)
+        assert outputs['graph']['rul'].shape == (1, 1)
     
     def test_forward_temporal_all_timesteps(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
         """Temporal forward should return all timesteps if requested."""
@@ -168,9 +192,10 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(sequence, temporal=True, return_all_timesteps=True)
         
-        assert 'node_logits_seq' in outputs
-        assert len(outputs['node_logits_seq']) == 5  # 5 timesteps
-        assert outputs['node_logits_seq'][0].shape == (3, 5)
+        assert 'component_seq' in outputs
+        assert len(outputs['component_seq']) == 5  # 5 timesteps
+        assert outputs['component_seq'][0]['health'].shape == (3, 1)
+        assert outputs['component_seq'][0]['anomaly'].shape == (3, 9)
     
     def test_forward_temporal_all_attention(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
         """Should return attention for all timesteps if requested."""
@@ -203,8 +228,8 @@ class TestUniversalTemporalGNNv2:
             with torch.no_grad():
                 outputs = model(graph, temporal=False)
             
-            assert outputs['node_logits'].shape[0] == size
-            assert outputs['graph_logits'].shape == (1, 4)
+            assert outputs['component']['health'].shape[0] == size
+            assert outputs['graph']['health'].shape == (1, 1)
     
     def test_batch_processing(self, model: UniversalTemporalGNNv2):
         """Model should handle batched graphs."""
@@ -223,11 +248,18 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(batch, temporal=False)
         
-        assert outputs['node_logits'].shape[0] == 12  # 4 graphs * 3 nodes
-        assert outputs['graph_logits'].shape == (4, 4)  # 4 graphs
+        # Component-level: 4 graphs * 3 nodes = 12 total nodes
+        assert outputs['component']['health'].shape[0] == 12
+        assert outputs['component']['anomaly'].shape[0] == 12
+        
+        # Graph-level: 4 graphs
+        assert outputs['graph']['health'].shape == (4, 1)
+        assert outputs['graph']['degradation'].shape == (4, 1)
+        assert outputs['graph']['anomaly'].shape == (4, 9)
+        assert outputs['graph']['rul'].shape == (4, 1)
     
     def test_size_embedding_small_graph(self, model: UniversalTemporalGNNv2):
-        """Model should handle small graphs (no size embedding)."""
+        """Model should handle small graphs."""
         graph = Data(
             x=torch.randn(3, 34),
             edge_index=torch.tensor([[0, 1], [1, 2]], dtype=torch.long),
@@ -238,7 +270,8 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(graph, temporal=False)
         
-        assert outputs['graph_logits'].shape == (1, 4)
+        assert outputs['graph']['health'].shape == (1, 1)
+        assert outputs['graph']['rul'].shape == (1, 1)
     
     def test_size_embedding_large_graph(self, model: UniversalTemporalGNNv2):
         """Model should handle large graphs (1000+ nodes)."""
@@ -253,8 +286,8 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(graph, temporal=False)
         
-        assert outputs['node_logits'].shape[0] == num_nodes
-        assert outputs['graph_logits'].shape == (1, 4)
+        assert outputs['component']['health'].shape[0] == num_nodes
+        assert outputs['graph']['health'].shape == (1, 1)
     
     def test_size_embedding_extra_large_graph(self, model: UniversalTemporalGNNv2):
         """Model should handle extra large graphs (10000+ nodes)."""
@@ -269,8 +302,8 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(graph, temporal=False)
         
-        assert outputs['node_logits'].shape[0] == num_nodes
-        assert outputs['graph_logits'].shape == (1, 4)
+        assert outputs['component']['health'].shape[0] == num_nodes
+        assert outputs['graph']['health'].shape == (1, 1)
     
     def test_no_attention_returns_empty_dict(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
         """Should not return attention_weights key when not requested."""
@@ -303,7 +336,8 @@ class TestUniversalTemporalGNNv2:
         with torch.no_grad():
             outputs = model(sequence, temporal=True)
         
-        assert outputs['graph_logits'].shape == (1, 4)
+        assert outputs['graph']['health'].shape == (1, 1)
+        assert outputs['graph']['rul'].shape == (1, 1)
     
     def test_training_mode(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
         """Forward pass should work in training mode."""
@@ -313,14 +347,24 @@ class TestUniversalTemporalGNNv2:
         
         # Should enable dropout
         assert model.training
-        assert outputs['node_logits'].shape == (3, 5)
+        assert outputs['component']['health'].shape == (3, 1)
+        assert outputs['graph']['health'].shape == (1, 1)
     
     def test_gradient_flow(self, model: UniversalTemporalGNNv2, sample_graph_3_nodes: Data):
         """Gradients should flow correctly (single mode)."""
         model.train()
         
         outputs = model(sample_graph_3_nodes, temporal=False)
-        loss = outputs['node_logits'].sum() + outputs['graph_logits'].sum()
+        
+        # Sum all outputs for backward
+        loss = (
+            outputs['component']['health'].sum() + 
+            outputs['component']['anomaly'].sum() +
+            outputs['graph']['health'].sum() + 
+            outputs['graph']['degradation'].sum() +
+            outputs['graph']['anomaly'].sum() +
+            outputs['graph']['rul'].sum()
+        )
         loss.backward()
         
         # Check that gradients exist (excluding LSTM which is not used in single mode)
