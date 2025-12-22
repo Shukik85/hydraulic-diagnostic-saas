@@ -471,12 +471,15 @@ class HydraulicGNNModule(pl.LightningModule):
         opt.step()
         opt.zero_grad()
 
-        # Log detached loss
+        # Log with step-level detail for TensorBoard
         self.log(
             "train/total_loss",
             total_loss.detach(),
+            on_step=True,   # 🔥 CRITICAL: Log every batch
+            on_epoch=True,  # Also show epoch average
             prog_bar=True,
             batch_size=batch.num_graphs,
+            sync_dist=False,
         )
 
         return None
@@ -489,12 +492,15 @@ class HydraulicGNNModule(pl.LightningModule):
                 outputs, batch, return_components=True
             )
 
-        # Log detached losses
+        # Log detached losses (on_step=False for validation is standard)
         self.log(
             "val/total_loss",
             total_loss.detach(),
+            on_step=False,  # Validation typically aggregated per epoch
+            on_epoch=True,
             prog_bar=True,
             batch_size=batch.num_graphs,
+            sync_dist=False,
         )
         if loss_dict is not None:
             for key, val in loss_dict.items():
@@ -502,8 +508,11 @@ class HydraulicGNNModule(pl.LightningModule):
                     self.log(
                         f"val/{key}_loss",
                         val,
+                        on_step=False,
+                        on_epoch=True,
                         prog_bar=False,
                         batch_size=batch.num_graphs,
+                        sync_dist=False,
                     )
 
         return None
