@@ -58,8 +58,8 @@ def generate_synthetic_graph(graph_id: int) -> Data:
         dtype=torch.long
     )
     
-    # Edge features: [6, 8] (static only)
-    edge_attr = torch.randn(num_edges, 8)
+    # Edge features: [6, 14] (Phase 2: 8D static + 6D temporal)
+    edge_attr = torch.randn(num_edges, 14)
     
     # === Phase 2 Multi-task Targets ===
     # Graph-level (4 tasks)
