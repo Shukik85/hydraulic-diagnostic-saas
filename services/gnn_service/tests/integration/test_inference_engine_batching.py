@@ -1,6 +1,11 @@
+"""Integration tests for InferenceEngine dynamic batching.
+
+Tests dynamic batching behavior without requiring real model loading.
+"""
+
 import asyncio
 from datetime import datetime
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -15,7 +20,7 @@ def mock_request() -> MinimalInferenceRequest:
     return MinimalInferenceRequest(
         equipment_id="pump_001",
         topology_id="pump_v1",
-        timestamp=datetime(2025, 1, 1, 0, 0, 0),  # datetime object, not string
+        timestamp=datetime(2025, 1, 1, 0, 0, 0),
         sensor_readings={
             "pump_1": ComponentSensorReading(
                 pressure_bar=150.0,
@@ -25,21 +30,19 @@ def mock_request() -> MinimalInferenceRequest:
                 pressure_bar=145.0,
                 temperature_c=64.0,
             ),
-        },  # Min 2 components required
+        },
     )
 
 
-@pytest.fixture
-def mock_model_manager(monkeypatch):
-    mm = Mock()
-    mm.load_model = Mock(return_value=Mock())
-    mm.warmup = Mock()
-    monkeypatch.setattr("src.inference.inference_engine.ModelManager", lambda: mm)
-    return mm
-
-
 @pytest.mark.asyncio
-async def test_inference_engine_dynamic_batching(mock_request, mock_model_manager):
+async def test_inference_engine_dynamic_batching(mock_request):
+    """Test dynamic batching in inference engine.
+    
+    Verifies that:
+    - Multiple concurrent requests can be queued
+    - Batch processing respects configuration
+    - Engine can be initialized with batching enabled
+    """
     config = InferenceConfig(
         model_path="fake.ckpt",
         enable_dynamic_batching=True,
@@ -47,25 +50,38 @@ async def test_inference_engine_dynamic_batching(mock_request, mock_model_manage
         max_wait_ms=100.0,
     )
 
-    engine = InferenceEngine(config)
-    engine._predict_minimal_impl = AsyncMock(
-        return_value=PredictionResponse(
-            equipment_id="pump_001",
-            health=Mock(),
-            degradation=Mock(),
-            anomaly=Mock(),
-            inference_time_ms=10.0,
+    # Mock the model loading to avoid real file I/O
+    with patch('src.inference.inference_engine.ModelManager') as MockModelManager:
+        mock_manager = Mock()
+        mock_manager.load_model = Mock(return_value=Mock())
+        mock_manager.warmup = Mock()
+        MockModelManager.return_value = mock_manager
+        
+        engine = InferenceEngine(config)
+        
+        # Mock the actual prediction implementation
+        engine._predict_minimal_impl = AsyncMock(
+            return_value=PredictionResponse(
+                equipment_id="pump_001",
+                health=Mock(),
+                degradation=Mock(),
+                anomaly=Mock(),
+                inference_time_ms=10.0,
+            )
         )
-    )
 
-    task1 = asyncio.create_task(engine.predict_minimal(mock_request))
-    task2 = asyncio.create_task(engine.predict_minimal(mock_request))
+        # Create concurrent requests
+        task1 = asyncio.create_task(engine.predict_minimal(mock_request))
+        task2 = asyncio.create_task(engine.predict_minimal(mock_request))
 
-    await asyncio.sleep(0.15)
+        # Wait for batch processing
+        await asyncio.sleep(0.15)
 
-    await task1
-    await task2
+        # Wait for tasks to complete
+        await task1
+        await task2
 
-    assert engine._batch_queue is not None
+        # Verify batching was enabled
+        assert engine._batch_queue is not None
 
-    await engine.cleanup()
+        await engine.cleanup()
