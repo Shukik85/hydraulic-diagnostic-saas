@@ -78,10 +78,12 @@ def sample_pt_file(tmp_path: Path):
 
 @pytest.fixture
 def feature_config():
-    """Create FeatureConfig for testing."""
+    """Create FeatureConfig for testing.
+    
+    Note: total_features_per_sensor is a @property, not a constructor arg.
+    """
     return FeatureConfig(
         edge_in_dim=14,  # Model expects 14D (8D static + 6D dynamic)
-        total_features_per_sensor=34,
     )
 
 
