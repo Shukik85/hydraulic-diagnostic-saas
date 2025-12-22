@@ -17,11 +17,13 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
 
@@ -67,7 +69,9 @@ def generate_synthetic_graph(graph_id: int) -> Data:
     y_graph_health = torch.tensor([health], dtype=torch.float32)
     y_graph_degradation = torch.tensor([1.0 - health], dtype=torch.float32)
     y_graph_anomaly = torch.randint(0, 2, (9,), dtype=torch.float32)
-    y_graph_rul = torch.tensor([500.0 * health], dtype=torch.float32)
+    # CRITICAL FIX: Normalize RUL to [0, 1] like other metrics
+    # (not 500*health which causes loss explosion)
+    y_graph_rul = torch.tensor([health], dtype=torch.float32)  # [0, 1] range
     
     # Component-level (2 tasks)
     y_component_health = torch.rand(num_nodes) * 0.5 + 0.5  # [0.5, 1.0]
@@ -91,12 +95,18 @@ def generate_synthetic_graph(graph_id: int) -> Data:
 
 
 class MetricsCallback(pl.Callback):
-    """Custom callback to track and print metrics."""
+    """Custom callback to track and print metrics with timing."""
     
     def __init__(self):
         super().__init__()
         self.train_losses = []
         self.val_losses = []
+        self.epoch_start_time = None
+        self.epoch_times = []
+    
+    def on_train_epoch_start(self, trainer, pl_module):
+        """Mark epoch start time."""
+        self.epoch_start_time = time.time()
     
     def on_train_epoch_end(self, trainer, pl_module):
         """Called at the end of training epoch."""
@@ -116,6 +126,10 @@ class MetricsCallback(pl.Callback):
             val_loss_val = float(val_loss)
             self.val_losses.append(val_loss_val)
             
+            # Calculate epoch duration
+            epoch_duration = time.time() - self.epoch_start_time if self.epoch_start_time else 0
+            self.epoch_times.append(epoch_duration)
+            
             # Print epoch summary
             epoch = trainer.current_epoch
             train_loss = self.train_losses[-1] if self.train_losses else 0.0
@@ -126,7 +140,7 @@ class MetricsCallback(pl.Callback):
                 if val_loss_val < prev_loss:
                     improvement = f" (↓ {prev_loss - val_loss_val:.3f} improvement!)"
             
-            print(f"\n📊 Epoch {epoch+1}: train_loss={train_loss:.3f}, val_loss={val_loss_val:.3f}{improvement}")
+            print(f"\n📊 Epoch {epoch+1}: train_loss={train_loss:.3f}, val_loss={val_loss_val:.3f}{improvement} [time: {epoch_duration:.1f}s]")
 
 
 def main():
@@ -134,6 +148,8 @@ def main():
     print("="*60)
     print("🧪 TRAINING PIPELINE SMOKE TEST")
     print("="*60)
+    
+    start_time = time.time()
     
     # === 1. Generate synthetic data ===
     print("\n📊 Step 1: Generating synthetic data...")
@@ -147,6 +163,7 @@ def main():
     print(f"   Node features: {train_graphs[0].x.shape}")
     print(f"   Edge features: {train_graphs[0].edge_attr.shape}")
     print(f"   Targets: 6 (4 graph + 2 component)")
+    print(f"   RUL range: [0, 1] (normalized)")
     
     # === 2. Create temporary data files ===
     print("\n💾 Step 2: Saving to temp files...")
@@ -220,6 +237,13 @@ def main():
     # === 5. Setup trainer ===
     print("\n⚡ Step 5: Setting up trainer...")
     
+    # TensorBoard logger
+    logger = TensorBoardLogger(
+        save_dir="lightning_logs",
+        name="test_training",
+        version="smoke_test",
+    )
+    
     # Metrics tracking callback
     metrics_callback = MetricsCallback()
     
@@ -235,7 +259,7 @@ def main():
         max_epochs=3,
         accelerator="cpu",  # Force CPU
         devices=1,
-        logger=False,  # Disable logging for simplicity
+        logger=logger,  # Enable TensorBoard
         enable_progress_bar=True,
         enable_checkpointing=True,
         callbacks=[checkpoint_callback, metrics_callback],
@@ -243,24 +267,28 @@ def main():
     )
     
     print("✅ Trainer configured (3 epochs, CPU)")
+    print(f"   TensorBoard: tensorboard --logdir lightning_logs/test_training")
     
     # === 6. Train ===
     print("\n🚀 Step 6: Training...")
     print("-" * 60)
     
+    training_start = time.time()
     try:
         trainer.fit(
             module,
             train_dataloaders=train_loader,
             val_dataloaders=val_loader,
         )
+        training_duration = time.time() - training_start
+        
         print("-" * 60)
-        print("✅ Training completed successfully!")
+        print(f"✅ Training completed successfully! (total: {training_duration:.1f}s)")
         
         # Print loss history
         print("\n📈 Loss History:")
-        for i, (t_loss, v_loss) in enumerate(zip(metrics_callback.train_losses, metrics_callback.val_losses)):
-            print(f"   Epoch {i+1}: train={t_loss:.3f}, val={v_loss:.3f}")
+        for i, (t_loss, v_loss, t_time) in enumerate(zip(metrics_callback.train_losses, metrics_callback.val_losses, metrics_callback.epoch_times)):
+            print(f"   Epoch {i+1}: train={t_loss:.3f}, val={v_loss:.3f} [{t_time:.1f}s]")
         
         # Validate loss decreased
         if len(metrics_callback.val_losses) >= 2:
@@ -271,6 +299,16 @@ def main():
                 print(f"\n✅ Loss decreased: {initial_loss:.3f} → {final_loss:.3f} ({improvement:.1f}% improvement)")
             else:
                 print(f"\n⚠️ Loss did not decrease: {initial_loss:.3f} → {final_loss:.3f}")
+        
+        # Validate loss is in reasonable range
+        if metrics_callback.val_losses:
+            final_loss = metrics_callback.val_losses[-1]
+            if final_loss > 100:
+                print(f"\n⚠️ Warning: Loss is high ({final_loss:.1f}). Expected: 1-10")
+            elif final_loss < 0.01:
+                print(f"\n⚠️ Warning: Loss is suspiciously low ({final_loss:.3f}). Possible overfitting")
+            else:
+                print(f"\n✅ Loss in healthy range: {final_loss:.3f}")
         
     except Exception as e:
         print("-" * 60)
@@ -303,6 +341,8 @@ def main():
         print(f"   Component anomaly: {outputs['component']['anomaly'].shape}")
         print(f"   Sample prediction: health={outputs['graph']['health'][0].item():.3f}")
     
+    total_duration = time.time() - start_time
+    
     # === Final summary ===
     print("\n" + "="*60)
     print("✅ ALL TESTS PASSED!")
@@ -314,12 +354,15 @@ def main():
     print(f"   ✅ Training: 3 epochs completed")
     print(f"   ✅ Checkpoint: saved")
     print(f"   ✅ Inference: working")
+    print(f"   ✅ Total time: {total_duration:.1f}s")
     
     if metrics_callback.val_losses:
         final_loss = metrics_callback.val_losses[-1]
         print(f"   ✅ Final val loss: {final_loss:.3f}")
     
     print("\n🚀 Ready for production training!")
+    print("\n📊 View training metrics:")
+    print(f"   tensorboard --logdir lightning_logs/test_training")
     print("\nNext steps:")
     print("  1. Generate real data: python scripts/generate_data.py")
     print("  2. Train full model: python src/training/train.py")
