@@ -5,6 +5,7 @@ Tests dynamic batching behavior without requiring real model loading.
 
 import asyncio
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -34,8 +35,16 @@ def mock_request() -> MinimalInferenceRequest:
     )
 
 
+@pytest.fixture
+def fake_model_path(tmp_path) -> Path:
+    """Create dummy model file for config validation."""
+    model_file = tmp_path / "fake.ckpt"
+    model_file.write_text("")  # Empty file, just needs to exist
+    return model_file
+
+
 @pytest.mark.asyncio
-async def test_inference_engine_dynamic_batching(mock_request):
+async def test_inference_engine_dynamic_batching(mock_request, fake_model_path):
     """Test dynamic batching in inference engine.
     
     Verifies that:
@@ -44,7 +53,7 @@ async def test_inference_engine_dynamic_batching(mock_request):
     - Engine can be initialized with batching enabled
     """
     config = InferenceConfig(
-        model_path="fake.ckpt",
+        model_path=str(fake_model_path),  # Use fake file that exists
         enable_dynamic_batching=True,
         batch_size=2,
         max_wait_ms=100.0,
