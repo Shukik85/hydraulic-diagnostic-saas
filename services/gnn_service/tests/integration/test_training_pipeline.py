@@ -360,7 +360,7 @@ class TestTrainingPipeline:
         assert grad_count > 0
 
     def test_mixed_precision_compatibility(self, model, loss_fn, optimizer, sample_batch, sample_targets):
-        """Test model works with mixed precision training (no actual AMP, just float16)."""
+        """Test model works with mixed precision training (float16)."""
         model.train()
         
         # Convert model to float16 (simulates mixed precision)
@@ -387,9 +387,12 @@ class TestTrainingPipeline:
             }
         }
         
-        # Compute loss
+        # Compute loss (loss modules internally use float32 for stability)
         losses = loss_fn(outputs, targets_fp16)
         
-        # Should work without errors
+        # Outputs should be float16
+        assert outputs['component']['health'].dtype == torch.float16
+        assert outputs['graph']['rul'].dtype == torch.float16
+        
+        # Loss should work without errors
         assert not torch.isnan(losses['total'])
-        assert losses['total'].dtype == torch.float16
