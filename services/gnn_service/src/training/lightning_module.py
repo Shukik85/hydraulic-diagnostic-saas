@@ -457,7 +457,7 @@ class HydraulicGNNModule(pl.LightningModule):
         else:
             return total_loss, None
 
-    def training_step(self, batch: Any, _batch_idx: int) -> None:
+    def training_step(self, batch: Any, batch_idx: int) -> None:
         """Training step (MANUAL optimization)."""
         # Forward pass (v2 accepts Data object)
         outputs = self(batch)
@@ -481,7 +481,7 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return None
 
-    def validation_step(self, batch: Any, _batch_idx: int) -> None:
+    def validation_step(self, batch: Any, batch_idx: int) -> None:
         """Validation step."""
         with torch.no_grad():
             outputs = self(batch)
@@ -508,7 +508,7 @@ class HydraulicGNNModule(pl.LightningModule):
 
         return None
 
-    def test_step(self, batch: Any, _batch_idx: int) -> None:
+    def test_step(self, batch: Any, batch_idx: int) -> None:
         """Test step."""
         with torch.no_grad():
             outputs = self(batch)
