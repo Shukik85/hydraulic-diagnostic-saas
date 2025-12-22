@@ -18,8 +18,7 @@ import pytest
 import torch
 from torch_geometric.data import Batch, Data
 
-from models import ModelConfig, UniversalTemporalGNNv2
-from training.multi_task_loss import MultiTaskLoss
+from models import ModelConfig, MultiTaskLoss, UniversalTemporalGNNv2
 
 
 @pytest.mark.integration
