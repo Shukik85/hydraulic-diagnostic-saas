@@ -194,8 +194,15 @@ class MultiTaskLoss(nn.Module):
                     targets['graph']['rul']
                 )
         
+        # Determine device from first available output
+        device = 'cpu'
+        if 'component' in outputs and outputs['component']:
+            device = next(iter(outputs['component'].values())).device
+        elif 'graph' in outputs and outputs['graph']:
+            device = next(iter(outputs['graph'].values())).device
+        
         # Compute weighted total
-        total_loss = torch.tensor(0.0, device=next(iter(outputs['component'].values())).device)
+        total_loss = torch.tensor(0.0, device=device)
         
         if 'component_health' in losses:
             total_loss += self.config.component_health_weight * losses['component_health']
