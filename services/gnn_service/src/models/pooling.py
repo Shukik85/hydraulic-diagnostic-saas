@@ -16,7 +16,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.utils import softmax
-from torch_scatter import scatter
+
+# Try torch_scatter first (faster), fallback to PyG built-in
+try:
+    from torch_scatter import scatter
+except ImportError:
+    from torch_geometric.utils import scatter
 
 
 class AttentionPooling(nn.Module):
