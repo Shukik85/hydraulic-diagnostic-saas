@@ -246,7 +246,7 @@ class TestComputePosWeights:
             [0, 1, 0]
         ])
 
-        weights = compute_pos_weights(labels, num_classes=3)
+        weights = compute_pos_weights(labels)
 
         # Class 0: 2 pos, 2 neg -> weight = 1.0
         # Class 1: 2 pos, 2 neg -> weight = 1.0
@@ -262,7 +262,7 @@ class TestComputePosWeights:
             [0, 1, 1]
         ])
 
-        weights = compute_pos_weights(labels, num_classes=3)
+        weights = compute_pos_weights(labels)
 
         # Class 0: 3 pos, 1 neg -> weight = 1/3
         # Class 1: 1 pos, 3 neg -> weight = 3
@@ -274,7 +274,7 @@ class TestComputePosWeights:
         """Test with all positive labels."""
         labels = torch.ones(5, 3)
 
-        weights = compute_pos_weights(labels, num_classes=3)
+        weights = compute_pos_weights(labels)
 
         # All positive -> weight = 0
         assert torch.allclose(weights, torch.tensor([0.0, 0.0, 0.0]))
