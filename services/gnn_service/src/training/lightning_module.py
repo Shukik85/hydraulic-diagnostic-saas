@@ -6,6 +6,11 @@ Integrates:
 - Confidence-weighted training
 - Domain adversarial loss (DIDA)
 - Component criticality weighting
+
+Version 2.1.0 (Phase 2):
+- Migrated to UniversalTemporalGNNv2 with ModelConfig
+- 6-task architecture (4 graph + 2 component)
+- Simplified initialization
 """
 
 from __future__ import annotations
@@ -19,7 +24,7 @@ from torch import nn
 from torch.optim import Adam
 from torch.optim.lr_scheduler import CosineAnnealingLR, ReduceLROnPlateau
 
-from src.models import UniversalTemporalGNN
+from src.models import UniversalTemporalGNNv2, ModelConfig
 from src.training.losses import UncertaintyWeighting
 from src.training.losses_advanced import (
     AsymmetricL1Loss,
@@ -34,6 +39,11 @@ logger = logging.getLogger(__name__)
 class HydraulicGNNModule(pl.LightningModule):
     """PyTorch Lightning module for hydraulic diagnostics (Production-ready).
 
+    Version 2.1.0 - Phase 2 Architecture:
+    - 6-task multi-level predictions
+    - Graph-level: health, degradation, anomaly (9), RUL
+    - Component-level: health, anomaly (9)
+
     Features:
     - Advanced physics-aware losses
     - Confidence-weighted training for imputed data
@@ -42,23 +52,23 @@ class HydraulicGNNModule(pl.LightningModule):
     - Manual optimization to prevent closure() double backward
 
     Examples:
+        >>> from src.models import ModelConfig
+        >>> config = ModelConfig(
+        ...     node_features=34,
+        ...     edge_features=14,
+        ...     gat_hidden_dim=128,
+        ...     lstm_hidden_dim=256,
+        ... )
         >>> module = HydraulicGNNModule(
-        ...     in_channels=34,
-        ...     hidden_channels=128,
+        ...     model_config=config,
         ...     use_advanced_losses=True,
         ...     use_confidence_weighting=True,
-        ...     component_weights=torch.tensor([1.0, 0.8, 0.6]),
         ... )
     """
 
     def __init__(
         self,
-        in_channels: int,
-        hidden_channels: int = 128,
-        num_heads: int = 8,
-        num_gat_layers: int = 3,
-        lstm_hidden: int = 256,
-        lstm_layers: int = 2,
+        model_config: ModelConfig,
         learning_rate: float = 0.001,
         weight_decay: float = 1e-5,
         scheduler_type: Literal["plateau", "cosine", "none"] = "plateau",
@@ -78,31 +88,42 @@ class HydraulicGNNModule(pl.LightningModule):
         num_domains: int = 2,
         **kwargs: Any,
     ) -> None:
+        """Initialize Lightning module.
+        
+        Args:
+            model_config: ModelConfig for UniversalTemporalGNNv2
+            learning_rate: Learning rate for optimizer
+            weight_decay: Weight decay for optimizer
+            scheduler_type: LR scheduler type (plateau, cosine, none)
+            loss_weighting: Loss weighting strategy (fixed, uncertainty)
+            loss_weights: Manual loss weights (if loss_weighting='fixed')
+            use_advanced_losses: Use physics-aware losses
+            use_confidence_weighting: Use confidence-weighted training
+            use_domain_adversarial: Use domain adversarial loss (DIDA)
+            rul_tau: Asymmetric L1 tau for RUL loss
+            component_weights: Component criticality weights
+            severity_weights: Anomaly severity weights
+            lambda_domain: Domain adversarial loss weight
+            num_domains: Number of domains for DIDA
+            **kwargs: Additional arguments (ignored)
+        """
         super().__init__()
-        self.save_hyperparameters()
+        # Save hyperparameters (exclude ModelConfig to avoid serialization issues)
+        self.save_hyperparameters(ignore=['model_config'])
+        
+        # Store ModelConfig separately
+        self.model_config = model_config
 
         # 🔥 CRITICAL: Use MANUAL optimization to prevent closure() double backward
-        # When Lightning calls optimizer.step(closure=closure), Adam internally calls
-        # closure() multiple times for line search. Each time it calls backward().
-        # This causes "backward through graph twice" error.
-        # Manual optimization gives us full control.
         self.automatic_optimization = False
 
         # Validate loss_weighting
         if loss_weighting not in ["fixed", "uncertainty"]:
             raise ValueError(f"Unknown loss_weighting: {loss_weighting}")
 
-        # Model
-        self.model = UniversalTemporalGNN(
-            in_channels=in_channels,
-            hidden_channels=hidden_channels,
-            num_heads=num_heads,
-            num_gat_layers=num_gat_layers,
-            lstm_hidden=lstm_hidden,
-            lstm_layers=lstm_layers,
-            use_compile=False,
-            **kwargs,
-        )
+        # Model (Phase 2 v2 API)
+        self.model = UniversalTemporalGNNv2(config=model_config)
+        logger.info("Initialized UniversalTemporalGNNv2 v%s", model_config.version)
 
         # Training config
         self.learning_rate = learning_rate
@@ -174,9 +195,9 @@ class HydraulicGNNModule(pl.LightningModule):
                 lambda_domain=lambda_domain,
                 num_domains=num_domains,
             )
-            # Domain classifier (to be trained separately)
+            # Domain classifier
             self.domain_classifier = nn.Sequential(
-                nn.Linear(hidden_channels, 128),
+                nn.Linear(model_config.gat_hidden_dim, 128),
                 nn.ReLU(),
                 nn.Dropout(0.3),
                 nn.Linear(128, num_domains),
@@ -194,7 +215,6 @@ class HydraulicGNNModule(pl.LightningModule):
             }
         elif loss_weighting == "uncertainty":
             num_tasks = 7 if use_domain_adversarial else 6
-            # Use fixed weights (can be customized)
             init_weights = [1.0] * num_tasks
             self.uncertainty_weighter = UncertaintyWeighting(
                 num_tasks=num_tasks, init_weights=init_weights
@@ -202,13 +222,17 @@ class HydraulicGNNModule(pl.LightningModule):
 
     def forward(
         self,
-        x: torch.Tensor,
-        edge_index: torch.Tensor,
-        edge_attr: torch.Tensor,
-        batch: torch.Tensor,
+        data: Any,
     ) -> dict[str, dict[str, torch.Tensor]]:
-        """Forward pass."""
-        return self.model(x, edge_index, edge_attr, batch)
+        """Forward pass (accepts PyG Data object).
+        
+        Args:
+            data: PyG Data object with x, edge_index, edge_attr, batch
+            
+        Returns:
+            Nested dict with component and graph predictions
+        """
+        return self.model(data, temporal=False)
 
     def compute_loss(
         self,
@@ -219,7 +243,7 @@ class HydraulicGNNModule(pl.LightningModule):
         """Compute multi-level multi-task loss with confidence weighting.
 
         Args:
-            outputs: Model outputs
+            outputs: Model outputs (nested dict from v2)
             batch: Batch data (must contain confidence if use_confidence_weighting=True)
             return_components: If True, return individual loss components (for logging)
                              If False, only return total loss (for training)
@@ -242,7 +266,6 @@ class HydraulicGNNModule(pl.LightningModule):
                 raise AttributeError(f"Batch missing required field: {field}")
 
         # CRITICAL: Squeeze all targets to prevent broadcasting issues
-        # Convert [N, 1] -> [N] for MSE losses
         y_graph_health = (
             batch.y_graph_health.squeeze(-1)
             if batch.y_graph_health.dim() > 1
@@ -265,14 +288,12 @@ class HydraulicGNNModule(pl.LightningModule):
         )
 
         # Fix anomaly target shapes if flattened by DataLoader
-        # Graph anomaly: should be [batch_size, 9]
         y_graph_anomaly = batch.y_graph_anomaly
         if y_graph_anomaly.dim() == 1:
             batch_size = outputs["graph"]["anomaly"].size(0)
             num_classes = outputs["graph"]["anomaly"].size(1)
             y_graph_anomaly = y_graph_anomaly.view(batch_size, num_classes)
 
-        # Component anomaly: should be [num_nodes, 9]
         y_component_anomaly = batch.y_component_anomaly
         if y_component_anomaly.dim() == 1:
             num_nodes = outputs["component"]["anomaly"].size(0)
@@ -292,11 +313,9 @@ class HydraulicGNNModule(pl.LightningModule):
                     device=batch.x.device,
                 )
             else:
-                # Node-level confidence [num_nodes] e.g. [320]
                 node_confidence = batch.confidence
 
-                # Aggregate to graph-level confidence [num_graphs] e.g. [32]
-                # Using native PyTorch scatter_reduce (mean)
+                # Aggregate to graph-level confidence
                 graph_confidence = torch.zeros(
                     batch.num_graphs,
                     dtype=node_confidence.dtype,
@@ -312,7 +331,7 @@ class HydraulicGNNModule(pl.LightningModule):
 
             # === GRAPH-LEVEL LOSSES (use graph_confidence) ===
             graph_health_loss = self.graph_health_loss(
-                outputs["graph"]["health"].squeeze(-1),  # [batch_size]
+                outputs["graph"]["health"].squeeze(-1),
                 y_graph_health,
                 graph_confidence,
             )
@@ -327,7 +346,7 @@ class HydraulicGNNModule(pl.LightningModule):
 
             # === COMPONENT-LEVEL LOSSES (use node_confidence) ===
             component_health_loss = self.component_health_loss(
-                outputs["component"]["health"].squeeze(-1),  # [num_nodes]
+                outputs["component"]["health"].squeeze(-1),
                 y_component_health,
                 node_confidence,
             )
@@ -335,11 +354,11 @@ class HydraulicGNNModule(pl.LightningModule):
             # Anomaly losses (no confidence for classification)
             graph_anomaly_loss = self.graph_anomaly_loss(
                 outputs["graph"]["anomaly"],
-                y_graph_anomaly,  # Fixed shape
+                y_graph_anomaly,
             )
             component_anomaly_loss = self.component_anomaly_loss(
                 outputs["component"]["anomaly"],
-                y_component_anomaly,  # Fixed shape
+                y_component_anomaly,
             )
 
         else:
@@ -352,7 +371,7 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             graph_anomaly_loss = self.graph_anomaly_loss(
                 outputs["graph"]["anomaly"],
-                y_graph_anomaly,  # Fixed shape
+                y_graph_anomaly,
             )
             graph_rul_loss = self.graph_rul_loss(
                 outputs["graph"]["rul"].squeeze(-1), y_graph_rul
@@ -362,7 +381,7 @@ class HydraulicGNNModule(pl.LightningModule):
             )
             component_anomaly_loss = self.component_anomaly_loss(
                 outputs["component"]["anomaly"],
-                y_component_anomaly,  # Fixed shape
+                y_component_anomaly,
             )
 
         # Domain adversarial loss (optional)
@@ -371,7 +390,6 @@ class HydraulicGNNModule(pl.LightningModule):
                 logger.warning("Domain labels not found, skipping domain loss")
                 domain_loss = torch.tensor(0.0, device=graph_health_loss.device)
             else:
-                # Extract features from model
                 features = outputs.get("features")
                 if features is None:
                     logger.warning("Features not in outputs, skipping domain loss")
@@ -384,9 +402,8 @@ class HydraulicGNNModule(pl.LightningModule):
                 0.0, device=graph_health_loss.device, dtype=torch.float32
             )
 
-        # Ensure all losses are scalars + convert to float32 for stability
+        # Ensure all losses are scalars + float32
         def ensure_scalar_float32(loss: torch.Tensor) -> torch.Tensor:
-            """Convert loss to scalar float32."""
             if loss.dim() > 0:
                 loss = loss.mean()
             return loss.float()
@@ -408,10 +425,9 @@ class HydraulicGNNModule(pl.LightningModule):
                 + self.loss_weights["graph_rul"] * graph_rul_loss
                 + self.loss_weights["component_health"] * component_health_loss
                 + self.loss_weights["component_anomaly"] * component_anomaly_loss
-                + domain_loss  # DIDA
+                + domain_loss
             )
         else:  # uncertainty
-            # All losses are float32 scalars
             losses = {
                 "graph_health": graph_health_loss,
                 "graph_degradation": graph_degradation_loss,
@@ -423,10 +439,9 @@ class HydraulicGNNModule(pl.LightningModule):
             if self.use_domain_adversarial:
                 losses["domain"] = domain_loss
 
-            # UncertaintyWeighting now uses fixed buffers (no gradients)
             total_loss = self.uncertainty_weighter(losses)
 
-        # 🔥 CRITICAL: Only create loss_dict if needed for logging
+        # Create loss_dict if needed for logging
         if return_components:
             loss_dict = {
                 "graph_health": graph_health_loss.detach(),
@@ -440,164 +455,93 @@ class HydraulicGNNModule(pl.LightningModule):
             }
             return total_loss, loss_dict
         else:
-            # Training: only return total loss, discard components
             return total_loss, None
 
     def training_step(self, batch: Any, _batch_idx: int) -> None:
-        """Training step (MANUAL optimization).
-
-        CRITICAL FIXES:
-        1. We control optimizer.step() manually to prevent closure() double backward
-        2. Always detach losses before logging (self.log caches computation graphs)
-        3. Return None instead of tensor to prevent Lightning from caching graph
-        4. Never return tensors with active gradients from training_step
-
-        When Lightning calls optimizer.step(closure=closure), Adam internally calls
-        closure() multiple times for line search. Each time it calls backward().
-        This causes "backward through graph twice" error.
-        Manual optimization gives us full control.
-        """
-        # Forward pass
-        outputs = self(
-            x=batch.x,
-            edge_index=batch.edge_index,
-            edge_attr=batch.edge_attr,
-            batch=batch.batch,
-        )
+        """Training step (MANUAL optimization)."""
+        # Forward pass (v2 accepts Data object)
+        outputs = self(batch)
         total_loss, _ = self.compute_loss(outputs, batch, return_components=False)
 
-        # Get optimizer (only one optimizer configured)
+        # Get optimizer
         opt = self.optimizers()
 
-        # Manual backward (called ONCE)
-        # self.manual_backward(total_loss)
-
-        # Manual optimizer step (WITHOUT closure!)
+        # Manual backward + step
+        self.manual_backward(total_loss)
         opt.step()
         opt.zero_grad()
 
-        # 🔥 CRITICAL: ALWAYS detach before logging!
-        # PyTorch Lightning's TensorBoard logger caches computation graphs
-        # from logged metrics. This prevents proper garbage collection.
-        loss_detached = total_loss.detach().clone()  # Detach + create new tensor
+        # Log detached loss
         self.log(
             "train/total_loss",
-            loss_detached,  # Log detached scalar
+            total_loss.detach(),
             prog_bar=True,
             batch_size=batch.num_graphs,
         )
 
-        # 🔥 CRITICAL: Return None, not tensor!
-        # If we return a tensor with active graph, Lightning might cache it.
-        # Returning None prevents any graph caching.
         return None
 
     def validation_step(self, batch: Any, _batch_idx: int) -> None:
-        """Validation step (no gradients needed).
-
-        CRITICAL: Wrapped with torch.no_grad() to prevent graph conflicts.
-        Validation should never build computation graph during training.
-        This prevents 'backward through graph twice' errors.
-
-        Also detach all metrics before logging to prevent TensorBoard
-        from caching computation graph.
-        """
+        """Validation step."""
         with torch.no_grad():
-            outputs = self(
-                x=batch.x,
-                edge_index=batch.edge_index,
-                edge_attr=batch.edge_attr,
-                batch=batch.batch,
-            )
+            outputs = self(batch)
             total_loss, loss_dict = self.compute_loss(
                 outputs, batch, return_components=True
             )
 
-        # 🔥 CRITICAL: Detach losses BEFORE logging!
-        # TensorBoard can hold references to tensors with active graphs
-        total_loss_detached = total_loss.detach().clone()
-
+        # Log detached losses
         self.log(
             "val/total_loss",
-            total_loss_detached,  # Log detached scalar
+            total_loss.detach(),
             prog_bar=True,
             batch_size=batch.num_graphs,
         )
         if loss_dict is not None:
             for key, val in loss_dict.items():
                 if key != "total":
-                    # Already detached in compute_loss, but clone for safety
-                    val_safe = val.clone() if val.is_floating_point() else val
                     self.log(
                         f"val/{key}_loss",
-                        val_safe,
+                        val,
                         prog_bar=False,
                         batch_size=batch.num_graphs,
                     )
 
-        # Return None to prevent graph caching
         return None
 
     def test_step(self, batch: Any, _batch_idx: int) -> None:
-        """Test step (no gradients needed)."""
+        """Test step."""
         with torch.no_grad():
-            outputs = self(
-                x=batch.x,
-                edge_index=batch.edge_index,
-                edge_attr=batch.edge_attr,
-                batch=batch.batch,
-            )
+            outputs = self(batch)
             total_loss, loss_dict = self.compute_loss(
                 outputs, batch, return_components=True
             )
 
-        # Detach before logging
-        total_loss_detached = total_loss.detach().clone()
-
-        self.log("test/total_loss", total_loss_detached, batch_size=batch.num_graphs)
+        self.log("test/total_loss", total_loss.detach(), batch_size=batch.num_graphs)
         if loss_dict is not None:
             for key, val in loss_dict.items():
                 if key != "total":
-                    val_safe = val.clone() if val.is_floating_point() else val
-                    self.log(f"test/{key}_loss", val_safe, batch_size=batch.num_graphs)
+                    self.log(f"test/{key}_loss", val, batch_size=batch.num_graphs)
 
         return None
 
     def on_epoch_end(self) -> None:
-        """Clear PyTorch cache at end of epoch.
-
-        CRITICAL: Prevents computation graphs from being cached between epochs.
-        This fixes 'backward through graph twice' errors on epoch transitions.
-        """
+        """Clear PyTorch cache at end of epoch."""
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
-        torch.cuda.synchronize() if torch.cuda.is_available() else None
+            torch.cuda.synchronize()
 
     def on_train_batch_end(self, outputs, batch, batch_idx: int) -> None:
-        """Clear cache after each training batch.
-
-        CRITICAL: Prevents accumulation of computation graphs in memory.
-        This is especially important with manual optimization.
-        """
-        # Force garbage collection of computation graphs
+        """Clear cache after each training batch."""
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
     def configure_optimizers(self) -> dict[str, Any]:
-        """Configure optimizers and schedulers.
-
-        CRITICAL: Uses interval='epoch' to prevent scheduler from
-        caching computation graphs between epoch transitions.
-
-        NOTE: For development/debugging, consider disabling scheduler
-        to simplify the optimization loop.
-        """
+        """Configure optimizers and schedulers."""
         optimizer = Adam(
             self.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
         )
 
         if self.scheduler_type == "plateau":
-            # Note: 'verbose' parameter removed in PyTorch 2.9+
             scheduler = ReduceLROnPlateau(
                 optimizer, mode="min", factor=0.5, patience=10
             )
@@ -606,7 +550,7 @@ class HydraulicGNNModule(pl.LightningModule):
                 "lr_scheduler": {
                     "scheduler": scheduler,
                     "monitor": "val/total_loss",
-                    "interval": "epoch",  # 🔥 CRITICAL: Step at epoch end
+                    "interval": "epoch",
                     "frequency": 1,
                     "name": "lr/plateau",
                 },
