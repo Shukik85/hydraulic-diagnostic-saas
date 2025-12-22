@@ -33,7 +33,10 @@ import torch.nn.functional as F
 from torch_geometric.data import Batch, Data
 from torch_geometric.nn import GATv2Conv, global_mean_pool
 
-from .pooling import AttentionPooling, VirtualNodePooling
+from .pooling import AttentionPooling, VirtualNodeAugmentation
+
+# Backward compatibility for existing code/tests
+VirtualNodePooling = VirtualNodeAugmentation
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +65,7 @@ class ModelConfig:
         lstm_num_layers: Number of LSTM layers (must be >= 1)
         lstm_dropout: LSTM dropout (must be in [0, 1])
         lstm_bidirectional: Whether LSTM is bidirectional
-        use_virtual_nodes: Enable virtual node pooling
+        use_virtual_nodes: Enable virtual node augmentation
         virtual_node_dim: Virtual node dimension (must be > 0 if used)
         use_attention_pooling: Use attention-based pooling
         component_health_num_classes: Node-level classes (must be >= 2)
@@ -164,7 +167,7 @@ class UniversalTemporalGNNv2(nn.Module):
     Architecture:
     1. Node/edge encoding
     2. Multi-layer GATv2 (spatial, with edge features)
-    3. Optional VirtualNode
+    3. Optional VirtualNodeAugmentation
     4. AttentionPooling → graph representation
     5. LSTM (temporal mode) or Linear projection (single mode)
     6. Dual prediction heads (node-level + graph-level)
@@ -245,9 +248,9 @@ class UniversalTemporalGNNv2(nn.Module):
         # Final GATv2 output dimension
         self.gat_output_dim = in_channels
         
-        # Virtual node (optional)
+        # Virtual node augmentation (optional)
         if self.config.use_virtual_nodes:
-            self.virtual_node_pooling = VirtualNodePooling(
+            self.virtual_node_pooling = VirtualNodeAugmentation(
                 node_dim=self.gat_output_dim,
                 virtual_dim=self.config.virtual_node_dim,
                 dropout=self.config.gat_dropout
@@ -405,7 +408,7 @@ class UniversalTemporalGNNv2(nn.Module):
                 device=node_embeddings.device
             )
         
-        # Virtual node (optional)
+        # Virtual node augmentation (optional)
         if self.virtual_node_pooling is not None:
             node_embeddings = self.virtual_node_pooling(node_embeddings, batch)
         
