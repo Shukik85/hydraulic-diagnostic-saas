@@ -90,6 +90,45 @@ def generate_synthetic_graph(graph_id: int) -> Data:
     )
 
 
+class MetricsCallback(pl.Callback):
+    """Custom callback to track and print metrics."""
+    
+    def __init__(self):
+        super().__init__()
+        self.train_losses = []
+        self.val_losses = []
+    
+    def on_train_epoch_end(self, trainer, pl_module):
+        """Called at the end of training epoch."""
+        # Get metrics from trainer
+        metrics = trainer.callback_metrics
+        train_loss = metrics.get('train/total_loss', None)
+        
+        if train_loss is not None:
+            self.train_losses.append(float(train_loss))
+    
+    def on_validation_epoch_end(self, trainer, pl_module):
+        """Called at the end of validation epoch."""
+        metrics = trainer.callback_metrics
+        val_loss = metrics.get('val/total_loss', None)
+        
+        if val_loss is not None:
+            val_loss_val = float(val_loss)
+            self.val_losses.append(val_loss_val)
+            
+            # Print epoch summary
+            epoch = trainer.current_epoch
+            train_loss = self.train_losses[-1] if self.train_losses else 0.0
+            
+            improvement = ""
+            if len(self.val_losses) > 1:
+                prev_loss = self.val_losses[-2]
+                if val_loss_val < prev_loss:
+                    improvement = f" (↓ {prev_loss - val_loss_val:.3f} improvement!)"
+            
+            print(f"\n📊 Epoch {epoch+1}: train_loss={train_loss:.3f}, val_loss={val_loss_val:.3f}{improvement}")
+
+
 def main():
     """Run simple training test."""
     print("="*60)
@@ -180,6 +219,10 @@ def main():
     
     # === 5. Setup trainer ===
     print("\n⚡ Step 5: Setting up trainer...")
+    
+    # Metrics tracking callback
+    metrics_callback = MetricsCallback()
+    
     checkpoint_callback = ModelCheckpoint(
         dirpath=temp_dir,
         filename="best_model",
@@ -195,7 +238,7 @@ def main():
         logger=False,  # Disable logging for simplicity
         enable_progress_bar=True,
         enable_checkpointing=True,
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback, metrics_callback],
         log_every_n_steps=1,
     )
     
@@ -213,6 +256,21 @@ def main():
         )
         print("-" * 60)
         print("✅ Training completed successfully!")
+        
+        # Print loss history
+        print("\n📈 Loss History:")
+        for i, (t_loss, v_loss) in enumerate(zip(metrics_callback.train_losses, metrics_callback.val_losses)):
+            print(f"   Epoch {i+1}: train={t_loss:.3f}, val={v_loss:.3f}")
+        
+        # Validate loss decreased
+        if len(metrics_callback.val_losses) >= 2:
+            initial_loss = metrics_callback.val_losses[0]
+            final_loss = metrics_callback.val_losses[-1]
+            if final_loss < initial_loss:
+                improvement = ((initial_loss - final_loss) / initial_loss) * 100
+                print(f"\n✅ Loss decreased: {initial_loss:.3f} → {final_loss:.3f} ({improvement:.1f}% improvement)")
+            else:
+                print(f"\n⚠️ Loss did not decrease: {initial_loss:.3f} → {final_loss:.3f}")
         
     except Exception as e:
         print("-" * 60)
@@ -256,6 +314,11 @@ def main():
     print(f"   ✅ Training: 3 epochs completed")
     print(f"   ✅ Checkpoint: saved")
     print(f"   ✅ Inference: working")
+    
+    if metrics_callback.val_losses:
+        final_loss = metrics_callback.val_losses[-1]
+        print(f"   ✅ Final val loss: {final_loss:.3f}")
+    
     print("\n🚀 Ready for production training!")
     print("\nNext steps:")
     print("  1. Generate real data: python scripts/generate_data.py")
