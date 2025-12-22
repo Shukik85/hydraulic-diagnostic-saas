@@ -12,10 +12,11 @@ Main components:
 - UniversalTemporalGNNv2: GAT + LSTM with multi-task learning
 - MultiTaskLoss: Joint optimization for node + graph predictions
 - AttentionWeightExtractor: Interpretability tools
-- Pooling layers: AttentionPooling, VirtualNodePooling
+- Pooling layers: AttentionPooling, VirtualNodeAugmentation
 
 Backward Compatibility:
 - UniversalTemporalGNN (v1) → UniversalTemporalGNNv2 (alias)
+- VirtualNodePooling → VirtualNodeAugmentation (alias)
 
 Examples:
     >>> from models import UniversalTemporalGNNv2, ModelConfig, MultiTaskLoss
@@ -46,7 +47,7 @@ from .multi_task_loss import (
     MultiTaskLossConfig,
     compute_class_weights,
 )
-from .pooling import AttentionPooling, VirtualNodePooling
+from .pooling import AttentionPooling, VirtualNodeAugmentation, VirtualNodePooling
 from .universal_temporal_gnn import ModelConfig, UniversalTemporalGNNv2
 
 # Backward compatibility alias (v1 → v2)
@@ -66,7 +67,8 @@ __all__ = [
     'AttentionWeightExtractor',
     # Pooling layers
     'AttentionPooling',
-    'VirtualNodePooling',
+    'VirtualNodeAugmentation',  # New name (v2.0.2)
+    'VirtualNodePooling',       # Backward compatibility alias
 ]
 
 __version__ = '2.0.2'
