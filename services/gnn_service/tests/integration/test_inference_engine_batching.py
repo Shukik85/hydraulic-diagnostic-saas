@@ -6,7 +6,7 @@ import pytest
 
 from src.inference import InferenceConfig, InferenceEngine
 from src.schemas import PredictionResponse
-from src.schemas.requests import MinimalInferenceRequest
+from src.schemas.requests import ComponentSensorReading, MinimalInferenceRequest
 
 
 @pytest.fixture
@@ -17,9 +17,15 @@ def mock_request() -> MinimalInferenceRequest:
         topology_id="pump_v1",
         timestamp=datetime(2025, 1, 1, 0, 0, 0),  # datetime object, not string
         sensor_readings={
-            "pressure_in": 150.0,
-            "pressure_out": 180.0,
-        },  # Min 2 items required
+            "pump_1": ComponentSensorReading(
+                pressure_bar=150.0,
+                temperature_c=65.0,
+            ),
+            "valve_1": ComponentSensorReading(
+                pressure_bar=145.0,
+                temperature_c=64.0,
+            ),
+        },  # Min 2 components required
     )
 
 
