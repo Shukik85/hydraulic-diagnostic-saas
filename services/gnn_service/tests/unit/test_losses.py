@@ -209,18 +209,34 @@ class TestQuantileRULLoss:
 
 
 class TestUncertaintyWeighting:
-    """Tests for UncertaintyWeighting."""
+    """Tests for UncertaintyWeighting (buffer-based, Lightning-compatible)."""
 
     def test_uncertainty_weighting_init(self):
-        """Test initialization."""
+        """Test initialization with fixed buffers."""
         weighter = UncertaintyWeighting(num_tasks=3)
 
-        assert weighter.log_vars.shape == torch.Size([3])
-        assert torch.allclose(weighter.log_vars, torch.zeros(3))
+        # Check buffer exists (not parameter)
+        assert hasattr(weighter, "task_weights")
+        assert weighter.task_weights.shape == torch.Size([3])
+        
+        # Default weights should be 1.0
+        assert torch.allclose(weighter.task_weights, torch.ones(3))
+        
+        # Verify it's a buffer (not parameter)
+        assert "task_weights" in dict(weighter.named_buffers())
+        assert "task_weights" not in dict(weighter.named_parameters())
+
+    def test_uncertainty_weighting_custom_init(self):
+        """Test initialization with custom weights."""
+        custom_weights = [0.5, 1.0, 2.0]
+        weighter = UncertaintyWeighting(num_tasks=3, init_weights=custom_weights)
+        
+        expected = torch.tensor(custom_weights, dtype=torch.float32)
+        assert torch.allclose(weighter.task_weights, expected)
 
     def test_uncertainty_weighting_forward(self):
-        """Test forward pass."""
-        weighter = UncertaintyWeighting(num_tasks=3)
+        """Test forward pass with fixed weights."""
+        weighter = UncertaintyWeighting(num_tasks=3, init_weights=[1.0, 2.0, 0.5])
 
         losses = {
             "health": torch.tensor(0.5),
@@ -230,19 +246,48 @@ class TestUncertaintyWeighting:
 
         total_loss = weighter(losses)
 
+        # Expected: 1.0*0.5 + 2.0*0.3 + 0.5*0.8 = 0.5 + 0.6 + 0.4 = 1.5
+        expected_loss = 0.5 * 1.0 + 0.3 * 2.0 + 0.8 * 0.5
+        
         assert isinstance(total_loss, torch.Tensor)
         assert total_loss.shape == torch.Size([])
-        assert total_loss.item() >= 0
+        assert torch.isclose(total_loss, torch.tensor(expected_loss), atol=1e-5)
 
-    def test_uncertainty_weighting_learning(self):
-        """Test that weights are learnable."""
+    def test_uncertainty_weighting_no_parameters(self):
+        """Test that weights are NOT learnable parameters (Lightning fix)."""
         weighter = UncertaintyWeighting(num_tasks=3)
 
-        # Check parameters are registered
+        # Check NO parameters are registered (buffers only)
         params = list(weighter.parameters())
-        assert len(params) == 1
-        assert params[0].shape == torch.Size([3])
-        assert params[0].requires_grad
+        assert len(params) == 0, "UncertaintyWeighting should have NO learnable parameters"
+        
+        # But buffers should exist
+        buffers = dict(weighter.named_buffers())
+        assert "task_weights" in buffers
+        assert buffers["task_weights"].requires_grad == False
+
+    def test_uncertainty_weighting_scalar_validation(self):
+        """Test that non-scalar losses raise error."""
+        weighter = UncertaintyWeighting(num_tasks=2)
+        
+        # Non-scalar loss should raise ValueError
+        with pytest.raises(ValueError, match="must be scalar"):
+            weighter({
+                "task1": torch.tensor([0.5, 0.3]),  # Not scalar!
+                "task2": torch.tensor(0.8)
+            })
+
+    def test_uncertainty_weighting_task_count_mismatch(self):
+        """Test that mismatched task counts raise error."""
+        weighter = UncertaintyWeighting(num_tasks=3)
+        
+        # Wrong number of losses
+        with pytest.raises(ValueError, match="does not match"):
+            weighter({
+                "task1": torch.tensor(0.5),
+                "task2": torch.tensor(0.8)
+                # Missing task3!
+            })
 
 
 class TestMultiTaskLoss:
@@ -296,9 +341,10 @@ class TestMultiTaskLoss:
         # Check uncertainty weighter exists
         assert hasattr(multi_loss, "uncertainty_weighter")
 
-        # Check learnable parameters
+        # Check that uncertainty_weighter has NO learnable parameters
+        # (this is the Lightning fix - weights are buffers, not parameters)
         params = list(multi_loss.uncertainty_weighter.parameters())
-        assert len(params) == 1
+        assert len(params) == 0, "UncertaintyWeighting should not have parameters"
 
     def test_multitask_loss_custom_losses(self):
         """Test with custom loss functions."""
