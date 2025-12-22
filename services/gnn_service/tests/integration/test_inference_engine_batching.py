@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -10,11 +11,15 @@ from src.schemas.requests import MinimalInferenceRequest
 
 @pytest.fixture
 def mock_request() -> MinimalInferenceRequest:
+    """Create valid MinimalInferenceRequest for testing."""
     return MinimalInferenceRequest(
         equipment_id="pump_001",
         topology_id="pump_v1",
-        timestamp="2025-01-01T00:00:00Z",
-        sensor_readings={},
+        timestamp=datetime(2025, 1, 1, 0, 0, 0),  # datetime object, not string
+        sensor_readings={
+            "pressure_in": 150.0,
+            "pressure_out": 180.0,
+        },  # Min 2 items required
     )
 
 
