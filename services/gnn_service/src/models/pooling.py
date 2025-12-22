@@ -2,7 +2,7 @@
 
 Implements:
 - AttentionPooling: Learnable importance weights per node
-- VirtualNodePooling: Virtual node for graph-level aggregation
+- VirtualNodeAugmentation: Virtual node for graph-level features
 - Replaces naive mean/max pooling for better generalization
 
 Python 3.14 Features:
@@ -16,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.utils import softmax
+from torch_scatter import scatter
 
 
 class AttentionPooling(nn.Module):
@@ -76,6 +77,10 @@ class AttentionPooling(nn.Module):
         if batch is None:
             batch = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
         
+        # Handle empty graphs
+        if batch.numel() == 0:
+            return torch.zeros(0, self.hidden_dim, dtype=x.dtype, device=x.device)
+        
         # Compute attention scores
         scores = self.attention_mlp(x)  # [num_nodes, 1]
         
@@ -85,16 +90,8 @@ class AttentionPooling(nn.Module):
         # Weighted sum
         weighted_features = x * attention_weights  # [num_nodes, hidden_dim]
         
-        # Sum per graph
-        batch_size = batch.max().item() + 1
-        graph_features = torch.zeros(
-            batch_size,
-            self.hidden_dim,
-            dtype=x.dtype,
-            device=x.device
-        )
-        
-        graph_features.index_add_(0, batch, weighted_features)
+        # Sum per graph using scatter (best practice)
+        graph_features = scatter(weighted_features, batch, dim=0, reduce='sum')
         
         return graph_features
     
@@ -120,20 +117,23 @@ class AttentionPooling(nn.Module):
         return attention_weights.squeeze(-1)
 
 
-class VirtualNodePooling(nn.Module):
-    """Virtual node for size-invariant graph representations.
+class VirtualNodeAugmentation(nn.Module):
+    """Virtual node augmentation for size-invariant graph representations.
     
     Adds a learnable virtual node that aggregates information from all nodes.
     Helps models generalize across different graph sizes.
     
+    Note: This is a single-pass augmentation. For iterative virtual node
+    updates (as in original papers), integrate into GNN message passing.
+    
     Examples:
-        >>> pooling = VirtualNodePooling(node_dim=128, virtual_dim=64)
+        >>> augmentation = VirtualNodeAugmentation(node_dim=128, virtual_dim=64)
         >>> 
         >>> x = torch.randn(50, 128)  # [num_nodes, node_dim]
         >>> batch = torch.zeros(50, dtype=torch.long)
         >>> 
         >>> # Add virtual node representations
-        >>> x_with_virtual = pooling(x, batch)  # [50, 128 + 64]
+        >>> x_with_virtual = augmentation(x, batch)  # [50, 128 + 64]
     """
     
     def __init__(
@@ -142,7 +142,7 @@ class VirtualNodePooling(nn.Module):
         virtual_dim: int,
         dropout: float = 0.1
     ) -> None:
-        """Initialize virtual node pooling.
+        """Initialize virtual node augmentation.
         
         Args:
             node_dim: Dimension of node features
@@ -154,10 +154,8 @@ class VirtualNodePooling(nn.Module):
         self.node_dim = node_dim
         self.virtual_dim = virtual_dim
         
-        # Virtual node embedding (learnable)
-        self.virtual_embedding = nn.Parameter(
-            torch.randn(virtual_dim)
-        )
+        # Virtual node embedding (initialized with zeros for stable training)
+        self.virtual_embedding = nn.Parameter(torch.zeros(virtual_dim))
         
         # Aggregation network
         self.aggregate_mlp = nn.Sequential(
@@ -191,20 +189,21 @@ class VirtualNodePooling(nn.Module):
         if batch is None:
             batch = torch.zeros(x.size(0), dtype=torch.long, device=x.device)
         
-        # ✅ FIX: Check batch is not None before calling .max()
-        batch_size = batch.max().item() + 1
+        # Handle empty graphs
+        if batch.numel() == 0:
+            return torch.empty(0, self.node_dim + self.virtual_dim, 
+                             dtype=x.dtype, device=x.device)
+        
+        # Safe batch_size calculation
+        batch_size = int(batch.max()) + 1
         
         # Aggregate node features per graph
         aggregated = self.aggregate_mlp(x)  # [num_nodes, virtual_dim]
         
-        # Sum per graph
-        graph_aggregated = torch.zeros(
-            batch_size,
-            self.virtual_dim,
-            dtype=x.dtype,
-            device=x.device
-        )
-        graph_aggregated.index_add_(0, batch, aggregated)
+        # Sum per graph using scatter (best practice)
+        graph_aggregated = scatter(
+            aggregated, batch, dim=0, dim_size=batch_size, reduce='sum'
+        )  # [batch_size, virtual_dim]
         
         # Update virtual node embedding
         virtual_batch = self.virtual_embedding.unsqueeze(0).expand(
@@ -222,3 +221,7 @@ class VirtualNodePooling(nn.Module):
         x_enhanced = torch.cat([x, virtual_per_node], dim=1)
         
         return x_enhanced
+
+
+# Backward compatibility alias
+VirtualNodePooling = VirtualNodeAugmentation
