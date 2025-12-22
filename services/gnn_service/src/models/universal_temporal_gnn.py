@@ -6,20 +6,22 @@ Combines:
 - Multi-task learning for component health + anomaly detection
 - Size-invariant design for different graph topologies
 
-Version 2.0.2 (Production-Hardened):
-- Fixed all senior review findings
-- Proper configuration validation
-- Consistent single/temporal mode behavior
-- Removed size_embedding for simplicity and consistency
-- Robust batch handling
+Version 2.1.0 (Phase 2 - Multi-Level Predictions):
+- 6-task architecture: 4 graph-level + 2 component-level
+- Graph: health, degradation, anomaly (9 classes), RUL
+- Component: health (regression), anomaly (9 classes)
+- Nested output structure for better organization
+- Production-ready multi-level diagnostics
 
 Python 3.14 Features:
     - Deferred annotations (PEP 563)
     - Builtin generic types (PEP 585)
 
 References:
-    - GATv2: \"How Attentive are Graph Attention Networks?\" (ICLR 2022)
+    - GATv2: "How Attentive are Graph Attention Networks?" (ICLR 2022)
       https://arxiv.org/abs/2105.14491
+    - Multi-level predictions: Issue #116
+      https://github.com/Shukik85/hydraulic-diagnostic-saas/issues/116
 """
 
 from __future__ import annotations
@@ -47,10 +49,22 @@ class ModelConfig:
     
     All parameters validated in __post_init__.
     
+    Phase 2 Architecture (6 tasks):
+    
+    Graph-level predictions (4):
+        - health_score: [B, 1] ∈ [0,1] - Overall system health (regression)
+        - degradation_rate: [B, 1] ∈ [0,1] - System degradation rate (regression)
+        - anomaly_flags: [B, 9] ∈ {0,1}^9 - 9 anomaly types (multi-label)
+        - rul_hours: [B, 1] ∈ [0,∞) - Remaining Useful Life (regression)
+    
+    Component-level predictions (2):
+        - component_health: [N, 1] ∈ [0,1] - Per-component health (regression)
+        - component_anomaly: [N, 9] ∈ {0,1}^9 - Per-component anomalies (multi-label)
+    
     Design decisions:
     - No size_embedding: Ensures consistency between single/temporal modes.
-      Graph size is not a critical feature for hydraulic anomaly detection.
-    - Unified anomaly_type_head: Same architecture for both modes (64 → 4).
+    - Component predictions use only GATv2 (no LSTM) for direct node attribution.
+    - Graph predictions use LSTM for temporal context in temporal mode.
     
     Attributes:
         version: Model version string
@@ -68,14 +82,14 @@ class ModelConfig:
         use_virtual_nodes: Enable virtual node augmentation
         virtual_node_dim: Virtual node dimension (must be > 0 if used)
         use_attention_pooling: Use attention-based pooling
-        component_health_num_classes: Node-level classes (must be >= 2)
-        anomaly_type_num_classes: Graph-level classes (must be >= 2)
+        graph_anomaly_classes: Number of graph-level anomaly classes (must be >= 2)
+        component_anomaly_classes: Number of component-level anomaly classes (must be >= 2)
         head_hidden_dim: Prediction head hidden dim (must be > 0)
         head_dropout: Prediction head dropout (must be in [0, 1])
     """
     
     # Model version
-    version: str = "2.0.2"
+    version: str = "2.1.0"
     
     # Input dimensions
     node_features: int = 34
@@ -99,9 +113,9 @@ class ModelConfig:
     virtual_node_dim: int = 64
     use_attention_pooling: bool = True
     
-    # Multi-task heads
-    component_health_num_classes: int = 5
-    anomaly_type_num_classes: int = 4
+    # Multi-task heads (Phase 2)
+    graph_anomaly_classes: int = 9
+    component_anomaly_classes: int = 9
     head_hidden_dim: int = 64
     head_dropout: float = 0.2
     
@@ -139,16 +153,16 @@ class ModelConfig:
         if not 0.0 <= self.head_dropout <= 1.0:
             raise ValueError(f"head_dropout must be in [0,1], got {self.head_dropout}")
         
-        # Validate class counts
-        if self.component_health_num_classes < 2:
+        # Validate anomaly class counts (Phase 2)
+        if self.graph_anomaly_classes < 2:
             raise ValueError(
-                f"component_health_num_classes must be >= 2, "
-                f"got {self.component_health_num_classes}"
+                f"graph_anomaly_classes must be >= 2, "
+                f"got {self.graph_anomaly_classes}"
             )
-        if self.anomaly_type_num_classes < 2:
+        if self.component_anomaly_classes < 2:
             raise ValueError(
-                f"anomaly_type_num_classes must be >= 2, "
-                f"got {self.anomaly_type_num_classes}"
+                f"component_anomaly_classes must be >= 2, "
+                f"got {self.component_anomaly_classes}"
             )
         
         # Validate virtual node settings
@@ -162,7 +176,7 @@ class ModelConfig:
 class UniversalTemporalGNNv2(nn.Module):
     """Universal Temporal GNN v2 for hydraulic diagnostics.
     
-    Version 2.0.2 - Production-hardened after dual review.
+    Version 2.1.0 - Phase 2: Multi-Level Predictions (6 tasks)
     
     Architecture:
     1. Node/edge encoding
@@ -170,12 +184,15 @@ class UniversalTemporalGNNv2(nn.Module):
     3. Optional VirtualNodeAugmentation
     4. AttentionPooling → graph representation
     5. LSTM (temporal mode) or Linear projection (single mode)
-    6. Dual prediction heads (node-level + graph-level)
+    6. Multi-level prediction heads:
+       - Component-level (from GATv2): health [N,1], anomaly [N,9]
+       - Graph-level (from LSTM/projection): health [B,1], degradation [B,1], 
+         anomaly [B,9], RUL [B,1]
     
     Mode differences:
-    - Single: GNN → projection → head (direct path)
-    - Temporal: GNN → LSTM → head (sequence modeling)
-    - Both use same anomaly_type_head (64 → 4) for consistency
+    - Single: GNN → projection → graph heads (direct path)
+    - Temporal: GNN → LSTM → graph heads (sequence modeling)
+    - Component predictions: Same for both modes (no LSTM)
     
     Examples:
         >>> config = ModelConfig(node_features=34, edge_features=14)
@@ -183,16 +200,12 @@ class UniversalTemporalGNNv2(nn.Module):
         >>> 
         >>> # Single graph
         >>> outputs = model(data, temporal=False)
-        >>> node_logits = outputs['node_logits']
-        >>> graph_logits = outputs['graph_logits']
+        >>> component_health = outputs['component']['health']  # [N, 1]
+        >>> graph_rul = outputs['graph']['rul']  # [B, 1]
         >>> 
-        >>> # Temporal sequence (all timesteps)
-        >>> outputs = model(
-        ...     sequence, 
-        ...     temporal=True, 
-        ...     return_all_timesteps=True
-        ... )
-        >>> node_logits_seq = outputs['node_logits_seq']  # List[Tensor]
+        >>> # Temporal sequence
+        >>> outputs = model(sequence, temporal=True)
+        >>> graph_health = outputs['graph']['health']  # [B, 1]
     """
     
     def __init__(self, config: ModelConfig | None = None) -> None:
@@ -286,27 +299,68 @@ class UniversalTemporalGNNv2(nn.Module):
             lstm_output_dim
         )
         
-        # Component health head (node-level)
+        # ===== Component-level heads (from GATv2, no LSTM) =====
+        # Component health: [N, 1] regression
         self.component_health_head = nn.Sequential(
             nn.Linear(self.gat_output_dim, self.config.head_hidden_dim),
             nn.ReLU(),
             nn.Dropout(self.config.head_dropout),
-            nn.Linear(self.config.head_hidden_dim, self.config.component_health_num_classes)
+            nn.Linear(self.config.head_hidden_dim, 1),
+            nn.Sigmoid()  # Output in [0, 1]
         )
         
-        # Anomaly type head (graph-level, unified for both modes)
-        # Input: lstm_output_dim (64 for default config)
-        # Output: anomaly_type_num_classes (4 for default config)
-        self.anomaly_type_head = nn.Sequential(
+        # Component anomaly: [N, 9] multi-label classification
+        self.component_anomaly_head = nn.Sequential(
+            nn.Linear(self.gat_output_dim, self.config.head_hidden_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(self.config.head_dropout),
+            nn.Linear(self.config.head_hidden_dim * 2, self.config.component_anomaly_classes)
+            # No sigmoid here - will be applied in loss function
+        )
+        
+        # ===== Graph-level heads (from LSTM/projection) =====
+        # Graph health: [B, 1] regression
+        self.graph_health_head = nn.Sequential(
             nn.Linear(lstm_output_dim, self.config.head_hidden_dim),
             nn.ReLU(),
             nn.Dropout(self.config.head_dropout),
-            nn.Linear(self.config.head_hidden_dim, self.config.anomaly_type_num_classes)
+            nn.Linear(self.config.head_hidden_dim, 1),
+            nn.Sigmoid()  # Output in [0, 1]
+        )
+        
+        # Graph degradation: [B, 1] regression
+        self.graph_degradation_head = nn.Sequential(
+            nn.Linear(lstm_output_dim, self.config.head_hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(self.config.head_dropout),
+            nn.Linear(self.config.head_hidden_dim, 1),
+            nn.Sigmoid()  # Output in [0, 1]
+        )
+        
+        # Graph anomaly: [B, 9] multi-label classification
+        self.graph_anomaly_head = nn.Sequential(
+            nn.Linear(lstm_output_dim, self.config.head_hidden_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(self.config.head_dropout),
+            nn.Linear(self.config.head_hidden_dim * 2, self.config.graph_anomaly_classes)
+            # No sigmoid here - will be applied in loss function
+        )
+        
+        # Graph RUL: [B, 1] regression (hours until failure)
+        self.graph_rul_head = nn.Sequential(
+            nn.Linear(lstm_output_dim, self.config.head_hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(self.config.head_dropout),
+            nn.Linear(self.config.head_hidden_dim, 1),
+            nn.Softplus()  # Ensures positive output
         )
         
         logger.debug("UniversalTemporalGNNv2 (v%s) initialized", self.config.version)
         logger.debug("GATv2 output dim: %d, LSTM output dim: %d", self.gat_output_dim, lstm_output_dim)
-        logger.debug("Anomaly head input: %d (consistent across modes)", lstm_output_dim)
+        logger.debug("Phase 2: 6 tasks (4 graph + 2 component)")
+        logger.debug("  Component: health [N,1], anomaly [N,%d]", self.config.component_anomaly_classes)
+        logger.debug("  Graph: health [B,1], degradation [B,1], anomaly [B,%d], RUL [B,1]", 
+                    self.config.graph_anomaly_classes)
     
     def _get_lstm_output_dim(self) -> int:
         """Calculate LSTM output dimension.
@@ -426,7 +480,7 @@ class UniversalTemporalGNNv2(nn.Module):
         temporal: bool = False,
         return_attention: bool = False,
         return_all_timesteps: bool = False
-    ) -> dict[str, torch.Tensor]:
+    ) -> dict[str, dict[str, torch.Tensor]]:
         """Forward pass.
         
         Args:
@@ -436,12 +490,22 @@ class UniversalTemporalGNNv2(nn.Module):
             return_all_timesteps: Return predictions for all timesteps (temporal only)
             
         Returns:
-            Dictionary with predictions:
-            - 'node_logits': Node predictions [num_nodes, num_classes]
-            - 'graph_logits': Graph predictions [batch_size, num_classes]
-            - 'attention_weights': Attention (if return_attention=True)
-            - 'node_logits_seq': All timestep node preds (if return_all_timesteps=True)
-            - 'attention_seq': All timestep attention (if return_all_timesteps=True)
+            Dictionary with nested predictions:
+            {
+                'component': {
+                    'health': Tensor [N, 1],
+                    'anomaly': Tensor [N, 9]
+                },
+                'graph': {
+                    'health': Tensor [B, 1],
+                    'degradation': Tensor [B, 1],
+                    'anomaly': Tensor [B, 9],
+                    'rul': Tensor [B, 1]
+                },
+                'attention_weights': dict (optional),
+                'component_seq': list (optional, if return_all_timesteps),
+                'attention_seq': list (optional, if return_all_timesteps)
+            }
         """
         if temporal:
             return self._forward_temporal(data, return_attention, return_all_timesteps)
@@ -452,25 +516,27 @@ class UniversalTemporalGNNv2(nn.Module):
         self,
         data,
         return_attention: bool = False
-    ) -> dict[str, torch.Tensor]:
+    ) -> dict[str, dict[str, torch.Tensor]]:
         """Forward pass for single graph.
         
-        Path: GNN → projection → anomaly_type_head
+        Path: GNN → projection → graph heads
+        Component predictions: Directly from GATv2 (no LSTM)
         
         Args:
             data: PyG Data object
             return_attention: Return attention weights
             
         Returns:
-            Dictionary with predictions
+            Dictionary with nested predictions
         """
         batch = self._validate_batch(data)
         
-        # Encode nodes
+        # Encode nodes through GATv2
         node_emb, attention_weights = self._encode_nodes(data, return_attention)
         
-        # Component health prediction (node-level)
-        node_logits = self.component_health_head(node_emb)
+        # ===== Component-level predictions (from GATv2) =====
+        component_health = self.component_health_head(node_emb)      # [N, 1]
+        component_anomaly = self.component_anomaly_head(node_emb)    # [N, 9]
         
         # Pool to graph-level
         graph_repr = self._encode_graph(node_emb, batch)
@@ -479,12 +545,23 @@ class UniversalTemporalGNNv2(nn.Module):
         graph_features = self.single_graph_projection(graph_repr)
         graph_features = F.relu(graph_features)
         
-        # Anomaly type prediction (graph-level)
-        graph_logits = self.anomaly_type_head(graph_features)
+        # ===== Graph-level predictions (from projection) =====
+        graph_health = self.graph_health_head(graph_features)           # [B, 1]
+        graph_degradation = self.graph_degradation_head(graph_features) # [B, 1]
+        graph_anomaly = self.graph_anomaly_head(graph_features)         # [B, 9]
+        graph_rul = self.graph_rul_head(graph_features)                 # [B, 1]
         
         outputs = {
-            'node_logits': node_logits,
-            'graph_logits': graph_logits
+            'component': {
+                'health': component_health,
+                'anomaly': component_anomaly
+            },
+            'graph': {
+                'health': graph_health,
+                'degradation': graph_degradation,
+                'anomaly': graph_anomaly,
+                'rul': graph_rul
+            }
         }
         
         if return_attention and attention_weights:
@@ -497,10 +574,11 @@ class UniversalTemporalGNNv2(nn.Module):
         data_sequence: list,
         return_attention: bool = False,
         return_all_timesteps: bool = False
-    ) -> dict[str, torch.Tensor]:
+    ) -> dict[str, dict[str, torch.Tensor]]:
         """Forward pass for temporal sequence.
         
-        Path: GNN → LSTM → anomaly_type_head
+        Path: GNN → LSTM → graph heads
+        Component predictions: Directly from GATv2 (no LSTM)
         
         Args:
             data_sequence: List of PyG Data objects (time sequence)
@@ -508,32 +586,38 @@ class UniversalTemporalGNNv2(nn.Module):
             return_all_timesteps: Return predictions for all timesteps
             
         Returns:
-            Dictionary with predictions
+            Dictionary with nested predictions
         """
         # Process each timestep
         timestep_reprs = []
-        all_node_logits = [] if return_all_timesteps else None
+        all_component_preds = [] if return_all_timesteps else None
         all_attention = [] if return_all_timesteps and return_attention else None
-        last_node_logits = None
+        last_component_health = None
+        last_component_anomaly = None
         last_attention: dict[str, torch.Tensor] = {}
         
         for t, data_t in enumerate(data_sequence):
             batch = self._validate_batch(data_t)
             
-            # Encode nodes (single source of truth)
+            # Encode nodes through GATv2
             node_emb, attn_weights = self._encode_nodes(data_t, return_attention)
             
-            # Node predictions
-            node_logits_t = self.component_health_head(node_emb)
+            # Component predictions (from GATv2, no LSTM)
+            component_health_t = self.component_health_head(node_emb)
+            component_anomaly_t = self.component_anomaly_head(node_emb)
             
             if return_all_timesteps:
-                all_node_logits.append(node_logits_t.detach())
+                all_component_preds.append({
+                    'health': component_health_t.detach(),
+                    'anomaly': component_anomaly_t.detach()
+                })
                 if return_attention and attn_weights:
                     all_attention.append(attn_weights)
             
             # Keep last timestep for final output
             if t == len(data_sequence) - 1:
-                last_node_logits = node_logits_t
+                last_component_health = component_health_t
+                last_component_anomaly = component_anomaly_t
                 if return_attention:
                     last_attention = attn_weights
             
@@ -548,19 +632,30 @@ class UniversalTemporalGNNv2(nn.Module):
         lstm_out, _ = self.lstm(sequence_tensor)
         lstm_final = lstm_out[:, -1, :]  # Take last timestep
         
-        # Graph prediction - same head as single mode
-        graph_logits = self.anomaly_type_head(lstm_final)
+        # ===== Graph-level predictions (from LSTM) =====
+        graph_health = self.graph_health_head(lstm_final)
+        graph_degradation = self.graph_degradation_head(lstm_final)
+        graph_anomaly = self.graph_anomaly_head(lstm_final)
+        graph_rul = self.graph_rul_head(lstm_final)
         
         outputs = {
-            'node_logits': last_node_logits,
-            'graph_logits': graph_logits
+            'component': {
+                'health': last_component_health,
+                'anomaly': last_component_anomaly
+            },
+            'graph': {
+                'health': graph_health,
+                'degradation': graph_degradation,
+                'anomaly': graph_anomaly,
+                'rul': graph_rul
+            }
         }
         
         if return_attention and last_attention:
             outputs['attention_weights'] = last_attention
         
         if return_all_timesteps:
-            outputs['node_logits_seq'] = all_node_logits
+            outputs['component_seq'] = all_component_preds
             if return_attention and all_attention:
                 outputs['attention_seq'] = all_attention
         
