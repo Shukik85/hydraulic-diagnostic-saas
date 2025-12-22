@@ -20,7 +20,6 @@ from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
 
@@ -236,14 +235,12 @@ class MultiTaskLoss(nn.Module):
 
 
 def compute_pos_weights(
-    labels: torch.Tensor,
-    num_classes: int
+    labels: torch.Tensor
 ) -> torch.Tensor:
     """Compute positive class weights for imbalanced multi-label data.
     
     Args:
         labels: Binary labels [num_samples, num_classes]
-        num_classes: Number of classes
         
     Returns:
         Positive class weights [num_classes]
@@ -254,7 +251,7 @@ def compute_pos_weights(
         ...     [1, 1, 0],
         ...     [0, 0, 1]
         ... ])
-        >>> weights = compute_pos_weights(labels, num_classes=3)
+        >>> weights = compute_pos_weights(labels)
         >>> weights  # [0.5, 2.0, 2.0] (inverse frequency)
     """
     # Count positive examples per class
