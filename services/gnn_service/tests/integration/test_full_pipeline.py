@@ -18,7 +18,7 @@ import pytest
 import torch
 from torch_geometric.data import Batch, Data
 
-from models import ModelConfig, MultiTaskLoss, UniversalTemporalGNNv2
+from models import ModelConfig, UniversalTemporalGNNv2
 
 
 @pytest.mark.integration
@@ -43,12 +43,6 @@ class TestFullTrainingPipeline:
     def model(self, config: ModelConfig) -> UniversalTemporalGNNv2:
         """Create v2 model for testing."""
         return UniversalTemporalGNNv2(config)
-
-    @pytest.fixture
-    def loss_fn(self) -> MultiTaskLoss:
-        """Multi-task loss function."""
-        # Note: MultiTaskLoss may need update for Phase 2 compatibility
-        return MultiTaskLoss()
 
     @pytest.fixture
     def sample_graph(self) -> Data:
