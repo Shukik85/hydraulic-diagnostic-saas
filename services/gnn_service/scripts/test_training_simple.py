@@ -70,8 +70,7 @@ def generate_synthetic_graph(graph_id: int) -> Data:
     y_graph_degradation = torch.tensor([1.0 - health], dtype=torch.float32)
     y_graph_anomaly = torch.randint(0, 2, (9,), dtype=torch.float32)
     # CRITICAL FIX: Normalize RUL to [0, 1] like other metrics
-    # (not 500*health which causes loss explosion)
-    y_graph_rul = torch.tensor([health], dtype=torch.float32)  # [0, 1] range
+    y_graph_rul = torch.tensor([health], dtype=torch.float32)
     
     # Component-level (2 tasks)
     y_component_health = torch.rand(num_nodes) * 0.5 + 0.5  # [0.5, 1.0]
@@ -195,7 +194,7 @@ def main():
         train_dataset,
         batch_size=8,
         shuffle=True,
-        num_workers=0,  # Avoid multiprocessing issues
+        num_workers=0,
     )
     val_loader = DataLoader(
         val_dataset,
@@ -212,7 +211,7 @@ def main():
     model_config = ModelConfig(
         node_features=34,
         edge_features=14,
-        gat_hidden_dim=64,  # Small for CPU
+        gat_hidden_dim=64,
         lstm_hidden_dim=64,
         gat_num_layers=2,
         lstm_num_layers=1,
@@ -224,9 +223,9 @@ def main():
     
     module = HydraulicGNNModule(
         model_config=model_config,
-        learning_rate=0.01,  # Higher LR for quick test
+        learning_rate=0.01,
         scheduler_type="none",
-        use_advanced_losses=False,  # Basic losses for simplicity
+        use_advanced_losses=False,
         use_confidence_weighting=False,
         use_domain_adversarial=False,
     )
@@ -237,11 +236,12 @@ def main():
     # === 5. Setup trainer ===
     print("\n⚡ Step 5: Setting up trainer...")
     
-    # TensorBoard logger
+    # TensorBoard logger with explicit flush
     logger = TensorBoardLogger(
         save_dir="lightning_logs",
         name="test_training",
-        version="smoke_test",
+        version="v1",  # Fixed version for consistency
+        default_hp_metric=False,
     )
     
     # Metrics tracking callback
@@ -257,13 +257,13 @@ def main():
     
     trainer = pl.Trainer(
         max_epochs=3,
-        accelerator="cpu",  # Force CPU
+        accelerator="cpu",
         devices=1,
-        logger=logger,  # Enable TensorBoard
+        logger=logger,
         enable_progress_bar=True,
         enable_checkpointing=True,
         callbacks=[checkpoint_callback, metrics_callback],
-        log_every_n_steps=1,
+        log_every_n_steps=1,  # Log every batch
     )
     
     print("✅ Trainer configured (3 epochs, CPU)")
@@ -281,6 +281,10 @@ def main():
             val_dataloaders=val_loader,
         )
         training_duration = time.time() - training_start
+        
+        # Force flush logs
+        if hasattr(logger.experiment, 'flush'):
+            logger.experiment.flush()
         
         print("-" * 60)
         print(f"✅ Training completed successfully! (total: {training_duration:.1f}s)")
@@ -362,7 +366,9 @@ def main():
     
     print("\n🚀 Ready for production training!")
     print("\n📊 View training metrics:")
+    print(f"   cd {Path.cwd()}")
     print(f"   tensorboard --logdir lightning_logs/test_training")
+    print(f"   Open: http://localhost:6006")
     print("\nNext steps:")
     print("  1. Generate real data: python scripts/generate_data.py")
     print("  2. Train full model: python src/training/train.py")
