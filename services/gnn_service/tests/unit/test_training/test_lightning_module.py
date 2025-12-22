@@ -19,7 +19,13 @@ from src.training.lightning_module import HydraulicGNNModule
 
 @pytest.fixture
 def model_config():
-    """Create ModelConfig for testing."""
+    """Create ModelConfig for testing.
+    
+    Note: ModelConfig has separate dropout parameters:
+    - gat_dropout (for GATv2 layers)
+    - lstm_dropout (for LSTM)
+    - head_dropout (for prediction heads)
+    """
     return ModelConfig(
         node_features=34,
         edge_features=14,
@@ -28,7 +34,9 @@ def model_config():
         gat_num_heads=4,
         gat_num_layers=2,
         lstm_num_layers=1,
-        dropout=0.1,
+        gat_dropout=0.1,
+        lstm_dropout=0.1,
+        head_dropout=0.2,
         version="2.1.0",
     )
 
