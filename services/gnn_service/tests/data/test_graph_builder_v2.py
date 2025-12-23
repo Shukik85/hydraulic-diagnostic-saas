@@ -1,10 +1,15 @@
 """Unit tests for GraphBuilderV2 node features.
 
 Week 1, Day 1: Testing build_node_features_v2() with 25 component types.
+
+🏗️ Production-Grade Testing Architecture:
+    - Layer 1 (Pydantic): Rejects "physically impossible" values (e.g., negative RPM, >100% position)
+    - Layer 2 (Features): Clips "physically unlikely but real" values (e.g., sensor overshoot, calibration drift)
 """
 
 import pytest
 import torch
+from pydantic import ValidationError
 
 from src.data.graph_builder_v2 import (
     GraphBuilderV2,
@@ -71,7 +76,7 @@ class TestGraphBuilderV2NodeFeatures:
             (0, 0.0),
             (1500, 0.5),
             (3000, 1.0),
-            (4500, 1.0),  # Clipped to 1.0
+            (4500, 1.0),  # Clipped to 1.0 by np.clip in build_node_features_v2
         ]
 
         for rpm_input, expected_norm in test_cases:
@@ -88,15 +93,22 @@ class TestGraphBuilderV2NodeFeatures:
             )
 
     def test_position_normalization(self, builder):
-        """Test position normalization (0-100%)."""
+        """Test position normalization (0-100%).
+
+        🔧 Production Note:
+            - Pydantic Field(ge=0, le=100) blocks values >100 at API layer
+            - np.clip in build_node_features_v2 handles edge cases within valid range
+            - Test only VALID Pydantic values (0-100%)
+        """
         from src.schemas.requests import ComponentSensorReading
         from datetime import datetime, UTC
 
+        # Only test valid Pydantic range [0, 100]
         test_cases = [
             (0.0, 0.0),
             (50.0, 0.5),
             (100.0, 1.0),
-            (150.0, 1.0),  # Clipped to 1.0
+            # (150.0, 1.0) - REMOVED: Pydantic Field(le=100) blocks this at API layer
         ]
 
         for pos_input, expected_norm in test_cases:
@@ -121,7 +133,7 @@ class TestGraphBuilderV2NodeFeatures:
             (0.0, 0.0),
             (50.0, 0.5),
             (100.0, 1.0),
-            (200.0, 1.0),  # Clipped to 1.0
+            (200.0, 1.0),  # Clipped to 1.0 by np.clip
         ]
 
         for current_input, expected_norm in test_cases:
@@ -146,7 +158,7 @@ class TestGraphBuilderV2NodeFeatures:
             (0.0, 0.0),
             (250.0, 0.5),
             (500.0, 1.0),
-            (750.0, 1.0),  # Clipped to 1.0
+            (750.0, 1.0),  # Clipped to 1.0 by np.clip
         ]
 
         for voltage_input, expected_norm in test_cases:
@@ -161,6 +173,106 @@ class TestGraphBuilderV2NodeFeatures:
             assert abs(voltage_feature - expected_norm) < 1e-6, (
                 f"Voltage {voltage_input}V should normalize to {expected_norm}, got {voltage_feature}"
             )
+
+    # ========================================================================
+    # TEST: Pydantic Validation (API Layer)
+    # ========================================================================
+
+    def test_pydantic_rejects_invalid_position(self):
+        """Test that Pydantic rejects position_percent > 100.
+
+        🏗️ Architecture: API layer (Pydantic) blocks "physically impossible" values.
+        """
+        from src.schemas.requests import ComponentSensorReading
+        from datetime import datetime, UTC
+
+        # Attempt to create invalid reading (position > 100%)
+        with pytest.raises(ValidationError) as exc_info:
+            ComponentSensorReading(
+                component_id="valve",
+                position_percent=150.0,  # INVALID: > Field(le=100)
+                timestamp=datetime.now(UTC)
+            )
+
+        # Verify error message mentions boundary
+        error_str = str(exc_info.value)
+        assert "less than or equal to 100" in error_str, (
+            f"Expected 'less than or equal to 100' in error, got: {error_str}"
+        )
+
+    def test_pydantic_rejects_negative_sensors(self):
+        """Test that Pydantic rejects negative sensor values.
+
+        🏗️ Architecture: API layer blocks "physically impossible" negative values.
+        """
+        from src.schemas.requests import ComponentSensorReading
+        from datetime import datetime, UTC
+
+        # Test negative RPM
+        with pytest.raises(ValidationError) as exc_info:
+            ComponentSensorReading(
+                component_id="motor",
+                rpm=-100,  # INVALID: < Field(ge=0)
+                timestamp=datetime.now(UTC)
+            )
+        assert "greater than or equal to 0" in str(exc_info.value)
+
+        # Test negative current
+        with pytest.raises(ValidationError) as exc_info:
+            ComponentSensorReading(
+                component_id="motor",
+                current_a=-50.0,  # INVALID
+                timestamp=datetime.now(UTC)
+            )
+        assert "greater than or equal to 0" in str(exc_info.value)
+
+        # Test negative voltage
+        with pytest.raises(ValidationError) as exc_info:
+            ComponentSensorReading(
+                component_id="motor",
+                voltage_v=-250.0,  # INVALID
+                timestamp=datetime.now(UTC)
+            )
+        assert "greater than or equal to 0" in str(exc_info.value)
+
+    def test_boundary_values(self, builder):
+        """Test valid boundary values (0, max) pass Pydantic and normalize correctly.
+
+        🏗️ Architecture: Valid boundaries work through both layers.
+        """
+        from src.schemas.requests import ComponentSensorReading
+        from datetime import datetime, UTC
+
+        # Boundary: all zeros (minimum)
+        reading_min = ComponentSensorReading(
+            component_id="motor",
+            rpm=0,
+            position_percent=0.0,
+            current_a=0.0,
+            voltage_v=0.0,
+            timestamp=datetime.now(UTC)
+        )
+        features_min = builder.build_node_features_v2("motor", reading_min, "motor")
+        assert features_min[0].item() == 0.0  # RPM
+        assert features_min[1].item() == 0.0  # Position
+        assert features_min[2].item() == 0.0  # Current
+        assert features_min[3].item() == 0.0  # Voltage
+
+        # Boundary: max valid values
+        reading_max = ComponentSensorReading(
+            component_id="motor",
+            rpm=10000,  # Field(le=10000)
+            position_percent=100.0,  # Field(le=100)
+            current_a=1000.0,  # Field(le=1000)
+            voltage_v=1000.0,  # Field(le=1000)
+            timestamp=datetime.now(UTC)
+        )
+        features_max = builder.build_node_features_v2("motor", reading_max, "motor")
+        # Normalized values depend on MAX_RPM=3000, MAX_CURRENT=100, MAX_VOLTAGE=500
+        assert features_max[0].item() == 1.0  # RPM: 10000/3000 clipped to 1.0
+        assert features_max[1].item() == 1.0  # Position: 100/100 = 1.0
+        assert features_max[2].item() == 1.0  # Current: 1000/100 clipped to 1.0
+        assert features_max[3].item() == 1.0  # Voltage: 1000/500 clipped to 1.0
 
     # ========================================================================
     # TEST: Component Type One-Hot (25D)
@@ -332,26 +444,6 @@ class TestGraphBuilderV2NodeFeatures:
     # ========================================================================
     # TEST: Edge Cases
     # ========================================================================
-
-    def test_negative_sensor_values_clipped_to_zero(self, builder):
-        """Test that negative sensor values are clipped to 0.0."""
-        from src.schemas.requests import ComponentSensorReading
-        from datetime import datetime, UTC
-
-        reading = ComponentSensorReading(
-            component_id="motor",
-            rpm=-100,  # Invalid negative
-            current_a=-50.0,
-            voltage_v=-250.0,
-            timestamp=datetime.now(UTC)
-        )
-
-        features = builder.build_node_features_v2("motor", reading, "motor")
-
-        # All negative values should be clipped to 0.0
-        assert features[0].item() >= 0.0, "Negative RPM should clip to 0.0"
-        assert features[2].item() >= 0.0, "Negative current should clip to 0.0"
-        assert features[3].item() >= 0.0, "Negative voltage should clip to 0.0"
 
     def test_component_type_case_insensitive(self, builder):
         """Test that component type matching is case-insensitive."""
