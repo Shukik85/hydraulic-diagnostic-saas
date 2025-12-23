@@ -4,14 +4,14 @@ Phase 3.2: Transition from node-centric to edge-centric sensor placement.
 
 Key Changes from GraphBuilder:
     - Edge features: Primary (rich 14-116D with edge sensors)
-    - Node features: Secondary (minimal 16D internal sensors only)
+    - Node features: Secondary (minimal 25D internal sensors only)
     - Accepts HybridInferenceRequest (edge_readings + component_readings)
     - Physical reality: Sensors IN pipes (edges), not ON components (nodes)
 
 Architecture:
-    Nodes (16D):
+    Nodes (25D):
         - 4D: Internal component sensors (rpm, position, current, voltage)
-        - 12D: Component type one-hot encoding
+        - 21D: Component type one-hot encoding (25 real hydraulic types)
     
     Edges (14-116D based on config):
         - 8D: Static physical features (diameter, length, material, ...)
@@ -78,7 +78,7 @@ Examples:
     >>> 
     >>> # Build graph
     >>> graph = builder.build_graph_hybrid(request, topology)
-    >>> print(graph.x.shape)  # [N, 16] - Minimal node features
+    >>> print(graph.x.shape)  # [N, 25] - Minimal node features
     >>> print(graph.edge_attr.shape)  # [E, 14] - Rich edge features
 """
 
@@ -116,24 +116,51 @@ logger = logging.getLogger(__name__)
 
 # Node feature dimensions
 NODE_INTERNAL_SENSORS_DIM = 4  # rpm, position, current, voltage
-NODE_COMPONENT_TYPE_DIM = 12  # One-hot encoding for component types
-NODE_FEATURES_TOTAL_DIM = NODE_INTERNAL_SENSORS_DIM + NODE_COMPONENT_TYPE_DIM  # 16D
+NODE_COMPONENT_TYPE_DIM = 25  # One-hot encoding for component types (EXPANDED!)
+NODE_FEATURES_TOTAL_DIM = NODE_INTERNAL_SENSORS_DIM + NODE_COMPONENT_TYPE_DIM  # 29D
 
-# Component type encoding (12 types)
+# Component type encoding (25 types - REAL HYDRAULIC COMPONENTS)
+# Based on ISO 5598:2020 Fluid power systems and components
+# Covers mobile + industrial hydraulics
 COMPONENT_TYPE_MAPPING = {
-    "pump": 0,
-    "motor": 1,
-    "valve": 2,
-    "cylinder": 3,
-    "accumulator": 4,
-    "filter": 5,
-    "cooler": 6,
-    "reservoir": 7,
-    "manifold": 8,
-    "sensor": 9,
-    "relief_valve": 10,
-    "check_valve": 11,
+    # === ENERGY CONVERSION (Pumps & Motors) ===
+    "pump": 0,  # General hydraulic pump
+    "gear_pump": 1,  # Fixed displacement gear pump
+    "piston_pump": 2,  # Variable displacement piston pump (A10VSO, etc.)
+    "vane_pump": 3,  # Variable displacement vane pump
+    "hydraulic_motor": 4,  # Rotational hydraulic motor
+    "orbital_motor": 5,  # Low-speed high-torque orbital motor
+    
+    # === CONTROL VALVES ===
+    "directional_valve": 6,  # 2/2, 3/2, 4/3, etc. directional control valve
+    "proportional_valve": 7,  # Proportional directional valve (variable flow)
+    "servo_valve": 8,  # High-precision servo valve
+    "relief_valve": 9,  # Pressure relief/safety valve
+    "check_valve": 10,  # One-way check valve
+    "flow_control_valve": 11,  # Flow control/throttle valve
+    "pressure_reducing_valve": 12,  # Pressure reducing valve
+    "sequence_valve": 13,  # Sequence valve
+    
+    # === ACTUATORS ===
+    "cylinder": 14,  # Linear hydraulic cylinder
+    "telescopic_cylinder": 15,  # Multi-stage telescopic cylinder
+    
+    # === CONDITIONING & STORAGE ===
+    "accumulator": 16,  # Hydraulic accumulator (gas/bladder/piston)
+    "filter": 17,  # Hydraulic filter (suction/pressure/return)
+    "cooler": 18,  # Oil cooler/heat exchanger
+    "heater": 19,  # Hydraulic oil heater
+    "reservoir": 20,  # Hydraulic tank/reservoir
+    
+    # === DISTRIBUTION & MONITORING ===
+    "manifold": 21,  # Hydraulic manifold block
+    "pressure_sensor": 22,  # Pressure transducer/sensor node
+    "flow_sensor": 23,  # Flow meter sensor node
+    "temperature_sensor": 24,  # Temperature sensor node
 }
+
+# Reverse mapping for debugging
+COMPONENT_TYPE_NAMES = {v: k for k, v in COMPONENT_TYPE_MAPPING.items()}
 
 # Edge feature dimensions
 EDGE_STATIC_DIM = 8  # Physical properties (diameter, length, material, ...)
@@ -155,7 +182,7 @@ class GraphBuilderV2:
 
     Features:
         - Edge features: 8 static + 6 dynamic + 34*N time-series = 14-116D
-        - Node features: 4 internal sensors + 12 component type = 16D
+        - Node features: 4 internal sensors + 25 component type = 29D
 
     Args:
         feature_engineer: FeatureEngineer for time-series feature extraction
@@ -204,11 +231,12 @@ class GraphBuilderV2:
         logger.info(
             f"GraphBuilderV2 initialized: "
             f"edge_in_dim={self.feature_config.edge_in_dim}, "
-            f"use_timeseries={use_edge_timeseries}"
+            f"use_timeseries={use_edge_timeseries}, "
+            f"component_types={NODE_COMPONENT_TYPE_DIM}"
         )
 
     # ========================================================================
-    # NODE FEATURES (MINIMAL 16D)
+    # NODE FEATURES (MINIMAL 29D)
     # ========================================================================
 
     def build_node_features_v2(
@@ -219,52 +247,52 @@ class GraphBuilderV2:
     ) -> torch.Tensor:
         """Build MINIMAL node features from internal component sensors.
 
-        Node features (16D total):
+        Node features (29D total):
             [0-3]: Internal sensor features (4D)
                 - rpm (normalized to 0-1, max 3000 RPM)
                 - position_percent (normalized to 0-1)
                 - current_a (normalized to 0-1, max 100A)
                 - voltage_v (normalized to 0-1, max 500V)
 
-            [4-15]: Component type one-hot (12D)
-                - pump, motor, valve, cylinder, accumulator, filter,
-                  cooler, reservoir, manifold, sensor, relief_valve, check_valve
+            [4-28]: Component type one-hot (25D)
+                - 25 real hydraulic component types (ISO 5598:2020)
+                - Covers: pumps, motors, valves, actuators, conditioning, sensors
 
         Args:
-            component_id: Component identifier (e.g., "pump_main")
+            component_id: Component identifier (e.g., "pump_main", "proportional_valve_boom")
             component_reading: ComponentSensorReading with internal sensors (optional)
             component_type: Component type string (optional, inferred from component_id)
 
         Returns:
-            features: Tensor [16] with minimal node features
+            features: Tensor [29] with minimal node features
 
         Examples:
-            >>> # Pump with RPM and current
+            >>> # Piston pump with RPM and current
             >>> reading = ComponentSensorReading(
-            ...     component_id="pump_main",
+            ...     component_id="piston_pump_main",
             ...     rpm=1450,
             ...     current_a=25.5,
             ...     timestamp=datetime.now(UTC)
             ... )
-            >>> features = builder.build_node_features_v2("pump_main", reading, "pump")
-            >>> print(features.shape)  # torch.Size([16])
+            >>> features = builder.build_node_features_v2("piston_pump_main", reading, "piston_pump")
+            >>> print(features.shape)  # torch.Size([29])
             >>> print(features[:4])  # [0.483, 0.0, 0.255, 0.0] (rpm, pos, current, voltage)
-            >>> print(features[4:])  # [1, 0, 0, 0, ...] (pump one-hot)
+            >>> print(features[4:])  # [0, 0, 1, 0, ...] (piston_pump one-hot at index 2)
             >>>
-            >>> # Valve with position only
+            >>> # Proportional valve with position
             >>> reading = ComponentSensorReading(
-            ...     component_id="valve_01",
+            ...     component_id="proportional_valve_01",
             ...     position_percent=65.5,
             ...     timestamp=datetime.now(UTC)
             ... )
-            >>> features = builder.build_node_features_v2("valve_01", reading, "valve")
+            >>> features = builder.build_node_features_v2("proportional_valve_01", reading, "proportional_valve")
             >>> print(features[:4])  # [0.0, 0.655, 0.0, 0.0]
-            >>> print(features[4:])  # [0, 0, 1, 0, ...] (valve one-hot)
+            >>> print(features[4:])  # [0, 0, 0, 0, 0, 0, 0, 1, ...] (proportional_valve at index 7)
             >>>
-            >>> # Component without sensors (passive)
-            >>> features = builder.build_node_features_v2("filter_01", None, "filter")
+            >>> # Pressure sensor (passive, no internal sensors)
+            >>> features = builder.build_node_features_v2("pressure_sensor_01", None, "pressure_sensor")
             >>> print(features[:4])  # [0.0, 0.0, 0.0, 0.0] (all zeros)
-            >>> print(features[4:])  # [0, 0, 0, 0, 0, 1, ...] (filter one-hot)
+            >>> print(features[4:])  # [..., 0, 0, 1, 0, 0] (pressure_sensor at index 22)
         """
         features = []
 
@@ -309,7 +337,7 @@ class GraphBuilderV2:
             features.extend([0.0, 0.0, 0.0, 0.0])
 
         # ====================================================================
-        # PART 2: Component Type One-Hot (12D)
+        # PART 2: Component Type One-Hot (25D)
         # ====================================================================
 
         # Infer component type from component_id if not provided
@@ -336,29 +364,53 @@ class GraphBuilderV2:
     def _infer_component_type(self, component_id: str) -> str:
         """Infer component type from component_id.
 
-        Heuristic: Look for type keywords in component_id.
+        Heuristic: Look for type keywords in component_id (prioritize specific types).
 
         Args:
-            component_id: Component identifier (e.g., "pump_main", "valve_boom")
+            component_id: Component identifier (e.g., "piston_pump_main", "proportional_valve_boom")
 
         Returns:
             component_type: Inferred type (default: "pump")
 
         Examples:
-            >>> builder._infer_component_type("pump_main")
-            'pump'
-            >>> builder._infer_component_type("valve_boom_01")
-            'valve'
-            >>> builder._infer_component_type("cylinder_left")
-            'cylinder'
+            >>> builder._infer_component_type("piston_pump_main")
+            'piston_pump'
+            >>> builder._infer_component_type("gear_pump_aux")
+            'gear_pump'
+            >>> builder._infer_component_type("proportional_valve_boom_01")
+            'proportional_valve'
+            >>> builder._infer_component_type("servo_valve_steering")
+            'servo_valve'
+            >>> builder._infer_component_type("telescopic_cylinder_left")
+            'telescopic_cylinder'
             >>> builder._infer_component_type("unknown_component")
             'pump'  # Default
         """
         component_id_lower = component_id.lower()
 
-        for type_name in COMPONENT_TYPE_MAPPING.keys():
-            if type_name in component_id_lower:
-                return type_name
+        # Priority order: Specific types BEFORE general types
+        # (e.g., "piston_pump" before "pump")
+        priority_types = [
+            # Specific pumps/motors
+            "piston_pump", "gear_pump", "vane_pump", "orbital_motor", "hydraulic_motor",
+            # Specific valves
+            "proportional_valve", "servo_valve", "relief_valve", "check_valve",
+            "flow_control_valve", "pressure_reducing_valve", "sequence_valve", "directional_valve",
+            # Specific cylinders
+            "telescopic_cylinder",
+            # Specific sensors
+            "pressure_sensor", "flow_sensor", "temperature_sensor",
+            # General types (fallback)
+            "pump", "motor", "valve", "cylinder", "accumulator", "filter",
+            "cooler", "heater", "reservoir", "manifold", "sensor",
+        ]
+
+        for type_name in priority_types:
+            # Check for exact word match (e.g., "piston_pump" not "pump_piston")
+            if type_name.replace("_", "") in component_id_lower.replace("_", ""):
+                # Validate it's in mapping
+                if type_name in COMPONENT_TYPE_MAPPING:
+                    return type_name
 
         # Default to pump if no match
         logger.warning(
@@ -639,7 +691,7 @@ class GraphBuilderV2:
         """Build graph from HybridInferenceRequest (edge-centric!).
 
         Process:
-            1. Build minimal node features (16D) from component_readings
+            1. Build minimal node features (29D) from component_readings
             2. Build rich edge features (14-116D) from edge_readings + edge_history
             3. Create PyG Data object
             4. Validate graph structure
@@ -652,7 +704,7 @@ class GraphBuilderV2:
 
         Returns:
             graph: PyG Data object with:
-                - x: [N, 16] minimal node features
+                - x: [N, 29] minimal node features
                 - edge_index: [2, E]
                 - edge_attr: [E, edge_in_dim] rich edge features
 
@@ -664,7 +716,7 @@ class GraphBuilderV2:
             >>> topology = GraphTopology(...)
             >>> graph = builder.build_graph_hybrid(request, topology)
             >>> print(graph)
-            Data(x=[10, 16], edge_index=[2, 20], edge_attr=[20, 14])
+            Data(x=[10, 29], edge_index=[2, 20], edge_attr=[20, 14])
         """
         # TODO: Implement in Day 3 (Wednesday)
         # Placeholder for now
