@@ -1,0 +1,13 @@
+component_weights: null
+lambda_domain: 0.5
+learning_rate: 0.001
+loss_weighting: fixed
+loss_weights: null
+num_domains: 2
+rul_tau: 0.7
+scheduler_type: plateau
+severity_weights: null
+use_advanced_losses: false
+use_confidence_weighting: false
+use_domain_adversarial: false
+weight_decay: 1.0e-05
