@@ -4,14 +4,14 @@ Phase 3.2: Transition from node-centric to edge-centric sensor placement.
 
 Key Changes from GraphBuilder:
     - Edge features: Primary (rich 14-116D with edge sensors)
-    - Node features: Secondary (minimal 25D internal sensors only)
+    - Node features: Secondary (minimal 29D internal sensors only)
     - Accepts HybridInferenceRequest (edge_readings + component_readings)
     - Physical reality: Sensors IN pipes (edges), not ON components (nodes)
 
 Architecture:
-    Nodes (25D):
+    Nodes (29D):
         - 4D: Internal component sensors (rpm, position, current, voltage)
-        - 21D: Component type one-hot encoding (25 real hydraulic types)
+        - 25D: Component type one-hot encoding (25 real hydraulic types)
     
     Edges (14-116D based on config):
         - 8D: Static physical features (diameter, length, material, ...)
@@ -44,6 +44,7 @@ References:
 Examples:
     >>> from src.schemas.requests import HybridInferenceRequest, EdgeSensorReading, ComponentSensorReading
     >>> from src.data.graph_builder_v2 import GraphBuilderV2
+    >>> from datetime import datetime, UTC
     >>> 
     >>> # Create builder
     >>> builder = GraphBuilderV2(
@@ -78,7 +79,7 @@ Examples:
     >>> 
     >>> # Build graph
     >>> graph = builder.build_graph_hybrid(request, topology)
-    >>> print(graph.x.shape)  # [N, 25] - Minimal node features
+    >>> print(graph.x.shape)  # [N, 29] - Minimal node features
     >>> print(graph.edge_attr.shape)  # [E, 14] - Rich edge features
 """
 
@@ -97,8 +98,6 @@ from src.data.feature_engineer import FeatureEngineer
 from src.data.normalization import EdgeFeatureNormalizer, create_edge_feature_normalizer
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     import pandas as pd
 
     from src.schemas import EdgeSpec, GraphTopology
@@ -268,6 +267,7 @@ class GraphBuilderV2:
 
         Examples:
             >>> # Piston pump with RPM and current
+            >>> from datetime import datetime, UTC
             >>> reading = ComponentSensorReading(
             ...     component_id="piston_pump_main",
             ...     rpm=1450,
@@ -407,10 +407,9 @@ class GraphBuilderV2:
 
         for type_name in priority_types:
             # Check for exact word match (e.g., "piston_pump" not "pump_piston")
-            if type_name.replace("_", "") in component_id_lower.replace("_", ""):
-                # Validate it's in mapping
-                if type_name in COMPONENT_TYPE_MAPPING:
-                    return type_name
+            # SIM102: Combine nested if into single condition
+            if type_name.replace("_", "") in component_id_lower.replace("_", "") and type_name in COMPONENT_TYPE_MAPPING:
+                return type_name
 
         # Default to pump if no match
         logger.warning(
@@ -468,6 +467,7 @@ class GraphBuilderV2:
 
         Examples:
             >>> # Basic: 14D (static + dynamic)
+            >>> from datetime import datetime, UTC
             >>> edge_reading = EdgeSensorReading(
             ...     edge_id="pump__valve",
             ...     pressure_inlet_bar=150.0,
@@ -480,6 +480,7 @@ class GraphBuilderV2:
             >>> print(features.shape)  # torch.Size([14])
             >>>
             >>> # Advanced: 48D (static + dynamic + time-series)
+            >>> import pandas as pd
             >>> edge_history = pd.DataFrame({
             ...     "pressure": [...],  # Time-series data
             ...     "flow": [...],
