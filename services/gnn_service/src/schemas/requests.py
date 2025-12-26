@@ -48,7 +48,7 @@ from __future__ import annotations
 
 import warnings
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated
 
 from pydantic import (
     BaseModel,
@@ -63,25 +63,13 @@ if TYPE_CHECKING:
     pass
 
 __all__ = [
-    # Core schemas - Phase 3.2 edge-centric
+    # Phase 3.2: Edge-centric sensor schemas
     "EdgeSensorReading",
     "ComponentSensorReading",
-    "EdgeOverride",
-    "TimeWindow",
-    # NEW: Flexible schemas for partial sensor data
+    # Day 2: Flexible schemas for partial sensor data
     "FlexibleEdgeSensorReading",
     "FlexibleComponentSensorReading",
     "FlexibleInferenceRequest",
-    # API levels
-    "HybridInferenceRequest",  # Preferred for edge-centric
-    "MinimalInferenceRequest",  # Legacy: node-centric
-    "AdvancedInferenceRequest",
-    "InferenceRequest",
-    "BatchInferenceRequest",
-    # Legacy (deprecated)
-    "PredictionRequest",
-    "BatchPredictionRequest",
-    "TrainingRequest",
 ]
 
 
@@ -739,6 +727,3 @@ class ComponentSensorReading(BaseModel):
             )
             raise ValueError(msg)
         return self
-
-
-# ... (rest of the file remains unchanged - EdgeOverride, TimeWindow, etc.)
