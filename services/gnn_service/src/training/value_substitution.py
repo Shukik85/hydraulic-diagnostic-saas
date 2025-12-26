@@ -15,12 +15,11 @@ from __future__ import annotations
 
 import math
 import warnings
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING
-
-import numpy as np
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from src.schemas.graph import ComponentType
     from src.schemas.requests import (
         ComponentSensorReading,
         EdgeSensorReading,
@@ -29,7 +28,6 @@ if TYPE_CHECKING:
     )
     from src.schemas.sensor_coverage import SensorCoverageConfig
     from src.schemas.topology import EdgeConfiguration, TopologyConfig
-    from src.schemas.graph import ComponentType
 
 from src.config import settings
 from src.utils.logger import get_logger
@@ -134,10 +132,10 @@ class ValueSubstitutionEngine:
             >>> engine = ValueSubstitutionEngine(topology, coverage)
             >>> complete = engine.substitute_missing_values(flex_req)
             >>> # complete.edge_readings["pump__valve"] has:
-            >>> # - pressure_inlet_bar=150.0 (measured)
-            >>> # - pressure_outlet_bar=147.5 (estimated via Darcy-Weisbach)
-            >>> # - flow_rate_lpm=120.0 (estimated via conservation)
-            >>> # - temperature_c=64.0 (estimated via thermal model)
+            >>> # - pressure_inlet_bar=150.0 (measured) ✅
+            >>> # - pressure_outlet_bar=147.5 (estimated via Darcy-Weisbach) ✅
+            >>> # - flow_rate_lpm=120.0 (estimated via conservation) ✅
+            >>> # - temperature_c=64.0 (estimated via thermal model) ✅
         """
         from src.schemas.requests import (
             ComponentSensorReading,
@@ -306,8 +304,8 @@ class ValueSubstitutionEngine:
         # === VIBRATION ===
         vibration = measured.get("vibration_g")
         if vibration is None:
-            # Use default based on component type and flow
-            vibration = self._get_default_vibration(edge_id, flow_rate)
+            # Use default based on flow rate
+            vibration = self._get_default_vibration(flow_rate)
             logger.debug(f"Edge '{edge_id}': Using default vibration={vibration:.2f} g")
         else:
             logger.debug(f"Edge '{edge_id}': Using measured vibration={vibration} g")
@@ -609,9 +607,8 @@ class ValueSubstitutionEngine:
                 # Sum known outlet flows
                 known_outlet_flow = 0.0
                 for outlet_edge in source_outlets:
-                    if outlet_edge != edge_id and outlet_edge in measured:
-                        if "flow_rate_lpm" in measured[outlet_edge]:
-                            known_outlet_flow += measured[outlet_edge]["flow_rate_lpm"]
+                    if outlet_edge != edge_id and outlet_edge in measured and "flow_rate_lpm" in measured[outlet_edge]:
+                        known_outlet_flow += measured[outlet_edge]["flow_rate_lpm"]
                 
                 # Remaining flow goes to this edge
                 estimated_flow = inlet_flow - known_outlet_flow
@@ -633,9 +630,8 @@ class ValueSubstitutionEngine:
                 # Sum known inlet flows
                 known_inlet_flow = 0.0
                 for inlet_edge in target_inlets:
-                    if inlet_edge != edge_id and inlet_edge in measured:
-                        if "flow_rate_lpm" in measured[inlet_edge]:
-                            known_inlet_flow += measured[inlet_edge]["flow_rate_lpm"]
+                    if inlet_edge != edge_id and inlet_edge in measured and "flow_rate_lpm" in measured[inlet_edge]:
+                        known_inlet_flow += measured[inlet_edge]["flow_rate_lpm"]
                 
                 # Remaining flow comes from this edge
                 estimated_flow = outlet_flow - known_inlet_flow
@@ -872,11 +868,10 @@ class ValueSubstitutionEngine:
         
         return self._component_map[component_id].component_type
     
-    def _get_default_vibration(self, edge_id: str, flow_rate: float) -> float:
+    def _get_default_vibration(self, flow_rate: float) -> float:
         """Get default vibration level based on flow rate.
         
         Args:
-            edge_id: Edge identifier
             flow_rate: Flow rate in L/min
         
         Returns:
@@ -888,7 +883,7 @@ class ValueSubstitutionEngine:
             - High flow (>150 L/min): 1.0-2.0 g (higher vibration)
         
         Example:
-            >>> vib = engine._get_default_vibration("pump__valve", 120.0)
+            >>> vib = engine._get_default_vibration(120.0)
             >>> assert 0.5 <= vib <= 1.0  # Normal range
         """
         if flow_rate < 50:
