@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from src.schemas.requests import FlexibleInferenceRequest, HybridInferenceRequest
     from src.schemas.sensor_coverage import SensorCoverageConfig
     from src.schemas.topology import EdgeConfiguration, TopologyConfig
+    from src.schemas.graph import ComponentType
 
 from src.config import settings
 
@@ -62,10 +63,22 @@ class ValueSubstitutionEngine:
             "composite": settings.material_roughness_composite
         }
         
+        # Thermal constants
+        self.fluid_specific_heat = 2000.0  # J/(kg·K) for hydraulic oil
+        self.ambient_temperature = 20.0    # °C
+        self.cooling_coefficient = 0.01    # Empirical cooling factor
+        self.nominal_operating_temp = 65.0 # °C (default)
+        
         # Build edge lookup for faster access
         self._edge_map: dict[str, EdgeConfiguration] = {
             f"{edge.source_id}__{edge.target_id}": edge
             for edge in topology.edges
+        }
+        
+        # Build component lookup
+        self._component_map = {
+            comp.component_id: comp
+            for comp in topology.components
         }
     
     def substitute_missing_values(
@@ -387,13 +400,136 @@ class ValueSubstitutionEngine:
     def _estimate_temperature(
         self,
         edge_id: str,
-        measured: FlexibleInferenceRequest
+        measured: dict[str, dict[str, float]]
     ) -> float | None:
         """Estimate temperature from tank or upstream measurements.
         
-        TODO: Implement (Day 2)
+        Thermal model:
+            1. Start from tank temperature (baseline)
+            2. Add pump heating (+3-5°C typical)
+            3. Apply line cooling (heat loss over distance)
+            4. Fallback to nominal operating temperature (60-80°C)
+        
+        Physics:
+            - Pump heating: ΔT = Q_loss / (m_dot * C_p)
+              where Q_loss = pump inefficiency losses
+            - Line cooling: T_out = T_in - k * L * (T_in - T_ambient)
+              where k = cooling coefficient, L = length
+        
+        Args:
+            edge_id: Edge identifier ("source__target")
+            measured: Measured edge readings {edge_id: {"temperature_c": value, ...}}
+        
+        Returns:
+            Estimated temperature in °C, or None if can't estimate
+        
+        Examples:
+            >>> # Propagate from tank
+            >>> measured = {
+            ...     "tank__pump": {"temperature_c": 60.0}
+            ... }
+            >>> temp = engine._estimate_temperature("pump__valve", measured)
+            >>> assert 63.0 <= temp <= 65.0  # Tank + pump heating
+            >>>
+            >>> # Long line with cooling
+            >>> measured = {
+            ...     "pump__valve": {"temperature_c": 70.0}
+            ... }
+            >>> temp = engine._estimate_temperature("valve__cylinder", measured)
+            >>> assert temp < 70.0  # Cooled down
         """
-        raise NotImplementedError("Day 2")
+        # Parse edge_id
+        parts = edge_id.split("__")
+        if len(parts) != 2:
+            return None
+        
+        source_id, target_id = parts
+        
+        # Check if edge exists
+        if edge_id not in self._edge_map:
+            return None
+        
+        edge_config = self._edge_map[edge_id]
+        
+        # Strategy 1: Check upstream edges for measured temperature
+        upstream_edges = self._get_upstream_edges(source_id)
+        upstream_temp = None
+        
+        for up_edge_id in upstream_edges:
+            if up_edge_id in measured and "temperature_c" in measured[up_edge_id]:
+                upstream_temp = measured[up_edge_id]["temperature_c"]
+                break
+        
+        # If we have upstream temperature, propagate with modifications
+        if upstream_temp is not None:
+            estimated_temp = upstream_temp
+            
+            # Add pump heating if source is a pump
+            if self._is_pump_component(source_id):
+                # Typical pump heating: 3-5°C
+                # Simplified model (more accurate would use power loss)
+                pump_heating = 4.0  # °C (average)
+                estimated_temp += pump_heating
+            
+            # Apply line cooling (heat loss to ambient)
+            # T_out = T_in - k * L * (T_in - T_ambient)
+            length_m = edge_config.length_m
+            if length_m > 1.0:  # Only for lines longer than 1m
+                temp_diff = estimated_temp - self.ambient_temperature
+                cooling = self.cooling_coefficient * length_m * temp_diff
+                estimated_temp -= cooling
+            
+            # Validate range
+            if estimated_temp < -20 or estimated_temp > 150:
+                warnings.warn(
+                    f"Estimated temperature out of valid range: {estimated_temp:.1f}°C "
+                    f"on edge '{edge_id}'. Using nominal instead.",
+                    UserWarning,
+                    stacklevel=2
+                )
+                return self.nominal_operating_temp
+            
+            return estimated_temp
+        
+        # Strategy 2: Check if tank component exists and look for its temperature
+        tank_components = [c for c in self.topology.components 
+                          if 'tank' in c.component_id.lower()]
+        
+        if tank_components:
+            # Look for tank outlet edges
+            for tank_comp in tank_components:
+                tank_edges = self._get_downstream_edges(tank_comp.component_id)
+                for tank_edge in tank_edges:
+                    if tank_edge in measured and "temperature_c" in measured[tank_edge]:
+                        tank_temp = measured[tank_edge]["temperature_c"]
+                        
+                        # Propagate tank temperature through system
+                        # Add heating if passing through pump
+                        if self._is_pump_component(source_id):
+                            return tank_temp + 4.0  # Tank + pump heating
+                        else:
+                            return tank_temp
+        
+        # Strategy 3: Check downstream for temperature and propagate backwards
+        downstream_edges = self._get_downstream_edges(target_id)
+        for down_edge_id in downstream_edges:
+            if down_edge_id in measured and "temperature_c" in measured[down_edge_id]:
+                down_temp = measured[down_edge_id]["temperature_c"]
+                
+                # Reverse calculation (add back cooling loss)
+                length_m = edge_config.length_m
+                if length_m > 1.0:
+                    # Approximate reverse cooling
+                    estimated_temp = down_temp + (self.cooling_coefficient * length_m * 2.0)
+                else:
+                    estimated_temp = down_temp
+                
+                # Validate
+                if -20 <= estimated_temp <= 150:
+                    return estimated_temp
+        
+        # Strategy 4: Fallback to nominal operating temperature
+        return self.nominal_operating_temp
     
     # ========================================================================
     # HELPER METHODS
@@ -442,3 +578,41 @@ class ValueSubstitutionEngine:
                 edge_id = f"{edge.source_id}__{edge.target_id}"
                 downstream.append(edge_id)
         return downstream
+    
+    def _is_pump_component(self, component_id: str) -> bool:
+        """Check if component is a pump (generates heat).
+        
+        Args:
+            component_id: Component identifier
+        
+        Returns:
+            True if component is a pump
+        
+        Example:
+            >>> engine._is_pump_component("pump_main")
+            True
+            >>> engine._is_pump_component("valve_01")
+            False
+        """
+        if component_id not in self._component_map:
+            return False
+        
+        comp = self._component_map[component_id]
+        
+        # Check component type
+        from src.schemas.graph import ComponentType
+        return comp.component_type == ComponentType.PUMP
+    
+    def _get_component_type(self, component_id: str) -> ComponentType | None:
+        """Get component type from topology.
+        
+        Args:
+            component_id: Component identifier
+        
+        Returns:
+            ComponentType or None if not found
+        """
+        if component_id not in self._component_map:
+            return None
+        
+        return self._component_map[component_id].component_type
