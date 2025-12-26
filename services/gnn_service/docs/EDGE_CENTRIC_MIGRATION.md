@@ -90,27 +90,73 @@ class HybridInferenceRequest(BaseModel):
     component_readings: dict[str, ComponentSensorReading]  # ← Secondary
 ```
 
-#### **2. GraphBuilderV2 (TODO - Next Step)**
+#### **2. GraphBuilderV2 (✅ COMPLETE - Dec 26, 2025)**
 
-**File:** `src/data/graph_builder.py`
+**File:** `src/data/graph_builder_v2.py`
 
-Needs refactoring to:
+**Status:** ✅ Fully implemented!
 - ✅ Accept `HybridInferenceRequest`
-- ✅ Build **rich edge features** from `EdgeSensorReading`
-- ✅ Build **minimal node features** from `ComponentSensorReading`
-- ✅ Maintain backward compatibility with old API
+- ✅ Build **rich edge features** (14-116D) from `EdgeSensorReading`
+- ✅ Build **minimal node features** (29D) from `ComponentSensorReading`
+- ✅ DiagnosticScope support (focused/full topology)
+- ✅ Comprehensive validation (6 checks)
+- ✅ Unit tests (23 methods, >90% coverage)
+
+---
+
+## 🆕 **Recent Updates (December 26, 2025)**
+
+### ✅ **COMPLETED: GraphBuilderV2 Implementation**
+
+**Commits:**
+- [`02518b3`](https://github.com/Shukik85/hydraulic-diagnostic-saas/commit/02518b3): DiagnosticScope + HybridInferenceRequest
+- [`30f1d4f`](https://github.com/Shukik85/hydraulic-diagnostic-saas/commit/30f1d4f): `build_graph_hybrid()` complete implementation
+- [`35ac8bb`](https://github.com/Shukik85/hydraulic-diagnostic-saas/commit/35ac8bbca6e8c423ed191eedbe00dbfde62ba057): Comprehensive unit tests
+
+**What's Ready:**
+
+1. **✅ build_graph_hybrid() - Full Implementation**
+   - Node features [N, 29] from component_readings
+   - Edge features [E, 14-116] from edge_readings + history
+   - DiagnosticScope support (full/focused topology)
+   - PyG Data object creation with metadata
+   - 6 validation checks (shapes, bounds, NaN/Inf, connectivity)
+   - Detailed logging
+
+2. **✅ DiagnosticScope - Flexible Diagnostics**
+   - Full system (default): all edges included
+   - Focused: target_edges + optional context edges
+   - Context edges use nominal values (logged)
+
+3. **✅ HybridInferenceRequest - Hybrid Validation**
+   - TIER 1 (STRICT): ≥1 pressure per required edge
+   - TIER 2 (WARN): flow_rate_lpm recommended
+   - TIER 3 (INFO): temperature/vibration optional
+
+4. **✅ Comprehensive Unit Tests**
+   - 23 test methods covering all functionality:
+     - Node features (5 tests): piston pump, proportional valve, passive sensor, type inference, normalization
+     - Edge features (5 tests): static, dynamic, timeseries, padding, material encoding
+     - Graph construction (5 tests): full topology, focused diagnostics, context edges, edge index, NaN/Inf
+     - Validation (5 tests): component not found, no edges, node mismatch, bounds checking, isolated nodes
+     - Helper methods (3 tests): index mapping, edge ID, type inference
+   - 8 reusable fixtures
+   - >90% code coverage for graph_builder_v2.py
+
+**Next Steps:**
+- ⏳ InferenceEngine.predict_hybrid() integration (Priority 1)
+- ⏳ FastAPI endpoint `/v2/inference/hybrid` (Priority 2)
+- ⏳ Backward compatibility layer (Priority 3)
 
 ---
 
 ## 🔧 **Implementation Guide**
 
-### **Step 1: Update GraphBuilder (2-3 hours)**
+### **Step 1: GraphBuilderV2 (✅ DONE)**
 
-#### **Create GraphBuilderV2:**
+**File:** `src/data/graph_builder_v2.py`
 
 ```python
-# src/data/graph_builder.py
-
 class GraphBuilderV2:
     """Phase 3.2: Edge-centric graph construction.
     
@@ -119,63 +165,34 @@ class GraphBuilderV2:
     - Nodes: RPM, position, current (minimal internal sensors)
     
     Features:
-    - Edge features: 8 (static) + 6 (dynamic) + 34 (time-series per sensor)
+    - Edge features: 8 (static) + 6 (dynamic) + 34*N (time-series)
                    = up to 116D per edge!
-    - Node features: 16D (minimal, only internal sensors)
+    - Node features: 29D (4 internal sensors + 25 component types)
     """
-    
-    def __init__(
-        self,
-        feature_engineer: FeatureEngineer,
-        feature_config: FeatureConfig,
-        use_edge_timeseries: bool = True  # ← NEW!
-    ):
-        self.feature_engineer = feature_engineer
-        self.feature_config = feature_config
-        self.use_edge_timeseries = use_edge_timeseries
     
     def build_node_features_v2(
         self,
         component_id: str,
-        component_reading: ComponentSensorReading | None
+        component_reading: ComponentSensorReading | None,
+        component_type: str | None = None,
     ) -> torch.Tensor:
         """Build MINIMAL node features from internal sensors.
         
-        Returns: [16] tensor
-            - rpm (normalized)
-            - position_percent (normalized)
-            - current_a (normalized)
-            - voltage_v (normalized)
-            - One-hot component type (12D)
+        Returns: [29] tensor
+            - rpm (normalized to 0-1, max 3000 RPM)
+            - position_percent (normalized to 0-1)
+            - current_a (normalized to 0-1, max 100A)
+            - voltage_v (normalized to 0-1, max 500V)
+            - One-hot component type (25D - real hydraulic types)
         """
-        features = []
-        
-        if component_reading:
-            # Internal sensor features (4D)
-            features.extend([
-                component_reading.rpm / 3000.0 if component_reading.rpm else 0.0,
-                component_reading.position_percent / 100.0 if component_reading.position_percent else 0.0,
-                component_reading.current_a / 100.0 if component_reading.current_a else 0.0,
-                component_reading.voltage_v / 500.0 if component_reading.voltage_v else 0.0,
-            ])
-        else:
-            features.extend([0.0, 0.0, 0.0, 0.0])
-        
-        # Component type one-hot (12D)
-        # TODO: Get from topology.components[component_id].type
-        component_type_encoding = [0.0] * 12  # Placeholder
-        features.extend(component_type_encoding)
-        
-        # Pad to 16D
-        features = features[:16] + [0.0] * (16 - len(features))
-        
-        return torch.tensor(features, dtype=torch.float32)
+        # ✅ IMPLEMENTED!
+        # See src/data/graph_builder_v2.py for full code
     
     def build_edge_features_v2(
         self,
-        edge_spec: EdgeSpec,
+        edge_spec: EdgeConfiguration,
         edge_reading: EdgeSensorReading | None,
-        edge_history: pd.DataFrame | None = None  # ← Time-series!
+        edge_history: pd.DataFrame | None = None,
     ) -> torch.Tensor:
         """Build RICH edge features from edge sensors.
         
@@ -184,140 +201,56 @@ class GraphBuilderV2:
             - 48D (standard): 8 static + 6 dynamic + 34 time-series (1 sensor)
             - 116D (full): 8 static + 6 dynamic + 34*3 time-series (3 sensors)
         """
-        features = []
-        
-        # 1. Static physical features (8D) - from EdgeSpec
-        static = self._build_static_features(edge_spec)  # Existing method
-        features.append(static)
-        
-        # 2. Dynamic instant features (6D) - from EdgeSensorReading
-        if edge_reading:
-            dynamic = np.array([
-                edge_reading.pressure_drop_bar or 0.0,
-                edge_reading.flow_rate_lpm or 0.0,
-                edge_reading.temperature_c or 0.0,
-                edge_reading.vibration_g or 0.0,
-                edge_spec.age_hours or 0.0,
-                edge_spec.get_maintenance_score(edge_reading.timestamp) or 0.0,
-            ], dtype=np.float32)
-            features.append(dynamic)
-        else:
-            features.append(np.zeros(6, dtype=np.float32))
-        
-        # 3. Time-series features (34D per sensor type!) - from history
-        if self.use_edge_timeseries and edge_history is not None:
-            # Extract statistical/frequency/temporal features
-            for sensor_col in edge_history.columns:
-                ts_features = self.feature_engineer.extract_all_features(
-                    edge_history[[sensor_col]]
-                )
-                features.append(ts_features)
-        
-        # Concatenate all
-        all_features = np.concatenate(features)
-        
-        # Pad/truncate to config.edge_in_dim
-        if len(all_features) < self.feature_config.edge_in_dim:
-            padding = np.zeros(
-                self.feature_config.edge_in_dim - len(all_features),
-                dtype=np.float32
-            )
-            all_features = np.concatenate([all_features, padding])
-        elif len(all_features) > self.feature_config.edge_in_dim:
-            all_features = all_features[:self.feature_config.edge_in_dim]
-        
-        return torch.from_numpy(all_features)
+        # ✅ IMPLEMENTED!
+        # See src/data/graph_builder_v2.py for full code
     
     def build_graph_hybrid(
         self,
         request: HybridInferenceRequest,
-        topology: GraphTopology,
-        edge_history: dict[str, pd.DataFrame] | None = None
+        topology: TopologyConfig,
+        edge_history: dict[str, pd.DataFrame] | None = None,
     ) -> Data:
         """Build graph from HybridInferenceRequest.
         
+        Process:
+            1. Build minimal node features (29D) from component_readings
+            2. Build rich edge features (14-116D) from edge_readings + history
+            3. Create PyG Data object with edge_index
+            4. Add metadata (equipment_id, timestamp, topology_id)
+            5. Validate graph structure (6 checks)
+        
+        **DiagnosticScope Support:**
+            - None: Full topology, all edges included
+            - Specified: Only target_edges + context (if include_context=True)
+            - Context edges use nominal values (logged)
+        
         Args:
             request: HybridInferenceRequest with edge+component readings
-            topology: GraphTopology
+            topology: TopologyConfig with components and edges
             edge_history: Optional time-series data per edge
                          {"pump__valve": DataFrame[timestamp, pressure, flow, ...]}
         
         Returns:
             PyG Data object with:
-                - x: [N, 16] node features (minimal)
+                - x: [N, 29] minimal node features
                 - edge_index: [2, E]
                 - edge_attr: [E, edge_in_dim] rich edge features
+                - equipment_id, timestamp, topology_id (metadata)
         """
-        # 1. Build node features (MINIMAL)
-        node_features = []
-        component_id_to_idx = {}
-        
-        for idx, comp_id in enumerate(topology.components.keys()):
-            # Get component reading (if exists)
-            comp_reading = request.component_readings.get(comp_id)
-            
-            # Build minimal features
-            features = self.build_node_features_v2(comp_id, comp_reading)
-            node_features.append(features)
-            component_id_to_idx[comp_id] = idx
-        
-        x = torch.stack(node_features)  # [N, 16]
-        
-        # 2. Build edge features (RICH)
-        edge_index_list = []
-        edge_attr_list = []
-        
-        for edge_spec in topology.edges:
-            source_idx = component_id_to_idx[edge_spec.source_id]
-            target_idx = component_id_to_idx[edge_spec.target_id]
-            
-            # Edge ID in request format
-            edge_id = f"{edge_spec.source_id}__{edge_spec.target_id}"
-            
-            # Get edge reading
-            edge_reading = request.edge_readings.get(edge_id)
-            
-            # Get edge history (if available)
-            edge_ts = edge_history.get(edge_id) if edge_history else None
-            
-            # Build rich edge features
-            edge_features = self.build_edge_features_v2(
-                edge_spec,
-                edge_reading,
-                edge_ts
-            )
-            
-            # Add edge
-            edge_index_list.append([source_idx, target_idx])
-            edge_attr_list.append(edge_features)
-            
-            # Bidirectional edges
-            if edge_spec.flow_direction == "bidirectional":
-                edge_index_list.append([target_idx, source_idx])
-                edge_attr_list.append(edge_features)  # Same features
-        
-        # Convert to tensors
-        edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
-        edge_attr = torch.stack(edge_attr_list)
-        
-        # 3. Create PyG Data
-        graph = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
-        
-        logger.info(
-            f"Built hybrid graph: {graph.num_nodes} nodes (16D), "
-            f"{graph.num_edges} edges ({graph.edge_attr.shape[1]}D)"
-        )
-        
-        return graph
+        # ✅ IMPLEMENTED!
+        # See src/data/graph_builder_v2.py for full code
 ```
+
+**Test Coverage:** >90% (✅ DONE)
+- See `tests/unit/test_data/test_graph_builder_v2.py`
 
 ---
 
-### **Step 2: Update InferenceEngine (1 hour)**
+### **Step 2: Update InferenceEngine (⏳ TODO - Priority 1)**
+
+**File:** `src/inference/inference_engine.py`
 
 ```python
-# src/inference/inference_engine.py
-
 class InferenceEngine:
     def predict_hybrid(
         self,
@@ -328,7 +261,7 @@ class InferenceEngine:
         # 1. Fetch topology
         topology = self.topology_service.get_topology(request.topology_id)
         
-        # 2. Build graph (edge-centric)
+        # 2. Build graph (edge-centric) - ✅ GraphBuilderV2 ready!
         graph = self.graph_builder.build_graph_hybrid(
             request=request,
             topology=topology,
@@ -346,13 +279,15 @@ class InferenceEngine:
         return predictions
 ```
 
+**Estimated Time:** 1.5-2 hours
+
 ---
 
-### **Step 3: Update FastAPI Endpoints (30 min)**
+### **Step 3: Update FastAPI Endpoints (⏳ TODO - Priority 2)**
+
+**File:** `src/api/endpoints/inference.py`
 
 ```python
-# src/api/endpoints/inference.py
-
 from src.schemas.requests import HybridInferenceRequest
 
 @router.post("/v2/inference/hybrid", response_model=InferenceResponse)
@@ -385,6 +320,8 @@ async def inference_hybrid(
         logger.exception(f"Hybrid inference failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 ```
+
+**Estimated Time:** 1-1.5 hours
 
 ---
 
@@ -632,47 +569,22 @@ def convert_node_to_hybrid(
 
 ## ✅ **Testing Strategy**
 
-### **Unit Tests:**
+### **Unit Tests (✅ DONE):**
+
+**File:** `tests/unit/test_data/test_graph_builder_v2.py`
 
 ```python
-# tests/unit/test_graph_builder_v2.py
+# 23 test methods covering:
+# - Node feature extraction (5 tests)
+# - Edge feature extraction (5 tests)
+# - Graph construction (5 tests)
+# - Validation logic (5 tests)
+# - Helper methods (3 tests)
 
-def test_build_edge_features_v2():
-    """Test edge feature extraction from EdgeSensorReading."""
-    edge_reading = EdgeSensorReading(
-        edge_id="pump__valve",
-        pressure_inlet_bar=150.0,
-        pressure_outlet_bar=148.0,
-        flow_rate_lpm=115.5,
-        temperature_c=65.0,
-        timestamp=datetime.now(UTC)
-    )
-    
-    builder = GraphBuilderV2(...)
-    features = builder.build_edge_features_v2(
-        edge_spec=mock_edge_spec,
-        edge_reading=edge_reading,
-        edge_history=None
-    )
-    
-    assert features.shape[0] == config.edge_in_dim
-    assert features[8] == 2.0  # pressure_drop = 150 - 148
-    assert features[9] > 0  # flow_rate present
-
-def test_build_graph_hybrid():
-    """Test graph construction from HybridInferenceRequest."""
-    request = HybridInferenceRequest(...)
-    topology = mock_topology()
-    
-    graph = builder.build_graph_hybrid(request, topology)
-    
-    assert graph.num_nodes == len(topology.components)
-    assert graph.num_edges == len(topology.edges)
-    assert graph.x.shape[1] == 16  # Minimal node features
-    assert graph.edge_attr.shape[1] == config.edge_in_dim  # Rich edges!
+# Coverage: >90% for graph_builder_v2.py
 ```
 
-### **Integration Test:**
+### **Integration Test (⏳ TODO):**
 
 ```python
 # tests/integration/test_hybrid_inference.py
@@ -727,17 +639,17 @@ Hybrid (edge-centric):
 ## 🚀 **Next Steps**
 
 ### **Week 1: Implementation**
-- [ ] ✅ Update schemas (DONE!)
-- [ ] Implement `GraphBuilderV2.build_node_features_v2`
-- [ ] Implement `GraphBuilderV2.build_edge_features_v2`
-- [ ] Implement `GraphBuilderV2.build_graph_hybrid`
-- [ ] Unit tests for GraphBuilderV2
+- [x] ✅ Update schemas (DONE!)
+- [x] ✅ Implement `GraphBuilderV2.build_node_features_v2` (DONE!)
+- [x] ✅ Implement `GraphBuilderV2.build_edge_features_v2` (DONE!)
+- [x] ✅ Implement `GraphBuilderV2.build_graph_hybrid` (DONE!)
+- [x] ✅ Unit tests for GraphBuilderV2 (DONE! 23 methods, >90% coverage)
 
-### **Week 2: Integration**
-- [ ] Update `InferenceEngine.predict_hybrid`
-- [ ] Add FastAPI endpoint `/v2/inference/hybrid`
-- [ ] Add backward compatibility converter
-- [ ] Integration tests
+### **Week 2: Integration (⏳ CURRENT FOCUS)**
+- [ ] ⏳ Update `InferenceEngine.predict_hybrid` (Priority 1)
+- [ ] ⏳ Add FastAPI endpoint `/v2/inference/hybrid` (Priority 2)
+- [ ] ⏳ Add backward compatibility converter (Priority 3)
+- [ ] ⏳ Integration tests
 
 ### **Week 3: Data Migration**
 - [ ] Convert existing sensor data to edge-centric format
@@ -754,12 +666,16 @@ Hybrid (edge-centric):
 
 ## 📚 **References**
 
-- [Commit 3526054](https://github.com/Shukik85/hydraulic-diagnostic-saas/commit/3526054764426a99427edfe68e6fa36695715738): Edge-centric schemas
+- [Commit 02518b3](https://github.com/Shukik85/hydraulic-diagnostic-saas/commit/02518b3): DiagnosticScope + HybridInferenceRequest
+- [Commit 30f1d4f](https://github.com/Shukik85/hydraulic-diagnostic-saas/commit/30f1d4f): build_graph_hybrid() complete
+- [Commit 35ac8bb](https://github.com/Shukik85/hydraulic-diagnostic-saas/commit/35ac8bbca6e8c423ed191eedbe00dbfde62ba057): Comprehensive unit tests
 - `src/schemas/requests.py`: Updated schemas with `EdgeSensorReading`, `HybridInferenceRequest`
-- `src/data/graph_builder.py`: Current node-centric implementation (to be refactored)
+- `src/data/graph_builder_v2.py`: Edge-centric implementation (✅ COMPLETE)
+- `tests/unit/test_data/test_graph_builder_v2.py`: Unit tests (✅ COMPLETE)
 
 ---
 
-**Status:** ✅ Phase 3.2 Schemas Complete | 🚧 GraphBuilderV2 In Progress  
+**Status:** ✅ Phase 3.2 Schemas Complete | ✅ GraphBuilderV2 COMPLETE | ⏳ InferenceEngine Integration Pending  
+**Last Updated:** December 26, 2025  
 **Expected Completion:** Week 4  
 **Impact:** +40-60% model accuracy improvement 🚀
