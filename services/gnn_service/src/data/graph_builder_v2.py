@@ -100,7 +100,7 @@ from src.data.normalization import EdgeFeatureNormalizer, create_edge_feature_no
 if TYPE_CHECKING:
     import pandas as pd
 
-    from src.schemas import EdgeSpec, GraphTopology
+    from src.schemas.topology import ComponentConfiguration, EdgeConfiguration, TopologyConfig
     from src.schemas.requests import (
         ComponentSensorReading,
         EdgeSensorReading,
@@ -423,7 +423,7 @@ class GraphBuilderV2:
 
     def build_edge_features_v2(
         self,
-        edge_spec: EdgeSpec,
+        edge_spec: EdgeConfiguration,
         edge_reading: EdgeSensorReading | None,
         edge_history: pd.DataFrame | None = None,
     ) -> torch.Tensor:
@@ -457,7 +457,7 @@ class GraphBuilderV2:
             - 116D: Static + Dynamic + 3 sensor time-series (pressure, flow, temp)
 
         Args:
-            edge_spec: EdgeSpec with physical properties
+            edge_spec: EdgeConfiguration with physical properties
             edge_reading: EdgeSensorReading with instant measurements (optional)
             edge_history: DataFrame with time-series data (optional)
                          Columns: [timestamp, pressure, flow, temperature, ...]
@@ -510,7 +510,7 @@ class GraphBuilderV2:
         else:
             # No edge reading → all zeros
             dynamic_features = np.zeros(EDGE_DYNAMIC_INSTANT_DIM, dtype=np.float32)
-            logger.debug(f"No edge reading for {edge_spec.edge_id}, using zeros for dynamic features")
+            logger.debug(f"No edge reading for {edge_spec.source_id}__{edge_spec.target_id}, using zeros for dynamic features")
 
         all_features.append(dynamic_features)
 
@@ -547,7 +547,7 @@ class GraphBuilderV2:
 
         return torch.from_numpy(all_features_array)
 
-    def _build_static_edge_features(self, edge_spec: EdgeSpec) -> np.ndarray:
+    def _build_static_edge_features(self, edge_spec: EdgeConfiguration) -> np.ndarray:
         """Build static edge features (8D).
 
         Same as GraphBuilder.build_edge_features_static for compatibility.
@@ -599,7 +599,7 @@ class GraphBuilderV2:
 
         return np.array(features, dtype=np.float32)
 
-    def _build_dynamic_edge_features(self, edge_spec: EdgeSpec, edge_reading: EdgeSensorReading) -> np.ndarray:
+    def _build_dynamic_edge_features(self, edge_spec: EdgeConfiguration, edge_reading: EdgeSensorReading) -> np.ndarray:
         """Build dynamic edge features (6D) from EdgeSensorReading.
 
         Features:
@@ -611,7 +611,7 @@ class GraphBuilderV2:
             - maintenance_score (from edge_spec)
 
         Args:
-            edge_spec: EdgeSpec with metadata
+            edge_spec: EdgeConfiguration with metadata
             edge_reading: EdgeSensorReading with instant measurements
 
         Returns:
@@ -627,7 +627,7 @@ class GraphBuilderV2:
             "flow_rate_lpm": edge_reading.flow_rate_lpm or 0.0,
             "temperature_c": edge_reading.temperature_c or 0.0,
             "vibration_level_g": edge_reading.vibration_g or 0.0,
-            "age_hours": edge_spec.age_hours or 0.0,
+            "age_hours": edge_spec.get_age_hours(edge_reading.timestamp) if hasattr(edge_spec, 'get_age_hours') else 0.0,
             "maintenance_score": (
                 edge_spec.get_maintenance_score(edge_reading.timestamp)
                 if hasattr(edge_spec, "get_maintenance_score")
@@ -680,13 +680,13 @@ class GraphBuilderV2:
         return np.concatenate(timeseries_features)
 
     # ========================================================================
-    # HYBRID GRAPH CONSTRUCTION
+    # HYBRID GRAPH CONSTRUCTION (DAY 3)
     # ========================================================================
 
     def build_graph_hybrid(
         self,
         request: HybridInferenceRequest,
-        topology: GraphTopology,
+        topology: TopologyConfig,
         edge_history: dict[str, pd.DataFrame] | None = None,
     ) -> Data:
         """Build graph from HybridInferenceRequest (edge-centric!).
@@ -694,12 +694,18 @@ class GraphBuilderV2:
         Process:
             1. Build minimal node features (29D) from component_readings
             2. Build rich edge features (14-116D) from edge_readings + edge_history
-            3. Create PyG Data object
-            4. Validate graph structure
+            3. Create PyG Data object with edge_index
+            4. Add metadata (equipment_id, timestamp, topology_id)
+            5. Validate graph structure
+
+        **DiagnosticScope Support:**
+            - None: Full topology, all edges included
+            - Specified: Only target_edges + context edges (if include_context=True)
+            - Context edges use nominal values (logged)
 
         Args:
             request: HybridInferenceRequest with edge_readings + component_readings
-            topology: GraphTopology with components and edges
+            topology: TopologyConfig with components and edges
             edge_history: Optional dict mapping edge_id → time-series DataFrame
                          {"pump__valve": DataFrame[timestamp, pressure, flow, ...]}
 
@@ -708,20 +714,329 @@ class GraphBuilderV2:
                 - x: [N, 29] minimal node features
                 - edge_index: [2, E]
                 - edge_attr: [E, edge_in_dim] rich edge features
+                - equipment_id: str
+                - timestamp: datetime
+                - topology_id: str
 
         Raises:
             ValueError: If topology is invalid or graph construction fails
 
         Examples:
+            >>> # Full system diagnosis
             >>> request = HybridInferenceRequest(...)
-            >>> topology = GraphTopology(...)
+            >>> topology = TopologyConfig(...)
             >>> graph = builder.build_graph_hybrid(request, topology)
             >>> print(graph)
             Data(x=[10, 29], edge_index=[2, 20], edge_attr=[20, 14])
+            >>>
+            >>> # Focused subsystem diagnosis
+            >>> request.diagnostic_scope = DiagnosticScope(
+            ...     target_edges=["pump__valve"],
+            ...     include_context=True
+            ... )
+            >>> graph = builder.build_graph_hybrid(request, topology)
+            >>> # Only pump__valve has real data, others use nominal
         """
-        # TODO: Implement in Day 3 (Wednesday)
-        # Placeholder for now
-        raise NotImplementedError("build_graph_hybrid will be implemented in Day 3")
+        logger.info(
+            f"Building graph for equipment '{request.equipment_id}' "
+            f"(topology: {request.topology_id}, timestamp: {request.timestamp})"
+        )
+
+        # ====================================================================
+        # STEP 1: Build component index mapping
+        # ====================================================================
+
+        component_index_map = self._build_component_index_map(topology)
+        num_components = len(topology.components)
+
+        logger.debug(
+            f"Component index map: {num_components} components, "
+            f"IDs: {list(component_index_map.keys())}"
+        )
+
+        # ====================================================================
+        # STEP 2: Build node features [N, 29]
+        # ====================================================================
+
+        node_features_list = []
+
+        for component_config in topology.components:
+            comp_id = component_config.component_id
+            comp_reading = request.component_readings.get(comp_id)
+            comp_type = component_config.component_type
+
+            # Handle enum
+            if hasattr(comp_type, "value"):
+                comp_type = comp_type.value
+
+            # Build node features
+            node_features = self.build_node_features_v2(
+                component_id=comp_id,
+                component_reading=comp_reading,
+                component_type=comp_type,
+            )
+            node_features_list.append(node_features)
+
+        # Stack to [N, 29]
+        x = torch.stack(node_features_list)
+        logger.info(f"Built node features: shape={x.shape} (expected: [{num_components}, 29])")
+
+        # ====================================================================
+        # STEP 3: Build edge features [E, edge_in_dim] and edge_index [2, E]
+        # ====================================================================
+
+        edge_features_list = []
+        edge_index_list = []
+
+        # Determine which edges to include (based on diagnostic_scope)
+        if request.diagnostic_scope and request.diagnostic_scope.target_edges:
+            target_edges = set(request.diagnostic_scope.target_edges)
+            include_context = request.diagnostic_scope.include_context
+            logger.info(
+                f"Focused diagnostics: {len(target_edges)} target edges, "
+                f"include_context={include_context}"
+            )
+        else:
+            # Full topology
+            target_edges = None
+            include_context = False
+            logger.info("Full system diagnostics: all edges included")
+
+        for edge_config in topology.edges:
+            edge_id = self._get_edge_id(edge_config.source_id, edge_config.target_id)
+            is_target_edge = target_edges is None or edge_id in target_edges
+
+            # Skip non-target edges if not including context
+            if not is_target_edge and not include_context:
+                logger.debug(f"Skipping non-target edge: {edge_id} (not in diagnostic scope)")
+                continue
+
+            # Get edge reading
+            edge_reading = request.edge_readings.get(edge_id)
+
+            # Log if context edge uses nominal
+            if not is_target_edge and include_context:
+                if edge_reading is None:
+                    logger.debug(f"Context edge '{edge_id}' has no reading, using nominal values")
+
+            # Get edge history (if available)
+            edge_hist = edge_history.get(edge_id) if edge_history else None
+
+            # Build edge features
+            try:
+                edge_features = self.build_edge_features_v2(
+                    edge_spec=edge_config,
+                    edge_reading=edge_reading,
+                    edge_history=edge_hist,
+                )
+                edge_features_list.append(edge_features)
+            except Exception as e:
+                logger.error(f"Failed to build edge features for '{edge_id}': {e}")
+                raise ValueError(f"Edge feature construction failed for '{edge_id}'") from e
+
+            # Build edge_index
+            try:
+                src_idx = component_index_map[edge_config.source_id]
+                tgt_idx = component_index_map[edge_config.target_id]
+                edge_index_list.append([src_idx, tgt_idx])
+            except KeyError as e:
+                logger.error(f"Component not found in index map: {e}")
+                raise ValueError(
+                    f"Edge '{edge_id}' references unknown component: {e}"
+                ) from e
+
+        # Stack edge features [E, edge_in_dim]
+        if not edge_features_list:
+            raise ValueError(
+                "No edges to build graph! Check diagnostic_scope or topology configuration."
+            )
+
+        edge_attr = torch.stack(edge_features_list)
+        edge_index = torch.tensor(edge_index_list, dtype=torch.long).t().contiguous()
+
+        logger.info(
+            f"Built edge features: edge_attr={edge_attr.shape}, edge_index={edge_index.shape} "
+            f"(expected: [E, {self.feature_config.edge_in_dim}], [2, E])"
+        )
+
+        # ====================================================================
+        # STEP 4: Create PyG Data object
+        # ====================================================================
+
+        graph = Data(
+            x=x,
+            edge_index=edge_index,
+            edge_attr=edge_attr,
+        )
+
+        # Add metadata
+        graph.equipment_id = request.equipment_id
+        graph.timestamp = request.timestamp
+        graph.topology_id = request.topology_id
+
+        logger.info(f"Created PyG Data object: {graph}")
+
+        # ====================================================================
+        # STEP 5: Validate graph structure
+        # ====================================================================
+
+        try:
+            self._validate_graph_structure(graph, topology)
+        except ValueError as e:
+            logger.error(f"Graph validation failed: {e}")
+            raise
+
+        # ====================================================================
+        # STEP 6: Log summary
+        # ====================================================================
+
+        self._log_graph_summary(graph, request)
+
+        logger.info(
+            f"Graph construction complete for '{request.equipment_id}' ✅ "
+            f"(nodes: {graph.num_nodes}, edges: {graph.num_edges})"
+        )
+
+        return graph
+
+    # ========================================================================
+    # HELPER METHODS
+    # ========================================================================
+
+    def _build_component_index_map(self, topology: TopologyConfig) -> dict[str, int]:
+        """Build mapping from component_id to node index.
+
+        Args:
+            topology: TopologyConfig with components
+
+        Returns:
+            component_index_map: {component_id: node_index}
+        """
+        return {comp.component_id: idx for idx, comp in enumerate(topology.components)}
+
+    def _get_edge_id(self, source_id: str, target_id: str) -> str:
+        """Construct edge_id from source and target component IDs.
+
+        Args:
+            source_id: Source component ID
+            target_id: Target component ID
+
+        Returns:
+            edge_id: "source__target" format
+        """
+        return f"{source_id}__{target_id}"
+
+    def _validate_graph_structure(self, graph: Data, topology: TopologyConfig) -> None:
+        """Validate PyG graph structure.
+
+        Checks:
+        1. Node features shape: [N, 29]
+        2. Edge features shape: [E, edge_in_dim]
+        3. Edge index shape: [2, E]
+        4. Edge index bounds: 0 <= idx < N
+        5. No NaN/Inf in tensors
+        6. Graph connectivity (warn if disconnected)
+
+        Args:
+            graph: PyG Data object
+            topology: TopologyConfig
+
+        Raises:
+            ValueError: If validation fails
+        """
+        num_components = len(topology.components)
+
+        # 1. Node features
+        if graph.x.shape[0] != num_components:
+            raise ValueError(
+                f"Node count mismatch: graph has {graph.x.shape[0]} nodes, "
+                f"topology has {num_components} components"
+            )
+
+        if graph.x.shape[1] != NODE_FEATURES_TOTAL_DIM:
+            raise ValueError(
+                f"Node feature dimension mismatch: {graph.x.shape[1]} != {NODE_FEATURES_TOTAL_DIM}"
+            )
+
+        # 2. Edge features
+        if graph.edge_attr.shape[1] != self.feature_config.edge_in_dim:
+            raise ValueError(
+                f"Edge feature dimension mismatch: {graph.edge_attr.shape[1]} != "
+                f"{self.feature_config.edge_in_dim}"
+            )
+
+        # 3. Edge index
+        if graph.edge_index.shape[0] != 2:
+            raise ValueError(f"Edge index first dimension must be 2, got {graph.edge_index.shape[0]}")
+
+        if graph.edge_index.shape[1] != graph.edge_attr.shape[0]:
+            raise ValueError(
+                f"Edge count mismatch: edge_index has {graph.edge_index.shape[1]} edges, "
+                f"edge_attr has {graph.edge_attr.shape[0]} edges"
+            )
+
+        # 4. Edge index bounds
+        max_idx = graph.edge_index.max().item()
+        if max_idx >= num_components:
+            raise ValueError(
+                f"Edge index out of bounds: max index {max_idx} >= num_components {num_components}"
+            )
+
+        min_idx = graph.edge_index.min().item()
+        if min_idx < 0:
+            raise ValueError(f"Edge index contains negative values: min index {min_idx}")
+
+        # 5. NaN/Inf check
+        if torch.isnan(graph.x).any():
+            raise ValueError("Node features contain NaN values")
+        if torch.isinf(graph.x).any():
+            raise ValueError("Node features contain Inf values")
+        if torch.isnan(graph.edge_attr).any():
+            raise ValueError("Edge features contain NaN values")
+        if torch.isinf(graph.edge_attr).any():
+            raise ValueError("Edge features contain Inf values")
+
+        # 6. Connectivity check (warn only)
+        # Simple heuristic: check if any node has degree 0
+        edge_index_undirected = torch.cat([graph.edge_index, graph.edge_index.flip(0)], dim=1)
+        degrees = torch.bincount(edge_index_undirected[0], minlength=num_components)
+        isolated_nodes = (degrees == 0).sum().item()
+        if isolated_nodes > 0:
+            logger.warning(
+                f"Graph has {isolated_nodes} isolated nodes (degree 0). "
+                "This may indicate incomplete topology or diagnostic scope."
+            )
+
+        logger.debug("✅ Graph structure validation passed")
+
+    def _log_graph_summary(self, graph: Data, request: HybridInferenceRequest) -> None:
+        """Log detailed graph summary.
+
+        Args:
+            graph: PyG Data object
+            request: HybridInferenceRequest
+        """
+        logger.info("=" * 60)
+        logger.info("GRAPH SUMMARY")
+        logger.info("=" * 60)
+        logger.info(f"Equipment ID: {request.equipment_id}")
+        logger.info(f"Topology ID: {request.topology_id}")
+        logger.info(f"Timestamp: {request.timestamp}")
+        logger.info(f"Nodes: {graph.num_nodes} (features: {graph.x.shape})")
+        logger.info(f"Edges: {graph.num_edges} (features: {graph.edge_attr.shape})")
+        logger.info(f"Edge index: {graph.edge_index.shape}")
+
+        if request.diagnostic_scope:
+            logger.info(f"Diagnostic Scope:")
+            if request.diagnostic_scope.target_components:
+                logger.info(f"  Target components: {request.diagnostic_scope.target_components}")
+            if request.diagnostic_scope.target_edges:
+                logger.info(f"  Target edges: {request.diagnostic_scope.target_edges}")
+            logger.info(f"  Include context: {request.diagnostic_scope.include_context}")
+        else:
+            logger.info("Diagnostic Scope: Full system")
+
+        logger.info("=" * 60)
 
 
 # ============================================================================
@@ -731,7 +1046,7 @@ class GraphBuilderV2:
 
 def convert_node_to_hybrid(
     node_centric_request,  # MinimalInferenceRequest
-    topology: GraphTopology,
+    topology: TopologyConfig,
 ) -> HybridInferenceRequest:
     """Convert node-centric request to edge-centric HybridInferenceRequest.
 
@@ -743,7 +1058,7 @@ def convert_node_to_hybrid(
 
     Args:
         node_centric_request: MinimalInferenceRequest (old API)
-        topology: GraphTopology
+        topology: TopologyConfig
 
     Returns:
         HybridInferenceRequest (new API)
