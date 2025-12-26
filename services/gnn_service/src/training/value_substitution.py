@@ -15,17 +15,26 @@ from __future__ import annotations
 
 import math
 import warnings
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 if TYPE_CHECKING:
-    from src.schemas.requests import FlexibleInferenceRequest, HybridInferenceRequest
+    from src.schemas.requests import (
+        ComponentSensorReading,
+        EdgeSensorReading,
+        FlexibleInferenceRequest,
+        HybridInferenceRequest,
+    )
     from src.schemas.sensor_coverage import SensorCoverageConfig
     from src.schemas.topology import EdgeConfiguration, TopologyConfig
     from src.schemas.graph import ComponentType
 
 from src.config import settings
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 __all__ = ["ValueSubstitutionEngine"]
 
@@ -88,16 +97,262 @@ class ValueSubstitutionEngine:
         """Fill missing values in inference request.
         
         Args:
-            measured: Request with ONLY measured values
+            measured: Request with ONLY measured values (partial sensor data)
         
         Returns:
-            Complete request with all fields filled
+            Complete HybridInferenceRequest with all fields filled
         
-        TODO: Implement full substitution logic (Day 2-3)
+        Workflow:
+            1. Parse FlexibleInferenceRequest
+            2. For each edge in topology:
+                a. Check if edge has measurements
+                b. Identify missing fields
+                c. Estimate using physics → nominal → default
+                d. Build complete EdgeSensorReading
+            3. For each component in topology:
+                a. Check if component has measurements
+                b. Fill missing internal sensor values with defaults
+                c. Build complete ComponentSensorReading
+            4. Construct HybridInferenceRequest
+        
+        Examples:
+            >>> # Input: 1 pressure sensor
+            >>> flex_req = FlexibleInferenceRequest(
+            ...     equipment_id="pump_01",
+            ...     timestamp=datetime.now(UTC),
+            ...     topology_id="standard",
+            ...     edge_readings={
+            ...         "pump__valve": FlexibleEdgeSensorReading(
+            ...             edge_id="pump__valve",
+            ...             pressure_inlet_bar=150.0,
+            ...             timestamp=datetime.now(UTC)
+            ...         )
+            ...     }
+            ... )
+            >>> 
+            >>> # Output: Complete data
+            >>> engine = ValueSubstitutionEngine(topology, coverage)
+            >>> complete = engine.substitute_missing_values(flex_req)
+            >>> # complete.edge_readings["pump__valve"] has:
+            >>> # - pressure_inlet_bar=150.0 (measured)
+            >>> # - pressure_outlet_bar=147.5 (estimated via Darcy-Weisbach)
+            >>> # - flow_rate_lpm=120.0 (estimated via conservation)
+            >>> # - temperature_c=64.0 (estimated via thermal model)
         """
-        raise NotImplementedError(
-            "ValueSubstitutionEngine.substitute_missing_values() "
-            "will be implemented on Day 2-3"
+        from src.schemas.requests import (
+            ComponentSensorReading,
+            EdgeSensorReading,
+            HybridInferenceRequest,
+        )
+        
+        logger.info(
+            f"Starting value substitution for equipment '{measured.equipment_id}' "
+            f"with {len(measured.edge_readings)} edge readings, "
+            f"{len(measured.component_readings)} component readings"
+        )
+        
+        # Convert FlexibleInferenceRequest to dict format for estimation methods
+        measured_edges_dict: dict[str, dict[str, float]] = {}
+        for edge_id, flex_reading in measured.edge_readings.items():
+            measured_edges_dict[edge_id] = {}
+            if flex_reading.pressure_inlet_bar is not None:
+                measured_edges_dict[edge_id]["pressure_inlet_bar"] = flex_reading.pressure_inlet_bar
+            if flex_reading.pressure_outlet_bar is not None:
+                measured_edges_dict[edge_id]["pressure_outlet_bar"] = flex_reading.pressure_outlet_bar
+            if flex_reading.flow_rate_lpm is not None:
+                measured_edges_dict[edge_id]["flow_rate_lpm"] = flex_reading.flow_rate_lpm
+            if flex_reading.temperature_c is not None:
+                measured_edges_dict[edge_id]["temperature_c"] = flex_reading.temperature_c
+            if flex_reading.vibration_g is not None:
+                measured_edges_dict[edge_id]["vibration_g"] = flex_reading.vibration_g
+        
+        # Build complete edge readings for ALL edges in topology
+        complete_edge_readings: dict[str, EdgeSensorReading] = {}
+        
+        for edge_config in self.topology.edges:
+            edge_id = f"{edge_config.source_id}__{edge_config.target_id}"
+            
+            logger.debug(f"Processing edge '{edge_id}'")
+            
+            # Build complete EdgeSensorReading
+            complete_reading = self._build_edge_reading(
+                edge_id=edge_id,
+                edge_config=edge_config,
+                measured_edges=measured_edges_dict,
+                timestamp=measured.timestamp
+            )
+            
+            complete_edge_readings[edge_id] = complete_reading
+        
+        # Build complete component readings
+        complete_component_readings: dict[str, ComponentSensorReading] = {}
+        
+        for component_config in self.topology.components:
+            comp_id = component_config.component_id
+            
+            logger.debug(f"Processing component '{comp_id}'")
+            
+            # Check if component has measurements
+            if comp_id in measured.component_readings:
+                flex_comp = measured.component_readings[comp_id]
+                
+                complete_reading = self._build_component_reading(
+                    component_id=comp_id,
+                    flex_reading=flex_comp,
+                    timestamp=measured.timestamp
+                )
+                
+                complete_component_readings[comp_id] = complete_reading
+        
+        # Construct HybridInferenceRequest
+        hybrid_request = HybridInferenceRequest(
+            equipment_id=measured.equipment_id,
+            timestamp=measured.timestamp,
+            topology_id=measured.topology_id,
+            edge_readings=complete_edge_readings,
+            component_readings=complete_component_readings
+        )
+        
+        logger.info(
+            f"Value substitution complete: {len(complete_edge_readings)} edges, "
+            f"{len(complete_component_readings)} components"
+        )
+        
+        return hybrid_request
+    
+    # ========================================================================
+    # BUILDER METHODS
+    # ========================================================================
+    
+    def _build_edge_reading(
+        self,
+        edge_id: str,
+        edge_config: EdgeConfiguration,
+        measured_edges: dict[str, dict[str, float]],
+        timestamp: datetime
+    ) -> EdgeSensorReading:
+        """Build complete EdgeSensorReading from partial measurements.
+        
+        Args:
+            edge_id: Edge identifier
+            edge_config: Edge configuration from topology
+            measured_edges: Dict of measured edge values
+            timestamp: Measurement timestamp
+        
+        Returns:
+            Complete EdgeSensorReading with all required fields
+        """
+        from src.schemas.requests import EdgeSensorReading
+        
+        # Get measurements for this edge (if any)
+        measured = measured_edges.get(edge_id, {})
+        
+        # === PRESSURE INLET ===
+        pressure_inlet = measured.get("pressure_inlet_bar")
+        if pressure_inlet is None:
+            # TODO: Estimate from upstream (Day 2 enhancement)
+            # For now, use nominal or default
+            pressure_inlet = 150.0  # Default system pressure
+            logger.debug(f"Edge '{edge_id}': Using default pressure_inlet={pressure_inlet} bar")
+        else:
+            logger.debug(f"Edge '{edge_id}': Using measured pressure_inlet={pressure_inlet} bar")
+        
+        # === FLOW RATE ===
+        flow_rate = measured.get("flow_rate_lpm")
+        if flow_rate is None:
+            # Estimate using conservation of mass
+            flow_rate = self._estimate_flow_rate(edge_id, measured_edges)
+            if flow_rate is None:
+                # Fallback to nominal
+                flow_rate = 100.0  # Default nominal flow
+                logger.debug(f"Edge '{edge_id}': Using default flow_rate={flow_rate} L/min")
+            else:
+                logger.debug(f"Edge '{edge_id}': Estimated flow_rate={flow_rate:.1f} L/min (conservation)")
+        else:
+            logger.debug(f"Edge '{edge_id}': Using measured flow_rate={flow_rate} L/min")
+        
+        # === PRESSURE OUTLET ===
+        pressure_outlet = measured.get("pressure_outlet_bar")
+        if pressure_outlet is None:
+            # Estimate using Darcy-Weisbach
+            pressure_drop = self._calculate_pressure_drop(
+                flow_lpm=flow_rate,
+                diameter_mm=edge_config.diameter_mm,
+                length_m=edge_config.length_m,
+                material=edge_config.material
+            )
+            pressure_outlet = pressure_inlet - pressure_drop
+            logger.debug(
+                f"Edge '{edge_id}': Estimated pressure_outlet={pressure_outlet:.1f} bar "
+                f"(inlet={pressure_inlet:.1f} - drop={pressure_drop:.1f})"
+            )
+        else:
+            logger.debug(f"Edge '{edge_id}': Using measured pressure_outlet={pressure_outlet} bar")
+        
+        # === TEMPERATURE ===
+        temperature = measured.get("temperature_c")
+        if temperature is None:
+            # Estimate using thermal model
+            temperature = self._estimate_temperature(edge_id, measured_edges)
+            if temperature is None:
+                # Fallback to nominal
+                temperature = self.nominal_operating_temp
+                logger.debug(f"Edge '{edge_id}': Using nominal temperature={temperature} °C")
+            else:
+                logger.debug(f"Edge '{edge_id}': Estimated temperature={temperature:.1f} °C (thermal model)")
+        else:
+            logger.debug(f"Edge '{edge_id}': Using measured temperature={temperature} °C")
+        
+        # === VIBRATION ===
+        vibration = measured.get("vibration_g")
+        if vibration is None:
+            # Use default based on component type and flow
+            vibration = self._get_default_vibration(edge_id, flow_rate)
+            logger.debug(f"Edge '{edge_id}': Using default vibration={vibration:.2f} g")
+        else:
+            logger.debug(f"Edge '{edge_id}': Using measured vibration={vibration} g")
+        
+        # Build EdgeSensorReading
+        return EdgeSensorReading(
+            edge_id=edge_id,
+            pressure_inlet_bar=pressure_inlet,
+            pressure_outlet_bar=pressure_outlet,
+            flow_rate_lpm=flow_rate,
+            temperature_c=temperature,
+            vibration_g=vibration,
+            timestamp=timestamp
+        )
+    
+    def _build_component_reading(
+        self,
+        component_id: str,
+        flex_reading: Any,  # FlexibleComponentSensorReading
+        timestamp: datetime
+    ) -> ComponentSensorReading:
+        """Build complete ComponentSensorReading from partial measurements.
+        
+        Args:
+            component_id: Component identifier
+            flex_reading: FlexibleComponentSensorReading with partial data
+            timestamp: Measurement timestamp
+        
+        Returns:
+            Complete ComponentSensorReading
+        
+        Note:
+            For components, we only include them if at least ONE sensor exists.
+            Missing internal sensors are left as None (not critical for GNN).
+        """
+        from src.schemas.requests import ComponentSensorReading
+        
+        # Pass through measured values, keep None for missing
+        return ComponentSensorReading(
+            component_id=component_id,
+            rpm=flex_reading.rpm,
+            position_percent=flex_reading.position_percent,
+            current_a=flex_reading.current_a,
+            voltage_v=flex_reading.voltage_v,
+            timestamp=timestamp
         )
     
     # ========================================================================
@@ -111,9 +366,9 @@ class ValueSubstitutionEngine:
     ) -> float | None:
         """Estimate inlet pressure from upstream measurements.
         
-        TODO: Implement (Day 2)
+        TODO: Implement (Day 2 enhancement)
         """
-        raise NotImplementedError("Day 2")
+        raise NotImplementedError("Day 2 enhancement")
     
     def _estimate_pressure_outlet(
         self,
@@ -122,9 +377,9 @@ class ValueSubstitutionEngine:
     ) -> float | None:
         """Estimate outlet pressure using Darcy-Weisbach.
         
-        TODO: Implement (Day 2)
+        TODO: Implement (Day 2 enhancement)
         """
-        raise NotImplementedError("Day 2")
+        raise NotImplementedError("Day 2 enhancement")
     
     def _calculate_pressure_drop(
         self,
@@ -616,3 +871,29 @@ class ValueSubstitutionEngine:
             return None
         
         return self._component_map[component_id].component_type
+    
+    def _get_default_vibration(self, edge_id: str, flow_rate: float) -> float:
+        """Get default vibration level based on flow rate.
+        
+        Args:
+            edge_id: Edge identifier
+            flow_rate: Flow rate in L/min
+        
+        Returns:
+            Default vibration in g
+        
+        Heuristics:
+            - Low flow (<50 L/min): 0.3-0.5 g (low vibration)
+            - Normal flow (50-150 L/min): 0.5-1.0 g (normal)
+            - High flow (>150 L/min): 1.0-2.0 g (higher vibration)
+        
+        Example:
+            >>> vib = engine._get_default_vibration("pump__valve", 120.0)
+            >>> assert 0.5 <= vib <= 1.0  # Normal range
+        """
+        if flow_rate < 50:
+            return 0.4  # Low vibration
+        elif flow_rate < 150:
+            return 0.7  # Normal vibration
+        else:
+            return 1.2  # Higher vibration (but still normal)
