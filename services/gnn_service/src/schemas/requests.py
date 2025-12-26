@@ -15,22 +15,27 @@ Supports progressive enhancement: from minimal to advanced inference APIs.
     - Supports ANY sensor coverage (1 sensor → full coverage)
     - Physics-based estimation fills missing values
 
+**Day 3 Addition: HybridInferenceRequest + DiagnosticScope**
+    - Complete inference request (output from ValueSubstitutionEngine)
+    - HYBRID validation: strict for critical, flexible for optional
+    - Flexible topology: diagnose full system or focus on subsystems
+    - Supports partial sensor deployment with physics-based estimation
+
 Python 3.14 Features:
     - Deferred annotations (PEP 649)
     - Union types with pipe operator (T | None)
     - Strict type checking
 
 API Levels:
-    Level 0 (Flexible): FlexibleInferenceRequest - partial sensor data (NEW!)
-    Level 1 (Minimal): MinimalInferenceRequest - node-centric (legacy)
-    Level 1B (Hybrid): HybridInferenceRequest - edge+node sensors
-    Level 2 (Standard): InferenceRequest - historical analysis
-    Level 3 (Advanced): AdvancedInferenceRequest - expert overrides
-    Level 4 (Batch): BatchInferenceRequest - batch processing
+    Level 0 (Flexible): FlexibleInferenceRequest - partial sensor data
+    Level 1 (Hybrid): HybridInferenceRequest - complete validated data (NEW!)
+    Level 2 (Standard): InferenceRequest - historical analysis (future)
+    Level 3 (Advanced): AdvancedInferenceRequest - expert overrides (future)
+    Level 4 (Batch): BatchInferenceRequest - batch processing (future)
 
 Examples:
-    >>> # NEW: Flexible partial sensor data
-    >>> request = FlexibleInferenceRequest(
+    >>> # Day 2: Flexible partial sensor data
+    >>> flex_request = FlexibleInferenceRequest(
     ...     equipment_id="pump_system_01",
     ...     timestamp=datetime.now(),
     ...     topology_id="standard_pump",
@@ -41,7 +46,10 @@ Examples:
     ...         )
     ...     }
     ... )
-    >>> # ValueSubstitutionEngine fills missing flow_rate, temperature, etc.
+    >>> 
+    >>> # Day 3: Complete validated data for GNN
+    >>> hybrid_request = engine.substitute_missing_values(flex_request)
+    >>> # All fields filled, ready for inference!
 """
 
 from __future__ import annotations
@@ -62,6 +70,10 @@ from pydantic import (
 if TYPE_CHECKING:
     pass
 
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 __all__ = [
     # Phase 3.2: Edge-centric sensor schemas
     "EdgeSensorReading",
@@ -70,7 +82,90 @@ __all__ = [
     "FlexibleEdgeSensorReading",
     "FlexibleComponentSensorReading",
     "FlexibleInferenceRequest",
+    # Day 3: Complete validated schemas + diagnostic scope
+    "DiagnosticScope",
+    "HybridInferenceRequest",
 ]
+
+
+# ============================================================================
+# DAY 3: DIAGNOSTIC SCOPE (Flexible Topology Support)
+# ============================================================================
+
+
+class DiagnosticScope(BaseModel):
+    """Define which parts of topology to diagnose.
+
+    **Day 3 Addition**: Support flexible sensor deployment and focused diagnostics.
+
+    Allows two modes:
+    1. **Full system diagnosis** (default: scope=None)
+       - All topology edges required
+       - Complete system health assessment
+
+    2. **Focused subsystem diagnosis** (scope specified)
+       - Only target_edges required to have sensor data
+       - Other edges use nominal values for GNN context
+       - Cost-effective incremental sensor deployment
+
+    Use cases:
+        >>> # Focus on pump subsystem only
+        >>> scope = DiagnosticScope(
+        ...     target_components=["pump_main", "valve_01"],
+        ...     target_edges=["pump_main__valve_01", "valve_01__cylinder"],
+        ...     include_context=True  # Use nominal for neighboring edges
+        ... )
+        >>>
+        >>> # Full system (default)
+        >>> scope = None  # All edges required
+
+    Attributes:
+        target_components: Components to diagnose (None = all components)
+        target_edges: Edges requiring sensor data (None = all edges)
+        include_context: Include neighboring edges with nominal values for GNN context
+    """
+
+    model_config = ConfigDict(
+        strict=True,
+        frozen=True,
+        json_schema_extra={
+            "example": {
+                "target_components": ["pump_main", "valve_01"],
+                "target_edges": ["pump_main__valve_01", "valve_01__cylinder"],
+                "include_context": True,
+            },
+            "title": "Diagnostic Scope",
+            "description": "Define focus area for flexible diagnostics",
+        },
+    )
+
+    target_components: list[str] | None = Field(
+        default=None,
+        description=(
+            "Components to diagnose. None = all components in topology. "
+            "Use for focused diagnostics on specific subsystems."
+        ),
+        json_schema_extra={"examples": [["pump_main", "valve_01"], ["cylinder_left", "cylinder_right"]]},
+    )
+
+    target_edges: list[str] | None = Field(
+        default=None,
+        description=(
+            "Edges requiring sensor data. None = all edges in topology. "
+            "Only these edges need real/estimated measurements."
+        ),
+        json_schema_extra={
+            "examples": [["pump_main__valve_01"], ["valve_01__cylinder", "cylinder__tank"]]
+        },
+    )
+
+    include_context: bool = Field(
+        default=True,
+        description=(
+            "Include neighboring edges with nominal values for GNN context. "
+            "Recommended: True (GNN benefits from graph structure)."
+        ),
+    )
 
 
 # ============================================================================
@@ -286,6 +381,8 @@ class FlexibleInferenceRequest(BaseModel):
         - Partial: Some edges with pressure, some with flow
         - Full: All sensors on all edges
 
+    **Day 3 Update**: Added diagnostic_scope for focused diagnostics.
+
     **Workflow**:
         1. Client sends FlexibleInferenceRequest (partial data)
         2. ValueSubstitutionEngine.substitute_missing_values()
@@ -297,9 +394,10 @@ class FlexibleInferenceRequest(BaseModel):
         - ✅ Cost savings (fewer sensors needed)
         - ✅ Backward compatible with existing systems
         - ✅ Physics-based estimation → higher accuracy than naive imputation
+        - ✅ NEW: Focused subsystem diagnostics (Day 3)
 
     Use case:
-        >>> # Minimal: 1 pressure sensor
+        >>> # Minimal: 1 pressure sensor, focus on pump subsystem
         >>> request = FlexibleInferenceRequest(
         ...     equipment_id="pump_system_01",
         ...     timestamp=datetime.now(UTC),
@@ -310,12 +408,17 @@ class FlexibleInferenceRequest(BaseModel):
         ...             pressure_inlet_bar=150.2,
         ...             timestamp=datetime.now(UTC)
         ...         )
-        ...     }
+        ...     },
+        ...     diagnostic_scope=DiagnosticScope(
+        ...         target_edges=["pump__valve"],
+        ...         include_context=True
+        ...     )
         ... )
         >>> # ValueSubstitutionEngine estimates:
         >>> # - pressure_outlet (via Darcy-Weisbach)
         >>> # - flow_rate (via conservation of mass)
         >>> # - temperature (via thermal model)
+        >>> # - Other edges use nominal for context
 
     Attributes:
         equipment_id: Unique equipment identifier (REQUIRED)
@@ -323,6 +426,7 @@ class FlexibleInferenceRequest(BaseModel):
         topology_id: Pre-configured topology identifier (REQUIRED)
         edge_readings: Partial edge sensor data (OPTIONAL)
         component_readings: Partial component sensor data (OPTIONAL)
+        diagnostic_scope: Focus area for diagnostics (OPTIONAL, Day 3)
     """
 
     model_config = ConfigDict(
@@ -346,6 +450,10 @@ class FlexibleInferenceRequest(BaseModel):
                         "rpm": 1450,
                         "timestamp": "2025-12-26T22:00:00Z",
                     }
+                },
+                "diagnostic_scope": {
+                    "target_edges": ["pump__valve"],
+                    "include_context": True,
                 },
             },
             "title": "Flexible Inference Request",
@@ -388,6 +496,15 @@ class FlexibleInferenceRequest(BaseModel):
         ),
     )
 
+    diagnostic_scope: DiagnosticScope | None = Field(
+        default=None,
+        description=(
+            "Diagnostic focus area (OPTIONAL, Day 3). "
+            "None = diagnose full topology. "
+            "Specified = focus on target components/edges only."
+        ),
+    )
+
     @field_validator("timestamp")
     @classmethod
     def ensure_timestamp_timezone(cls, v: datetime) -> datetime:
@@ -426,6 +543,277 @@ class FlexibleInferenceRequest(BaseModel):
             if comp_key != comp_reading.component_id:
                 msg = (
                     f"Component key '{comp_key}' does not match FlexibleComponentSensorReading.component_id "
+                    f"'{comp_reading.component_id}'. They must be identical."
+                )
+                raise ValueError(msg)
+        return self
+
+
+# ============================================================================
+# DAY 3: HYBRID INFERENCE REQUEST (Complete Validated Data for GNN)
+# ============================================================================
+
+
+class HybridInferenceRequest(BaseModel):
+    """Level 1 API: Complete inference request with validated sensor data.
+
+    **Day 3 Addition**: Output from ValueSubstitutionEngine, input for GNN inference.
+
+    ALL critical fields are guaranteed filled (no None in critical fields).
+
+    **HYBRID Validation Strategy**:
+        TIER 1 (CRITICAL): ≥1 pressure per required edge (STRICT)
+        TIER 2 (RECOMMENDED): flow_rate_lpm (WARN if missing)
+        TIER 3 (OPTIONAL): temperature_c, vibration_g (INFO if missing)
+
+    **Flexible Topology Support**:
+        - diagnostic_scope=None: ALL topology edges required
+        - diagnostic_scope specified: Only target_edges required
+        - Other edges use nominal values for GNN context
+
+    **Quality Guarantees**:
+        ✅ At least ONE pressure measurement per required edge
+        ✅ All critical fields filled (measured/estimated/nominal/default)
+        ✅ No NaN values in tensor conversion
+        ✅ Timestamps consistent across readings
+
+    **Workflow**:
+        FlexibleInferenceRequest (partial)
+            ↓
+        ValueSubstitutionEngine.substitute_missing_values()
+            ↓
+        HybridInferenceRequest (complete) ← YOU ARE HERE
+            ↓
+        GraphBuilder.build_from_hybrid_request()
+            ↓
+        GNN Inference
+
+    Use case:
+        >>> # Created by ValueSubstitutionEngine
+        >>> hybrid = HybridInferenceRequest(
+        ...     equipment_id="pump_system_01",
+        ...     timestamp=datetime.now(UTC),
+        ...     topology_id="standard_pump",
+        ...     edge_readings={
+        ...         "pump__valve": EdgeSensorReading(
+        ...             edge_id="pump__valve",
+        ...             pressure_inlet_bar=150.2,   # ✅ Measured
+        ...             pressure_outlet_bar=148.1,  # ✅ Estimated
+        ...             flow_rate_lpm=115.5,         # ✅ Estimated
+        ...             temperature_c=65.3,          # ✅ Nominal
+        ...             vibration_g=0.7,             # ✅ Default
+        ...             timestamp=datetime.now(UTC)
+        ...         )
+        ...     }
+        ... )
+        >>> # ALL fields filled, ready for GNN! ✅
+
+    Attributes:
+        equipment_id: Unique equipment identifier (REQUIRED)
+        timestamp: Sensor reading timestamp (REQUIRED)
+        topology_id: Pre-configured topology identifier (REQUIRED)
+        edge_readings: COMPLETE edge sensor data (ALL fields filled)
+        component_readings: Component sensor data (OPTIONAL)
+        diagnostic_scope: Diagnostic focus area (OPTIONAL)
+    """
+
+    model_config = ConfigDict(
+        strict=True,
+        validate_assignment=True,
+        json_schema_extra={
+            "example": {
+                "equipment_id": "pump_system_01",
+                "timestamp": "2025-12-26T22:00:00Z",
+                "topology_id": "standard_pump",
+                "edge_readings": {
+                    "pump__valve": {
+                        "edge_id": "pump__valve",
+                        "pressure_inlet_bar": 150.2,
+                        "pressure_outlet_bar": 148.1,
+                        "flow_rate_lpm": 115.5,
+                        "temperature_c": 65.3,
+                        "vibration_g": 0.7,
+                        "timestamp": "2025-12-26T22:00:00Z",
+                    }
+                },
+                "component_readings": {
+                    "pump": {
+                        "component_id": "pump",
+                        "rpm": 1450,
+                        "current_a": 25.5,
+                        "voltage_v": 400,
+                        "timestamp": "2025-12-26T22:00:00Z",
+                    }
+                },
+                "diagnostic_scope": None,
+            },
+            "title": "Hybrid Inference Request",
+            "description": "Complete validated sensor data for GNN inference",
+        },
+    )
+
+    equipment_id: Annotated[
+        str, Field(min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
+    ] = Field(
+        ...,
+        description="Unique equipment identifier (REQUIRED).",
+    )
+
+    timestamp: datetime = Field(
+        ...,
+        description="Sensor reading timestamp (REQUIRED, ISO 8601, timezone-aware).",
+    )
+
+    topology_id: Annotated[
+        str, Field(min_length=1, max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
+    ] = Field(
+        ...,
+        description="Pre-configured topology identifier (REQUIRED).",
+    )
+
+    edge_readings: dict[str, EdgeSensorReading] = Field(
+        ...,
+        description=(
+            "COMPLETE edge sensor data (REQUIRED). ALL critical fields must be filled. "
+            "Created by ValueSubstitutionEngine with physics-based estimation."
+        ),
+    )
+
+    component_readings: dict[str, ComponentSensorReading] = Field(
+        default_factory=dict,
+        description=(
+            "Component sensor data (OPTIONAL). Internal sensors only. "
+            "Empty dict if no internal sensors available."
+        ),
+    )
+
+    diagnostic_scope: DiagnosticScope | None = Field(
+        default=None,
+        description=(
+            "Diagnostic focus area (OPTIONAL). "
+            "None = full topology diagnosis. "
+            "Specified = focused subsystem diagnosis."
+        ),
+    )
+
+    @field_validator("timestamp")
+    @classmethod
+    def ensure_timestamp_timezone(cls, v: datetime) -> datetime:
+        """Ensure timestamp is timezone-aware."""
+        if v.tzinfo is None:
+            return v.replace(tzinfo=UTC)
+        return v
+
+    @model_validator(mode="after")
+    def validate_at_least_one_edge(self) -> HybridInferenceRequest:
+        """Ensure at least ONE edge reading provided."""
+        if not self.edge_readings:
+            msg = (
+                "At least ONE edge reading required in edge_readings. "
+                "Cannot perform GNN inference with zero edges."
+            )
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def validate_edge_data_quality(self) -> HybridInferenceRequest:
+        """Validate edge data quality with HYBRID approach.
+
+        TIER 1 (CRITICAL): At least ONE pressure per required edge (FAIL if missing)
+        TIER 2 (RECOMMENDED): flow_rate_lpm (WARN if missing)
+        TIER 3 (OPTIONAL): temperature_c, vibration_g (INFO if missing)
+
+        Required edges determined by diagnostic_scope:
+        - scope=None: ALL edges required
+        - scope.target_edges: Only target edges required
+        """
+        # Determine required edges
+        if self.diagnostic_scope and self.diagnostic_scope.target_edges:
+            required_edges = set(self.diagnostic_scope.target_edges)
+            logger.info(
+                f"Focused diagnostics: validating {len(required_edges)} target edges "
+                f"(out of {len(self.edge_readings)} total edges)"
+            )
+        else:
+            # Full topology: all edges required
+            required_edges = set(self.edge_readings.keys())
+            logger.info(f"Full system diagnostics: validating all {len(required_edges)} edges")
+
+        # Validate each required edge
+        for edge_id in required_edges:
+            if edge_id not in self.edge_readings:
+                msg = (
+                    f"Required edge '{edge_id}' missing from edge_readings. "
+                    f"Diagnostic scope requires this edge."
+                )
+                raise ValueError(msg)
+
+            reading = self.edge_readings[edge_id]
+
+            # TIER 1 (CRITICAL): At least ONE pressure
+            has_inlet = reading.pressure_inlet_bar is not None and reading.pressure_inlet_bar >= 0
+            has_outlet = (
+                reading.pressure_outlet_bar is not None and reading.pressure_outlet_bar >= 0
+            )
+
+            if not has_inlet and not has_outlet:
+                msg = (
+                    f"CRITICAL: Required edge '{edge_id}' has NO pressure data. "
+                    f"At least ONE pressure (inlet OR outlet) required per edge. "
+                    f"Current: inlet={reading.pressure_inlet_bar}, outlet={reading.pressure_outlet_bar}"
+                )
+                raise ValueError(msg)
+
+            # TIER 2 (RECOMMENDED): Flow rate
+            if reading.flow_rate_lpm is None or reading.flow_rate_lpm < 0:
+                logger.warning(
+                    f"Edge '{edge_id}': flow_rate_lpm missing or invalid ({reading.flow_rate_lpm}). "
+                    "GNN may have reduced accuracy without flow data."
+                )
+
+            # TIER 3 (OPTIONAL): Temperature
+            if reading.temperature_c is None:
+                logger.info(
+                    f"Edge '{edge_id}': temperature_c missing, likely using nominal value. "
+                    "This is acceptable for basic diagnostics."
+                )
+
+            # TIER 3 (OPTIONAL): Vibration
+            if reading.vibration_g is None:
+                logger.info(
+                    f"Edge '{edge_id}': vibration_g missing, likely using default heuristic. "
+                    "This is acceptable for basic diagnostics."
+                )
+
+        # Warn about optional (context) edges
+        optional_edges = set(self.edge_readings.keys()) - required_edges
+        if optional_edges:
+            logger.info(
+                f"Context edges included: {len(optional_edges)} edges "
+                f"(using nominal values for GNN context)"
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_edge_ids_match(self) -> HybridInferenceRequest:
+        """Validate edge_ids in dict keys match EdgeSensorReading.edge_id."""
+        for edge_key, edge_reading in self.edge_readings.items():
+            if edge_key != edge_reading.edge_id:
+                msg = (
+                    f"Edge key '{edge_key}' does not match EdgeSensorReading.edge_id "
+                    f"'{edge_reading.edge_id}'. They must be identical."
+                )
+                raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def validate_component_ids_match(self) -> HybridInferenceRequest:
+        """Validate component_ids in dict keys match ComponentSensorReading.component_id."""
+        for comp_key, comp_reading in self.component_readings.items():
+            if comp_key != comp_reading.component_id:
+                msg = (
+                    f"Component key '{comp_key}' does not match ComponentSensorReading.component_id "
                     f"'{comp_reading.component_id}'. They must be identical."
                 )
                 raise ValueError(msg)
