@@ -32,7 +32,7 @@ from src.middleware import (
     RateLimitMiddleware,
     setup_opentelemetry,
 )
-from src.schemas.requests import HybridInferenceRequest, PredictionRequest
+from src.schemas.requests import HybridInferenceRequest
 
 # =========================================================================
 # LOGGING CONFIGURATION
@@ -514,79 +514,6 @@ async def run_diagnosis(request: HybridInferenceRequest) -> dict[str, Any]:
         ) from e
 
 
-@app.post(
-    "/v1/predict",
-    tags=["Inference"],
-    summary="Get predictions",
-    response_model=dict[str, Any],
-    status_code=status.HTTP_200_OK,
-)
-async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
-    """Get detailed predictions for system components.
-
-    Supports batch inference with validation.
-
-    Args:
-        request: Prediction request with optional batch
-
-    Returns:
-        dict: Detailed predictions per component
-
-    Raises:
-        HTTPException(503): If engine not initialized
-        HTTPException(413): If batch too large
-        HTTPException(400): If validation fails
-        HTTPException(500): If prediction fails
-
-    Examples:
-        >>> POST /v1/predict
-        {"topology": {...}, "batch": [...]}
-    """
-    engine = getattr(app.state, "inference_engine", None)
-    validator = getattr(app.state, "validator", None)
-
-    if engine is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Inference engine not available",
-        )
-
-    logger.info(
-        "Prediction request received",
-        extra={
-            "batch_size": len(request.batch) if hasattr(request, "batch") else 1,
-        },
-    )
-
-    try:
-        if validator:
-            await validator.validate_prediction_request(request)
-            logger.info("Batch request validated")
-
-        predictions = await engine.predict(request, request.topology)
-
-        logger.info(
-            "Predictions completed",
-            extra={"status": "success"},
-        )
-
-        return {
-            "status": "success",
-            "predictions": predictions,
-        }
-
-    except Exception as e:
-        logger.error(
-            "Prediction error",
-            extra={"error": str(e)},
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate predictions",
-        ) from e
-
-
 # =========================================================================
 # ERROR HANDLERS
 # =========================================================================
@@ -679,7 +606,6 @@ async def get_info() -> dict[str, Any]:
             "healthz": "/healthz (K8s liveness)",
             "readyz": "/readyz (K8s readiness)",
             "diagnose": "/v1/diagnose",
-            "predict": "/v1/predict",
             "docs": "/docs",
             "redoc": "/redoc",
         },
