@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.api.validators import RequestValidator
+from src.api.validators import ModelRequirements, RequestValidator
 from src.inference.inference_engine import InferenceConfig, InferenceEngine
 from src.inference.request_context import set_request_id
 from src.middleware import (
@@ -32,11 +32,11 @@ from src.middleware import (
     RateLimitMiddleware,
     setup_opentelemetry,
 )
-from src.schemas.requests import MinimalInferenceRequest, PredictionRequest
+from src.schemas.requests import HybridInferenceRequest, PredictionRequest
 
-# ============================================================================
+# =========================================================================
 # LOGGING CONFIGURATION
-# ============================================================================
+# =========================================================================
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,9 +45,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ============================================================================
+# =========================================================================
 # MIDDLEWARE
-# ============================================================================
+# =========================================================================
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -83,9 +83,9 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-# ============================================================================
+# =========================================================================
 # LIFESPAN MANAGEMENT
-# ============================================================================
+# =========================================================================
 
 
 @asynccontextmanager
@@ -105,30 +105,51 @@ async def lifespan(app: FastAPI) -> Any:
     Yields:
         None: Application runs between startup and shutdown
     """
-    # ========================================================================
+    # =====================================================================
     # STARTUP
-    # ========================================================================
-    
+    # =====================================================================
+
     # Setup OpenTelemetry (if enabled)
     setup_opentelemetry()
-    
+
     try:
         # Initialize inference engine
-        config = InferenceConfig()
+        # Note: InferenceConfig requires a model_path or model_versions.
+        from configs.config import inference_config as app_inference_config
+
+        model_path = (
+            getattr(app_inference_config, "model_path", None)
+            or getattr(app_inference_config, "checkpoint_path", None)
+            or getattr(app_inference_config, "ckpt_path", None)
+        )
+        if not model_path:
+            raise RuntimeError(
+                "Model path not configured. Expected configs.config.inference_config.model_path"
+            )
+
+        config = InferenceConfig(model_path=str(model_path))
         app.state.inference_engine = InferenceEngine(config)
         logger.info("✅ Inference engine initialized")
 
-        # Initialize request validator with limits
+        # Initialize request validator (no InferenceEngine deps)
+        requirements = ModelRequirements(
+            node_feature_dim=29,
+            edge_feature_dim=app.state.inference_engine.feature_config.edge_in_dim,
+            min_nodes=2,
+            max_nodes=1000,
+        )
         app.state.validator = RequestValidator(
-            inference_engine=app.state.inference_engine,
+            requirements=requirements,
+            topology_service=app.state.inference_engine.topology_service,
             max_batch_size=32,
-            max_graph_size=1000,
         )
         logger.info(
             "✅ Request validator initialized",
             extra={
                 "max_batch_size": 32,
-                "max_graph_size": 1000,
+                "max_nodes": 1000,
+                "node_feature_dim": requirements.node_feature_dim,
+                "edge_feature_dim": requirements.edge_feature_dim,
             },
         )
 
@@ -143,9 +164,9 @@ async def lifespan(app: FastAPI) -> Any:
 
     yield
 
-    # ========================================================================
+    # =====================================================================
     # SHUTDOWN
-    # ========================================================================
+    # =====================================================================
     if hasattr(app.state, "inference_engine") and app.state.inference_engine:
         try:
             logger.info("🧹 Starting engine cleanup...")
@@ -159,9 +180,9 @@ async def lifespan(app: FastAPI) -> Any:
             )
 
 
-# ============================================================================
+# =========================================================================
 # APP CREATION
-# ============================================================================
+# =========================================================================
 
 app = FastAPI(
     title="GNN Service",
@@ -179,9 +200,9 @@ app = FastAPI(
 )
 
 
-# ============================================================================
+# =========================================================================
 # MIDDLEWARE REGISTRATION (ORDER MATTERS!)
-# ============================================================================
+# =========================================================================
 
 # 1. Request ID tracking (first, so all middleware can use it)
 app.add_middleware(RequestIDMiddleware)
@@ -209,9 +230,9 @@ app.add_middleware(
 )
 
 
-# ============================================================================
+# =========================================================================
 # KUBERNETES HEALTH ENDPOINTS
-# ============================================================================
+# =========================================================================
 
 
 @app.get(
@@ -281,9 +302,9 @@ async def readyz() -> dict[str, Any]:
     return {"ready": True, "components": components}
 
 
-# ============================================================================
+# =========================================================================
 # STANDARD HEALTH CHECK ENDPOINTS
-# ============================================================================
+# =========================================================================
 
 
 @app.get(
@@ -385,9 +406,9 @@ async def get_metrics() -> dict[str, Any]:
         return {"status": "error", "error": str(e)}
 
 
-# ============================================================================
+# =========================================================================
 # INFERENCE ENDPOINTS
-# ============================================================================
+# =========================================================================
 
 
 @app.post(
@@ -397,13 +418,13 @@ async def get_metrics() -> dict[str, Any]:
     response_model=dict[str, Any],
     status_code=status.HTTP_200_OK,
 )
-async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
+async def run_diagnosis(request: HybridInferenceRequest) -> dict[str, Any]:
     """Run GNN-based diagnosis on hydraulic system.
 
     Validates request, runs inference, and returns diagnosis.
 
     Args:
-        request: Inference request with system readings
+        request: HybridInferenceRequest (edge-centric readings)
 
     Returns:
         dict: Diagnosis results with predictions
@@ -414,15 +435,6 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
         HTTPException(400): If validation fails
         HTTPException(413): If graph too large
         HTTPException(500): If inference fails
-
-    Examples:
-        >>> POST /v1/diagnose
-        {
-            "equipment_id": "excavator_001",
-            "topology_id": "double_pump_v1",
-            "timestamp": "2025-12-16T20:00:00Z",
-            "sensor_readings": {...}
-        }
     """
     engine = getattr(app.state, "inference_engine", None)
     validator = getattr(app.state, "validator", None)
@@ -437,23 +449,24 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
         "Diagnosis request received",
         extra={
             "equipment_id": request.equipment_id,
-            "topology_id": getattr(request, "topology_id", "unknown"),
-            "num_sensors": len(request.sensor_readings),
+            "topology_id": request.topology_id,
+            "num_edge_readings": len(request.edge_readings),
+            "num_component_readings": len(request.component_readings),
         },
     )
 
     try:
-        if validator and hasattr(request, "topology_id"):
+        if validator:
             topology = await validator.validate_diagnosis_request(request)
             logger.info(
                 "Request validated",
                 extra={
                     "equipment_id": request.equipment_id,
-                    "num_components": topology.num_components,
+                    "num_components": len(topology.components),
                 },
             )
 
-        result = await engine.predict_minimal(request)
+        result = await engine.predict_hybrid(request)
 
         logger.info(
             "Diagnosis completed",
@@ -482,6 +495,9 @@ async def run_diagnosis(request: MinimalInferenceRequest) -> dict[str, Any]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid input: {str(ve)}",
         ) from ve
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         logger.error(
@@ -571,9 +587,9 @@ async def get_predictions(request: PredictionRequest) -> dict[str, Any]:
         ) from e
 
 
-# ============================================================================
+# =========================================================================
 # ERROR HANDLERS
-# ============================================================================
+# =========================================================================
 
 
 @app.exception_handler(HTTPException)
@@ -627,9 +643,9 @@ async def general_exception_handler(
     )
 
 
-# ============================================================================
+# =========================================================================
 # INFO ENDPOINT
-# ============================================================================
+# =========================================================================
 
 
 @app.get(
