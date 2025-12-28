@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 
 from src.schemas.topology import (
     BUILTIN_TEMPLATES,
+    TopologyConfig,
     TopologyTemplate,
     get_builtin_template,
 )
@@ -207,6 +208,36 @@ class TopologyService:
 
         logger.warning(f"Template not found: {template_id}")
         return None
+
+    def get_all_templates(self) -> dict[str, TopologyTemplate]:
+        """Return a dict of all currently cached templates.
+
+        Note:
+            This is primarily used by API/inference error messages.
+        """
+        return dict(self._cache)
+
+    def get_config(self, template_id: str, topology_id: str | None = None) -> TopologyConfig | None:
+        """Instantiate a TopologyConfig from a template.
+
+        This is the preferred representation for the edge-centric pipeline
+        (GraphBuilderV2.build_graph_hybrid).
+
+        Args:
+            template_id: Built-in/custom template ID
+            topology_id: Instance ID for created config (defaults to template_id)
+
+        Returns:
+            TopologyConfig or None if template is missing
+        """
+        template = self.get_template(template_id)
+        if template is None:
+            return None
+
+        return TopologyConfig.from_template(
+            template=template,
+            topology_id=topology_id or template_id,
+        )
 
     def list_templates(self) -> list[dict[str, Any]]:
         """List all available templates.
