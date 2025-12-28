@@ -192,17 +192,20 @@ class TemporalHydraulicDataLoader:
 
             # Construct edges
             edge_index, edge_attr, edge_mask = self._construct_dynamic_edges(
-                topology, node_features
+                topology, node_features, mask_nodes
             )
 
             # Create graph
+            # Store timestamp as int64 (epoch seconds) for PyG batching compatibility
+            timestamp_epoch = int(window_start.timestamp())
+            
             snapshot = Data(
                 x=torch.tensor(node_features, dtype=torch.float32),
                 edge_index=torch.tensor(edge_index, dtype=torch.long),
                 edge_attr=torch.tensor(edge_attr, dtype=torch.float32),
                 mask_nodes=torch.tensor(mask_nodes, dtype=torch.bool),
                 edge_mask=torch.tensor(edge_mask, dtype=torch.bool),
-                timestamp=window_start,
+                timestamp=torch.tensor(timestamp_epoch, dtype=torch.int64),
             )
 
             snapshots.append(snapshot)
@@ -265,12 +268,15 @@ class TemporalHydraulicDataLoader:
             Static edge_index [2, E]
         """
         nodes = list(topology.components.keys())
+        # Build node_id -> index mapping once
+        node_to_idx = {node_id: idx for idx, node_id in enumerate(nodes)}
+        
         edge_index = [[], []]
 
         for conn in topology.connections:
-            if conn["from"] in nodes and conn["to"] in nodes:
-                i = nodes.index(conn["from"])
-                j = nodes.index(conn["to"])
+            if conn["from"] in node_to_idx and conn["to"] in node_to_idx:
+                i = node_to_idx[conn["from"]]
+                j = node_to_idx[conn["to"]]
                 edge_index[0].append(i)
                 edge_index[1].append(j)
 
@@ -309,6 +315,7 @@ class TemporalHydraulicDataLoader:
             # Features: mean, std, min, max, etc.
             values = node_data["value"].to_numpy()
             if len(values) > 0:
+                # TODO: Replace with FeatureEngineer for full 34-dim extraction
                 node_features[idx, :4] = [
                     np.mean(values),
                     np.std(values),
@@ -316,17 +323,29 @@ class TemporalHydraulicDataLoader:
                     np.max(values),
                 ]
                 mask_nodes[idx] = True
+        
+        # Log feature extraction stats
+        n_observed = mask_nodes.sum()
+        n_missing = n_nodes - n_observed
+        logger.debug(
+            f"Extracted features: {n_observed}/{n_nodes} nodes observed, "
+            f"{n_missing} missing (only first 4/{n_features} dims populated)"
+        )
 
         return node_features, mask_nodes
 
     def _construct_dynamic_edges(
-        self, topology: GraphTopology, node_features: np.ndarray
+        self, 
+        topology: GraphTopology, 
+        node_features: np.ndarray,
+        mask_nodes: np.ndarray,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Construct dynamic edges from sensor correlations.
 
         Args:
             topology: Graph topology (static edges)
             node_features: Node features [N, F]
+            mask_nodes: Boolean mask [N] (True=observed)
 
         Returns:
             edge_index: [2, E]
@@ -334,55 +353,81 @@ class TemporalHydraulicDataLoader:
             edge_mask: [E] bool (True=static, False=dynamic)
         """
         n_nodes = len(topology.components)
+        nodes = list(topology.components.keys())
+        
+        # Build node_id -> index mapping once
+        node_to_idx = {node_id: idx for idx, node_id in enumerate(nodes)}
 
         # Start with static edges from topology
-        edge_index = [[], []]
+        edge_set = set()  # Use set of tuples for efficient deduplication
+        edge_list = []  # Preserve order for edge_attr/edge_mask alignment
         edge_attr = []
         edge_mask = []
 
-        nodes = list(topology.components.keys())
-
         # Add static edges
         for conn in topology.connections:
-            if conn["from"] in nodes and conn["to"] in nodes:
-                i = nodes.index(conn["from"])
-                j = nodes.index(conn["to"])
-                if [i, j] not in list(zip(edge_index[0], edge_index[1], strict=False)):
-                    edge_index[0].append(i)
-                    edge_index[1].append(j)
+            if conn["from"] in node_to_idx and conn["to"] in node_to_idx:
+                i = node_to_idx[conn["from"]]
+                j = node_to_idx[conn["to"]]
+                edge_tuple = (i, j)
+                if edge_tuple not in edge_set:
+                    edge_set.add(edge_tuple)
+                    edge_list.append([i, j])
                     edge_attr.append(np.ones(14))  # Static edge features
                     edge_mask.append(True)  # Static
 
-        # Add dynamic edges based on correlation (K-NN)
-        if node_features.shape[0] > 1:
-            # Compute pairwise distances
+        # Add dynamic edges based on correlation (K-NN) only for observed nodes
+        observed_indices = np.where(mask_nodes)[0]
+        
+        if len(observed_indices) > 1:
+            # Extract features only for observed nodes
+            observed_features = node_features[observed_indices]
+            
+            # Compute pairwise similarity among observed nodes
             from sklearn.metrics.pairwise import cosine_similarity
 
-            similarity = cosine_similarity(node_features)
+            similarity = cosine_similarity(observed_features)
             np.fill_diagonal(similarity, -1)  # Ignore self
 
-            # For each node, add K nearest neighbors
-            for i in range(n_nodes):
-                # Get top-k neighbors
-                top_k_indices = np.argsort(similarity[i])[-self.k_neighbors :]
+            # For each observed node, add K nearest neighbors
+            for local_i, global_i in enumerate(observed_indices):
+                # Get top-k neighbors (in local observed space)
+                top_k_local = np.argsort(similarity[local_i])[-self.k_neighbors :]
 
-                for j in top_k_indices:
-                    # Combined condition to avoid nested if (SIM102)
+                for local_j in top_k_local:
+                    global_j = observed_indices[local_j]
+                    edge_tuple = (int(global_i), int(global_j))
+                    
+                    # Check correlation threshold and avoid duplicates
                     if (
-                        similarity[i, j] > self.correlation_threshold
-                        and [i, j] not in list(zip(edge_index[0], edge_index[1], strict=False))
+                        similarity[local_i, local_j] > self.correlation_threshold
+                        and edge_tuple not in edge_set
                     ):
-                        edge_index[0].append(i)
-                        edge_index[1].append(j)
+                        edge_set.add(edge_tuple)
+                        edge_list.append([int(global_i), int(global_j)])
                         # Dynamic edge features (correlation-based)
-                        edge_attr.append(np.ones(14) * similarity[i, j])
+                        edge_attr.append(np.ones(14) * similarity[local_i, local_j])
                         edge_mask.append(False)  # Dynamic
 
-        edge_index = np.array(edge_index)
-        edge_attr = np.array(edge_attr)
-        edge_mask = np.array(edge_mask)
+        # Convert to numpy arrays
+        if edge_list:
+            edge_index = np.array(edge_list).T  # [2, E]
+            edge_attr_array = np.array(edge_attr)
+            edge_mask_array = np.array(edge_mask)
+        else:
+            # Empty graph (no edges)
+            edge_index = np.array([[], []])
+            edge_attr_array = np.zeros((0, 14))
+            edge_mask_array = np.zeros(0, dtype=bool)
+        
+        n_static = edge_mask_array.sum() if len(edge_mask_array) > 0 else 0
+        n_dynamic = len(edge_mask_array) - n_static
+        logger.debug(
+            f"Constructed edges: {len(edge_mask_array)} total "
+            f"({n_static} static, {n_dynamic} dynamic)"
+        )
 
-        return edge_index, edge_attr, edge_mask
+        return edge_index, edge_attr_array, edge_mask_array
 
     async def _load_targets_for_snapshots(
         self, temporal_graphs: list[Data]
