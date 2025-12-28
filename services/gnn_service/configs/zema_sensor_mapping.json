@@ -1,0 +1,77 @@
+{
+  "version": "v0.1",
+  "equipment_id": "zema_001",
+  "topology": {
+    "factory": "src.topology.zema_topology:GraphTopology.create_zema_benchmark"
+  },
+  "edges": {
+    "zema_001_pump__zema_001_valve_main": {
+      "sensors": {
+        "PS1": {"field": "pressure_bar", "role": "supply_pressure"},
+        "FS1": {"field": "flow_lpm", "role": "supply_flow"},
+        "EPS1": {"field": "motor_power_w", "role": "pump_load"},
+        "VS1": {"field": "vibration", "role": "pump_vibration"},
+        "TS1": {"field": "temperature_c", "role": "supply_temp"}
+      }
+    },
+    "zema_001_valve_main__zema_001_actuator": {
+      "sensors": {
+        "PS2": {"field": "pressure_bar", "role": "load_pressure"},
+        "TS3": {"field": "temperature_c", "role": "load_line_temp"}
+      }
+    },
+    "zema_001_actuator__zema_001_tank": {
+      "sensors": {
+        "FS2": {"field": "flow_lpm", "role": "return_flow"}
+      }
+    },
+    "zema_001_valve_main__zema_001_drain_line": {
+      "sensors": {
+        "PS3": {"field": "pressure_bar", "role": "drain_pressure"}
+      }
+    },
+    "zema_001_drain_line__zema_001_tank": {"sensors": {}},
+    "zema_001_tank__zema_001_filter": {
+      "sensors": {
+        "PS5": {"field": "pressure_bar", "role": "filter_inlet_pressure"},
+        "TS4": {"field": "temperature_c", "role": "tank_temp"}
+      }
+    },
+    "zema_001_filter__zema_001_pump": {
+      "sensors": {
+        "PS6": {"field": "pressure_bar", "role": "filter_outlet_pressure"}
+      }
+    },
+    "zema_001_tank__zema_001_cooling_line": {
+      "sensors": {
+        "CE": {"field": "cooling_efficiency_pct", "role": "cooling_metric"},
+        "CP": {"field": "cooling_power_kw", "role": "cooling_metric"},
+        "SE": {"field": "efficiency_factor_pct", "role": "cooling_metric"}
+      }
+    },
+    "zema_001_cooling_line__zema_001_cooler": {
+      "sensors": {
+        "TS2": {"field": "temperature_c", "role": "cooler_temp"},
+        "PS4": {"field": "pressure_bar", "role": "cooler_pressure"}
+      }
+    },
+    "zema_001_cooler__zema_001_tank": {"sensors": {}}
+  },
+  "derived": {
+    "filter_dp": {
+      "expression": "PS5 - PS6",
+      "unit": "bar",
+      "attach_to_edge": "zema_001_tank__zema_001_filter",
+      "field": "dp_bar"
+    }
+  },
+  "labels": {
+    "source": "services/gnn_service/data/raw_real_dataset/profile.txt",
+    "columns": [
+      "cooler_condition",
+      "valve_condition",
+      "pump_condition",
+      "accumulator_condition"
+    ]
+  }
+}
