@@ -14,12 +14,15 @@ Security:
     - Async cleanup on shutdown
 """
 
+import json
 import logging
+import os
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -32,6 +35,7 @@ from src.middleware import (
     RateLimitMiddleware,
     setup_opentelemetry,
 )
+from src.schemas.datasets import DatasetIngestByUrlRequest
 from src.schemas.requests import HybridInferenceRequest
 
 # =========================================================================
@@ -195,6 +199,7 @@ app = FastAPI(
         {"name": "Health", "description": "Health and readiness checks"},
         {"name": "Kubernetes", "description": "K8s liveness/readiness probes"},
         {"name": "Inference", "description": "Prediction and diagnosis endpoints"},
+        {"name": "Datasets", "description": "Dataset ingestion endpoints"},
         {"name": "Info", "description": "Service information"},
     ],
 )
@@ -515,6 +520,152 @@ async def run_diagnosis(request: HybridInferenceRequest) -> dict[str, Any]:
 
 
 # =========================================================================
+# DATASET INGESTION ENDPOINTS
+# =========================================================================
+
+
+@app.post(
+    "/datasets/ingest",
+    tags=["Datasets"],
+    summary="Upload dataset + mapping (+ optional topology)",
+    response_model=dict[str, Any],
+    status_code=status.HTTP_201_CREATED,
+)
+async def ingest_dataset_upload(
+    dataset_file: UploadFile = File(..., description="Parquet/CSV dataset file"),
+    mapping_json: UploadFile = File(..., description="Mapping JSON"),
+    topology_json: UploadFile | None = File(None, description="Topology JSON (optional)"),
+    topology_id: str | None = Form(None, description="Topology ID (optional)"),
+    equipment_id: str | None = Form(None, description="Equipment ID (optional)"),
+) -> dict[str, Any]:
+    """Ingest a dataset into the service (upload mode).
+
+    Contract:
+    - mapping_json is required
+    - provide either topology_json or topology_id
+
+    Note:
+    - The service has a 10MB request body limit by default.
+      For large datasets prefer /datasets/ingest-by-url.
+    """
+
+    if bool(topology_id) == bool(topology_json):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide exactly one: topology_id or topology_json",
+        )
+
+    dataset_name = (dataset_file.filename or "dataset").lower()
+    if not (dataset_name.endswith(".parquet") or dataset_name.endswith(".csv")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="dataset_file must be .parquet or .csv",
+        )
+
+    try:
+        mapping_payload = json.loads((await mapping_json.read()).decode("utf-8"))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid mapping_json: {str(e)}",
+        ) from e
+
+    topology_payload: dict[str, Any] | None = None
+    if topology_json is not None:
+        try:
+            topology_payload = json.loads((await topology_json.read()).decode("utf-8"))
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid topology_json: {str(e)}",
+            ) from e
+
+    dataset_id = str(uuid.uuid4())
+    upload_dir = Path(os.getenv("GNN_UPLOAD_DIR", "/tmp/gnn_uploads"))
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_ext = ".parquet" if dataset_name.endswith(".parquet") else ".csv"
+    stored_path = upload_dir / f"{dataset_id}{safe_ext}"
+
+    try:
+        stored_path.write_bytes(await dataset_file.read())
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to store dataset_file: {str(e)}",
+        ) from e
+
+    logger.info(
+        "Dataset uploaded",
+        extra={
+            "dataset_id": dataset_id,
+            "equipment_id": equipment_id,
+            "topology_mode": "id" if topology_id else "json",
+            "stored_path": str(stored_path),
+        },
+    )
+
+    return {
+        "status": "accepted",
+        "dataset_id": dataset_id,
+        "equipment_id": equipment_id,
+        "topology_id": topology_id,
+        "topology_json_provided": topology_payload is not None,
+        "mapping_version": mapping_payload.get("version"),
+        "dataset": {
+            "filename": dataset_file.filename,
+            "stored_path": str(stored_path),
+            "content_type": dataset_file.content_type,
+        },
+    }
+
+
+@app.post(
+    "/datasets/ingest-by-url",
+    tags=["Datasets"],
+    summary="Ingest dataset by URL (+ mapping + topology)",
+    response_model=dict[str, Any],
+    status_code=status.HTTP_201_CREATED,
+)
+async def ingest_dataset_by_url(request: DatasetIngestByUrlRequest) -> dict[str, Any]:
+    """Ingest a dataset into the service (URL mode).
+
+    This endpoint is intended for large datasets (S3 presigned URL, etc.).
+    Current behavior:
+    - validate payload
+    - generate dataset_id
+    - return accepted
+
+    Download + processing will be added in the next iteration.
+    """
+
+    dataset_id = str(uuid.uuid4())
+
+    logger.info(
+        "Dataset ingest-by-url requested",
+        extra={
+            "dataset_id": dataset_id,
+            "equipment_id": request.equipment_id,
+            "dataset_url": str(request.dataset_url),
+            "topology_mode": "id" if request.topology_id else "json",
+        },
+    )
+
+    return {
+        "status": "accepted",
+        "dataset_id": dataset_id,
+        "equipment_id": request.equipment_id,
+        "topology_id": request.topology_id,
+        "topology_json_provided": request.topology_json is not None,
+        "mapping_version": request.mapping_json.get("version"),
+        "dataset": {
+            "dataset_url": str(request.dataset_url),
+            "mapping_url": str(request.mapping_url) if request.mapping_url else None,
+        },
+    }
+
+
+# =========================================================================
 # ERROR HANDLERS
 # =========================================================================
 
@@ -606,6 +757,8 @@ async def get_info() -> dict[str, Any]:
             "healthz": "/healthz (K8s liveness)",
             "readyz": "/readyz (K8s readiness)",
             "diagnose": "/v1/diagnose",
+            "dataset_ingest": "/datasets/ingest",
+            "dataset_ingest_by_url": "/datasets/ingest-by-url",
             "docs": "/docs",
             "redoc": "/redoc",
         },
