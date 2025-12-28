@@ -9,8 +9,8 @@ Supports:
 - Local training with mock components
 
 Debug features:
-- Automatic anomaly detection for backward errors
-- Backward call tracing
+- Automatic anomaly detection for backward errors (optional)
+- Backward call tracing (DEBUG_BACKWARD=1)
 - Loss tensor property logging
 
 Usage:
@@ -30,8 +30,9 @@ Usage:
         --mode dev \
         --fast-dev-run
         
-    # With backward tracing (debug only)
-    DEBUG_BACKWARD=1 python src/training/train_temporal.py ...
+    # With backward tracing + anomaly detection (debug only)
+    DEBUG_BACKWARD=1 python src/training/train_temporal.py \
+        --enable-anomaly-detection ...
 """
 
 from __future__ import annotations
@@ -41,6 +42,7 @@ import asyncio
 import logging
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
@@ -100,16 +102,38 @@ def _traced_backward(self, *args, **kwargs):
     return _original_backward(self, *args, **kwargs)
 
 
-def setup_debug_hooks():
-    """Setup backward tracing if DEBUG_BACKWARD enabled."""
+def setup_debug_hooks(enable_anomaly_detection: bool = False):
+    """Setup backward tracing and anomaly detection.
+    
+    Args:
+        enable_anomaly_detection: Enable torch.autograd.set_detect_anomaly (slow)
+    """
     if DEBUG_BACKWARD:
         logger.info("🔥 BACKWARD TRACING ENABLED (DEBUG_BACKWARD=1)")
         logger.info("   This will slow down training but catch double backward errors")
-        torch.Tensor.backward = _traced_backward
+        # Patch with cleanup guarantee
+        try:
+            torch.Tensor.backward = _traced_backward
+        except Exception as e:
+            logger.error(f"Failed to patch torch.Tensor.backward: {e}")
     
-    # Always enable anomaly detection
-    logger.info("🔍 Enabling torch.autograd.set_detect_anomaly(True)")
-    torch.autograd.set_detect_anomaly(True)
+    # Anomaly detection is optional (slow)
+    if enable_anomaly_detection:
+        logger.info("🔍 Enabling torch.autograd.set_detect_anomaly(True)")
+        logger.warning("   ⚠️  This significantly slows down training - use only for debugging")
+        torch.autograd.set_detect_anomaly(True)
+    else:
+        logger.info("✅ Anomaly detection DISABLED (use --enable-anomaly-detection to enable)")
+
+
+def restore_debug_hooks():
+    """Restore original torch.Tensor.backward."""
+    if DEBUG_BACKWARD:
+        try:
+            torch.Tensor.backward = _original_backward
+            logger.info("✅ Restored original torch.Tensor.backward")
+        except Exception as e:
+            logger.error(f"Failed to restore torch.Tensor.backward: {e}")
 
 
 def log_loss_properties(loss: torch.Tensor, context: str = "") -> None:
@@ -308,12 +332,17 @@ async def create_dataloader_from_config(config: dict, mode: str = "dev"):
         hours = 12 if mode == "dev" else 168
         logger.info(f"🔄 Loading {hours} hours of synthetic data...")
 
+        # Generate timezone-aware timestamps
+        start_time = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        if hours < 24:
+            end_time = datetime(2024, 1, 1, hours, 0, 0, tzinfo=timezone.utc)
+        else:
+            end_time = datetime(2024, 1, 8, 0, 0, 0, tzinfo=timezone.utc)
+
         graphs = await loader.load_temporal_sequence(
             equipment_id="pump_001",
-            start_time="2024-01-01T00:00:00",
-            end_time=f"2024-01-01T{hours:02d}:00:00"
-            if hours < 24
-            else "2024-01-08T00:00:00",
+            start_time=start_time.isoformat(),
+            end_time=end_time.isoformat(),
             topology=topology,
         )
 
@@ -375,9 +404,6 @@ async def create_dataloader_from_config(config: dict, mode: str = "dev"):
 
 def main():
     """Main training function."""
-    # Setup debug hooks FIRST
-    setup_debug_hooks()
-    
     parser = argparse.ArgumentParser(description="Train Universal Temporal GNN")
     parser.add_argument(
         "--config",
@@ -397,11 +423,23 @@ def main():
         action="store_true",
         help="Run single batch for debugging",
     )
+    parser.add_argument(
+        "--enable-anomaly-detection",
+        action="store_true",
+        help="Enable torch anomaly detection (SLOW - debug only)",
+    )
     args = parser.parse_args()
 
     logger.info("=" * 80)
     logger.info("🚀 Universal Temporal GNN Training")
     logger.info("=" * 80)
+
+    # Setup debug hooks with configurable anomaly detection
+    try:
+        setup_debug_hooks(enable_anomaly_detection=args.enable_anomaly_detection)
+    except Exception as e:
+        logger.error(f"❌ Failed to setup debug hooks: {e}")
+        # Continue anyway - this is not critical
 
     # Load and validate config
     logger.info(f"📄 Loading config from: {args.config}")
@@ -487,6 +525,9 @@ def main():
         logger.error(f"\n❌ Training failed: {e}")
         logger.exception(e)
         sys.exit(1)
+    finally:
+        # Cleanup: restore original backward if patched
+        restore_debug_hooks()
 
 
 if __name__ == "__main__":
