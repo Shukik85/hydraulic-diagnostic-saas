@@ -64,7 +64,7 @@ from src.schemas import (
     HealthPrediction,
     PredictionResponse,
 )
-from src.schemas.requests import MinimalInferenceRequest
+from src.schemas.requests import HybridInferenceRequest, MinimalInferenceRequest
 
 # Import from new modular architecture
 from .batching import BatchItem
@@ -228,6 +228,7 @@ class InferenceEngine:
         # Deferred imports to avoid circular dependencies
         from src.data import FeatureConfig, FeatureEngineer, GraphBuilder
         from src.data.edge_features import create_edge_feature_computer
+        from src.data.graph_builder_v2 import GraphBuilderV2
         from src.inference.dynamic_graph_builder import DynamicGraphBuilder
         from src.inference.model_manager import ModelManager
         from src.services.topology_service import get_topology_service
@@ -276,6 +277,15 @@ class InferenceEngine:
                 use_dynamic_features=config.use_dynamic_features,
             )
 
+            # Graph builder v2 (edge-centric)
+            self.graph_builder_v2 = GraphBuilderV2(
+                feature_engineer=self.feature_engineer,
+                feature_config=self.feature_config,
+                edge_feature_computer=self.edge_feature_computer,
+                edge_normalizer=self.edge_normalizer,
+                use_edge_timeseries=False,
+            )
+
             # Topology service
             self.topology_service = get_topology_service(config.topology_templates_path)
 
@@ -287,10 +297,15 @@ class InferenceEngine:
 
             # Tensor validator
             self.tensor_validator = None
+            self.tensor_validator_v2 = None
             if config.validate_tensors:
                 self.tensor_validator = TensorValidator(
                     expected_node_dim=self.feature_config.node_feature_dim,
                     expected_edge_dim=14,
+                )
+                self.tensor_validator_v2 = TensorValidator(
+                    expected_node_dim=29,
+                    expected_edge_dim=self.feature_config.edge_in_dim,
                 )
 
             # Multi-model registry
@@ -500,6 +515,165 @@ class InferenceEngine:
                 exc_info=True,
             )
             raise
+
+    async def predict_hybrid(self, request: HybridInferenceRequest) -> PredictionResponse:
+        """Predict using edge-centric HybridInferenceRequest.
+
+        This is the preferred production inference path for Day 6.
+
+        Note:
+            Dynamic batching currently supports MinimalInferenceRequest only.
+            If dynamic batching is enabled, this method still runs per-request.
+        """
+        start_time = time.time()
+
+        request_id = ensure_request_id()
+
+        # Select model version
+        model_version = "default"
+        if self.model_registry:
+            model_version = self.model_registry.select_model(request.equipment_id)
+
+        try:
+            if self.config.enable_dynamic_batching:
+                logger.warning(
+                    "Dynamic batching not supported for HybridInferenceRequest yet; running single request",
+                    extra={
+                        "equipment_id": request.equipment_id,
+                        "request_id": request_id,
+                    },
+                )
+
+            response = await asyncio.wait_for(
+                self._predict_hybrid_impl(request, model_version),
+                timeout=self.config.inference_timeout_s,
+            )
+
+            # Stats
+            self.config._total_inferences += 1
+            self.config._total_inference_time_s += time.time() - start_time
+
+            # Metrics
+            INFERENCE_REQUESTS_TOTAL.labels(
+                model_version=model_version,
+                status="success",
+            ).inc()
+
+            return response
+
+        except TimeoutError as e:
+            self.config._total_errors += 1
+            INFERENCE_ERRORS_TOTAL.labels(error_type="timeout").inc()
+            INFERENCE_REQUESTS_TOTAL.labels(
+                model_version=model_version,
+                status="timeout",
+            ).inc()
+            logger.error(
+                f"Timeout: {request.equipment_id}",
+                extra={"request_id": request_id},
+            )
+            raise InferenceError(
+                f"Timeout after {self.config.inference_timeout_s}s"
+            ) from e
+        except Exception as e:
+            self.config._total_errors += 1
+            error_type = type(e).__name__
+            INFERENCE_ERRORS_TOTAL.labels(error_type=error_type).inc()
+            INFERENCE_REQUESTS_TOTAL.labels(
+                model_version=model_version,
+                status="error",
+            ).inc()
+            logger.error(
+                f"Inference failed: {request.equipment_id}",
+                extra={"request_id": request_id},
+                exc_info=True,
+            )
+            raise
+
+    async def _predict_hybrid_impl(
+        self, request: HybridInferenceRequest, model_version: str
+    ) -> PredictionResponse:
+        """Core hybrid prediction implementation."""
+        start_time = time.time()
+
+        # Get topology config (cached).
+        # Keep a separate namespace to avoid mixing with legacy GraphTopology objects.
+        topology_cache_key = f"v2::{request.topology_id}"
+        topology_config = self.topology_cache.get(topology_cache_key)
+
+        if topology_config is None:
+            topology_config = self.topology_service.get_config(
+                template_id=request.topology_id,
+                topology_id=request.topology_id,
+            )
+            if topology_config is None:
+                raise TopologyNotFoundError(
+                    f"Topology '{request.topology_id}' not found. "
+                    f"Available: {list(self.topology_service.get_all_templates().keys())}"
+                )
+            self.topology_cache.put(topology_cache_key, topology_config)
+
+        # Build graph (edge-centric)
+        try:
+            # Day 6: edge_history integration will be connected to TimescaleDB later.
+            graph = self.graph_builder_v2.build_graph_hybrid(
+                request=request,
+                topology=topology_config,
+                edge_history=None,
+            )
+        except Exception as e:
+            raise GraphBuildError(f"Graph build failed: {e}") from e
+
+        # Validate
+        if self.tensor_validator_v2:
+            self.tensor_validator_v2.validate_graph(graph)
+
+        # Inference
+        try:
+            with INFERENCE_DURATION_SECONDS.labels(model_version=model_version).time():
+                health, degradation, anomaly = self._inference_single(
+                    graph, model_version
+                )
+        except torch.cuda.OutOfMemoryError as e:
+            if self.config.fallback_to_cpu:
+                logger.warning(
+                    "GPU OOM detected, falling back to CPU",
+                    extra={"equipment_id": request.equipment_id},
+                )
+                if self.model_registry:
+                    model = self.model_registry.get_model(model_version)
+                    model.to("cpu")
+                else:
+                    self.model.to("cpu")
+                graph = graph.to("cpu")
+                health, degradation, anomaly = self._inference_single(
+                    graph, model_version
+                )
+            else:
+                raise GPUOutOfMemoryError("GPU OOM during inference") from e
+        except Exception as e:
+            raise InferenceError(f"Inference failed: {e}") from e
+
+        # Postprocess
+        response = self._postprocess(
+            equipment_id=request.equipment_id,
+            health=health,
+            degradation=degradation,
+            anomaly=anomaly,
+            inference_time=time.time() - start_time,
+        )
+
+        logger.info(
+            "Prediction complete",
+            extra={
+                "equipment_id": request.equipment_id,
+                "request_id": get_request_id(),
+                "health_score": response.health.score,
+                "inference_time_ms": response.inference_time_ms,
+            },
+        )
+
+        return response
 
     async def _predict_minimal_impl(
         self, request: MinimalInferenceRequest, model_version: str
