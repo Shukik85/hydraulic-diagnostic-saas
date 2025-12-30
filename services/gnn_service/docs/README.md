@@ -67,7 +67,8 @@
 
 | Document | Purpose | Key Content |
 |----------|---------|-------------|
-| **[DATA_PREPARATION_AND_MODEL_QUALITY.md](./DATA_PREPARATION_AND_MODEL_QUALITY.md)** | **Analysis of real data + quality expectations** | **Sensor interpretation, feature engineering, expected model performance, practical training recipe** |
+| **[RAW_DATA_QUALITY_ASSESSMENT.md](./RAW_DATA_QUALITY_ASSESSMENT.md)** | **UCI dataset quality analysis** | **Sensor interpretation, missing data check, outlier detection, pre-processing requirements** |
+| **[DATA_PREPARATION_AND_MODEL_QUALITY.md](./DATA_PREPARATION_AND_MODEL_QUALITY.md)** | **Analysis of real data + quality expectations** | **Feature engineering, expected model performance, practical training recipe** |
 | [DATA_GENERATION_GUIDE.md](./DATA_GENERATION_GUIDE.md) | Synthetic data creation | Scenarios, parameter ranges, file formats |
 
 ### **Infrastructure & Deployment**
@@ -85,6 +86,15 @@
 2. Then: [EDGE_CENTRIC_MIGRATION.md](./EDGE_CENTRIC_MIGRATION.md) — Current Phase 3.2 details
 3. Finally: [COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md](./COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md) — Next Phase 3.3
 
+### **"I want to assess raw data quality"**
+1. **Start here:** [RAW_DATA_QUALITY_ASSESSMENT.md](./RAW_DATA_QUALITY_ASSESSMENT.md)
+   - Dataset overview (530 MB, 17 sensors, 100 Hz sampling)
+   - Sensor mapping and physical interpretation
+   - Missing value & outlier analysis
+   - Pre-processing requirements (resampling, normalization, segmentation)
+   - UCI benchmark comparison
+2. Reference: [DATA_GENERATION_GUIDE.md](./DATA_GENERATION_GUIDE.md) — Synthetic data if needed
+
 ### **"I need to prepare training data and understand model quality"**
 1. **Start here:** [DATA_PREPARATION_AND_MODEL_QUALITY.md](./DATA_PREPARATION_AND_MODEL_QUALITY.md)
    - Analysis of real hydraulic cycle characteristics
@@ -92,8 +102,9 @@
    - Expected model performance by task (line anomaly, component health, RUL)
    - Practical data preparation checklist
    - Recommended training recipe (week-by-week)
-2. Reference: [EDGE_CENTRIC_MIGRATION.md](./EDGE_CENTRIC_MIGRATION.md) — Feature engineering details
-3. Implement: [TRAINING.md](./TRAINING.md) — Actual training code
+2. Reference: [RAW_DATA_QUALITY_ASSESSMENT.md](./RAW_DATA_QUALITY_ASSESSMENT.md) — Data quality baseline
+3. Reference: [EDGE_CENTRIC_MIGRATION.md](./EDGE_CENTRIC_MIGRATION.md) — Feature engineering details
+4. Implement: [TRAINING.md](./TRAINING.md) — Actual training code
 
 ### **"I need to implement Phase 3.3"**
 1. Read: [COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md](./COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md) (Sections: Architecture Overview, Graph Construction, Model Architecture)
@@ -107,10 +118,11 @@
 3. Example: Request format in [EDGE_CENTRIC_MIGRATION.md](./EDGE_CENTRIC_MIGRATION.md) (Phase 3.2) or [COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md](./COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md) (Phase 3.3)
 
 ### **"I need to retrain the model"**
-1. **Start here:** [DATA_PREPARATION_AND_MODEL_QUALITY.md](./DATA_PREPARATION_AND_MODEL_QUALITY.md) — Understand your data
-2. Then: [TRAINING.md](./TRAINING.md) — High-level procedure
-3. Details: [TRAINING_INTERNALS.md](./TRAINING_INTERNALS.md) — Loss functions, optimization
-4. Data: [DATA_GENERATION_GUIDE.md](./DATA_GENERATION_GUIDE.md) — Generating training dataset
+1. **Check data first:** [RAW_DATA_QUALITY_ASSESSMENT.md](./RAW_DATA_QUALITY_ASSESSMENT.md) — Understand your raw data
+2. **Plan preparation:** [DATA_PREPARATION_AND_MODEL_QUALITY.md](./DATA_PREPARATION_AND_MODEL_QUALITY.md) — Expected performance
+3. **Implement pipeline:** [TRAINING.md](./TRAINING.md) — High-level procedure
+4. **Details:** [TRAINING_INTERNALS.md](./TRAINING_INTERNALS.md) — Loss functions, optimization
+5. **Generate data:** [DATA_GENERATION_GUIDE.md](./DATA_GENERATION_GUIDE.md) — Synthetic dataset if needed
 
 ### **"I need to deploy this"**
 1. Build: [DOCKER.md](./DOCKER.md) — Container setup
@@ -276,7 +288,8 @@ Phase 3.3 (Next)
 | 3.2 | Unit tests (23 methods) | ✅ | Team | Dec 26 |
 | 3.2 | InferenceEngine.predict_hybrid() | ⏳ | Pending | Jan 1-3 |
 | 3.2 | /v2/inference/hybrid endpoint | ⏳ | Pending | Jan 3-5 |
-| **3.2+** | **DATA_PREPARATION_AND_MODEL_QUALITY.md** | **🎯 NEW (Dec 30)** | **Analysis & Training Strategy** | **- |
+| **Data** | **RAW_DATA_QUALITY_ASSESSMENT.md** | **🎯 NEW (Dec 30)** | **Analysis & Pre-processing Strategy** | **- |
+| **Data** | **DATA_PREPARATION_AND_MODEL_QUALITY.md** | **🎯 NEW (Dec 30)** | **Training Expectations** | **- |
 | 3.3 | COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md | 🎯 | NEW (Dec 30) | - |
 | 3.3 | GRAPH_ARCHITECTURE_EVOLUTION.md | 🎯 | NEW (Dec 30) | - |
 | 3.3 | GraphBuilderV2.build_graph_hetero() | ⏳ | To do | Jan 5-10 |
