@@ -63,11 +63,17 @@
 | [TRAINING.md](./TRAINING.md) | Training procedures | Data prep, hyperparameters, checkpointing |
 | [TRAINING_INTERNALS.md](./TRAINING_INTERNALS.md) | Low-level training details | Loss computation, optimization, monitoring |
 
-### **Infrastructure & Data**
+### **Data & Quality**
 
 | Document | Purpose | Key Content |
 |----------|---------|-------------|
+| **[DATA_PREPARATION_AND_MODEL_QUALITY.md](./DATA_PREPARATION_AND_MODEL_QUALITY.md)** | **Analysis of real data + quality expectations** | **Sensor interpretation, feature engineering, expected model performance, practical training recipe** |
 | [DATA_GENERATION_GUIDE.md](./DATA_GENERATION_GUIDE.md) | Synthetic data creation | Scenarios, parameter ranges, file formats |
+
+### **Infrastructure & Deployment**
+
+| Document | Purpose | Key Content |
+|----------|---------|-------------|
 | [DOCKER.md](./DOCKER.md) | Containerization | Build, run, environment setup |
 
 ---
@@ -78,6 +84,16 @@
 1. Start: [GRAPH_ARCHITECTURE_EVOLUTION.md](./GRAPH_ARCHITECTURE_EVOLUTION.md) — Visual 3-phase comparison
 2. Then: [EDGE_CENTRIC_MIGRATION.md](./EDGE_CENTRIC_MIGRATION.md) — Current Phase 3.2 details
 3. Finally: [COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md](./COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md) — Next Phase 3.3
+
+### **"I need to prepare training data and understand model quality"**
+1. **Start here:** [DATA_PREPARATION_AND_MODEL_QUALITY.md](./DATA_PREPARATION_AND_MODEL_QUALITY.md)
+   - Analysis of real hydraulic cycle characteristics
+   - Sensor interpretation (what each channel means)
+   - Expected model performance by task (line anomaly, component health, RUL)
+   - Practical data preparation checklist
+   - Recommended training recipe (week-by-week)
+2. Reference: [EDGE_CENTRIC_MIGRATION.md](./EDGE_CENTRIC_MIGRATION.md) — Feature engineering details
+3. Implement: [TRAINING.md](./TRAINING.md) — Actual training code
 
 ### **"I need to implement Phase 3.3"**
 1. Read: [COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md](./COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md) (Sections: Architecture Overview, Graph Construction, Model Architecture)
@@ -91,9 +107,10 @@
 3. Example: Request format in [EDGE_CENTRIC_MIGRATION.md](./EDGE_CENTRIC_MIGRATION.md) (Phase 3.2) or [COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md](./COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md) (Phase 3.3)
 
 ### **"I need to retrain the model"**
-1. Start: [TRAINING.md](./TRAINING.md) — High-level procedure
-2. Details: [TRAINING_INTERNALS.md](./TRAINING_INTERNALS.md) — Loss functions, optimization
-3. Data: [DATA_GENERATION_GUIDE.md](./DATA_GENERATION_GUIDE.md) — Generating training dataset
+1. **Start here:** [DATA_PREPARATION_AND_MODEL_QUALITY.md](./DATA_PREPARATION_AND_MODEL_QUALITY.md) — Understand your data
+2. Then: [TRAINING.md](./TRAINING.md) — High-level procedure
+3. Details: [TRAINING_INTERNALS.md](./TRAINING_INTERNALS.md) — Loss functions, optimization
+4. Data: [DATA_GENERATION_GUIDE.md](./DATA_GENERATION_GUIDE.md) — Generating training dataset
 
 ### **"I need to deploy this"**
 1. Build: [DOCKER.md](./DOCKER.md) — Container setup
@@ -259,6 +276,7 @@ Phase 3.3 (Next)
 | 3.2 | Unit tests (23 methods) | ✅ | Team | Dec 26 |
 | 3.2 | InferenceEngine.predict_hybrid() | ⏳ | Pending | Jan 1-3 |
 | 3.2 | /v2/inference/hybrid endpoint | ⏳ | Pending | Jan 3-5 |
+| **3.2+** | **DATA_PREPARATION_AND_MODEL_QUALITY.md** | **🎯 NEW (Dec 30)** | **Analysis & Training Strategy** | **- |
 | 3.3 | COMPONENT_DIAGNOSTICS_WITH_HETERO_GRAPH.md | 🎯 | NEW (Dec 30) | - |
 | 3.3 | GRAPH_ARCHITECTURE_EVOLUTION.md | 🎯 | NEW (Dec 30) | - |
 | 3.3 | GraphBuilderV2.build_graph_hetero() | ⏳ | To do | Jan 5-10 |
