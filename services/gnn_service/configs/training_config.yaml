@@ -1,0 +1,139 @@
+# Training Pipeline Configuration
+# Python 3.14+ compatible
+# Related: Issue #131 - Week 3
+
+training:
+  # Basic settings
+  epochs: 100
+  batch_size: 32
+  num_workers: 4  # DataLoader workers
+  pin_memory: true
+  
+  # Validation
+  validation_split: 0.15
+  validation_frequency: 1  # Validate every N epochs
+  early_stopping:
+    enabled: true
+    patience: 20
+    min_delta: 0.001
+    
+  # Gradient settings
+  gradient_clip:
+    enabled: true
+    max_norm: 1.0
+    norm_type: 2
+    
+  # Mixed precision training (PyTorch 2.8+)
+  mixed_precision:
+    enabled: true
+    dtype: "float16"  # Options: float16, bfloat16
+    
+  # Multi-topology training
+  topologies:
+    train: [3, 7, 10]  # Node counts
+    test: [3, 6, 7, 10, 50]  # Include unseen sizes
+    
+  # Data augmentation
+  augmentation:
+    enabled: true
+    noise_level: 0.02  # 2% additional noise
+    dropout_edges: 0.1  # Randomly drop 10% of edges
+    
+# Dataset configuration
+data:
+  # Paths
+  data_dir: "data/"
+  parallel_file: "parallel_operations_700graphs.pt"
+  sequential_file: "sequential_cascade_400graphs.pt"
+  temporal_file: "temporal_sequences_100x10.pt"
+  
+  # Splits
+  train_split: 0.7
+  val_split: 0.15
+  test_split: 0.15
+  
+  # Temporal sequence settings
+  temporal:
+    sequence_length: 10
+    stride: 1  # For overlapping sequences
+    
+  # Data loading
+  shuffle: true
+  drop_last: false  # Keep incomplete batches
+  
+# Checkpointing
+checkpoints:
+  save_dir: "checkpoints/"
+  save_frequency: 5  # Save every N epochs
+  save_best_only: true
+  monitor_metric: "val_loss"
+  mode: "min"  # min or max
+  
+  # Checkpoint naming
+  filename_template: "epoch={epoch:03d}-val_loss={val_loss:.4f}.ckpt"
+  
+  # Keep top-k checkpoints
+  keep_top_k: 3
+  
+# Logging
+logging:
+  # TensorBoard
+  tensorboard:
+    enabled: true
+    log_dir: "runs/"
+    flush_secs: 30
+    
+  # Metrics to log
+  metrics:
+    train:
+      - "loss"
+      - "component_health_accuracy"
+      - "anomaly_f1"
+      - "learning_rate"
+    validation:
+      - "val_loss"
+      - "val_component_health_accuracy"
+      - "val_anomaly_f1"
+      - "val_attention_distribution"
+    
+  # Console logging
+  console:
+    level: "INFO"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    
+  # Progress bars
+  progress_bar:
+    enabled: true
+    ncols: 100
+    
+# Metrics configuration
+metrics:
+  # Component health (node-level)
+  component_health:
+    accuracy: true
+    precision: true
+    recall: true
+    f1_score: true
+    confusion_matrix: true
+    per_class_metrics: true
+    
+  # Anomaly detection (graph-level)
+  anomaly_type:
+    accuracy: true
+    precision: true
+    recall: true
+    f1_score: true
+    confusion_matrix: true
+    roc_auc: true  # One-vs-rest
+    
+  # Attention weights
+  attention:
+    track_distribution: true
+    save_visualizations: true
+    visualization_frequency: 10  # Every N epochs
+
+# Reproducibility
+reproducibility:
+  seed: 42
+  deterministic: true
+  benchmark: false  # Set to true for faster training (non-deterministic)

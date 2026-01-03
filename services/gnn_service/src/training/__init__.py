@@ -1,0 +1,62 @@
+"""Training components for Universal Temporal GNN.
+
+Provides:
+- LightningModule for training
+- Loss functions (standard + advanced)
+- DataLoaders
+- Imputation (GRAPE two-stage)
+- Trainer factories
+"""
+
+__version__ = "0.2.0"
+
+from src.training.imputation_grape import (
+    GRAPEImputer,
+    TemporalImputer,
+    TwoStageImputer,
+)
+from src.training.lightning_module import HydraulicGNNModule
+from src.training.losses import (
+    FocalLoss,
+    MultiTaskLoss,
+    QuantileRULLoss as QuantileRULLossBasic,
+    UncertaintyWeighting,
+    WingLoss,
+)
+from src.training.losses_advanced import (
+    AsymmetricL1Loss,
+    ConfidenceWeightedLoss,
+    DomainAdversarialLoss,
+    PhysicsAwareFocalLoss,
+    QuantileRULLoss,
+)
+from src.training.trainer import (
+    create_development_trainer,
+    create_production_trainer,
+    create_trainer,
+)
+
+__all__ = [
+    # Training
+    "HydraulicGNNModule",
+    # Trainers
+    "create_trainer",
+    "create_production_trainer",
+    "create_development_trainer",
+    # Standard losses
+    "FocalLoss",
+    "WingLoss",
+    "QuantileRULLossBasic",
+    "UncertaintyWeighting",
+    "MultiTaskLoss",
+    # Advanced losses (GRAPE, DIDA, Quantile)
+    "AsymmetricL1Loss",
+    "QuantileRULLoss",
+    "PhysicsAwareFocalLoss",
+    "DomainAdversarialLoss",
+    "ConfidenceWeightedLoss",
+    # Imputation
+    "GRAPEImputer",
+    "TemporalImputer",
+    "TwoStageImputer",
+]

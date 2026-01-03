@@ -1,90 +1,139 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hydraulic-diagnostic-saas"
+version = "1.0.0-production"
+
 [tool.black]
 line-length = 88
-target-version = ["py311"]
+target-version = ["py314"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "DTZ", "PTH", "ARG"]
-ignore = [
-    "D",      # pydocstyle - отключаем docstring правила
-    "ANN",    # flake8-annotations - отключаем аннотации
-    "RUF001", # ambiguous-unicode-character-string - кириллица в строках OK
-    "RUF002", # ambiguous-unicode-character-docstring - кириллица в docstring OK  
-    "RUF003", # ambiguous-unicode-character-comment - кириллица в комментариях OK
-    "E501",   # line-too-long - часто невозможно сократить Django код
-]
+ignore = ["D", "ANN", "RUF001", "RUF002", "RUF003", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
-# Миграции Django - полное исключение
-"*/migrations/*.py" = [
-    "E", "F", "I", "UP", "B", "SIM", "DTZ", "PTH", "RUF", "ARG",
-    "W", "C", "N", "YTT", "S", "BLE", "FBT", "A", "COM", "CPY",
-    "C4", "EM", "EXE", "FA", "ISC", "ICN", "G", "INP", "PIE",
-    "PYI", "Q", "RSE", "RET", "SLF", "SLOT", "TID", "TCH",
-    "INT", "ARG", "PTH", "TD", "FIX", "ERA", "PD", "PGH", "PL",
-    "TRY", "FLY", "NPY", "AIR", "PERF", "FURB", "LOG", "RUF"
-]
-
-# Тесты - исключение большинства правил
 "*/tests/*.py" = ["ARG001", "ARG002", "DTZ003", "DTZ005", "PTH120"]
 "test_*.py" = ["ARG001", "ARG002", "DTZ003", "DTZ005", "PTH120", "I001"]
-
-# Django/DRF паттерны - специфические исключения
+"services/gnn_service/src/models/*.py" = ["E741", "N806"]
+"services/gnn_service/tests/legacy/*.py" = ["F841", "ARG001"]
+"*/migrations/*.py" = ["E", "F", "I", "UP", "B", "SIM", "DTZ", "PTH", "ARG"]
 "*/admin.py" = ["RUF012", "DTZ005", "ARG001", "ARG002", "I001"]
 "*/models.py" = ["RUF012", "A003", "UP037", "I001"]
 "*/serializers.py" = ["RUF012", "I001"]
 "*/views.py" = ["RUF012", "ARG001", "ARG002"]
-"*/optimized_views.py" = ["RUF012", "SIM102", "ARG001", "ARG002"]
-
-# Django специфика - сигналы и задачи
-"*/signals.py" = ["ARG001", "ARG002"]
-"*/celery.py" = ["ARG001", "UP007"]
-"*/tasks.py" = ["ARG001", "ARG002", "B904", "DTZ003", "I001"]
-"*/tasks_build.py" = ["ARG001", "DTZ003", "I001"]
-"*/urls.py" = ["ARG001", "F821", "I001"]
-
-# Системные файлы Django
-"*/asgi.py" = ["ARG001", "UP007"]
-"*/wsgi.py" = ["ARG001", "UP007"]
-"*/health_checks.py" = ["ARG001", "I001"]
-"*/pagination.py" = ["B904", "ARG002"]
 "*/settings.py" = ["F405", "F403"]
-"*/settings/*.py" = ["F405", "F403"]
 "manage.py" = ["ARG001"]
 "*/__init__.py" = ["F401"]
 
-# RAG/AI специфические файлы
-"*/rag_core.py" = ["PTH123", "I001"]
-"*/rag_service.py" = ["B904", "PTH108", "PTH110", "I001"]
-"*/rag_system.py" = ["PTH118", "I001"]
-"*/llm_factory.py" = ["I001"]
-"*/middleware.py" = ["SIM102", "ARG001", "I001"]
-"*/apps.py" = ["I001"]
-
-# Диагностические файлы
-"*/timescale_tasks.py" = ["ARG001", "B012", "I001"]
-"*/websocket_consumers.py" = ["DTZ005", "ARG001", "ARG002", "I001"]
-"*/ai_engine.py" = ["ARG002"]
-
-# Management commands
-"*/management/commands/*.py" = ["ARG001", "ARG002", "DTZ003", "DTZ005", "F401", "I001", "RUF010"]
-
-# Корневые файлы
-"conftest.py" = ["ARG001", "I001"]
-"smoke_*.py" = ["I001"]
-
 [tool.ruff.format]
 quote-style = "double"
-indent-style = "space"  
+indent-style = "space"
 
 [tool.ruff.lint.isort]
-known-first-party = ["backend", "apps", "core"]
+known-first-party = ["src", "tests", "services"]
 combine-as-imports = true
 
+[tool.mypy]
+python_version = "3.14"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["torch.*", "torch_geometric.*", "pytorch_lightning.*", "asyncpg.*", "pandas.*", "numpy.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "*.migrations.*"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "services/gnn_service/tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=src",
+    "--cov-report=html",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=xml",
+    "--cov-config=pyproject.toml",
+    "--asyncio-mode=auto",
+    "--maxfail=3",
+    "--durations=10",
+]
+
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Slow tests",
+    "gpu: GPU tests",
+    "db: Database tests",
+    "e2e: End-to-end tests",
+]
+
+asyncio_mode = "auto"
+
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+    "ignore::UserWarning:torch.*",
+    "ignore::FutureWarning:torch_geometric.*",
+]
+
+minversion = "7.0"
+norecursedirs = [".git", ".venv", "venv", "__pycache__", ".pytest_cache", ".mypy_cache", "htmlcov", "dist", "build", "*.egg-info"]
+console_output_style = "progress"
+
+[tool.coverage.run]
+branch = true
+source = ["src", "services/gnn_service/src"]
+omit = ["*/tests/*", "*/migrations/*", "*/conftest.py"]
+
+[tool.coverage.report]
+fail_under = 70
+precision = 2
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["src", "tests", "services"]
+ensure_newline_before_comments = true
+
 [tool.bandit]
-# Bandit настройки для безопасности
 skips = ["B101", "B601"]
 exclude_dirs = ["tests", "migrations"]

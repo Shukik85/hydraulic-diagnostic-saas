@@ -1,9 +1,93 @@
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+PIPFILE.lock
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Documentation
+docs/_build/
+*.md
+!README.md
+
+# Logs
 logs/
-models/
-!.gitkeep
-data/*.csv
-data/*.pt
-!.md
-data/equipment_*.json
+*.log
+
+# Data (exclude from image, mount as volumes)
+data/raw/*
+data/processed/*
+!data/topology_templates/
+
+# Models (exclude large checkpoints, mount as volumes)
+models/checkpoints/*
+models/production/*
+!models/.gitkeep
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Kubernetes
+k8s/
+
+# Misc
+notebooks/
+tests/
+*.bak
+*.tmp

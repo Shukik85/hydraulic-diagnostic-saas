@@ -1,0 +1,56 @@
+{
+  "pressure": [
+    "pump_pressure_outlet",
+    "boom_pressure_extend",
+    "boom_pressure_retract",
+    "boom_pressure_diff",
+    "stick_pressure_extend",
+    "stick_pressure_retract",
+    "stick_pressure_diff",
+    "bucket_pressure_extend",
+    "bucket_pressure_retract",
+    "bucket_pressure_diff",
+    "swing_pressure_inlet",
+    "left_pressure_inlet",
+    "right_pressure_inlet"
+  ],
+  "temperature": [
+    "pump_temperature",
+    "swing_temperature",
+    "left_temperature",
+    "right_temperature"
+  ],
+  "vibration": [
+    "pump_vibration",
+    "swing_vibration",
+    "left_vibration",
+    "right_vibration"
+  ],
+  "flow": [],
+  "rpm": [
+    "pump_speed_rpm",
+    "swing_speed_rpm",
+    "left_speed_rpm",
+    "right_speed_rpm"
+  ],
+  "other": [
+    "time_s",
+    "pump_power",
+    "fault_pump",
+    "boom_position",
+    "boom_velocity",
+    "fault_cylinder_boom",
+    "stick_position",
+    "stick_velocity",
+    "fault_cylinder_stick",
+    "bucket_position",
+    "bucket_velocity",
+    "fault_cylinder_bucket",
+    "swing_torque",
+    "fault_motor_swing",
+    "left_torque",
+    "fault_motor_left",
+    "right_torque",
+    "fault_motor_right"
+  ]
+}

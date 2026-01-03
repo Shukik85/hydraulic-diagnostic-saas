@@ -1,0 +1,24 @@
+# Pytest
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Coverage
+.coverage
+htmlcov/
+.coveragerc
+coverage.xml
+
+# PyTest logs
+tests/pytest.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
