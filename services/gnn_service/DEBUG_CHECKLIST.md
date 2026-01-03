@@ -1,409 +1,426 @@
-# 🔧 Production Debugging Checklist: Autograd Graph Issues
+# Debug Checklist: Phase 2 Integration
 
-## 📊 Pre-Training Verification
-
-### ✅ Configuration Checks
-
-- [ ] **Loss Weighting**
-  ```python
-  loss_config:
-    weighting: "fixed"  # ✅ Use fixed, not uncertainty
-  ```
-
-- [ ] **Precision**
-  ```python
-  training:
-    precision: "32"  # ✅ Use 32, not 16 (AMP caches graphs)
-  ```
-
-- [ ] **Sanity Checks (Dev Mode)**
-  ```python
-  # In create_development_trainer:
-  num_sanity_val_steps=0  # ✅ Disabled for dev
-  ```
-
-- [ ] **Scheduler Configuration**
-  ```python
-  lr_scheduler:
-    interval: "epoch"  # ✅ Step at epoch end
-    frequency: 1
-  ```
-
-- [ ] **Batch Size Reasonable**
-  ```yaml
-  training:
-    batch_size: 32  # ✅ Not too small
-  ```
+**Purpose**: Verify Phase 2 integration fixes are working  
+**Target**: Model output verification, inference compatibility, schema validation  
+**Time**: ~30 minutes total
 
 ---
 
-## 🔍 Runtime Inspection
+## Pre-Debug Setup
 
-### Quick Health Check Before Training
-
-```python
-import torch
-from src.training.lightning_module import HydraulicGNNModule
-
-# 1. Create module
-module = HydraulicGNNModule(
-    in_channels=34,
-    hidden_channels=128,
-    use_advanced_losses=True,
-    use_confidence_weighting=True,
-)
-
-# 2. Create dummy batch
-batch = create_dummy_batch(batch_size=4, num_nodes=40)
-
-# 3. Forward pass
-outputs = module(
-    x=batch.x,
-    edge_index=batch.edge_index,
-    edge_attr=batch.edge_attr,
-    batch=batch.batch
-)
-
-# 4. Loss computation
-total_loss, loss_dict = module.compute_loss(outputs, batch)
-
-# 5. Check loss properties
-print("📊 Loss Properties:")
-print(f"  requires_grad: {total_loss.requires_grad}")
-print(f"  is_leaf: {total_loss.is_leaf}")
-print(f"  grad_fn: {total_loss.grad_fn}")
-print(f"  dtype: {total_loss.dtype}")
-print(f"  device: {total_loss.device}")
-
-# 6. Test backward
-print("\n🔙 Testing backward...")
-try:
-    loss_grads = torch.autograd.grad(total_loss, module.parameters(), create_graph=False)
-    print(f"  ✅ Backward successful! Got {len(loss_grads)} gradients")
-    
-    # Check gradients are non-zero
-    nonzero_grads = sum(1 for g in loss_grads if (g != 0).any())
-    print(f"  ✅ {nonzero_grads}/{len(loss_grads)} gradients are non-zero")
-except Exception as e:
-    print(f"  ❌ Error: {e}")
-```
+- [ ] Virtual environment activated
+- [ ] Dependencies installed: `pip install -r requirements.txt`
+- [ ] Model checkpoint available: `models/v2.1.0.ckpt`
+- [ ] Database accessible (optional for basic tests)
 
 ---
 
-## 💥 Catching Double Backward at Runtime
+## 1. Model Output Verification (5 min)
 
-### Method 1: Enable Anomaly Detection (RECOMMENDED)
-
-```python
-# In train_temporal.py main():
-def main():
-    # Enable BEFORE creating module
-    torch.autograd.set_detect_anomaly(True)  # 🔥 CRITICAL
-    
-    # ... rest of code ...
-    trainer.fit(module, train_loader, val_loader)
-```
-
-**Expected error with full traceback:**
-```
-RuntimeError: Trying to backward through the graph a second time
-(...full stack trace showing where #1 and #2 happen...)
-```
-
----
-
-### Method 2: Validate Step Output
-
-```python
-class HydraulicGNNModule(pl.LightningModule):
-    
-    def training_step(self, batch, batch_idx):
-        outputs = self(...)
-        total_loss, loss_dict = self.compute_loss(outputs, batch)
-        
-        # 🔧 VALIDATION
-        assert total_loss.requires_grad, "Loss must have requires_grad=True"
-        assert total_loss.is_leaf == False, "Loss must have grad_fn"
-        assert total_loss.dim() == 0, "Loss must be scalar"
-        assert total_loss.dtype == torch.float32, "Loss should be float32"
-        
-        self.log("train/total_loss", total_loss, prog_bar=True)
-        return total_loss
-    
-    def validation_step(self, batch, batch_idx):
-        with torch.no_grad():
-            outputs = self(...)
-            total_loss, loss_dict = self.compute_loss(outputs, batch)
-            
-            # 🔧 VALIDATION
-            assert not total_loss.requires_grad, "Validation loss must have requires_grad=False"
-            assert total_loss.grad_fn is None, "Validation loss must not have grad_fn"
-            assert total_loss.dim() == 0, "Loss must be scalar"
-        
-        self.log("val/total_loss", total_loss, prog_bar=True)
-        return total_loss
-```
-
----
-
-### Method 3: Monitor Memory Usage
-
-```python
-import torch
-
-def log_gpu_memory():
-    """Log GPU memory usage."""
-    if torch.cuda.is_available():
-        allocated = torch.cuda.memory_allocated() / 1e9  # GB
-        reserved = torch.cuda.memory_reserved() / 1e9
-        print(f"👽 GPU Memory: {allocated:.2f}GB allocated, {reserved:.2f}GB reserved")
-
-# In training loop:
-for epoch in range(num_epochs):
-    log_gpu_memory()
-    # ... training ...
-    log_gpu_memory()
-    torch.cuda.empty_cache()
-    log_gpu_memory()
-```
-
-**Expected pattern:**
-```
-👽 GPU Memory: 0.50GB allocated, 0.80GB reserved (Start)
-👽 GPU Memory: 1.20GB allocated, 1.50GB reserved (After training)
-👽 GPU Memory: 0.50GB allocated, 0.80GB reserved (After cleanup)
-```
-
-If allocated grows each epoch → graph leaking!
-
----
-
-## 📇 Loss Computation Breakdown
-
-### Verify Each Loss Component
-
-```python
-def diagnose_loss_computation(module, batch):
-    """Detailed loss computation diagnosis."""
-    
-    print("📊=" * 50)
-    print("Loss Computation Diagnosis")
-    print("="*50)
-    
-    # 1. Forward pass
-    outputs = module(
-        x=batch.x,
-        edge_index=batch.edge_index,
-        edge_attr=batch.edge_attr,
-        batch=batch.batch
-    )
-    print("\n✅ Forward pass successful")
-    
-    # 2. Individual losses
-    print("\n📈 Individual Losses:")
-    
-    # Graph health
-    graph_health_loss = module.graph_health_loss(
-        outputs["graph"]["health"].squeeze(-1),
-        batch.y_graph_health.squeeze(-1),
-        torch.ones(batch.num_graphs, device=batch.x.device)
-    )
-    print(f"  graph_health: {graph_health_loss.item():.4f}")
-    print(f"    requires_grad: {graph_health_loss.requires_grad}")
-    print(f"    grad_fn: {graph_health_loss.grad_fn}")
-    
-    # Graph degradation
-    graph_degradation_loss = module.graph_degradation_loss(
-        outputs["graph"]["degradation"].squeeze(-1),
-        batch.y_graph_degradation.squeeze(-1),
-        torch.ones(batch.num_graphs, device=batch.x.device)
-    )
-    print(f"  graph_degradation: {graph_degradation_loss.item():.4f}")
-    
-    # ... repeat for all losses ...
-    
-    # 3. Combined loss
-    total_loss = (
-        1.0 * graph_health_loss +
-        1.0 * graph_degradation_loss
-        # ... etc
-    )
-    print(f"\n📊 Total Loss: {total_loss.item():.4f}")
-    print(f"  requires_grad: {total_loss.requires_grad}")
-    print(f"  grad_fn: {total_loss.grad_fn}")
-    
-    # 4. Test backward
-    print("\n🔙 Testing backward...")
-    try:
-        total_loss.backward()
-        print("✅ Backward successful!")
-        
-        # Check gradients
-        grad_norm = 0
-        for p in module.parameters():
-            if p.grad is not None:
-                grad_norm += p.grad.norm().item()**2
-        grad_norm = grad_norm ** 0.5
-        print(f"  Gradient norm: {grad_norm:.4f}")
-    except RuntimeError as e:
-        print(f"❌ Backward failed: {e}")
-    
-    print("="*50)
-```
-
----
-
-## 🔍 Epoch Transition Check
-
-```python
-class DebugCallback(pl.Callback):
-    """Monitor epoch transitions for graph leaks."""
-    
-    def on_epoch_end(self, trainer, pl_module):
-        print(f"\n📈 End of Epoch {trainer.current_epoch}")
-        
-        if torch.cuda.is_available():
-            allocated = torch.cuda.memory_allocated() / 1e9
-            reserved = torch.cuda.memory_reserved() / 1e9
-            print(f"  GPU Memory: {allocated:.2f}GB allocated, {reserved:.2f}GB reserved")
-    
-    def on_train_epoch_end(self, trainer, pl_module):
-        print(f"\n📦 Cleanup before Epoch {trainer.current_epoch + 1}")
-        
-        if hasattr(pl_module, 'on_epoch_end'):
-            pl_module.on_epoch_end()
-        
-        if torch.cuda.is_available():
-            allocated = torch.cuda.memory_allocated() / 1e9
-            print(f"  After cleanup: {allocated:.2f}GB allocated")
-```
-
-Use in trainer:
-```python
-trainer = create_production_trainer(config)
-trainer.callbacks.append(DebugCallback())
-trainer.fit(module, train_loader, val_loader)
-```
-
----
-
-## 🤚 Gradient Debugging
-
-### Check Gradient Flow
-
-```python
-def check_gradient_flow(module):
-    """Verify all parameters receive gradients."""
-    
-    print("📈 Gradient Flow Analysis\n")
-    
-    total_params = 0
-    params_with_grad = 0
-    zero_grad_params = 0
-    none_grad_params = 0
-    
-    for name, param in module.named_parameters():
-        total_params += 1
-        
-        if param.grad is None:
-            none_grad_params += 1
-            print(f"❌ {name}: NO GRAD COMPUTED")
-        elif (param.grad == 0).all():
-            zero_grad_params += 1
-            print(f"⚠️  {name}: zero gradient")
-        else:
-            params_with_grad += 1
-            grad_norm = param.grad.norm().item()
-            print(f"✅ {name}: ∣∣grad∣∣ = {grad_norm:.4f}")
-    
-    print(f"\n📊 Summary:")
-    print(f"  Total params: {total_params}")
-    print(f"  With gradients: {params_with_grad}")
-    print(f"  Zero gradients: {zero_grad_params}")
-    print(f"  No gradients: {none_grad_params}")
-    
-    if none_grad_params > 0:
-        print(f"\n⚠️  WARNING: {none_grad_params} parameters not receiving gradients!")
-```
-
----
-
-## 🚀 Running Production Training
+### Test: Model returns correct v2.1.0 structure
 
 ```bash
-# Step 1: Quick validation (1 batch)
-python src/training/train_temporal.py \
-    --config configs/training_temporal.yaml \
-    --mode dev \
-    --fast-dev-run
+python << 'EOF'
+from src.models import UniversalTemporalGNNv2, ModelConfig
+import torch
+from torch_geometric.data import Data
 
-# Expected output:
-# Epoch 0/0  ───────────────── 1/1 0:00:00
-# ✋ Training completed successfully!
+# Create model
+config = ModelConfig()
+model = UniversalTemporalGNNv2(config)
+model.eval()
 
-# Step 2: Full dev training (multiple epochs, small dataset)
-python src/training/train_temporal.py \
-    --config configs/training_temporal.yaml \
-    --mode dev
+# Create sample data
+data = Data(
+    x=torch.randn(5, 34),
+    edge_index=torch.tensor([[0,1,2,3,4], [1,2,3,4,0]], dtype=torch.long),
+    edge_attr=torch.randn(5, 14)
+)
 
-# Expected output:
-# Epoch 1/199 ───────────────── 2/2 0:00:02
-# ✋ train/total_loss: 310.721  val/total_loss: 327.078
-# Epoch 2/199 ───────────────── 2/2 0:00:02
-# ✋ train/total_loss: 298.456  val/total_loss: 315.234
+# Forward pass
+with torch.no_grad():
+    outputs = model(data, temporal=False)
 
-# Step 3: Production training
-python src/training/train_temporal.py \
-    --config configs/training_temporal.yaml \
-    --mode prod
+print("\u2705 Output type:", type(outputs).__name__)  # Should be: dict
+print("\u2705 Top-level keys:", list(outputs.keys()))  # Should be: ['component', 'graph']
+print("\u2705 Component keys:", list(outputs['component'].keys()))  # Should be: ['health', 'anomaly']
+print("\u2705 Graph keys:", list(outputs['graph'].keys()))  # Should be: ['health', 'degradation', 'anomaly', 'rul']
+
+# Verify shapes
+assert outputs['component']['health'].shape == (5, 1), "Component health shape wrong"
+assert outputs['component']['anomaly'].shape == (5, 9), "Component anomaly shape wrong"
+assert outputs['graph']['health'].shape == (1, 1), "Graph health shape wrong"
+assert outputs['graph']['rul'].shape == (1, 1), "Graph RUL shape wrong"
+
+print("\n✅ ALL CHECKS PASSED")
+EOF
 ```
 
----
+**Expected Output**:
+```
+✅ Output type: dict
+✅ Top-level keys: ['component', 'graph']
+✅ Component keys: ['health', 'anomaly']
+✅ Graph keys: ['health', 'degradation', 'anomaly', 'rul']
+✅ ALL CHECKS PASSED
+```
 
-## 📚 Troubleshooting Table
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| "Trying to backward through graph twice" | Sanity checks or validation in graph | Set `num_sanity_val_steps=0`, wrap validation with `torch.no_grad()` |
-| "CUDA out of memory" | Memory leak or graph caching | Add `on_epoch_end()` with `torch.cuda.empty_cache()` |
-| "loss.grad_fn is None" | Validation building graph | Ensure `torch.no_grad()` wraps validation |
-| "Gradients are zero" | Loss not connected to params | Check loss computation formula |
-| "Gradients are NaN" | Numerical instability | Use `precision='32'`, check loss values |
-| Training very slow | Too many workers or sync issues | Increase `num_workers`, use persistent workers |
-
----
-
-## 🏆 Final Validation Checklist
-
-- [ ] Module trains for 3+ epochs without error
-- [ ] Loss decreases monotonically (or at least doesn't explode)
-- [ ] GPU memory doesn't grow unbounded
-- [ ] Validation metrics are reasonable
-- [ ] Checkpoints save successfully
-- [ ] Can resume from checkpoint
-- [ ] All gradients are non-zero
-- [ ] No NaN values in loss
+**If Failed**:
+- [ ] Check model file: `src/models/universal_temporal_gnn.py`
+- [ ] Verify forward() method returns nested dict
+- [ ] Check output layer definitions
 
 ---
 
-## 📚 Useful Commands
+## 2. Inference Engine Compatibility (5 min)
+
+### Test: Inference engine handles dict output
 
 ```bash
-# View TensorBoard logs
-tensorboard --logdir logs/production
+python << 'EOF'
+from src.inference.inference_engine import InferenceEngine
+from src.inference.model_manager import ModelManager
+from torch_geometric.data import Data
+import torch
 
-# Profile training
-DEBUG_BACKWARD=1 python src/training/train_temporal.py --config configs/training_temporal.yaml --mode dev --fast-dev-run
+print("Testing inference engine dict handling...\n")
 
-# Check GPU memory
-gpustat --watch 1
+# Check inference_engine.py code
+with open('src/inference/inference_engine.py', 'r') as f:
+    content = f.read()
+    
+    # Should NOT have this pattern (old):
+    if 'health, degradation, anomaly = model' in content:
+        print("\u274c ERROR: Found tuple unpacking (old pattern)")
+        print("   Location: _inference_single() method")
+        print("   Fix: Change to: outputs = model(...)")
+    else:
+        print("\u2705 No tuple unpacking found (good!)")
+    
+    # Should have this pattern (new):
+    if "outputs = model" in content and "outputs_dict" not in content:
+        print("\u2705 Dict unpacking found (correct!)")
+    elif "outputs_dict" in content:
+        print("\u2705 Dict structure handling found")
+    else:
+        print("\u26a0️ WARNING: Check _inference_single() implementation")
 
-# Monitor system resources
-watch -n 1 nvidia-smi
+print("\n✅ CODE STRUCTURE CHECK COMPLETE")
+EOF
+```
+
+**Expected Output**:
+```
+Testing inference engine dict handling...
+✅ No tuple unpacking found (good!)
+✅ Dict unpacking found (correct!)
+✅ CODE STRUCTURE CHECK COMPLETE
+```
+
+**If Failed**:
+- [ ] Open `src/inference/inference_engine.py`
+- [ ] Find `_inference_single()` method
+- [ ] Replace tuple unpacking with dict: `outputs = model(...)`
+- [ ] Verify `_postprocess()` uses `outputs['component']` and `outputs['graph']`
+
+---
+
+## 3. Response Schema Validation (5 min)
+
+### Test: Response includes all v2.1.0 fields
+
+```bash
+python << 'EOF'
+from src.schemas.responses import PredictionResponse
+import inspect
+
+print("Checking PredictionResponse schema...\n")
+
+# Get fields
+sig = inspect.signature(PredictionResponse.__init__)
+fields = [p for p in sig.parameters if p != 'self']
+
+print(f"Fields found: {len(fields)}")
+print(f"Field list: {fields}\n")
+
+# Check for required Phase 2 fields
+required_fields = ['rul_hours', 'component_predictions']
+for field in required_fields:
+    if field in fields:
+        print(f"\u2705 Found: {field}")
+    else:
+        print(f"\u274c MISSING: {field}")
+
+print("\n✅ SCHEMA VALIDATION COMPLETE")
+EOF
+```
+
+**Expected Output**:
+```
+Checking PredictionResponse schema...
+
+Fields found: X
+Field list: [...]  # includes rul_hours, component_predictions
+
+✅ Found: rul_hours
+✅ Found: component_predictions
+✅ SCHEMA VALIDATION COMPLETE
+```
+
+**If Failed**:
+- [ ] Open `src/schemas/responses.py`
+- [ ] Add `rul_hours: float` field
+- [ ] Add `component_predictions: List[ComponentDiagnosis]` field
+- [ ] Update docstring
+
+---
+
+## 4. Unit Tests (10 min)
+
+### Test: All 21 model tests pass
+
+```bash
+pytest tests/test_universal_temporal_gnn.py -v
+```
+
+**Expected Output**:
+```
+test_valid_config PASSED
+test_invalid_dropout PASSED
+test_model_initialization PASSED
+test_forward_single_graph PASSED
+... [18 more tests]
+test_gradient_flow PASSED
+
+==================== 21 passed in 2.45s ====================
+```
+
+**If Any Test Fails**:
+- [ ] Read error message carefully
+- [ ] Check if error is about output format
+- [ ] Verify model code returns nested dict
+- [ ] Run single test: `pytest tests/test_universal_temporal_gnn.py::TestUniversalTemporalGNNv2::test_forward_single_graph -xvs`
+
+---
+
+## 5. Integration Test (10 min)
+
+### Test: Full pipeline works
+
+```bash
+pytest tests/integration/ -v
+```
+
+**Expected Output**:
+```
+test_diagnose_endpoint PASSED
+test_with_model_loading PASSED
+test_full_pipeline PASSED
+
+==================== X passed in Y.XXs ====================
+```
+
+**If Failed**:
+- [ ] Check error is not about tuple unpacking
+- [ ] Check response schema has rul_hours and component_predictions
+- [ ] Verify inference_engine._postprocess() builds correct response
+- [ ] Run with verbose: `pytest tests/integration/ -xvs`
+
+---
+
+## 6. Manual API Test (5 min)
+
+### Test: Start service and call endpoint
+
+```bash
+# Terminal 1: Start service
+uvicorn src.api.main:app --reload
+
+# Terminal 2: Call endpoint
+curl -X POST http://localhost:8000/v1/diagnose \
+  -H "Content-Type: application/json" \
+  -d '{
+    "equipment_id": "debug_test",
+    "topology_id": "standard_pump_system",
+    "timestamp": "2026-01-03T23:30:00Z",
+    "sensor_readings": {
+      "pump_main": {"pressure": 150.5, "temperature": 65.2},
+      "valve_control": {"position": 0.75, "leakage": 0.01}
+    }
+  }' | jq
+```
+
+**Expected Response**:
+```json
+{
+  "status": "success",
+  "model_version": "v2.1.0",
+  "equipment_id": "debug_test",
+  "diagnosis": {
+    "component_predictions": [...],
+    "system_predictions": {
+      "health": 0.85,
+      "degradation_rate": 0.12,
+      "anomalies": {...},
+      "rul_hours": 248.5
+    },
+    "inference_time_ms": 42.3
+  }
+}
+```
+
+**Key Checks**:
+- [ ] Status is "success" (not error)
+- [ ] Model version is "v2.1.0"
+- [ ] Response includes `rul_hours`
+- [ ] Response includes `component_predictions`
+- [ ] HTTP status is 200 (not 500)
+- [ ] Inference time < 100ms
+
+**If Failed**:
+
+**Error: TypeError about unpacking**
+```
+TypeError: cannot unpack non-iterable dict object
+```
+- [ ] Model returns dict, inference expects tuple
+- [ ] Fix: Update `_inference_single()` in inference_engine.py
+
+**Error: Missing fields**
+```
+KeyError: 'rul_hours'
+```
+- [ ] Response schema incomplete
+- [ ] Fix: Add fields to PredictionResponse
+
+**Error: 500 Internal Server Error**
+```
+Internal Server Error
+```
+- [ ] Check logs: `tail -f logs/gnn_service.log`
+- [ ] Look for exact error
+- [ ] Fix accordingly
+
+---
+
+## 7. Performance Check (Optional - 5 min)
+
+### Test: Latency and memory
+
+```bash
+python << 'EOF'
+import time
+import torch
+from src.models import UniversalTemporalGNNv2, ModelConfig
+from torch_geometric.data import Data
+
+model = UniversalTemporalGNNv2(ModelConfig())
+model.eval()
+
+# Create sample data
+data = Data(
+    x=torch.randn(100, 34),
+    edge_index=torch.randint(0, 100, (2, 200)),
+    edge_attr=torch.randn(200, 14)
+)
+
+# Warm up
+with torch.no_grad():
+    _ = model(data, temporal=False)
+
+# Timing
+start = time.time()
+for _ in range(10):
+    with torch.no_grad():
+        _ = model(data, temporal=False)
+latency = (time.time() - start) / 10 * 1000  # ms
+
+print(f"\u2705 Average latency: {latency:.1f}ms")
+print(f"Target: < 100ms")
+if latency < 100:
+    print("\u2705 PASS")
+else:
+    print("\u26a0️ WARNING: Latency higher than target")
+EOF
+```
+
+**Expected**:
+```
+✅ Average latency: 45.2ms
+Target: < 100ms
+✅ PASS
 ```
 
 ---
 
-✅ **System is Production-Ready!**
+## Common Issues & Fixes
 
-Your training system has been thoroughly debugged and hardened against common PyTorch Lightning pitfalls.
+### Issue 1: TypeError: cannot unpack non-iterable dict object
+
+**Cause**: Model returns dict, inference tries tuple unpacking  
+**Location**: `src/inference/inference_engine.py` line ~320  
+**Fix**:
+```python
+# BEFORE:
+health, degradation, anomaly = model(...)
+
+# AFTER:
+outputs = model(...)
+```
+
+### Issue 2: KeyError: 'rul_hours'
+
+**Cause**: Response schema missing field  
+**Location**: `src/schemas/responses.py`  
+**Fix**: Add field to PredictionResponse
+
+### Issue 3: Test fails with shape mismatch
+
+**Cause**: Model or inference returning wrong shape  
+**Fix**:
+- [ ] Check tensor shapes in model
+- [ ] Verify batch dimension handling
+- [ ] Check squeeze() operations
+
+### Issue 4: 500 error on API call
+
+**Cause**: Check logs for exact error  
+**Fix**:
+```bash
+# View logs
+tail -f logs/gnn_service.log
+
+# Or run with debug
+uvicorn src.api.main:app --reload --log-level debug
+```
+
+---
+
+## Checklist Completion
+
+- [ ] Step 1: Model output verification PASSED
+- [ ] Step 2: Inference engine compatibility PASSED
+- [ ] Step 3: Response schema validation PASSED
+- [ ] Step 4: Unit tests (21/21) PASSED
+- [ ] Step 5: Integration tests PASSED
+- [ ] Step 6: Manual API test PASSED
+- [ ] Step 7: Performance check PASSED (optional)
+
+**If all PASSED**: Phase 2 integration is complete ✅
+
+**If any FAILED**: Use "Common Issues" section to debug
+
+---
+
+## Support
+
+**Questions about tests?** Check test file: `tests/test_universal_temporal_gnn.py`  
+**Questions about integration?** Check: `src/inference/inference_engine.py`  
+**Questions about schema?** Check: `src/schemas/responses.py`  
+**Questions about model?** Check: `src/models/universal_temporal_gnn.py`
+
+---
+
+**Last Updated**: January 3, 2026  
+**Purpose**: Verify Phase 2 integration fixes  
+**Expected Time**: ~30 minutes
