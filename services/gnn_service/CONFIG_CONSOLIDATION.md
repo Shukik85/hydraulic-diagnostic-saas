@@ -1,349 +1,453 @@
-# 🔧 Configuration Consolidation Guide
+# Configuration Consolidation Guide
 
-**Status**: ✅ Root `pyproject.toml` updated with all tool configurations
-
-**Goal**: Single source of truth for Python tooling
-
----
-
-## 📋 Current Situation
-
-### ❌ Before: Scattered Configuration Files
-
-```
-📁 root/
-├── pyproject.toml              (black, ruff basics)
-├── services/gnn_service/
-│   ├── pyproject.toml          (duplicate)
-│   ├── pytest.ini              (pytest config)
-│   ├── mypy.ini                (mypy config)
-│   ├── ruff.toml               (7.3KB ruff config!)
-│   ├── .coveragerc             (coverage config)
-│   └── ...
-```
-
-**Problems**:
-- 📌 Multiple sources of truth
-- 🔄 Configuration sync issues
-- 📚 Hard to maintain
-- ⚠️ Inconsistent between tools
-- 🐛 Easy to miss updates
-
-### ✅ After: Centralized Configuration
-
-```
-📁 root/
-├── pyproject.toml              (ALL tools configured)
-├── services/gnn_service/
-│   ├── pytest.ini              (DELETE)
-│   ├── mypy.ini                (DELETE)
-│   ├── ruff.toml               (DELETE)
-│   ├── .coveragerc             (DELETE)
-│   └── ...
-```
-
-**Benefits**:
-- ✅ Single source of truth
-- ✅ Easy to update
-- ✅ IDE support (PyCharm, VS Code)
-- ✅ CI/CD consistency
-- ✅ No duplication
+**Purpose**: Unified configuration management for GNN Service Phase 2  
+**Last Updated**: January 3, 2026
 
 ---
 
-## 🚀 Migration Steps
+## Quick Reference
 
-### Step 1: Update ROOT `pyproject.toml` ✅
-
-```bash
-# Already done! Root pyproject.toml now contains:
-✅ [tool.black]
-✅ [tool.ruff]
-✅ [tool.mypy]
-✅ [tool.pytest.ini_options]
-✅ [tool.coverage.run]
-✅ [tool.coverage.report]
-✅ [tool.isort]
-✅ [tool.bandit]
-```
-
-### Step 2: Delete Local Config Files
+### Development Environment
 
 ```bash
-cd services/gnn_service/
+PORT=8000
+HOST=0.0.0.0
+DEVEL=true
 
-# Remove individual tool configs
-rm pytest.ini          # ← pytest config now in root pyproject.toml
-rm mypy.ini            # ← mypy config now in root pyproject.toml
-rm ruff.toml           # ← ruff config now in root pyproject.toml
-rm .coveragerc         # ← coverage config now in root pyproject.toml
-rm pyproject.toml      # ← duplicate, not needed
+# Model
+MODEL_VERSION=v2.1.0
+MODEL_PATH=models/universal_temporal_gnn_v2.1.0.ckpt
+DEVICE=cpu  # or cuda
+
+# Inference
+BATCH_SIZE=32
+INFERENCE_TIMEOUT_S=30
+
+# Logging
+LOG_LEVEL=DEBUG
+LOG_FILE=logs/gnn_service.log
 ```
 
-### Step 3: Update Tools to Use Root Config
+### Production Environment
 
-#### pytest
 ```bash
-# OLD (from services/gnn_service/)
-cd services/gnn_service
-pytest tests/ -c pytest.ini
+PORT=8000
+HOST=0.0.0.0
+DEVEL=false
 
-# NEW (from root)
-cd root
-pytest services/gnn_service/tests/ -c pyproject.toml
+# Model
+MODEL_VERSION=v2.1.0
+MODEL_PATH=/opt/models/universal_temporal_gnn_v2.1.0.ckpt
+DEVICE=cuda
+
+# Inference
+BATCH_SIZE=128
+INFERENCE_TIMEOUT_S=60
+
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=/var/log/gnn_service.log
+
+# Monitoring
+OTEL_ENABLED=true
+OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
 ```
 
-#### mypy
+---
+
+## Configuration Sources
+
+### Priority Order
+
+1. **Environment Variables** (highest priority)
+2. **config.py** (default values)
+3. **Docker/K8s ConfigMaps** (deployment-specific)
+
+### Environment Files
+
+**Development**:
 ```bash
-# OLD
-cd services/gnn_service
-mypy src/ --config-file=mypy.ini
-
-# NEW
-cd root
-mypy services/gnn_service/src/ --config-file=pyproject.toml
+cp .env.example .env
+# Edit .env with local values
 ```
 
-#### ruff
+**Production**:
 ```bash
-# OLD
-cd services/gnn_service
-ruff check src/ --config=ruff.toml
-
-# NEW
-cd root
-ruff check services/gnn_service/src/ --config=pyproject.toml
+# Use K8s ConfigMap
+kubectl create configmap gnn-service-config --from-file=.env
 ```
 
-#### coverage
+---
+
+## Environment Variables
+
+### Service Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `PORT` | int | 8000 | HTTP server port |
+| `HOST` | str | 0.0.0.0 | Bind address |
+| `WORKERS` | int | 4 | Uvicorn worker count |
+| `DEBUG` | bool | false | Debug mode (dev only) |
+
+### Model Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `MODEL_VERSION` | str | v2.1.0 | Model version tag |
+| `MODEL_PATH` | str | models/v2.1.0.ckpt | Checkpoint path |
+| `DEVICE` | str | auto | cpu, cuda, or auto |
+| `PRECISION` | str | fp32 | fp32, fp16, or bf16 |
+| `NUM_WORKERS` | int | 4 | DataLoader workers |
+
+### Inference Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `BATCH_SIZE` | int | 32 | Batch size for inference |
+| `INFERENCE_TIMEOUT_S` | int | 30 | Max inference time |
+| `ENABLE_DYNAMIC_BATCHING` | bool | true | Auto batching |
+| `MAX_BATCH_WAIT_MS` | int | 50 | Max wait for batching |
+| `MAX_BATCH_SIZE` | int | 128 | Max batch size |
+
+### Database Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `TIMESCALEDB_URL` | str | - | PostgreSQL connection |
+| `DB_POOL_SIZE` | int | 20 | Connection pool size |
+| `DB_QUERY_TIMEOUT_S` | int | 10 | Query timeout |
+
+### Caching Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `TOPOLOGY_CACHE_SIZE` | int | 100 | LRU cache items |
+| `TOPOLOGY_CACHE_TTL_S` | int | 300 | Cache TTL seconds |
+| `ENABLE_TOPOLOGY_CACHE` | bool | true | Enable caching |
+
+### OpenTelemetry Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `OTEL_ENABLED` | bool | true | Enable tracing |
+| `OTEL_SERVICE_NAME` | str | gnn-service-v2 | Service name |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | str | - | Collector endpoint |
+| `OTEL_EXPORTER_OTLP_TIMEOUT_MS` | int | 10000 | Export timeout |
+
+### Rate Limiting Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `RATE_LIMIT_ENABLED` | bool | true | Enable rate limiting |
+| `RATE_LIMIT_REQUESTS` | int | 100 | Requests per window |
+| `RATE_LIMIT_WINDOW_S` | int | 60 | Time window seconds |
+| `REDIS_URL` | str | - | Redis for distributed limits |
+
+### Security Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `MAX_BODY_SIZE_MB` | int | 10 | Request body limit |
+| `ALLOWED_ORIGINS` | str | localhost:3000 | CORS allowed origins |
+| `API_KEY` | str | - | API authentication key |
+| `API_KEY_HEADER` | str | X-API-Key | Key header name |
+
+### Logging Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `LOG_LEVEL` | str | INFO | DEBUG, INFO, WARNING, ERROR |
+| `LOG_FILE` | str | logs/gnn_service.log | Log file path |
+| `LOG_FORMAT` | str | standard | Log format (standard, json) |
+| `LOG_RETENTION_DAYS` | int | 30 | Log retention |
+
+---
+
+## Configuration Files
+
+### .env (Local Development)
+
 ```bash
-# OLD
-cd services/gnn_service
-pytest --cov=src --cov-config=.coveragerc
+# Copy template
+cp .env.example .env
 
-# NEW
-cd root
-pytest services/gnn_service/tests/ --cov=services/gnn_service/src --cov-config=pyproject.toml
+# Edit with your values
+vi .env
 ```
 
-### Step 4: Update CI/CD Pipelines
+**Key sections**:
+```bash
+# Service
+PORT=8000
+HOST=0.0.0.0
+DEBUG=true
 
-#### GitHub Actions
+# Model
+MODEL_VERSION=v2.1.0
+MODEL_PATH=models/v2.1.0.ckpt
+DEVICE=cpu
+
+# Development
+LOG_LEVEL=DEBUG
+OTEL_ENABLED=false
+```
+
+### configs/config.py (Application Defaults)
+
+```python
+class Config:
+    """Default configuration."""
+    PORT = int(os.getenv('PORT', '8000'))
+    HOST = os.getenv('HOST', '0.0.0.0')
+    DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
+    
+    # Model
+    MODEL_VERSION = os.getenv('MODEL_VERSION', 'v2.1.0')
+    MODEL_PATH = os.getenv('MODEL_PATH', 'models/v2.1.0.ckpt')
+    DEVICE = os.getenv('DEVICE', 'auto')
+    
+    # Inference
+    BATCH_SIZE = int(os.getenv('BATCH_SIZE', '32'))
+    INFERENCE_TIMEOUT_S = int(os.getenv('INFERENCE_TIMEOUT_S', '30'))
+```
+
+### K8s ConfigMap (Production)
+
 ```yaml
-# OLD
-- name: Run Tests
-  run: |
-    cd services/gnn_service
-    pytest tests/ -c pytest.ini
-
-# NEW
-- name: Run Tests
-  run: |
-    cd root_directory
-    pytest services/gnn_service/tests/ -c pyproject.toml
-```
-
-### Step 5: Update IDE Settings
-
-#### PyCharm
-```
-Settings → Languages & Frameworks → Python
-├── Linting → Ruff
-│   └── Config: pyproject.toml (root)
-├── Type Checker → Mypy
-│   └── Mypy path: (auto-detect from root)
-├── Testing → pytest
-│   └── pytest.ini: pyproject.toml (root)
-```
-
-#### VS Code
-```json
-{
-  "[python]": {
-    "editor.defaultFormatter": "ms-python.black-formatter",
-    "editor.formatOnSave": true
-  },
-  "python.linting.ruffEnabled": true,
-  "python.linting.ruffPath": "ruff",
-  "python.testing.pytestEnabled": true,
-  "python.testing.pytestPath": "pytest"
-}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gnn-service-config
+  namespace: production
+data:
+  .env: |
+    PORT=8000
+    HOST=0.0.0.0
+    MODEL_VERSION=v2.1.0
+    MODEL_PATH=/opt/models/v2.1.0.ckpt
+    DEVICE=cuda
+    OTEL_ENABLED=true
+    OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+    RATE_LIMIT_ENABLED=true
+    TIMESCALEDB_URL=postgresql://user:pass@pg:5432/hydraulic
 ```
 
 ---
 
-## 📊 Configuration Reference
+## Configuration by Environment
 
-### Tool Locations in Root `pyproject.toml`
+### Development Setup
 
-| Tool | Section | Status |
-|------|---------|--------|
-| **black** | `[tool.black]` | ✅ Configured |
-| **ruff** | `[tool.ruff]` + `[tool.ruff.lint]` + `[tool.ruff.format]` | ✅ Configured |
-| **mypy** | `[tool.mypy]` + `[[tool.mypy.overrides]]` | ✅ Configured |
-| **pytest** | `[tool.pytest.ini_options]` | ✅ Configured |
-| **coverage** | `[tool.coverage.run]` + `[tool.coverage.report]` | ✅ Configured |
-| **isort** | `[tool.isort]` | ✅ Configured |
-| **bandit** | `[tool.bandit]` | ✅ Configured |
-
-### Key Configuration Changes
-
-```toml
-# Python version upgraded
-python_version = "3.14"           # from 3.11
-target-version = ["py314"]        # from py311
-
-# Test paths extended
-testpaths = ["tests", "services/gnn_service/tests"]
-
-# Coverage includes GNN service
-source = ["src", "services/gnn_service/src"]
-
-# Mypy strict mode fully enabled
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-strict_equality = true
-```
-
----
-
-## ✅ Validation Checklist
-
-### Before Cleanup
-
-- [ ] Root `pyproject.toml` has all tool configurations
-- [ ] All tools can run from root using `-c pyproject.toml`
-- [ ] Tests pass with root config
-- [ ] MyPy passes with root config
-- [ ] Ruff passes with root config
-- [ ] Coverage report generates from root config
-
-### Cleanup Phase
-
-- [ ] Backup local configs (git stash)
-- [ ] Delete local config files
-- [ ] Update CI/CD pipelines
-- [ ] Update IDE settings
-- [ ] Test all tools from root
-
-### Post-Cleanup Validation
-
-- [ ] `pytest` finds tests correctly
-- [ ] Coverage report generated
-- [ ] No config file conflicts
-- [ ] IDE still recognizes Python settings
-- [ ] CI/CD pipeline passes
-
----
-
-## 🔍 Testing the Configuration
-
-### From Root Directory
+**Goal**: Quick iteration, local debugging
 
 ```bash
-# All paths are relative to root
+# .env
+PORT=8000
+DEBUG=true
+DEVICE=cpu
+LOG_LEVEL=DEBUG
+OTEL_ENABLED=false
+RATE_LIMIT_ENABLED=false
+TIMESCALEDB_URL=postgresql://localhost:5432/hydraulic_dev
+```
 
-# Run tests
-pytest services/gnn_service/tests/ -c pyproject.toml
+**Run**:
+```bash
+uvicorn src.api.main:app --reload
+```
 
-# Type check
-mypy services/gnn_service/src/ --config-file=pyproject.toml
+### Staging Setup
 
-# Lint
-ruff check services/gnn_service/src/ --config=pyproject.toml
+**Goal**: Pre-production testing
 
-# Format
-black services/gnn_service/src/ --config=pyproject.toml
+```bash
+# .env (from K8s ConfigMap)
+PORT=8000
+DEVICE=cuda
+LOG_LEVEL=INFO
+OTEL_ENABLED=true
+OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger-staging:4318
+RATE_LIMIT_ENABLED=true
+TIMESCALEDB_URL=postgresql://user:pass@pg-staging:5432/hydraulic_staging
+```
 
-# Coverage
-pytest services/gnn_service/tests/ \
-  --cov=services/gnn_service/src \
-  --cov-config=pyproject.toml
+### Production Setup
+
+**Goal**: Performance, reliability, monitoring
+
+```bash
+# .env (from K8s Secret)
+PORT=8000
+WORKERS=8
+DEVICE=cuda
+PRECISION=fp16
+LOG_LEVEL=WARNING  # Less logging = faster
+OTEL_ENABLED=true
+OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger-prod:4318
+RATE_LIMIT_ENABLED=true
+TIMESCALEDB_URL=postgresql://prod_user:***@pg-prod.rds.amazonaws.com:5432/hydraulic_prod
 ```
 
 ---
 
-## 🔗 Local Development Workflow
+## Model Configuration (Phase 2)
 
-### If Working in `services/gnn_service/` Subdirectory
+### Model Checkpoint Paths
 
 ```bash
-cd services/gnn_service/
+# Development (local)
+model/v2.1.0.ckpt
 
-# Point tools to parent directory config
-pytest tests/ -c ../../pyproject.toml
-mypy src/ --config-file=../../pyproject.toml
-ruff check src/ --config=../../pyproject.toml
+# Docker
+/app/models/v2.1.0.ckpt
+
+# K8s (mounted from ConfigMap)
+/opt/models/v2.1.0.ckpt
+
+# S3 (auto-download)
+s3://hydraulic-models/v2.1.0.ckpt
 ```
 
-### Or Create a Symlink
+### Model Initialization
 
-```bash
-cd services/gnn_service/
-ln -s ../../pyproject.toml pyproject.toml
+```python
+from src.models import UniversalTemporalGNNv2, ModelConfig
 
-# Now tools find it automatically
-pytest tests/
-mypy src/
-ruff check src/
-```
+# Config from environment
+config = ModelConfig.from_env()  # Reads DEVICE, PRECISION, etc.
 
----
-
-## 🐛 Troubleshooting
-
-### pytest not finding config
-```bash
-# Explicitly specify
-pytest -c pyproject.toml tests/
-
-# Or set environment variable
-export PYTEST_ADDOPTS="-c pyproject.toml"
-```
-
-### mypy not finding overrides
-```bash
-# Make sure [[tool.mypy.overrides]] sections are present
-# Check: grep -A5 "\[\[tool.mypy.overrides\]\]" pyproject.toml
-```
-
-### coverage not merging reports
-```bash
-# Set coverage config explicitly
-pytest --cov-config=pyproject.toml --cov=...
-```
-
-### ruff conflicts with black
-```bash
-# Both configured to be compatible in pyproject.toml
-# Should auto-resolve with line-length = 88
+# Load model
+model = UniversalTemporalGNNv2(config)
+model.load_state_dict(torch.load(os.getenv('MODEL_PATH')))
+model.to(os.getenv('DEVICE', 'cpu'))
+model.eval()
 ```
 
 ---
 
-## 📚 Documentation References
+## Validation
 
-- [PEP 621 - Python Project Metadata](https://peps.python.org/pep-0621/)
-- [Ruff Configuration](https://docs.astral.sh/ruff/configuration/)
-- [MyPy Configuration](https://mypy.readthedocs.io/en/stable/config_file.html)
-- [Pytest Configuration](https://docs.pytest.org/en/latest/configuration.html)
-- [Coverage.py Configuration](https://coverage.readthedocs.io/en/latest/config.html)
+### Verify Configuration
+
+```bash
+python << 'EOF'
+import os
+from pathlib import Path
+
+print("Validating configuration...\n")
+
+# Check environment variables
+required = ['MODEL_PATH', 'TIMESCALEDB_URL']
+for var in required:
+    value = os.getenv(var)
+    if value:
+        print(f"\u2705 {var}: {value[:50]}..." if len(value) > 50 else f"\u2705 {var}: {value}")
+    else:
+        print(f"\u274c {var}: NOT SET")
+
+# Check model file exists
+model_path = os.getenv('MODEL_PATH')
+if Path(model_path).exists():
+    print(f"\u2705 Model file exists: {model_path}")
+else:
+    print(f"\u274c Model file NOT FOUND: {model_path}")
+
+print("\n✅ Configuration validation complete")
+EOF
+```
 
 ---
 
-## 🎯 Next Steps
+## Troubleshooting
 
-1. ✅ ROOT pyproject.toml created
-2. 📝 Update CI/CD pipelines (GitHub Actions, GitLab CI, etc.)
-3. 🗑️ Delete local config files
-4. 🔧 Update IDE settings
-5. ✔️ Run full test suite
-6. 🚀 Deploy to staging
+### Issue: Model not loading
+
+**Symptom**: `FileNotFoundError: [Errno 2] No such file or directory: 'models/v2.1.0.ckpt'`
+
+**Fix**:
+```bash
+# Check MODEL_PATH
+echo $MODEL_PATH
+
+# Verify file exists
+ls -la models/v2.1.0.ckpt
+
+# Update .env
+vi .env  # Set MODEL_PATH=/full/path/to/v2.1.0.ckpt
+```
+
+### Issue: CUDA not available
+
+**Symptom**: `RuntimeError: CUDA is not available`
+
+**Fix**:
+```bash
+# Check DEVICE
+echo $DEVICE
+
+# Switch to CPU
+export DEVICE=cpu
+# or in .env
+DEVICE=cpu
+```
+
+### Issue: Database connection fails
+
+**Symptom**: `psycopg2.OperationalError: FATAL: password authentication failed`
+
+**Fix**:
+```bash
+# Verify TIMESCALEDB_URL
+echo $TIMESCALEDB_URL
+
+# Check credentials
+psql postgresql://user:pass@host:5432/db
+
+# Update .env with correct credentials
+vi .env
+```
 
 ---
 
-**Status**: Configuration consolidated into root `pyproject.toml`
+## Best Practices
 
-**Last Updated**: December 16, 2025
+1. **Never commit secrets** to git
+   - Use .env.example (without values)
+   - Use K8s Secrets in production
 
-**Maintainer**: ML Engineering Team
+2. **Use environment-specific configs**
+   - .env for development
+   - ConfigMap for staging/prod
+
+3. **Validate on startup**
+   ```python
+   # In main.py startup event
+   @app.on_event('startup')
+   async def validate_config():
+       assert os.getenv('MODEL_PATH'), "MODEL_PATH not set"
+       assert Path(os.getenv('MODEL_PATH')).exists()
+       assert os.getenv('DEVICE') in ['cpu', 'cuda', 'auto']
+   ```
+
+4. **Log configuration (masked)**
+   ```python
+   logger.info(f"Service starting: {config.SERVICE_NAME}")
+   logger.info(f"Model: {config.MODEL_VERSION}")
+   logger.info(f"Device: {config.DEVICE}")
+   # Don't log: passwords, API keys, tokens
+   ```
+
+---
+
+## Reference
+
+- **[README.md](README.md)** - Service overview
+- **[.env.example](.env.example)** - Example configuration
+- **[configs/config.py](configs/config.py)** - Default values
+- **[PRODUCTION_ROADMAP.md](PRODUCTION_ROADMAP.md)** - Deployment info
+
+---
+
+**Last Updated**: January 3, 2026  
+**Scope**: Phase 2 GNN Service Configuration
